@@ -15,12 +15,12 @@ catch (  IOException e) {
     return;
   }
   Element rootElement=document.getRootElement();
-  Element languageRootsElement=rootElement.getChild(LANGUAGE_ROOTS);
+  Element languageRootsElement=rootElement.getChild(LANGUAGES);
   if (languageRootsElement != null) {
-    Iterator languageRoots=languageRootsElement.getChildren(LANGUAGE_ROOT).iterator();
-    while (languageRoots.hasNext()) {
-      Element element=(Element)languageRoots.next();
-      String rootFileName=element.getAttributeValue(NAME);
+    Iterator languageRootElements=languageRootsElement.getChildren(LANGUAGE_ROOT).iterator();
+    while (languageRootElements.hasNext()) {
+      Element element=(Element)languageRootElements.next();
+      String rootFileName=element.getAttributeValue(ROOT_PATH);
       String rootAbsolutePath=null;
       if (rootFileName.startsWith(PATH_MACRO_PROJECT)) {
         String modelRelativePath=rootFileName.substring(PATH_MACRO_PROJECT.length());
@@ -30,53 +30,18 @@ catch (  IOException e) {
         rootAbsolutePath=PathManager.getAbsolutePathByRelational(myProjectFile,rootFileName);
       }
       File dir=new File(rootAbsolutePath);
+      myLanguageRoots.add(dir);
       if (dir.exists()) {
-        loadLanguageDescriptors(dir);
+        readLanguageDescriptors(dir);
       }
  else {
         throw new RuntimeException("Couldn't load languages from " + rootAbsolutePath + "\nDirectory doesn't exist: "+ rootAbsolutePath);
       }
     }
   }
-  Element modelElement=rootElement.getChild(SEMANTIC_MODELS);
-  if (modelElement != null) {
-    Iterator models=modelElement.getChildren(SEMANTIC_MODEL).iterator();
-    while (models.hasNext()) {
-      Element element=(Element)models.next();
-      Element modelFileElement=element.getChild(FILE);
-      String modelFileName=modelFileElement.getAttributeValue(NAME);
-      String modelAbsolutePath=null;
-      if (modelFileName.startsWith(PATH_MACRO_MODELS_ROOT)) {
-        String modelRelativePath=modelFileName.substring(PATH_MACRO_MODELS_ROOT.length());
-        modelAbsolutePath=PathManager.getAbsolutePathByRelational(new File(PathManager.getModelPath()),modelRelativePath);
-      }
- else       if (modelFileName.startsWith(PATH_MACRO_PROJECT)) {
-        String modelRelativePath=modelFileName.substring(PATH_MACRO_PROJECT.length());
-        modelAbsolutePath=PathManager.getAbsolutePathByRelational(myProjectFile,modelRelativePath);
-      }
- else {
-        modelAbsolutePath=PathManager.getAbsolutePathByRelational(myProjectFile,modelFileName);
-      }
-      if ((new File(modelAbsolutePath)).exists()) {
-        System.out.println("MPSProject addNewModel from: " + modelAbsolutePath);
-        mySemanticModels.loadModel(modelAbsolutePath);
-      }
- else {
-        throw new RuntimeException("Couldn't load model from " + modelFileName + "\nFile doesn't exist: "+ modelAbsolutePath);
-      }
-    }
-    SemanticModel[] semanticModels=mySemanticModels.semanticModels();
-    for (int i=0; i < semanticModels.length; i++) {
-      SemanticModel semanticModel=semanticModels[i];
-      try {
-        ContextUtil.initGlobalContext(semanticModel,this);
-        ContextUtil.initLocalContext(semanticModel,this);
-      }
- catch (      Exception e) {
-        System.out.println("No context for model: " + semanticModel.getNamespace() + "."+ semanticModel.getName());
-        e.printStackTrace();
-      }
-    }
-    mySemanticModels.flushModelInfos();
-  }
+  Element projectModelsElement=rootElement.getChild(PROJECT_MODELS);
+  readModels(myProjectModelRoots,myProjectModels,projectModelsElement);
+  Element libraryModelsElement=rootElement.getChild(LIBRARY_MODELS);
+  readModels(myLibraryModelRoots,myLibraryModels,libraryModelsElement);
+  mySemanticModels.flushModelInfos();
 }
