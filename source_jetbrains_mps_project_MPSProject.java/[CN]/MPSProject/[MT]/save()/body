@@ -1,3 +1,44 @@
 {
   getSemanticModels().saveAll();
+  Element rootElement=new Element(PROJECT);
+  Document document=new Document();
+  document.setRootElement(rootElement);
+  Element languages=new Element(LANGUAGES);
+  for (Iterator<File> iterator=myLanguageRoots.iterator(); iterator.hasNext(); ) {
+    File languageRoot=iterator.next();
+    String absolutePath=languageRoot.getAbsolutePath();
+    String fileName=null;
+    if (absolutePath.startsWith(myProjectFile.getParent())) {
+      String modelRelationalPath=PathManager.getRelationalPathByAbsolute(myProjectFile,absolutePath);
+      fileName=PATH_MACRO_PROJECT + modelRelationalPath;
+    }
+ else {
+      String modelRelationalPath=PathManager.getRelationalPathByAbsolute(new File(PathManager.getModelPath()),absolutePath);
+      fileName=PATH_MACRO_MODELS_ROOT + modelRelationalPath;
+    }
+    Element languageRootElement=new Element(LANGUAGE_ROOT);
+    languageRootElement.setAttribute(ROOT_PATH,fileName);
+    languages.addContent(languageRootElement);
+  }
+  rootElement.addContent(languages);
+  Element projectModelsElement=new Element(PROJECT_MODELS);
+  saveModelRoots(myProjectModelRoots,projectModelsElement);
+  rootElement.addContent(projectModelsElement);
+  Element libraryModelsElement=new Element(LIBRARY_MODELS);
+  saveModelRoots(myProjectModelRoots,libraryModelsElement);
+  rootElement.addContent(libraryModelsElement);
+  if (!myProjectFile.exists()) {
+    try {
+      myProjectFile.createNewFile();
+    }
+ catch (    IOException e) {
+      e.printStackTrace();
+    }
+  }
+  try {
+    JDOMUtil.writeDocument(document,myProjectFile);
+  }
+ catch (  IOException e) {
+    e.printStackTrace();
+  }
 }
