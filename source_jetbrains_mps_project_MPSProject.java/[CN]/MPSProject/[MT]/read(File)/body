@@ -22,9 +22,25 @@ catch (  IOException e) {
       Element element=(Element)models.next();
       Element modelFileElement=element.getChild(FILE);
       String modelFileName=modelFileElement.getAttributeValue(NAME);
-      modelFileName=PathManager.getAbsolutePathByRelational(myProjectFile,modelFileName);
-      System.out.println("MPSProject addModel from: " + modelFileName);
-      mySemanticModels.loadModel(modelFileName);
+      String modelAbsolutePath=null;
+      if (modelFileName.startsWith(PATH_MACRO_MODELS_ROOT)) {
+        String modelRelativePath=modelFileName.substring(PATH_MACRO_MODELS_ROOT.length());
+        modelAbsolutePath=PathManager.getAbsolutePathByRelational(new File(PathManager.getModelPath()),modelRelativePath);
+      }
+ else       if (modelFileName.startsWith(PATH_MACRO_PROJECT)) {
+        String modelRelativePath=modelFileName.substring(PATH_MACRO_PROJECT.length());
+        modelAbsolutePath=PathManager.getAbsolutePathByRelational(myProjectFile,modelRelativePath);
+      }
+ else {
+        modelAbsolutePath=PathManager.getAbsolutePathByRelational(myProjectFile,modelFileName);
+      }
+      if ((new File(modelAbsolutePath)).exists()) {
+        System.out.println("MPSProject addModel from: " + modelAbsolutePath);
+        mySemanticModels.loadModel(modelAbsolutePath);
+      }
+ else {
+        throw new RuntimeException("Couldn't load model from " + modelFileName + "\nFile doesn't exist: "+ modelAbsolutePath);
+      }
     }
     SemanticModel[] semanticModels=mySemanticModels.semanticModels();
     for (int i=0; i < semanticModels.length; i++) {
