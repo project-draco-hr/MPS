@@ -6,34 +6,49 @@
     }
   }
   String actionType=getActionType(keyEvent,editorContext);
-  boolean executeCellCommand=true;
-  if (actionType == EditorCellAction.RIGHT_TRANSFORM && mySelectedCell != null && getCellAction(mySelectedCell,actionType) != null) {
-    executeCellCommand=validateCellBeforeTransform(mySelectedCell);
-  }
-  if (mySelectedCell != null) {
-    if (actionType != null) {
-      if (executeCellCommand) {
-        if (executeCellAction(mySelectedCell,actionType)) {
-          keyEvent.consume();
-          return true;
-        }
-      }
-    }
-    EditorCell oldSelection=mySelectedCell;
-    if (mySelectedCell.processKeyPressed(keyEvent) == true) {
-      if (oldSelection != mySelectedCell) {
-        mySelectedStack.removeAllElements();
-      }
+  if (mySelectedCell != null && actionType == EditorCellAction.RIGHT_TRANSFORM) {
+    if (!isValidCell(mySelectedCell) && !validateCell(mySelectedCell)) {
       keyEvent.consume();
       return true;
     }
-    if ((keyEvent.getKeyCode() == KeyEvent.VK_SPACE && keyEvent.isControlDown()) || (keyEvent.getKeyCode() == KeyEvent.VK_ENTER && !keyEvent.isControlDown())) {
-      if (activateNodeSubstituteChooser(mySelectedCell,keyEvent.getKeyCode() == KeyEvent.VK_ENTER)) {
+    if (mySelectedCell != null && getCellAction(mySelectedCell,EditorCellAction.RIGHT_TRANSFORM) == null) {
+      if (mySelectedCell instanceof EditorCell_Constant) {
+        actionType=EditorCellAction.RIGHT_SPECIAL;
         keyEvent.consume();
-        System.out.println("SUBSTITUTE");
+      }
+      if (mySelectedCell instanceof EditorCell_Property) {
+        String text=((EditorCell_Property)mySelectedCell).getText();
+        if (!((EditorCell_Property)mySelectedCell).getModelAccessor().isValidText(text + " ")) {
+          actionType=EditorCellAction.RIGHT_SPECIAL;
+          keyEvent.consume();
+        }
+      }
+    }
+  }
+  if (mySelectedCell != null) {
+    if (actionType != null) {
+      if (executeCellAction(mySelectedCell,actionType)) {
+        keyEvent.consume();
         return true;
       }
-      System.out.println("NO SUBSTITUTE");
+    }
+    if (!keyEvent.isConsumed()) {
+      EditorCell oldSelection=mySelectedCell;
+      if (mySelectedCell.processKeyPressed(keyEvent) == true) {
+        if (oldSelection != mySelectedCell) {
+          mySelectedStack.removeAllElements();
+        }
+        keyEvent.consume();
+        return true;
+      }
+      if ((keyEvent.getKeyCode() == KeyEvent.VK_SPACE && keyEvent.isControlDown()) || (keyEvent.getKeyCode() == KeyEvent.VK_ENTER && !keyEvent.isControlDown())) {
+        if (activateNodeSubstituteChooser(mySelectedCell,keyEvent.getKeyCode() == KeyEvent.VK_ENTER)) {
+          keyEvent.consume();
+          System.out.println("SUBSTITUTE");
+          return true;
+        }
+        System.out.println("NO SUBSTITUTE");
+      }
     }
   }
   if (actionType != null) {
