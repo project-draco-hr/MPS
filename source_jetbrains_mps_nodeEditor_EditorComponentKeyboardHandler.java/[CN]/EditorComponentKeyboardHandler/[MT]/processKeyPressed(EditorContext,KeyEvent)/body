@@ -5,15 +5,35 @@
     if (keyEvent.getKeyCode() == KeyEvent.VK_M) {
       System.out.println("key pressed:" + keyEvent);
     }
-    EditorCell actionCell=selectedCell;
-    EditorCellKeyMapAction cellKeyMapAction=EditorUtil.getCellKeyMapAction(actionCell,keyEvent,editorContext);
-    while (cellKeyMapAction == null && actionCell.getParent() != null) {
-      actionCell=actionCell.getParent();
-      cellKeyMapAction=EditorUtil.getCellKeyMapAction(actionCell,keyEvent,editorContext);
-    }
-    if (cellKeyMapAction != null) {
-      cellKeyMapAction.execute(keyEvent,editorContext);
-      return true;
+    List<EditorCellKeyMapAction> actions=EditorUtil.getKeyMapActionsForEvent(selectedCell,keyEvent,editorContext);
+    if (actions != null) {
+      if (actions.size() == 1) {
+        actions.get(0).execute(keyEvent,editorContext);
+        return true;
+      }
+ else {
+        JPopupMenu menu=new JPopupMenu();
+        for (int i=0; i < actions.size(); i++) {
+          final EditorCellKeyMapAction keyMapAction=actions.get(i);
+          JMenuItem menuItem=new JMenuItem(keyMapAction.getDescriptionText());
+          menuItem.addActionListener(new ActionListener(){
+            public void actionPerformed(            ActionEvent e){
+              CommandProcessor commandProcessor=CommandProcessor.instance();
+              commandProcessor.executeCommand(new Runnable(){
+                public void run(){
+                  keyMapAction.execute(keyEvent,editorContext);
+                }
+              }
+,keyMapAction.getDescriptionText());
+            }
+          }
+);
+          menu.add(menuItem);
+        }
+        AbstractEditorComponent component=editorContext.getNodeEditorComponent();
+        menu.show(component,selectedCell.getX(),selectedCell.getY() + selectedCell.getHeight());
+        return true;
+      }
     }
   }
   String actionType=editor.getActionType(keyEvent,editorContext);
