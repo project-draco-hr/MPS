@@ -1,0 +1,36 @@
+{
+  Iterator<SemanticReference> iterator=templateNode.getReferences().iterator();
+  while (iterator.hasNext()) {
+    SemanticReference templateReference=iterator.next();
+    SemanticNode templateReferentNode=templateReference.getTargetNode();
+    if (templateReferentNode instanceof NodeMacro || templateReferentNode instanceof ReferenceMacro || templateReferentNode instanceof PropertyMacro) {
+      continue;
+    }
+    String macroReferenceRole=ITemplateGenerator.ROLE_PREFIX_REFEENCE_MAKRO + templateReference.getRole();
+    if (templateNode.getChild(macroReferenceRole) != null) {
+      continue;
+    }
+    if (templateReferentNode.getModel() != templateNode.getModel()) {
+      targetNode.addReferent(templateReference.getRole(),templateReferentNode);
+      continue;
+    }
+    IReferenceResolver referenceResolver=createReferenceResolver(templateNode);
+    SemanticNode targetReferentNode=referenceResolver.resolveTarget(templateReference,nodeBuilder);
+    if (targetReferentNode != null) {
+      targetNode.addReferent(templateReference.getRole(),targetReferentNode);
+      continue;
+    }
+    System.out.println("uhhh! error. set breakpoint here, referenceResolver:" + referenceResolver);
+    referenceResolver.resolveTarget(templateReference,nodeBuilder);
+    StringBuffer buildersStack=new StringBuffer("    builders stack:\n");
+    String indent="\n    ";
+    INodeBuilder currBuilder=nodeBuilder;
+    while (currBuilder != null) {
+      buildersStack.append(indent);
+      buildersStack.append(currBuilder.getTemplateNode().getDebugText());
+      indent+="    ";
+      currBuilder=currBuilder.getParent();
+    }
+    System.err.println("WARN! Couldn't resolve template reference! " + nodeBuilder.getGenerator().getState().toString() + "\n    template       : "+ templateReference.getSourceNode().getDebugText()+ " --["+ templateReference.getRole()+ "]--> "+ templateReference.getTargetNode().getDebugText()+ "\n    template target: "+ targetNode.getDebugText()+ "\n"+ buildersStack);
+  }
+}
