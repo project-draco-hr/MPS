@@ -1,10 +1,5 @@
 {
   TemplateDeclaration templateDeclaration=templateWeavingRule.getTemplate();
-  List<TemplateFragment> templateFragments=getTemplateFragments(templateDeclaration);
-  if (templateFragments.isEmpty()) {
-    System.err.println("WARN: no template fragments found in " + templateDeclaration.getDebugText());
-    return;
-  }
   List<SemanticNode> sourceNodes=createSourceNodeListForTemplateWeavingRule(templateWeavingRule,generator);
   for (  SemanticNode sourceNode : sourceNodes) {
     INodeBuilder ruleContextBuilder=getContextNodeBuilderForTemplateWeavingingRule(sourceNode,templateWeavingRule,generator);
@@ -13,30 +8,6 @@
       SModelUtil.dumpNodePath(sourceNode,0,System.err);
       continue;
     }
-    for (    TemplateFragment templateFragment : templateFragments) {
-      SemanticNode templateFragmentNode=templateFragment.getParent();
-      String mappingName=templateFragment.getName();
-      List<INodeBuilder> fragmentNodeBuilders=createNodeBuildersForTemplate(sourceNode,templateFragmentNode,mappingName,generator);
-      for (      INodeBuilder fragmentBuilder : fragmentNodeBuilders) {
-        TemplateTag templateFragmentTag=templateFragment.getTag();
-        if (templateFragmentTag != null) {
-          INodeBuilder toReplaceBuilder=findTemplateTagReference(sourceNode,templateFragmentTag,ruleContextBuilder,generator);
-          if (toReplaceBuilder == null) {
-            String message="Could't find reference on tagged template fragment." + "\nTag                    : " + templateFragmentTag.getName() + "\nSource node            : "+ sourceNode.getDebugText()+ "\nTemplate fragment      : "+ templateFragmentNode.getDebugText()+ "\nTemplate declaration   : "+ SModelUtil.getRootParent(templateFragmentNode).getDebugText()+ "\nContext source node    : "+ ruleContextBuilder.getSourceNode().getDebugText()+ "\nContext template node  : "+ ruleContextBuilder.getTemplateNode().getDebugText()+ "\nContext template parent: "+ SModelUtil.getRootParent(ruleContextBuilder.getTemplateNode()).getDebugText();
-            (new RuntimeException(message)).printStackTrace();
-            System.err.println("Source node trace:");
-            SModelUtil.dumpNodePath(sourceNode,0,System.err);
-          }
- else {
-            toReplaceBuilder.getParent().replaceChildBuilder(toReplaceBuilder,fragmentBuilder);
-            fragmentBuilder.setRoleInParent(toReplaceBuilder.getRoleInParent());
-          }
-        }
- else {
-          INodeBuilder fragmentContextBuilder=getContextBuilderForTemplateFragment(templateFragmentNode,ruleContextBuilder,generator);
-          fragmentContextBuilder.addChildBuilder(fragmentBuilder);
-        }
-      }
-    }
+    createNodeBuildersForTemplateDeclaration(sourceNode,templateDeclaration,ruleContextBuilder,generator);
   }
 }
