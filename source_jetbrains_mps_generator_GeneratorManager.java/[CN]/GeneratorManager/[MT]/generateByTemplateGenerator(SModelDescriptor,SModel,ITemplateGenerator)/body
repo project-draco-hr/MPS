@@ -1,0 +1,64 @@
+{
+  SModel originalSourceModel=sourceModelDescr.getSModel();
+  String outputModelNamespace=JavaNameUtil.packageNameForModelFqName(originalSourceModel.getFQName());
+  String transientModelNamePfx=originalSourceModel.getName() + "_transient_";
+  List<SModel> transientModels=new LinkedList<SModel>();
+  int iterationCount=0;
+  SModel currentTargetModel=createOutputModel(outputModelNamespace,transientModelNamePfx + iterationCount++,originalSourceModel,templatesModel);
+  transientModels.add(currentTargetModel);
+  System.out.println("DO MAPPING from: " + originalSourceModel.getFQName() + " to "+ currentTargetModel.getFQName());
+  generator.generate(originalSourceModel,currentTargetModel,templatesModel);
+  while (true) {
+    generator.reset();
+    SModel currentSourceModel=currentTargetModel;
+    System.out.println("CHECK NEED REDUCTION (" + iterationCount + ") in: "+ currentSourceModel.getFQName());
+    int numReductions=generator.setupReduction(currentSourceModel,templatesModel);
+    System.out.println("FOUND " + numReductions + " REDUCTIONS");
+    if (numReductions == 0) {
+      break;
+    }
+    currentTargetModel=createOutputModel(outputModelNamespace,transientModelNamePfx + iterationCount,originalSourceModel,templatesModel);
+    transientModels.add(currentTargetModel);
+    System.out.println("DO REDUCTION (" + iterationCount + ") from: "+ currentSourceModel.getFQName()+ " to "+ currentTargetModel.getFQName());
+    generator.doReduction(currentTargetModel);
+    iterationCount++;
+    currentSourceModel=currentTargetModel;
+  }
+  if (SAVE_TRANSIENT_MODELS) {
+    System.out.println("SAVE TRANSIENT MODELS ...");
+    String sourceModelDerectory=sourceModelDescr.getModelFile().getParent();
+    SModelRepository modelRepository=SModelRepository.getInstance();
+    for (    SModel transientModel : transientModels) {
+      SModelDescriptor existingModel=modelRepository.getModelDescriptor(transientModel.getFQName());
+      if (existingModel != null) {
+        myProject.deleteModel(existingModel);
+      }
+      File transientModelFile=new File(sourceModelDerectory,transientModel.getName() + ".mps");
+      SModelDescriptor transientModelDescr=MPSFileModelDescriptor.getInstance(transientModelFile.getAbsolutePath(),transientModel,myProject);
+      myProject.getComponent(RootManager.class).addProjectModelDescriptor(transientModelDescr);
+      modelRepository.markChanged(transientModel);
+      System.out.println(" ---> " + transientModelDescr.getFQName() + " to file "+ transientModelDescr.getModelFile().getAbsolutePath());
+    }
+    SwingUtilities.invokeLater(new Runnable(){
+      public void run(){
+        generator.getProject().getComponent(ProjectPane.class).rebuildTree();
+      }
+    }
+);
+  }
+  SModel lastTransientModel=transientModels.get(transientModels.size() - 1);
+  SModel outputModel=null;
+  if (SAVE_TRANSIENT_MODELS) {
+    outputModel=createOutputModel(outputModelNamespace,"",originalSourceModel,templatesModel);
+    System.out.println("DO VOID REDUCTION from: " + lastTransientModel.getFQName() + " to "+ outputModel.getFQName());
+    generator.reset();
+    generator.setupReduction(lastTransientModel,templatesModel);
+    generator.doReduction(outputModel);
+  }
+ else {
+    outputModel=lastTransientModel;
+    outputModel.setNamespace(outputModelNamespace);
+    outputModel.setName("");
+  }
+  return outputModel;
+}
