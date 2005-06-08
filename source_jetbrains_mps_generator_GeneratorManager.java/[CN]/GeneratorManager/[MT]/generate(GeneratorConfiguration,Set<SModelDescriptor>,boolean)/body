@@ -1,46 +1,64 @@
 {
-  getMessageView().clear();
-  getMessageView().add(new Message(MessageKind.INFORMATION,null,"Generating configuration " + configuration.getName()));
-  compileAndReload();
-  System.out.println("Generating configuration " + configuration.getName());
-  System.out.println("Output path is " + configuration.getOutputPath());
-  System.out.println("");
-  for (  GeneratorConfigurationCommand cmd : CollectionUtil.iteratorAsIterable(configuration.commands())) {
-    System.out.println("Executing " + cmd.getSourceLanguage().getName() + " -> "+ cmd.getTargetLanguage());
-    Set<SModelDescriptor> modelsWithLanguage=findModelsWithLanguage(modelDescriptors,cmd.getSourceLanguage().getName());
-    System.out.println("Models to generate from " + modelsWithLanguage.toString());
-    Generator generator=findGenerator(cmd.getSourceLanguage().getName(),cmd.getTargetLanguage().getName());
-    for (    Root r : CollectionUtil.iteratorAsIterable(generator.languages())) {
-      myProject.getComponent(RootManager.class).readLanguageDescriptors(new File(r.getPath()));
-    }
-    String generatorClass=findGeneratorClass(generator);
-    if (generatorClass == null)     generatorClass=DefaultTemplateGenerator.class.getName();
-    System.out.println("Generator class is " + generatorClass);
-    SModelDescriptor templatesModel=loadTemplatesModel(generator);
-    if (templatesModel != null) {
-      System.out.println("Templates model is " + templatesModel.getFQName());
-    }
+  new Thread(){
+    public void run(){
+      ProgressMonitor progress=new ProgressWindowProgressMonitor();
+      int modelCount=0;
+      for (      GeneratorConfigurationCommand cmd : CollectionUtil.iteratorAsIterable(configuration.commands())) {
+        modelCount+=findModelsWithLanguage(modelDescriptors,cmd.getSourceLanguage().getName()).size();
+      }
+      int ideaCompilations=0;
+      if (generateText) {
+        ideaCompilations=1;
+      }
  else {
-    }
-    for (    SModelDescriptor model : modelsWithLanguage) {
+        ideaCompilations=2;
+      }
+      progress.start("Generating",(modelCount + ideaCompilations) * AMOUNT_PER_MODEL);
+      clearMessages();
+      addMessage(new Message(MessageKind.INFORMATION,null,"Generating configuration " + configuration.getName()));
+      progress.addText("Compiling in IDEA...");
+      compileAndReload();
+      progress.advance(AMOUNT_PER_MODEL);
+      for (      GeneratorConfigurationCommand cmd : CollectionUtil.iteratorAsIterable(configuration.commands())) {
+        Set<SModelDescriptor> modelsWithLanguage=findModelsWithLanguage(modelDescriptors,cmd.getSourceLanguage().getName());
+        Generator generator=findGenerator(cmd.getSourceLanguage().getName(),cmd.getTargetLanguage().getName());
+        for (        Root r : CollectionUtil.iteratorAsIterable(generator.languages())) {
+          myProject.getComponent(RootManager.class).readLanguageDescriptors(new File(r.getPath()));
+        }
+        String generatorClass=findGeneratorClass(generator);
+        if (generatorClass == null)         generatorClass=DefaultTemplateGenerator.class.getName();
+        SModelDescriptor templatesModel=loadTemplatesModel(generator);
+        for (        final SModelDescriptor model : modelsWithLanguage) {
+          try {
+            generate_internal_new(model,generatorClass,templatesModel,configuration.getOutputPath(),progress,generateText);
+          }
+ catch (          final GenerationFailedException gfe) {
+            System.err.println(model.getFQName() + " generation failed");
+            gfe.printStackTrace();
+            addMessage(new Message(MessageKind.ERROR,model.getFQName() + " model generation failed"));
+            showMessageView();
+            return;
+          }
+          addMessage(new Message(MessageKind.INFORMATION,model.getFQName() + " model is generated"));
+        }
+      }
+      if (!generateText) {
+        progress.addText("Compiling in IDEA...");
+        compileAndReload();
+        progress.advance(AMOUNT_PER_MODEL);
+      }
+      addMessage(new Message(MessageKind.INFORMATION,"Generation finished"));
+      if (!generateText) {
+        showMessageView();
+      }
+      progress.addText("Finished.");
       try {
-        generate_internal_new(model,generatorClass,templatesModel,configuration.getOutputPath(),generateText);
+        Thread.sleep(200);
       }
- catch (      GenerationFailedException gfe) {
-        System.err.println(model.getFQName() + " generation failed");
-        gfe.printStackTrace();
-        getMessageView().add(new Message(MessageKind.ERROR,model.getFQName() + " model generation failed"));
-        getMessageView().show();
-        return;
+ catch (      Exception e) {
       }
-      getMessageView().add(new Message(MessageKind.INFORMATION,model.getFQName() + " model is generated"));
+      progress.finish();
     }
   }
-  if (!generateText) {
-    compileAndReload();
-  }
-  getMessageView().add(new Message(MessageKind.INFORMATION,"Generation finished"));
-  if (!generateText) {
-    getMessageView().show();
-  }
+.start();
 }
