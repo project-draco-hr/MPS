@@ -1,0 +1,61 @@
+{
+  myIDE=ide;
+  setLayout(new BorderLayout());
+  myTree.setCellRenderer(new SemanticNodeTreeRenderer());
+  new TreeWithSemanticNodesSpeedSearch(myTree);
+  myHeader=new HeaderWrapper("Project",new JScrollPane(myTree));
+  add(myHeader,BorderLayout.CENTER);
+  myTree.addKeyListener(new KeyAdapter(){
+    public void keyPressed(    KeyEvent e){
+      if (e.getKeyCode() == KeyEvent.VK_F4 && e.getModifiers() == 0) {
+        openEditor();
+      }
+      if (e.getKeyCode() == KeyEvent.VK_ENTER && e.getModifiers() == 0) {
+        openEditor();
+      }
+    }
+  }
+);
+  myTree.addMouseListener(new MouseAdapter(){
+    public void mouseClicked(    MouseEvent e){
+      if (myTree.getToggleClickCount() == 2)       return;
+      if (e.getClickCount() == 2) {
+        TreePath path=myTree.getPathForLocation(e.getX(),e.getY());
+        if (path == null)         return;
+        myTree.setSelectionPath(path);
+        openEditor();
+      }
+    }
+    public void mousePressed(    MouseEvent e){
+      if (e.getButton() == MouseEvent.BUTTON3) {
+        TreePath path=myTree.getClosestPathForLocation(e.getX(),e.getY());
+        myTree.setSelectionPath(path);
+      }
+      if (e.isPopupTrigger()) {
+        showPopupMenu(e);
+      }
+    }
+    public void mouseReleased(    MouseEvent e){
+      if (e.isPopupTrigger()) {
+        showPopupMenu(e);
+      }
+    }
+  }
+);
+  myTree.addTreeWillExpandListener(new TreeWillExpandListener(){
+    public void treeWillExpand(    TreeExpansionEvent event) throws ExpandVetoException {
+      TreePath path=event.getPath();
+      Object node=path.getLastPathComponent();
+      if (node instanceof SModelTreeNode) {
+        SModelTreeNode modelTreeNode=(SModelTreeNode)node;
+        if (!modelTreeNode.initialized()) {
+          modelTreeNode.init();
+        }
+      }
+    }
+    public void treeWillCollapse(    TreeExpansionEvent event) throws ExpandVetoException {
+    }
+  }
+);
+  rebuildTree();
+}

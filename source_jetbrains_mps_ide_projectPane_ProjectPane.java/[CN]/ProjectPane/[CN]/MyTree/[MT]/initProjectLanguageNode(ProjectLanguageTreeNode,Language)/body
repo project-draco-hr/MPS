@@ -1,0 +1,45 @@
+{
+  addNodeIfModelNotNull(node,language.getStructureModelDescriptor(),"Structure");
+  Iterator<SModelDescriptor> editorDescriptors=language.editorDescriptors();
+  while (editorDescriptors.hasNext()) {
+    SModelDescriptor editor=editorDescriptors.next();
+    String stereotypeName=language.getEditorStereotype(editor);
+    TextTreeNode stereotype=new TextTreeNode("<html><b>Editor " + ((stereotypeName != null) ? stereotypeName : "") + "</b>");
+    addNodeIfModelNotNull(stereotype,language.getEditorDescriptor(stereotypeName),"<html><b>Editor</b>");
+    node.add(stereotype);
+  }
+  Iterator<Generator> generators=language.getLanguageDescriptor().generators();
+  while (generators.hasNext()) {
+    Generator generator=generators.next();
+    TextTreeNode generatorNode=new TextTreeNode("<html><b>Generator " + generator.getName() + "</b>");
+    SModelDescriptor templatesModel=null;
+    if (generator.getTemplatesModel() != null && generator.getTemplatesModel().getName() != null) {
+      templatesModel=SModelRepository.getInstance().getModelDescriptor(generator.getTemplatesModel().getName());
+    }
+    addNodeIfModelNotNull(generatorNode,templatesModel,"Templates Model");
+    node.add(generatorNode);
+  }
+  SModelDescriptor typesystemModelDescriptor=language.getTypesystemModelDescriptor();
+  if (typesystemModelDescriptor != null) {
+    addNodeIfModelNotNull(node,typesystemModelDescriptor,"Typesystem");
+  }
+  SModelDescriptor actionsModelDescriptor=language.getActionsModelDescriptor();
+  if (actionsModelDescriptor != null) {
+    addNodeIfModelNotNull(node,actionsModelDescriptor,"Actions");
+  }
+  TextTreeNode libraries=new TextTreeNode("<html><b>Library Models</b>");
+  List<SModelDescriptor> models=new ArrayList<SModelDescriptor>();
+  for (  SModelDescriptor model : CollectionUtil.iteratorAsIterable(language.libraryModels())) {
+    models.add(model);
+  }
+  Collections.sort(models,new Comparator<SModelDescriptor>(){
+    public int compare(    SModelDescriptor o1,    SModelDescriptor o2){
+      return o1.getFQName().compareTo(o2.getFQName());
+    }
+  }
+);
+  for (  SModelDescriptor model : models) {
+    libraries.add(createSModelTreeNode(model,null));
+  }
+  node.add(libraries);
+}

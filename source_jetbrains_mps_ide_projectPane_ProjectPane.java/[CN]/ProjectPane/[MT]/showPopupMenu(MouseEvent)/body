@@ -1,0 +1,113 @@
+{
+  JPopupMenu popupMenu=new JPopupMenu();
+  TreePath selectionPath=myTree.getSelectionPath();
+  final Object lastPathComponent=selectionPath.getLastPathComponent();
+  SemanticTreeNode selectedTreeNode=null;
+  SModel semanticModel=null;
+  if (lastPathComponent instanceof SemanticTreeNode) {
+    selectedTreeNode=(SemanticTreeNode)selectionPath.getLastPathComponent();
+    if (selectedTreeNode != null) {
+      semanticModel=((SemanticTreeNode)selectedTreeNode).getSModel();
+    }
+  }
+  if (semanticModel != null) {
+    JMenu rootPopupMenu=createRootPopupMenu(semanticModel);
+    popupMenu.add(rootPopupMenu);
+  }
+  if (selectedTreeNode != null && selectedTreeNode.getSNode() != null) {
+    popupMenu.addSeparator();
+    addSemanticNodePopupActions(popupMenu,selectedTreeNode.getSNode(),semanticModel);
+  }
+  if (selectionPath.getLastPathComponent() == myTree.getModel().getRoot()) {
+    popupMenu.add(createGenerateMenu(null));
+    popupMenu.add(createGenerateTextMenu(null));
+    popupMenu.addSeparator();
+    popupMenu.add(new AbstractActionWithEmptyIcon("Project Properties"){
+      public void actionPerformed(      ActionEvent e){
+        new ProjectPropertiesDialog(myIDE.getMainFrame(),myProject).showDialog();
+      }
+    }
+);
+  }
+  if (selectionPath.getLastPathComponent() instanceof ProjectModelsTreeNode) {
+    popupMenu.add(new AbstractActionWithEmptyIcon("New Model"){
+      public void actionPerformed(      ActionEvent e){
+        new NewModelDialog(myProject,myIDE.getMainFrame()).showDialog();
+      }
+    }
+);
+  }
+  if (selectionPath.getLastPathComponent() instanceof ProjectLanguagesTreeNode) {
+    popupMenu.add(new AbstractActionWithEmptyIcon("New Language"){
+      public void actionPerformed(      ActionEvent e){
+        NewLanguageDialog dialog=new NewLanguageDialog(myIDE.getMainFrame(),myProject);
+        dialog.showDialog();
+      }
+    }
+);
+  }
+  if (getSelectedModel() != null) {
+    if (selectionPath.getLastPathComponent() instanceof SModelTreeNode) {
+      popupMenu.add(new AbstractActionWithEmptyIcon("Model Properties"){
+        public void actionPerformed(        ActionEvent e){
+          DialogUtils.editModelProperties(myIDE);
+        }
+      }
+);
+      popupMenu.add(new AbstractActionWithEmptyIcon("Delete Model"){
+        public void actionPerformed(        ActionEvent e){
+          if (JOptionPane.showConfirmDialog(null,"Delete model " + getSelectedModel() + "?","Delete model",JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+            SModelDescriptor model=getSelectedModel();
+            myProject.deleteModel(model);
+            System.out.println("deleting " + model.getModelFile());
+            rebuildTree();
+          }
+        }
+      }
+);
+      if (getSelectedModel().getSModel().importsLanguage("jetbrains.mps.baseLanguage")) {
+        popupMenu.addSeparator();
+        popupMenu.add(new AbstractActionWithEmptyIcon("Synchronize Model With Java"){
+          public void actionPerformed(          ActionEvent actionEvent){
+            ConversionUtil.updateModel(myProject,getSelectedModel().getFQName(),new Converter(myProject));
+            JOptionPane.showMessageDialog(ProjectPane.this,"Model Synchronized");
+          }
+        }
+);
+      }
+      popupMenu.addSeparator();
+      popupMenu.add(createGenerateMenu(getSelectedModel()));
+      popupMenu.add(createGenerateTextMenu(getSelectedModel()));
+      SModelDescriptor selectedModelDescriptor=getSelectedModel();
+      if (selectedModelDescriptor != null) {
+        SModel selectedModel=selectedModelDescriptor.getSModel();
+        for (        Language language : selectedModel.getLanguages()) {
+          if (language.getNamespace().equals("jetbrains.mps.bootstrap.editorLanguage")) {
+            popupMenu.addSeparator();
+            popupMenu.add(EditorLanguageUtil.createTurnCellBordersOnOffAction(selectedModel,true,myProject));
+            popupMenu.add(EditorLanguageUtil.createTurnCellBordersOnOffAction(selectedModel,false,myProject));
+            break;
+          }
+        }
+      }
+    }
+  }
+  if (lastPathComponent instanceof ProjectLanguageTreeNode) {
+    final ProjectLanguageTreeNode languageTreeNode=((ProjectLanguageTreeNode)lastPathComponent);
+    popupMenu.add(new AbstractActionWithEmptyIcon("Language Properties"){
+      public void actionPerformed(      ActionEvent e){
+        new LanguagePropertiesDialog(myIDE.getMainFrame(),myProject,languageTreeNode.getLanguage()).showDialog();
+      }
+    }
+);
+    popupMenu.addSeparator();
+    popupMenu.add(new AbstractActionWithEmptyIcon("Generate Language"){
+      public void actionPerformed(      ActionEvent e){
+        myProject.getComponent(GeneratorManager.class).generate(languageTreeNode.getLanguage());
+      }
+    }
+);
+  }
+  if (popupMenu.getComponentCount() == 0)   return;
+  popupMenu.show(myTree,e.getX(),e.getY());
+}
