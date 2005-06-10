@@ -2,7 +2,12 @@
   IModelGenerator generator=null;
   try {
     Class cls=Class.forName(generatorClassFQName,true,ClassLoaderManager.getInstance().getClassLoader());
-    generator=(IModelGenerator)cls.getConstructor(MPSProject.class).newInstance(myProject);
+    if (ITemplateGenerator.class.isAssignableFrom(cls)) {
+      generator=(ITemplateGenerator)cls.getConstructor(MPSProject.class,ProgressMonitor.class).newInstance(myProject,monitor);
+    }
+ else {
+      generator=(IModelGenerator)cls.getConstructor(MPSProject.class).newInstance(myProject);
+    }
   }
  catch (  Exception e) {
     e.printStackTrace();
@@ -12,15 +17,15 @@
   }
   try {
     SModel targetModel=null;
-    ProgressMonitor childMonitor=monitor.startSubTask(AMOUNT_PER_MODEL);
     if (generator instanceof ITemplateGenerator) {
-      targetModel=generateByTemplateGenerator(sourceModelDescr,templatesModel.getSModel(),(ITemplateGenerator)generator,childMonitor);
+      targetModel=generateByTemplateGenerator(sourceModelDescr,templatesModel.getSModel(),(ITemplateGenerator)generator);
     }
  else {
+      ProgressMonitor childMonitor=monitor.startSubTask(AMOUNT_PER_MODEL);
       targetModel=JavaGenUtil.createTargetJavaModel(sourceModelDescr.getSModel(),JavaNameUtil.packageNameForModelFqName(sourceModelDescr.getFQName()),myProject);
       generator.generate(sourceModelDescr.getSModel(),targetModel,monitor);
+      childMonitor.finish();
     }
-    childMonitor.finish();
     if (generateText) {
       generateText(targetModel);
     }
