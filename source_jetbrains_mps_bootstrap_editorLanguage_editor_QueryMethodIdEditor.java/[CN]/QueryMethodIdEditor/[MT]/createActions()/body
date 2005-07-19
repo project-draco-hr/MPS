@@ -1,0 +1,46 @@
+{
+  List<INodeSubstituteItem> actions=new ArrayList<INodeSubstituteItem>();
+  List<String> conditionsList=null;
+  conditionsList=getAvailableIdsUsingPlugin();
+  if (conditionsList == null) {
+    LOG.debug("Plugin isn't present using reflection");
+    conditionsList=getAvailableIdsUsingReflection();
+  }
+  for (Iterator<String> iterator=conditionsList.iterator(); iterator.hasNext(); ) {
+    final String queryMethodId=iterator.next();
+    actions.add(new AbstractNodeSubstituteItem(){
+      public String getMatchingText(      String pattern){
+        return queryMethodId;
+      }
+      public SemanticNode doSubstitute(      String pattern){
+        setQueryMethodId(queryMethodId);
+        return null;
+      }
+    }
+);
+  }
+  actions.add(new AbstractNodeSubstituteItem(){
+    public String getMatchingText(    String pattern){
+      return "New query method";
+    }
+    public SemanticNode doSubstitute(    String pattern){
+      String id=JOptionPane.showInputDialog(null,"Enter query method ID :","Create New Query Method",JOptionPane.QUESTION_MESSAGE);
+      if (id == null)       return null;
+      try {
+        MPSPlugin plugin=MPSPlugin.getInstance();
+        plugin.createAspectMethod(getNamespace(),getQueryMethodPrefix() + id,getQueryMethodReturnType(),getQueryMethodParameterList());
+        for (        Class cls : getImportedClasses()) {
+          plugin.addImport(getNamespace(),cls.getName());
+        }
+      }
+ catch (      Exception e) {
+        JOptionPane.showMessageDialog(null,"Can't create query method. \n Try to install MPS plugin.");
+        return null;
+      }
+      setQueryMethodId(id);
+      return null;
+    }
+  }
+);
+  return actions;
+}
