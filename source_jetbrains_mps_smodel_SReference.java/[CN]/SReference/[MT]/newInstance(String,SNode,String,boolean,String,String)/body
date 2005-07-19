@@ -1,0 +1,35 @@
+{
+  int offset=targetNodeId.indexOf('.');
+  SModel sourceModel=sourceNode.getModel();
+  String localNodeId=targetNodeId;
+  if (offset > 0) {
+    Integer refModelId=new Integer(targetNodeId.substring(0,offset));
+    String targetModelName=sourceModel.getImportedModelName(refModelId.intValue());
+    if (targetModelName == null) {
+      LOG.errorWithTrace("SReference.newInstance -Search in model: " + sourceNode.getModel().getFQName() + ": couldn't find referenced model by id:"+ refModelId);
+      return null;
+    }
+    localNodeId=targetNodeId.substring(offset + 1);
+    SModel.ImportElement importElement=sourceModel.addImportElement(targetModelName);
+    SReference resultReference=new ExternalReference(role,sourceNode,localNodeId,importElement,isBad);
+    resultReference.setResolveInfo(resolveInfo);
+    resultReference.setTargetClassResolveInfo(targetClassResolveInfo);
+    return resultReference;
+  }
+ else {
+    SNode targetNode=sourceModel.getNodeById(localNodeId);
+    if (targetNode == null && !(isBad)) {
+      if (resolveInfo == null) {
+        LOG.errorWithTrace("SReference.newInstance Couldn't create internal reference: \"" + role + "\" to node id:"+ localNodeId+ "\nSource node: "+ sourceNode.getDebugText());
+        return null;
+      }
+ else {
+        isBad=true;
+      }
+    }
+    SReference resultReference=new InternalReference(role,sourceNode,targetNode,isBad);
+    resultReference.setResolveInfo(resolveInfo);
+    resultReference.setTargetClassResolveInfo(targetClassResolveInfo);
+    return resultReference;
+  }
+}

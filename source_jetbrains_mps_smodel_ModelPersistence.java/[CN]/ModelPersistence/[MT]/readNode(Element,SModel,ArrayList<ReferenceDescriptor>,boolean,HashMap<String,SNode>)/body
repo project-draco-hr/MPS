@@ -1,0 +1,56 @@
+{
+  String type=nodeElement.getAttributeValue(TYPE);
+  SNode semanticNode=createNodeInstance(type,semanticModel);
+  if (semanticNode == null) {
+    String error="Error reading model " + semanticModel.getFQName() + ": couldn't create instance of node id="+ nodeElement.getAttributeValue(ID);
+    LOG.errorWithTrace(error);
+    firePersisteneceError();
+    return null;
+  }
+  String myOldId=nodeElement.getAttributeValue(ID);
+  if (setID) {
+    semanticNode.setId(myOldId);
+  }
+  if (oldIdsToNodes != null) {
+    oldIdsToNodes.put(myOldId,semanticNode);
+  }
+  List properties=nodeElement.getChildren(PROPERTY);
+  for (Iterator iterator=properties.iterator(); iterator.hasNext(); ) {
+    Element propertyElement=(Element)iterator.next();
+    String propertyName=propertyElement.getAttributeValue(NAME);
+    String propertyValue=propertyElement.getAttributeValue(VALUE);
+    if (propertyValue != null) {
+      semanticNode.setProperty(propertyName,propertyValue);
+    }
+  }
+  List links=nodeElement.getChildren(LINK);
+  for (Iterator iterator=links.iterator(); iterator.hasNext(); ) {
+    Element linkElement=(Element)iterator.next();
+    String role=linkElement.getAttributeValue(ROLE);
+    String bad=linkElement.getAttributeValue(BAD,"false");
+    String resolveInfo=linkElement.getAttributeValue(RESOLVE_INFO);
+    String targetClassResolveInfo=linkElement.getAttributeValue(TARGET_CLASS_RESOLVE_INFO);
+    boolean isBad=("true".equals(bad));
+    String targetNodeId=linkElement.getAttributeValue(TARGET_NODE_ID);
+    if (resolveInfo == null || resolveInfo.equals("") || targetClassResolveInfo == null || targetClassResolveInfo.equals("")) {
+      referenceDescriptors.add(new ReferenceDescriptor(semanticNode,role,targetNodeId,isBad));
+    }
+ else {
+      referenceDescriptors.add(new ReferenceDescriptor(semanticNode,role,targetNodeId,isBad,resolveInfo,targetClassResolveInfo));
+    }
+  }
+  List childNodes=nodeElement.getChildren(NODE);
+  for (Iterator iterator=childNodes.iterator(); iterator.hasNext(); ) {
+    Element childNodeElement=(Element)iterator.next();
+    String role=childNodeElement.getAttributeValue(ROLE);
+    SNode childNode=readNode(childNodeElement,semanticModel,referenceDescriptors,setID,oldIdsToNodes);
+    if (childNode != null) {
+      semanticNode.addChild(role,childNode);
+    }
+ else {
+      LOG.errorWithTrace("Error reading child node in node " + semanticNode.getDebugText());
+      firePersisteneceError();
+    }
+  }
+  return semanticNode;
+}

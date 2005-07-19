@@ -1,0 +1,42 @@
+{
+  Element rootElement=document.getRootElement();
+  String modelNamespace=rootElement.getAttributeValue(NAMESPACE,"");
+  String modelFqName=NameUtil.fqNameFromNamespaceAndName(modelNamespace,modelName);
+  SModel semanticModel=new SModel(modelFqName);
+  semanticModel.setStereotype(rootElement.getAttributeValue(STEREOTYPE));
+  semanticModel.setLoading(true);
+  try {
+    Element maxRefID=rootElement.getChild(MAX_REFERENCE_ID);
+    semanticModel.setMaxReferenceID(readIntAttributeValue(maxRefID,VALUE));
+  }
+ catch (  Throwable e) {
+    LOG.error(e);
+  }
+  List languages=rootElement.getChildren(LANGUAGE);
+  for (Iterator iterator=languages.iterator(); iterator.hasNext(); ) {
+    Element element=(Element)iterator.next();
+    String languageNamespace=element.getAttributeValue(NAMESPACE);
+    semanticModel.addLanguage(languageNamespace);
+  }
+  List imports=rootElement.getChildren(IMPORT_ELEMENT);
+  for (Iterator iterator=imports.iterator(); iterator.hasNext(); ) {
+    Element element=(Element)iterator.next();
+    String importedModelFQName=NameUtil.fqNameFromNamespaceAndName(element.getAttributeValue(NAMESPACE),element.getAttributeValue(NAME));
+    int referenceID=readIntAttributeValue(element,MODEL_REFERENCE_ID);
+    semanticModel.addImportElement(importedModelFQName,referenceID);
+  }
+  ArrayList<ReferenceDescriptor> referenceDescriptors=new ArrayList<ReferenceDescriptor>();
+  List children=rootElement.getChildren(NODE);
+  for (Iterator iterator=children.iterator(); iterator.hasNext(); ) {
+    Element element=(Element)iterator.next();
+    SNode semanticNode=readNode(element,semanticModel,referenceDescriptors);
+    semanticModel.addRoot(semanticNode);
+  }
+  for (  ReferenceDescriptor referenceDescriptor : referenceDescriptors) {
+    SReference semanticReference=null;
+    semanticReference=SReference.newInstance(referenceDescriptor.role,referenceDescriptor.sourceNode,referenceDescriptor.targetId,referenceDescriptor.isBad,referenceDescriptor.resolveInfo,referenceDescriptor.targetClassResolveInfo);
+    if (semanticReference != null)     referenceDescriptor.sourceNode.addSemanticReference(semanticReference);
+  }
+  semanticModel.setLoading(false);
+  return semanticModel;
+}

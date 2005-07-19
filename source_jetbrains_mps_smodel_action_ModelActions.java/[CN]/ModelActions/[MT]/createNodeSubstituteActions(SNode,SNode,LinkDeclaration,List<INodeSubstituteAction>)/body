@@ -1,0 +1,36 @@
+{
+  LinkMetaclass metaClass=linkDeclaration.getMetaClass();
+  ConceptDeclaration targetConcept=linkDeclaration.getTarget();
+  List<NodeSubstituteActionsBuilder> substituteActionsBuilders=new LinkedList<NodeSubstituteActionsBuilder>();
+  SModel model=sourceNode.getModel();
+  List<Language> languages=model.getLanguages();
+  for (  Language language : languages) {
+    SModelDescriptor actionsModelDescr=language.getActionsModelDescriptor();
+    if (actionsModelDescr != null) {
+      List<SNode> roots=actionsModelDescr.getSModel().getRoots();
+      for (      SNode root : roots) {
+        if (root instanceof NodeSubstituteActions) {
+          Iterator<NodeSubstituteActionsBuilder> iterator=((NodeSubstituteActions)root).actionsBuilders();
+          while (iterator.hasNext()) {
+            NodeSubstituteActionsBuilder substituteActionsBuilder=iterator.next();
+            if (substituteActionsBuilder.getApplicableLinkMetaclass() == metaClass && substituteActionsBuilder.getApplicableConcept() == targetConcept) {
+              substituteActionsBuilders.add(substituteActionsBuilder);
+            }
+          }
+        }
+      }
+    }
+  }
+  if (substituteActionsBuilders.size() == 0) {
+    return defaultActions;
+  }
+  List<INodeSubstituteAction> resultActions=new LinkedList<INodeSubstituteAction>();
+  List<INodeSubstituteAction> filteredActions=filterActions(defaultActions,substituteActionsBuilders,null);
+  resultActions.addAll(filteredActions);
+  for (  NodeSubstituteActionsBuilder nodeSubstituteActionsBuilder : substituteActionsBuilders) {
+    List<INodeSubstituteAction> addActions=createActions(nodeSubstituteActionsBuilder,sourceNode,currentTargetNode,linkDeclaration);
+    addActions=filterActions(addActions,substituteActionsBuilders,nodeSubstituteActionsBuilder);
+    resultActions.addAll(addActions);
+  }
+  return resultActions;
+}
