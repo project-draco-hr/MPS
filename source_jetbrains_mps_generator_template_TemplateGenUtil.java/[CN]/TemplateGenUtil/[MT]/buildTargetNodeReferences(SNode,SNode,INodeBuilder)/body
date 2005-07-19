@@ -1,0 +1,46 @@
+{
+  Iterator<SReference> iterator=templateNode.getReferences().iterator();
+  while (iterator.hasNext()) {
+    SReference templateReference=iterator.next();
+    SNode templateReferentNode=templateReference.getTargetNode();
+    if (templateReferentNode == null) {
+      nodeBuilder.getGenerator().showErrorMessage(templateNode,"Invalid reference \"" + templateReference.getRole() + "\" in templates model "+ templateNode.getModel().getFQName());
+      continue;
+    }
+    if (templateReferentNode instanceof NodeMacro || templateReferentNode instanceof ReferenceMacro || templateReferentNode instanceof PropertyMacro) {
+      continue;
+    }
+    String macroReferenceRole=ITemplateGenerator.ROLE_PREFIX_REFEENCE_MAKRO + templateReference.getRole();
+    if (templateNode.getChild(macroReferenceRole) != null) {
+      continue;
+    }
+    if (templateReferentNode.getModel() != templateNode.getModel()) {
+      targetNode.addReferent(templateReference.getRole(),templateReferentNode);
+      continue;
+    }
+    IReferenceResolver referenceResolver=createReferenceResolver(templateNode);
+    SNode targetReferentNode=referenceResolver.resolveTarget(templateReference,nodeBuilder);
+    if (targetReferentNode != null) {
+      if (SModelUtil.isAcceptableReferent(targetNode,templateReference.getRole(),targetReferentNode,nodeBuilder.getGenerator().getProject())) {
+        targetNode.addReferent(templateReference.getRole(),targetReferentNode);
+      }
+ else {
+        targetNode.addReferent(templateReference.getRole(),templateReferentNode);
+      }
+      continue;
+    }
+    nodeBuilder.getGenerator().showErrorMessage(templateNode,"Couldn't resolve template reference \"" + templateReference.getRole() + "\"");
+    LOG.error("uhhh! error. set breakpoint here, referenceResolver:" + referenceResolver);
+    StringBuffer buildersStack=new StringBuffer("    builders stack:");
+    String indent="\n        ";
+    INodeBuilder currBuilder=nodeBuilder;
+    while (currBuilder != null) {
+      buildersStack.append(indent);
+      buildersStack.append(currBuilder.getTemplateNode().getDebugText());
+      buildersStack.append(" (builder:" + currBuilder.getClass().getName() + ")");
+      indent+="    ";
+      currBuilder=currBuilder.getParent();
+    }
+    LOG.warning("WARN! Couldn't resolve template reference! " + nodeBuilder.getGenerator().getState().toString() + "\n    template       : "+ templateReference.getSourceNode().getDebugText()+ " --["+ templateReference.getRole()+ "]--> "+ templateReference.getTargetNode().getDebugText()+ "\n    template target: "+ targetNode.getDebugText()+ "\n"+ buildersStack);
+  }
+}

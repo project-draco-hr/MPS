@@ -1,0 +1,38 @@
+{
+  if (reference instanceof ExternalReference)   return;
+  CommandProcessor.instance().executeCommand(new Runnable(){
+    public void run(){
+      String role=reference.getRole();
+      SNode sourceNode=reference.getSourceNode();
+      SModel model=sourceNode.getModel();
+      String packageName=sourceNode.getClass().getPackage().getName();
+      Class cls=sourceNode.getClass();
+      SNode oldTarget=reference.getTargetNode();
+      while (cls != SNode.class) {
+        try {
+          String className=cls.getName();
+          className=className.substring(className.lastIndexOf('.') + 1);
+          Class resolveClass=Class.forName(packageName + ".resolve.Resolver",true,ClassLoaderManager.getInstance().getClassLoader());
+          Method m=resolveClass.getMethod("resolveForRole" + role + "In"+ className,SReference.class,Class.class);
+          boolean success=(Boolean)m.invoke(null,reference,cls);
+          if (success) {
+            sourceNode.removeReference(reference);
+          }
+ else {
+            reference.setBad();
+          }
+          return;
+        }
+ catch (        NullPointerException e) {
+          return;
+        }
+catch (        Exception e) {
+        }
+        cls=cls.getSuperclass();
+      }
+      reference.setGood();
+      reference.setResolveInfo(null);
+    }
+  }
+,"resolve");
+}

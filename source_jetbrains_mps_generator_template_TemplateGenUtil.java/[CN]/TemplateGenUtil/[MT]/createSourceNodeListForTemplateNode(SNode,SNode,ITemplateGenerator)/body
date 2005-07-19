@@ -1,0 +1,46 @@
+{
+  NodeMacro nodeMacro=(NodeMacro)templateNode.getChild(ITemplateGenerator.ROLE_NODE_MAKRO);
+  if (nodeMacro instanceof CopySrcNodeMacro) {
+    CopySrcNodeMacro copySrcNodeMacro=((CopySrcNodeMacro)nodeMacro);
+    String sourceNodeQueryId=copySrcNodeMacro.getSourceNodeQueryId();
+    String methodName="templateSourceNodeQuery_" + sourceNodeQueryId;
+    Object[] args=new Object[]{parentSourceNode,generator};
+    SNode srcNodeToCopy=(SNode)QueryMethod.invoke(methodName,args,nodeMacro.getModel());
+    List<SNode> list=new LinkedList<SNode>();
+    if (srcNodeToCopy != null) {
+      list.add(srcNodeToCopy);
+    }
+    checkNodesFromQuery(list,copySrcNodeMacro,generator);
+    return list;
+  }
+ else   if (nodeMacro instanceof IfMacro) {
+    IfMacro ifMacro=(IfMacro)nodeMacro;
+    String conditionAspectId=ifMacro.getConditionAspectId();
+    if (conditionAspectId == null) {
+      generator.showErrorMessage(nodeMacro,"Condition is not defined");
+    }
+ else {
+      String methodName="semanticNodeCondition_" + conditionAspectId;
+      Object[] args=new Object[]{parentSourceNode};
+      Boolean conditionStatus=(Boolean)QueryMethod.invoke(methodName,args,nodeMacro.getModel());
+      List<SNode> sourceNodes=new LinkedList<SNode>();
+      if (conditionStatus) {
+        sourceNodes.add(parentSourceNode);
+      }
+      return sourceNodes;
+    }
+  }
+  if (nodeMacro != null) {
+    String sourceQueryAspectMethodName=nodeMacro.getSourceQueryAspectMethodName();
+    if (sourceQueryAspectMethodName != null) {
+      String methodName="templateSourceQuery_" + sourceQueryAspectMethodName;
+      Object[] args=new Object[]{parentSourceNode,generator};
+      List<SNode> sourceNodes=(List<SNode>)QueryMethod.invoke(methodName,args,nodeMacro.getModel());
+      checkNodesFromQuery(sourceNodes,nodeMacro,generator);
+      return sourceNodes;
+    }
+  }
+  List<SNode> list=new LinkedList<SNode>();
+  list.add(parentSourceNode);
+  return list;
+}

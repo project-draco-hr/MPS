@@ -1,0 +1,38 @@
+{
+  if (reference instanceof ExternalReference)   return;
+  String role=reference.getRole();
+  Class sourceClass=reference.getSourceNode().getClass();
+  SNode targetNode=reference.getTargetNode();
+  Class targetClass=null;
+  if (targetNode != null)   targetClass=reference.getTargetNode().getClass();
+ else   try {
+    targetClass=Class.forName(reference.getTargetClassResolveInfo());
+  }
+ catch (  Exception e) {
+    return;
+  }
+  String packageName=sourceClass.getPackage().getName();
+  Class cls1=sourceClass;
+  while (cls1 != SNode.class) {
+    String sourceClassName=cls1.getName();
+    sourceClassName=sourceClassName.substring(sourceClassName.lastIndexOf('.') + 1);
+    Class cls2=targetClass;
+    while (cls2 != SNode.class) {
+      String targetClassName=cls2.getName();
+      targetClassName=targetClassName.substring(targetClassName.lastIndexOf('.') + 1);
+      String methodName="getResolveInfoOf" + targetClassName + "ForRole"+ role+ "In"+ sourceClassName;
+      try {
+        Class resolveClass=Class.forName(packageName + ".resolve.Resolver",true,ClassLoaderManager.getInstance().getClassLoader());
+        Method m=resolveClass.getMethod(methodName,cls2);
+        String resolveInfo=(String)m.invoke(null,reference.getTargetNode());
+        reference.setResolveInfo(resolveInfo);
+        reference.setTargetClassResolveInfo(targetClass);
+        return;
+      }
+ catch (      Exception e) {
+      }
+      cls2=cls2.getSuperclass();
+    }
+    cls1=cls1.getSuperclass();
+  }
+}
