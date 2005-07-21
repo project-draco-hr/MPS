@@ -2,9 +2,6 @@
   AbstractEditorComponent editor=editorContext.getNodeEditorComponent();
   EditorCell selectedCell=editor.getSelectedCell();
   if (selectedCell != null) {
-    if (keyEvent.getKeyCode() == KeyEvent.VK_ENTER) {
-      LOG.debug("key pressed:" + keyEvent);
-    }
     List<EditorCellKeyMapAction> actions=EditorUtil.getKeyMapActionsForEvent(selectedCell,keyEvent,editorContext);
     if (actions != null) {
       if (actions.size() == 1) {
@@ -21,31 +18,30 @@
   if (selectedCell != null) {
     boolean endEditKeystroke=isEndEditKeystroke(keyEvent);
     boolean deleteKeystroke=isDeleteKeystroke(keyEvent,selectedCell);
-    boolean cellWasValid=EditorUtil.isValidCell(selectedCell);
     boolean strictMatching=endEditKeystroke || actionType == EditorCellAction.RIGHT_TRANSFORM;
-    if (endEditKeystroke || actionType == EditorCellAction.RIGHT_TRANSFORM || actionType == EditorCellAction.INSERT || actionType == EditorCellAction.INSERT_BEFORE) {
-      if (!cellWasValid && !EditorUtil.validateCell(selectedCell,editorContext,strictMatching)) {
+    if (!EditorUtil.isValidCell(selectedCell)) {
+      if (endEditKeystroke || actionType == EditorCellAction.INSERT || actionType == EditorCellAction.INSERT_BEFORE) {
+        EditorUtil.validateCell(selectedCell,editorContext,strictMatching);
         return true;
       }
+      if (actionType == EditorCellAction.RIGHT_TRANSFORM) {
+        if (!EditorUtil.validateCell(selectedCell,editorContext,strictMatching)) {
+          return true;
+        }
+      }
       selectedCell=editor.getSelectedCell();
-      cellWasValid=true;
       if (selectedCell == null) {
         return true;
       }
     }
-    if (endEditKeystroke && !cellWasValid) {
-      EditorUtil.validateCell(selectedCell,editorContext,strictMatching);
-      keyEvent.consume();
-      return true;
-    }
- else     if (deleteKeystroke) {
+    if (deleteKeystroke) {
       if (!(selectedCell instanceof EditorCell_Label && ((EditorCell_Label)selectedCell).isEditable())) {
         actionType=EditorCellAction.DELETE;
         keyEvent.consume();
       }
     }
  else     if (actionType == EditorCellAction.RIGHT_TRANSFORM) {
-      if (selectedCell instanceof EditorCell_Label && ((EditorCell_Label)selectedCell).isErrorState()) {
+      if (selectedCell instanceof EditorCell_Label && selectedCell.isErrorState()) {
         return true;
       }
       if (selectedCell instanceof EditorCell_Property) {
