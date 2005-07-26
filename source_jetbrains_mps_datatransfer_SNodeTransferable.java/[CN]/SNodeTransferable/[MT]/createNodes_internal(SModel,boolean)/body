@@ -1,0 +1,25 @@
+{
+  List<SNode> resultNodeList=new LinkedList<SNode>();
+  Element rootElement=myDocument.getRootElement();
+  ArrayList<ModelPersistence.ReferenceDescriptor> referenceDescriptors=new ArrayList<ModelPersistence.ReferenceDescriptor>();
+  HashMap<String,SNode> oldIdsToNodes=preserveInternalLinks ? new HashMap<String,SNode>() : null;
+  List children=rootElement.getChildren(ModelPersistence.NODE);
+  for (int i=0; i < children.size(); i++) {
+    Element element=(Element)children.get(i);
+    SNode node=ModelPersistence.readNode(element,semanticModel,referenceDescriptors,false,oldIdsToNodes);
+    resultNodeList.add(node);
+  }
+  for (  ModelPersistence.ReferenceDescriptor referenceDescriptor : referenceDescriptors) {
+    if (preserveInternalLinks && oldIdsToNodes.containsKey(referenceDescriptor.targetId)) {
+      SNode targetNode=oldIdsToNodes.get(referenceDescriptor.targetId);
+      SNode sourceNode=referenceDescriptor.sourceNode;
+      sourceNode.addReferent(referenceDescriptor.role,targetNode);
+    }
+ else {
+      SReference semanticReference=null;
+      semanticReference=SReference.newInstance(referenceDescriptor.role,referenceDescriptor.sourceNode,referenceDescriptor.targetId,referenceDescriptor.isBad,referenceDescriptor.resolveInfo,referenceDescriptor.targetClassResolveInfo);
+      if (semanticReference != null)       referenceDescriptor.sourceNode.addSemanticReference(semanticReference);
+    }
+  }
+  return resultNodeList;
+}
