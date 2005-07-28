@@ -1,0 +1,137 @@
+{
+  addFocusListener(new FocusAdapter(){
+    public void focusGained(    FocusEvent e){
+      myPreviousFocusOwner=e.getOppositeComponent();
+    }
+  }
+);
+  myOperationContext=operationContext;
+  setFocusTraversalPolicyProvider(true);
+  setFocusCycleRoot(true);
+  setFocusTraversalPolicy(new FocusTraversalPolicy(){
+    public Component getComponentAfter(    Container aContainer,    Component aComponent){
+      executeComponentAction(EditorCellAction.NEXT);
+      return aContainer;
+    }
+    public Component getComponentBefore(    Container aContainer,    Component aComponent){
+      executeComponentAction(EditorCellAction.PREV);
+      return aContainer;
+    }
+    public Component getFirstComponent(    Container aContainer){
+      return aContainer;
+    }
+    public Component getLastComponent(    Container aContainer){
+      return aContainer;
+    }
+    public Component getDefaultComponent(    Container aContainer){
+      return aContainer;
+    }
+  }
+);
+  setFocusTraversalKeysEnabled(false);
+  setDoubleBuffered(true);
+  myScrollPane=new JScrollPane();
+  myScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+  myScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+  myScrollPane.setViewportView(this);
+  myContainer=new JPanel();
+  myContainer.setLayout(new BorderLayout());
+  myContainer.add(myScrollPane,BorderLayout.CENTER);
+  myNodeSubstituteChooser=new NodeSubstituteChooser(this);
+  myNodeRangeSelection=new NodeRangeSelection(this);
+  myCellRangeSelection=new CellRangeSelection(this);
+  myKbdHandlersStack=new Stack<IKeyboardHandler>();
+  myKbdHandlersStack.push(new EditorComponentKeyboardHandler());
+  myActionMap=new HashMap();
+  myActionMap.put(EditorCellAction.LEFT,new NodeEditorActions.LEFT());
+  myActionMap.put(EditorCellAction.RIGHT,new NodeEditorActions.RIGHT());
+  myActionMap.put(EditorCellAction.UP,new NodeEditorActions.UP());
+  myActionMap.put(EditorCellAction.DOWN,new NodeEditorActions.DOWN());
+  myActionMap.put(EditorCellAction.NEXT,new NodeEditorActions.NEXT());
+  myActionMap.put(EditorCellAction.PREV,new NodeEditorActions.PREV());
+  myActionMap.put(EditorCellAction.LEFT_SPECIAL,new NodeEditorActions.LEFT());
+  myActionMap.put(EditorCellAction.RIGHT_SPECIAL,new NodeEditorActions.RIGHT());
+  myActionMap.put(EditorCellAction.UP_SPECIAL,new NodeEditorActions.UP_SPECIAL());
+  myActionMap.put(EditorCellAction.DOWN_SPECIAL,new NodeEditorActions.DOWN_SPECIAL());
+  myActionMap.put(EditorCellAction.COPY,new CellAction_CopyNode());
+  myActionMap.put(EditorCellAction.PASTE,new CellAction_PasteNode());
+  myActionMap.put(EditorCellAction.PASTE_BEFORE,new CellAction_PasteNodeRelative(true));
+  myActionMap.put(EditorCellAction.PASTE_AFTER,new CellAction_PasteNodeRelative(false));
+  registerNodeAction(new ShowNodeTypeAction(),"control T");
+  registerNodeAction(new FindUsagesNodeAction(),"alt F7");
+  registerNodeAction(new ShowInProjectAction(),"control P");
+  registerNodeAction(new GoByFirstReferenceAction(),"control B");
+  registerNodeAction(new GoToConceptDeclarationAction(),"control shift S");
+  registerNodeAction(new GoToEditorDeclarationAction(),"control shift E");
+  registerNodeAction(new GoToConceptEditorDeclarationAction(),"control E");
+  registerKeyboardAction(new AbstractAction(){
+    public void actionPerformed(    ActionEvent e){
+      if (myPreviousFocusOwner != null) {
+        myPreviousFocusOwner.requestFocus();
+      }
+    }
+  }
+,KeyStroke.getKeyStroke("ESCAPE"),WHEN_FOCUSED);
+  registerKeyboardAction(new AbstractAction(){
+    public void actionPerformed(    ActionEvent e){
+      new CellExplorer(AbstractEditorComponent.this);
+    }
+  }
+,KeyStroke.getKeyStroke("F12"),WHEN_FOCUSED);
+  addMouseListener(new MouseAdapter(){
+    public void mousePressed(    final MouseEvent e){
+      if (e.isPopupTrigger()) {
+        processPopupMenu(e);
+      }
+ else {
+        processMousePressed(e);
+      }
+    }
+    public void mouseReleased(    MouseEvent e){
+      if (e.isPopupTrigger()) {
+        processPopupMenu(e);
+      }
+      super.mouseReleased(e);
+    }
+  }
+);
+  myKeyListener=new KeyAdapter(){
+    public void keyPressed(    final KeyEvent e){
+      if (myRecorder != null) {
+        myRecorder.record(e,AbstractEditorComponent.this instanceof InspectorEditorComponent);
+      }
+      processKeyPressed(e);
+    }
+    public void keyReleased(    final KeyEvent e){
+      if (myRecorder != null) {
+        myRecorder.record(e,AbstractEditorComponent.this instanceof InspectorEditorComponent);
+      }
+      processKeyReleased(e);
+    }
+  }
+;
+  addKeyListener(myKeyListener);
+  addFocusListener(new FocusListener(){
+    public void focusGained(    FocusEvent e){
+      EditorCell selectedCell=getSelectedCell();
+      if (selectedCell == null) {
+        EditorCell rootCell=getRootCell();
+        if (rootCell instanceof EditorCell_Collection) {
+          EditorCell firstSelectableLeaf=((EditorCell_Collection)rootCell).findFirstSelectableLeaf();
+          if (firstSelectableLeaf != null) {
+            changeSelection(firstSelectableLeaf);
+            return;
+          }
+        }
+        if (rootCell != null && rootCell.isSelectable()) {
+          changeSelection(rootCell);
+        }
+      }
+    }
+    public void focusLost(    FocusEvent e){
+      if (myNodeSubstituteChooser.getWindow() != null && (myNodeSubstituteChooser.getWindow().isAncestorOf(e.getOppositeComponent()) || myNodeSubstituteChooser.getWindow() == e.getOppositeComponent()))       return;
+      myNodeSubstituteChooser.setVisible(false);
+    }
+  }
+);
+}
