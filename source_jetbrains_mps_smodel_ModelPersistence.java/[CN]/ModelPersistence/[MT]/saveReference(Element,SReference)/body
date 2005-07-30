@@ -1,0 +1,39 @@
+{
+  Element linkElement=new Element(LINK);
+  element.addContent(linkElement);
+  linkElement.setAttribute(ROLE,semanticReference.getRole());
+  if (semanticReference.isExternal()) {
+    String referencedNodeId=semanticReference.createReferencedNodeId();
+    if (referencedNodeId != null) {
+      SModelUID modelUID=((ExternalReference)semanticReference).getImportElement().getModelUID();
+      SModelDescriptor modelDescriptor=IdeMain.instance().getProjectOperationContext().getModelDescriptor(modelUID);
+      if (modelDescriptor == null) {
+        LOG.error("Path to the target model " + modelUID + " is not specified");
+        setNotNullAttribute(linkElement,EXT_RESOLVE_INFO,semanticReference.createExtResolveInfo());
+        return;
+      }
+      SModel model=modelDescriptor.getSModel();
+      if (model == null) {
+        LOG.error("The modelDescriptor.getSModel() failed to load model");
+        setNotNullAttribute(linkElement,EXT_RESOLVE_INFO,semanticReference.createExtResolveInfo());
+        return;
+      }
+      if (model.isExternallyResolved()) {
+        setNotNullAttribute(linkElement,EXT_RESOLVE_INFO,ExternalResolver.createExternalResolveInfo(semanticReference));
+      }
+ else {
+        linkElement.setAttribute(TARGET_NODE_ID,semanticReference.createReferencedNodeId());
+      }
+    }
+ else {
+      setNotNullAttribute(linkElement,EXT_RESOLVE_INFO,semanticReference.createExtResolveInfo());
+    }
+  }
+ else {
+    if (semanticReference.isResolved())     linkElement.setAttribute(TARGET_NODE_ID,semanticReference.createReferencedNodeId());
+    String resolveInfo=semanticReference.getResolveInfo();
+    if (!semanticReference.isResolved() && resolveInfo != null)     linkElement.setAttribute(RESOLVE_INFO,resolveInfo);
+    String targetClassResolveInfo=semanticReference.getTargetClassResolveInfo();
+    if (!semanticReference.isResolved() && targetClassResolveInfo != null)     linkElement.setAttribute(TARGET_CLASS_RESOLVE_INFO,targetClassResolveInfo);
+  }
+}

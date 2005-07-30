@@ -1,17 +1,21 @@
 {
-  if (targetNodeId == null)   return new InternalReference(role,sourceNode,resolveInfo,targetClassResolveInfo);
+  if (targetNodeId == null) {
+    if (resolveInfo != null)     return new InternalReference(role,sourceNode,resolveInfo,targetClassResolveInfo);
+    if (extResolveInfo != null) {
+      int offset=extResolveInfo.indexOf('.');
+      SModel.ImportElement importElement=importElementFromString(extResolveInfo,sourceNode);
+      if (importElement == null)       return null;
+      String localExtResolveInfo=extResolveInfo.substring(offset + 1);
+      return new ExternalReference(role,sourceNode,importElement,localExtResolveInfo);
+    }
+  }
   int offset=targetNodeId.indexOf('.');
   SModel sourceModel=sourceNode.getModel();
   String localNodeId=targetNodeId;
   if (offset > 0) {
-    Integer refModelId=new Integer(targetNodeId.substring(0,offset));
-    SModelUID targetModelUID=sourceModel.getImportedModelKey(refModelId.intValue());
-    if (targetModelUID == null) {
-      LOG.errorWithTrace("SReference.newInstance -Search in model: " + sourceNode.getModel().getUID() + ": couldn't find referenced model by id:"+ refModelId);
-      return null;
-    }
+    SModel.ImportElement importElement=importElementFromString(targetNodeId,sourceNode);
+    if (importElement == null)     return null;
     localNodeId=targetNodeId.substring(offset + 1);
-    SModel.ImportElement importElement=sourceModel.addImportElement(targetModelUID);
     SReference resultReference=new ExternalReference(role,sourceNode,localNodeId,importElement);
     return resultReference;
   }
