@@ -1,0 +1,30 @@
+{
+  ConceptDeclaration pasteTargetType=SModelUtil.getConceptDeclaration(pasteTarget,operationContext);
+  ConceptDeclaration pasteNodeType=SModelUtil.getConceptDeclaration(pasteNode,operationContext);
+  if (pasteTargetType == null || pasteNodeType == null) {
+    return false;
+  }
+  final LinkDeclaration linkDeclaration=findMetalink(pasteTargetType,pasteNodeType,role);
+  if (linkDeclaration == null) {
+    return false;
+  }
+  if (reallyPaste) {
+    CommandProcessor.instance().executeCommand(new Runnable(){
+      public void run(){
+        Cardinality cardinality=linkDeclaration.getSourceCardinality();
+        boolean uniqueChild=(cardinality == Cardinality._0_1 || cardinality == Cardinality._1);
+        if (linkDeclaration.getMetaClass() == LinkMetaclass.aggregation) {
+          if (uniqueChild)           CommandUtil.setChild(pasteTarget,anchorNode,linkDeclaration.getRole(),pasteNode,pasteBefore);
+ else           CommandUtil.insertChild(pasteTarget,anchorNode,linkDeclaration.getRole(),pasteNode,pasteBefore);
+        }
+ else {
+          if (uniqueChild)           CommandUtil.insertReferent(pasteTarget,anchorNode,linkDeclaration.getRole(),pasteNode,pasteBefore);
+ else           CommandUtil.setReferent(pasteTarget,anchorNode,linkDeclaration.getRole(),pasteNode,pasteBefore);
+        }
+        Resolver.resolveAllReferences(pasteNode);
+      }
+    }
+);
+  }
+  return true;
+}
