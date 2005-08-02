@@ -1,24 +1,14 @@
 {
-  String packageName=targetNode.getClass().getPackage().getName();
-  Class externalResolver=null;
-  try {
-    externalResolver=Class.forName(packageName + CLASS_NAME_SUFFIX);
+  Method externalResolveMethod=ourConceptsToResolveInfoMethodsMap.get(targetNode.getClass());
+  if (externalResolveMethod == null) {
+    externalResolveMethod=getExternalResolveMethodFromTarget(targetNode);
+    ourConceptsToResolveInfoMethodsMap.put(targetNode.getClass(),externalResolveMethod);
+    if (externalResolveMethod == null)     return null;
   }
- catch (  ClassNotFoundException e) {
-    LOG.error("external resolver not found in package " + packageName,e);
+  try {
+    return (String)externalResolveMethod.invoke(null,targetNode);
+  }
+ catch (  Exception e) {
     return null;
   }
-  Class targetCls=targetNode.getClass();
-  while (targetCls != SNode.class) {
-    try {
-      String targetClassName=targetCls.getName();
-      targetClassName=targetClassName.substring(targetClassName.lastIndexOf(".") + 1);
-      Method externalResolveMethod=externalResolver.getMethod(METHOD_NAME_PREFIX + targetClassName,targetCls);
-      return (String)externalResolveMethod.invoke(null,targetNode);
-    }
- catch (    Exception e) {
-      targetCls=targetCls.getSuperclass();
-    }
-  }
-  return null;
 }
