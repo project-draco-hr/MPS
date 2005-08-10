@@ -32,18 +32,23 @@
     String languageNamespace=element.getAttributeValue(NAMESPACE);
     model.addLanguage(languageNamespace);
   }
+  Map<Integer,SModelUID> importedUIDtoIndex=new HashMap<Integer,SModelUID>();
   List imports=rootElement.getChildren(IMPORT_ELEMENT);
   for (Iterator iterator=imports.iterator(); iterator.hasNext(); ) {
     Element element=(Element)iterator.next();
     int referenceID=readIntAttributeValue(element,MODEL_REFERENCE_ID);
     String modelUID=element.getAttributeValue(MODEL_UID);
     if (modelUID != null) {
-      model.addImportElement(SModelUID.fromString(modelUID),referenceID);
+      SModelUID importedModelUID=SModelUID.fromString(modelUID);
+      model.addImportElement(importedModelUID,referenceID);
+      importedUIDtoIndex.put(referenceID,importedModelUID);
     }
  else {
       String importedModelFQName=NameUtil.longNameFromNamespaceAndShortName(element.getAttributeValue(NAMESPACE),element.getAttributeValue(NAME));
       String importedModelStereotype=element.getAttributeValue(STEREOTYPE,"");
-      model.addImportElement(new SModelUID(importedModelFQName,importedModelStereotype),referenceID);
+      SModelUID importedModelUID=new SModelUID(importedModelFQName,importedModelStereotype);
+      model.addImportElement(importedModelUID,referenceID);
+      importedUIDtoIndex.put(referenceID,importedModelUID);
     }
   }
   ArrayList<ReferenceDescriptor> referenceDescriptors=new ArrayList<ReferenceDescriptor>();
@@ -54,9 +59,16 @@
     model.addRoot(semanticNode);
   }
   for (  ReferenceDescriptor referenceDescriptor : referenceDescriptors) {
-    SReference semanticReference=null;
-    semanticReference=SReference.newInstance(referenceDescriptor.role,referenceDescriptor.sourceNode,referenceDescriptor.targetId,referenceDescriptor.resolveInfo,referenceDescriptor.targetClassResolveInfo,referenceDescriptor.extResolveInfo);
-    if (semanticReference != null)     referenceDescriptor.sourceNode.addSemanticReference(semanticReference);
+    SModelUID importedModelUID=model.getUID();
+    if (referenceDescriptor.importIndex > -1) {
+      importedModelUID=importedUIDtoIndex.get(referenceDescriptor.importIndex);
+      if (importedModelUID == null) {
+        LOG.error("Couldn't create reference from " + referenceDescriptor.sourceNode.getDebugText() + " : import for index ["+ referenceDescriptor.importIndex+ "] not found");
+        continue;
+      }
+    }
+    SReference reference=SReference.newInstance(referenceDescriptor.role,referenceDescriptor.sourceNode,referenceDescriptor.targetId,referenceDescriptor.extResolveInfo,importedModelUID,referenceDescriptor.resolveInfo,referenceDescriptor.targetClassResolveInfo);
+    if (reference != null)     referenceDescriptor.sourceNode.addSemanticReference(reference);
   }
   model.setLoading(false);
   return model;

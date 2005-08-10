@@ -1,0 +1,54 @@
+{
+  String type=nodeElement.getAttributeValue(TYPE);
+  SNode node=createNodeInstance(type,model);
+  if (node == null) {
+    String error="Error reading model " + model.getUID() + ": couldn't create instance of node id="+ nodeElement.getAttributeValue(ID);
+    LOG.errorWithTrace(error);
+    firePersisteneceError();
+    return null;
+  }
+  String myOldId=nodeElement.getAttributeValue(ID);
+  if (setID) {
+    node.setId(myOldId);
+  }
+  if (oldIdsToNodes != null) {
+    oldIdsToNodes.put(myOldId,node);
+  }
+  String cachedExtResolveInfo=nodeElement.getAttributeValue(EXT_RESOLVE_INFO);
+  if (!ExternalResolver.isEmptyExtResolveInfo(cachedExtResolveInfo)) {
+    model.cacheNodeExtResolveInfo(node,cachedExtResolveInfo);
+  }
+  List properties=nodeElement.getChildren(PROPERTY);
+  for (Iterator iterator=properties.iterator(); iterator.hasNext(); ) {
+    Element propertyElement=(Element)iterator.next();
+    String propertyName=propertyElement.getAttributeValue(NAME);
+    String propertyValue=propertyElement.getAttributeValue(VALUE);
+    if (propertyValue != null) {
+      node.setProperty(propertyName,propertyValue);
+    }
+  }
+  List links=nodeElement.getChildren(LINK);
+  for (Iterator iterator=links.iterator(); iterator.hasNext(); ) {
+    Element linkElement=(Element)iterator.next();
+    String role=linkElement.getAttributeValue(ROLE);
+    String resolveInfo=linkElement.getAttributeValue(RESOLVE_INFO);
+    String targetClassResolveInfo=linkElement.getAttributeValue(TARGET_CLASS_RESOLVE_INFO);
+    String attExtResolveInfo=linkElement.getAttributeValue(EXT_RESOLVE_INFO);
+    String attTargetNodeId=linkElement.getAttributeValue(TARGET_NODE_ID);
+    referenceDescriptors.add(new ReferenceDescriptor(node,role,attTargetNodeId,attExtResolveInfo,resolveInfo,targetClassResolveInfo));
+  }
+  List childNodes=nodeElement.getChildren(NODE);
+  for (Iterator iterator=childNodes.iterator(); iterator.hasNext(); ) {
+    Element childNodeElement=(Element)iterator.next();
+    String role=childNodeElement.getAttributeValue(ROLE);
+    SNode childNode=readNode(childNodeElement,model,referenceDescriptors,setID,oldIdsToNodes);
+    if (childNode != null) {
+      node.addChild(role,childNode);
+    }
+ else {
+      LOG.errorWithTrace("Error reading child node in node " + node.getDebugText());
+      firePersisteneceError();
+    }
+  }
+  return node;
+}

@@ -1,0 +1,41 @@
+{
+  Element linkElement=new Element(LINK);
+  element.addContent(linkElement);
+  linkElement.setAttribute(ROLE,reference.getRole());
+  if (reference.isExternal()) {
+    ExternalReference externalReference=(ExternalReference)reference;
+    SModelUID referentModelUID=externalReference.getTargetModelUID();
+    SModel.ImportElement importElement=node.getModel().getImportElement(referentModelUID);
+    if (importElement == null) {
+      importElement=node.getModel().addImportElement(referentModelUID);
+    }
+    String extResolveInfo=externalReference.getExtResolveInfo();
+    if (ExternalResolver.isEmptyExtResolveInfo(extResolveInfo)) {
+      SModelUID modelUID=externalReference.getTargetModelUID();
+      SModelDescriptor modelDescriptor=SModelRepository.getInstance().getModelDescriptor(modelUID);
+      LOG.assertLog(modelDescriptor != null,"Path to the target model " + modelUID + " is not specified");
+      SModel model=modelDescriptor.getSModel();
+      if (model == null) {
+        LOG.error("The modelDescriptor.getSModel() failed to load model");
+        return;
+      }
+      if (model.isExternallyResolved()) {
+        ExternalResolver.setExternalResolveInfo(reference);
+        setNotNullAttribute(linkElement,EXT_RESOLVE_INFO,importElement.getReferenceID() + '.' + extResolveInfo);
+      }
+ else {
+        linkElement.setAttribute(TARGET_NODE_ID,importElement.getReferenceID() + '.' + reference.getTargetNodeId());
+      }
+    }
+ else {
+      setNotNullAttribute(linkElement,EXT_RESOLVE_INFO,extResolveInfo);
+    }
+  }
+ else {
+    if (reference.isResolved())     linkElement.setAttribute(TARGET_NODE_ID,reference.getTargetNodeId());
+    String resolveInfo=reference.getResolveInfo();
+    if (!reference.isResolved() && resolveInfo != null)     linkElement.setAttribute(RESOLVE_INFO,resolveInfo);
+    String targetClassResolveInfo=reference.getTargetClassResolveInfo();
+    if (!reference.isResolved() && targetClassResolveInfo != null)     linkElement.setAttribute(TARGET_CLASS_RESOLVE_INFO,targetClassResolveInfo);
+  }
+}
