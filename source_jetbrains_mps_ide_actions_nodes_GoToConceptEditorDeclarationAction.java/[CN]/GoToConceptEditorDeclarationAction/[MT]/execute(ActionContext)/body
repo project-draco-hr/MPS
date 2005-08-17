@@ -3,6 +3,7 @@
   if (!(node instanceof ConceptDeclaration))   return;
   final IdeMain ide=context.get(IdeMain.class);
   final IOperationContext operationContext=context.get(IOperationContext.class);
+  final AbstractEditorComponent currentEditor=ide.getEditorsPane().getCurrentEditor();
   final String editorName=node.getName() + "_Editor";
   SModel languageStructure=node.getModel();
   final Language language=SModelUtil.getDeclaringLanguage((ConceptDeclaration)node,operationContext);
@@ -16,8 +17,21 @@
     while (iterator.hasNext()) {
       SNode root=iterator.next();
       if (editorName.equals(root.getName())) {
-        AbstractEditorComponent editor=ide.getEditorsPane().openEditor(root,operationContext);
-        editor.selectNode(root);
+        final SNode finalRoot=root;
+        NavigationActionProcessor.executeNavigationAction(new EditorNavigationRunnable(){
+          public AbstractEditorComponent run(          AbstractEditorComponent sourceEditor){
+            AbstractEditorComponent editor=ide.getEditorsPane().openEditor(finalRoot,operationContext);
+            editor.selectNode(finalRoot);
+            return editor;
+          }
+          public AbstractEditorComponent getSourceEditor(){
+            return currentEditor;
+          }
+          public EditorsPane getEditorsPane(){
+            return ide.getEditorsPane();
+          }
+        }
+);
         return;
       }
     }
@@ -34,7 +48,18 @@
       }
 );
       ide.getProjectPane().selectNode(editorDeclaration[0]);
-      ide.getProjectPane().openEditor(operationContext);
+      NavigationActionProcessor.executeNavigationAction(new EditorNavigationRunnable(){
+        public AbstractEditorComponent run(        AbstractEditorComponent sourceEditor){
+          return ide.getProjectPane().openEditor(operationContext);
+        }
+        public AbstractEditorComponent getSourceEditor(){
+          return currentEditor;
+        }
+        public EditorsPane getEditorsPane(){
+          return ide.getEditorsPane();
+        }
+      }
+);
       JOptionPane.showMessageDialog(null,"Editor " + editorName + " created");
     }
   }
