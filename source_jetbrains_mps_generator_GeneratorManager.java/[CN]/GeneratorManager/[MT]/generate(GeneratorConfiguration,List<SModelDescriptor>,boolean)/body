@@ -4,7 +4,7 @@
       setPriority(Thread.MIN_PRIORITY);
     }
     public void run(){
-      myOperationContext.getComponent(ProjectPane.class).disableRebuild();
+      myInvocationOperationContext.getComponent(ProjectPane.class).disableRebuild();
       ProgressMonitor progress=new ProgressWindowProgressMonitor(false);
       boolean isIdeaPresent=MPSPlugin.getInstance().isIDEAPresent();
       try {
@@ -29,7 +29,7 @@
           progress.addText("Compilation in IDEA on generation is turned off");
         }
         clearMessages();
-        addMessage(new Message(MessageKind.INFORMATION,null,"Generating configuration " + configuration.getName(),myOperationContext));
+        addMessage(new Message(MessageKind.INFORMATION,null,"Generating configuration " + configuration.getName(),myInvocationOperationContext));
         if (isIdeaPresent && myCompileOnGeneration) {
           progress.addText("Compiling in IntelliJ IDEA...");
           LOG.debug("Compiling in IDE before generation ");
@@ -40,15 +40,13 @@
           LOG.debug("Executing command : " + cmd.getSourceLanguage().getName() + " -> "+ cmd.getTargetLanguage().getName());
           Set<SModelDescriptor> modelsWithLanguage=findModelsWithLanguage(modelDescriptors,cmd.getSourceLanguage().getName());
           Generator generator=findGenerator(cmd.getSourceLanguage().getName(),cmd.getTargetLanguage().getName());
-          for (          String languageRoot : generator.getRequiredLanguageRoots()) {
-            LanguageRepository.getInstance().readLanguageDescriptors(new File(languageRoot),GeneratorManager.this);
-          }
-          String generatorClass=findGeneratorClass(generator);
+          GeneratorOperationContext generatorContext=new GeneratorOperationContext(myInvocationOperationContext,generator);
+          String generatorClass=findGeneratorClass(generatorContext);
           if (generatorClass == null)           generatorClass=DefaultTemplateGenerator.class.getName();
-          SModelDescriptor templatesModel=loadTemplatesModel(generator);
+          SModelDescriptor templatesModel=loadTemplatesModel(generatorContext);
           for (          final SModelDescriptor model : modelsWithLanguage) {
             try {
-              generate_internal(model,generatorClass,templatesModel,configuration.getOutputPath(),progress,generateText);
+              generate_internal(model,templatesModel,generatorContext,generatorClass,configuration.getOutputPath(),progress,generateText);
             }
  catch (            final GenerationCanceledException e) {
               addMessage(new Message(MessageKind.WARNING,"generation canceled"));
@@ -82,9 +80,7 @@ catch (            Exception e) {
       }
   finally {
         progress.finish();
-        LanguageRepository.getInstance().unRegisterLanguages(GeneratorManager.this);
-        SModelRepository.getInstance().unRegisterModelDescriptors(GeneratorManager.this);
-        myOperationContext.getComponent(ProjectPane.class).enableRebuild();
+        myInvocationOperationContext.getComponent(ProjectPane.class).enableRebuild();
       }
     }
   }

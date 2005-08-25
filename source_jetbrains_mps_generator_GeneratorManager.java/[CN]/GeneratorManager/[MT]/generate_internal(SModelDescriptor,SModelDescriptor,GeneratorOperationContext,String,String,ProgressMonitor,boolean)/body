@@ -1,0 +1,49 @@
+{
+  final IModelGenerator generator;
+  try {
+    Class cls=Class.forName(generatorClass,true,ClassLoaderManager.getInstance().getClassLoader());
+    if (ITemplateGenerator.class.isAssignableFrom(cls)) {
+      generator=(ITemplateGenerator)cls.getConstructor(IOperationContext.class,ProgressMonitor.class).newInstance(operationContext,monitor);
+    }
+ else {
+      generator=(IModelGenerator)cls.getConstructor(IOperationContext.class).newInstance(operationContext);
+    }
+  }
+ catch (  Exception e) {
+    LOG.error("Exception",e);
+    return;
+  }
+  if (generator == null) {
+    return;
+  }
+  try {
+    final SModel targetModel;
+    if (generator instanceof ITemplateGenerator) {
+      GenerateWithTemplatesCommand command=new GenerateWithTemplatesCommand(sourceModel,templatesModel.getSModel(),mySaveTransientModels,(ITemplateGenerator)generator);
+      targetModel=command.execute();
+    }
+ else {
+      ProgressMonitor childMonitor=monitor.startSubTask(AMOUNT_PER_MODEL);
+      targetModel=JavaGenUtil.createTargetJavaModel(sourceModel.getSModel(),JavaNameUtil.packageNameForModelUID(sourceModel.getModelUID()),operationContext);
+      CommandProcessor.instance().executeCommand(new Runnable(){
+        public void run(){
+          generator.generate(sourceModel.getSModel(),targetModel,monitor);
+        }
+      }
+,"generate with " + generator.getClass().getName());
+      childMonitor.finish();
+    }
+    if (targetModel != null) {
+      if (generateText) {
+        generateText(targetModel);
+      }
+ else {
+        generateFile(outputPath,sourceModel.getSModel(),targetModel);
+      }
+    }
+  }
+ catch (  Exception e) {
+    monitor.addText("Exception during generation " + e.getMessage());
+    LOG.error("Errors during generation",e);
+  }
+}
