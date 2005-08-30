@@ -4,7 +4,7 @@
       setPriority(Thread.MIN_PRIORITY);
     }
     public void run(){
-      myInvocationOperationContext.getComponent(ProjectPane.class).disableRebuild();
+      invocationContext.getComponent(ProjectPane.class).disableRebuild();
       ProgressMonitor progress=new ProgressWindowProgressMonitor(false);
       boolean isIdeaPresent=MPSPlugin.getInstance().isIDEAPresent();
       try {
@@ -28,8 +28,8 @@
         if (!myCompileOnGeneration) {
           progress.addText("Compilation in IDEA on generation is turned off");
         }
-        clearMessages();
-        addMessage(new Message(MessageKind.INFORMATION,null,"Generating configuration " + configuration.getName(),myInvocationOperationContext));
+        clearMessages(invocationContext);
+        addMessage(new Message(MessageKind.INFORMATION,null,"Generating configuration " + configuration.getName(),invocationContext),invocationContext);
         if (isIdeaPresent && myCompileOnGeneration) {
           progress.addText("Compiling in IntelliJ IDEA...");
           LOG.debug("Compiling in IDE before generation ");
@@ -39,8 +39,8 @@
         for (        GeneratorConfigurationCommand cmd : CollectionUtil.iteratorAsIterable(configuration.commands())) {
           LOG.debug("Executing command : " + cmd.getSourceLanguage().getName() + " -> "+ cmd.getTargetLanguage().getName());
           Set<SModelDescriptor> modelsWithLanguage=findModelsWithLanguage(modelDescriptors,cmd.getSourceLanguage().getName());
-          Generator generator=findGenerator(cmd.getSourceLanguage().getName(),cmd.getTargetLanguage().getName());
-          GeneratorOperationContext generatorContext=new GeneratorOperationContext(myInvocationOperationContext,generator);
+          Generator generator=findGenerator(cmd.getSourceLanguage().getName(),cmd.getTargetLanguage().getName(),invocationContext);
+          GeneratorOperationContext generatorContext=new GeneratorOperationContext(invocationContext,generator);
           String generatorClass=findGeneratorClass(generatorContext);
           if (generatorClass == null)           generatorClass=DefaultTemplateGenerator.class.getName();
           SModelDescriptor templatesModel=loadTemplatesModel(generatorContext);
@@ -49,21 +49,21 @@
               generate_internal(model,templatesModel,generatorContext,generatorClass,configuration.getOutputPath(),progress,generateText);
             }
  catch (            final GenerationCanceledException e) {
-              addMessage(new Message(MessageKind.WARNING,"generation canceled"));
+              addMessage(new Message(MessageKind.WARNING,"generation canceled"),invocationContext);
               progress.addText("Generation canceled");
-              showMessageView();
+              showMessageView(invocationContext);
               return;
             }
 catch (            final GenerationFailedException gfe) {
               LOG.error(model.getModelUID() + " generation failed",gfe);
-              addMessage(new Message(MessageKind.ERROR,model.getModelUID() + " model generation failed"));
-              showMessageView();
+              addMessage(new Message(MessageKind.ERROR,model.getModelUID() + " model generation failed"),invocationContext);
+              showMessageView(invocationContext);
               return;
             }
 catch (            Exception e) {
               LOG.error("Exception ",e);
             }
-            addMessage(new Message(MessageKind.INFORMATION,model.getModelUID() + " model is generated"));
+            addMessage(new Message(MessageKind.INFORMATION,model.getModelUID() + " model is generated"),invocationContext);
           }
         }
         if (!generateText && isIdeaPresent && myCompileOnGeneration) {
@@ -72,15 +72,15 @@ catch (            Exception e) {
           compileAndReload();
           progress.advance(AMOUNT_PER_MODEL);
         }
-        addMessage(new Message(MessageKind.INFORMATION,"Generation finished"));
+        addMessage(new Message(MessageKind.INFORMATION,"Generation finished"),invocationContext);
         if (!generateText) {
-          showMessageView();
+          showMessageView(invocationContext);
         }
         progress.addText("Finished.");
       }
   finally {
         progress.finish();
-        myInvocationOperationContext.getComponent(ProjectPane.class).enableRebuild();
+        invocationContext.getComponent(ProjectPane.class).enableRebuild();
       }
     }
   }
