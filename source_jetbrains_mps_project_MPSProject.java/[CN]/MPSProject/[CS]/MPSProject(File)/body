@@ -2,15 +2,28 @@
   myProjectFile=file;
   myProjectDescriptor=PersistenceUtil.loadProjectDescriptor(file,myProjectModel);
   mySolutions=new LinkedList<Solution>();
-  SolutionDescriptor solutionFromLegacyProject=PersistenceUtil.loadSolutionDescriptorFormOldMPR(file,myProjectModel);
-  if (solutionFromLegacyProject != null && solutionFromLegacyProject.getModelRootsCount() > 0) {
-    String solutionPath=file.getAbsolutePath();
-    solutionPath=solutionPath.substring(0,solutionPath.lastIndexOf('.')) + ".msd";
-    mySolutions.add(new Solution(new File(solutionPath),solutionFromLegacyProject));
-  }
   for (  SolutionPath solutionPath : CollectionUtil.iteratorAsIterable(myProjectDescriptor.solutionPaths())) {
     Solution solution=new Solution(new File(solutionPath.getPath()));
     mySolutions.add(solution);
+  }
+  SolutionDescriptor solutionFromLegacyProject=PersistenceUtil.loadSolutionDescriptorFormOldMPR(file,myProjectModel);
+  if (solutionFromLegacyProject != null && (solutionFromLegacyProject.getModelRootsCount() > 0 || solutionFromLegacyProject.getLanguageRootsCount() > 0)) {
+    String solutionPathname=file.getAbsolutePath();
+    solutionPathname=solutionPathname.substring(0,solutionPathname.lastIndexOf('.')) + ".msd";
+    File solutionDescriptorFile=new File(solutionPathname);
+    if (!solutionDescriptorFile.exists()) {
+      try {
+        solutionDescriptorFile.createNewFile();
+        SolutionPath solutionPath=SolutionPath.newInstance(myProjectModel);
+        solutionPath.setPath(solutionPathname);
+        myProjectDescriptor.addSolutionPath(solutionPath);
+        mySolutions.add(new Solution(solutionDescriptorFile,solutionFromLegacyProject));
+        PersistenceUtil.saveSolutionDescriptor(solutionDescriptorFile,solutionFromLegacyProject);
+      }
+ catch (      IOException e) {
+        e.printStackTrace();
+      }
+    }
   }
   myLanguages=new LinkedList<Language>();
   for (  ProjectLanguage languagePath : CollectionUtil.iteratorAsIterable(myProjectDescriptor.projectLanguages())) {
