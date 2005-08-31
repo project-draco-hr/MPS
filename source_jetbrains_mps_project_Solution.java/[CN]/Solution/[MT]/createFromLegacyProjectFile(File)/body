@@ -1,0 +1,27 @@
+{
+  Solution solution=new Solution();
+  SModel model=ProjectModelDescriptor.createDescriptorFor(solution).getSModel();
+  SolutionDescriptor solutionDescriptor=PersistenceUtil.loadSolutionDescriptorFormOldMPR(projectFile,model);
+  if (solutionDescriptor == null || (solutionDescriptor.getModelRootsCount() == 0 && solutionDescriptor.getLanguageRootsCount() == 0)) {
+    return null;
+  }
+  String solutionPathname=projectFile.getAbsolutePath();
+  solutionPathname=solutionPathname.substring(0,solutionPathname.lastIndexOf('.')) + ".msd";
+  File solutionDescriptorFile=new File(solutionPathname);
+  if (solutionDescriptorFile.exists()) {
+    return null;
+  }
+  try {
+    solutionDescriptorFile.createNewFile();
+    PersistenceUtil.saveSolutionDescriptor(solutionDescriptorFile,solutionDescriptor);
+  }
+ catch (  IOException e) {
+    e.printStackTrace();
+    return null;
+  }
+  solution.myDescriptorFile=solutionDescriptorFile;
+  solution.mySolutionDescriptor=solutionDescriptor;
+  LanguageRepository.getInstance().readLanguageDescriptors(solutionDescriptor.languageRoots(),solution);
+  SModelRepository.getInstance().readModelDescriptors(solutionDescriptor.modelRoots(),solution);
+  return solution;
+}
