@@ -1,24 +1,10 @@
 {
   myProjectFile=projectFile;
-  myProjectDescriptor=PersistenceUtil.loadProjectDescriptor(projectFile,myProjectModel);
-  mySolutions=new LinkedList<Solution>();
-  for (  SolutionPath solutionPath : CollectionUtil.iteratorAsIterable(myProjectDescriptor.solutionPaths())) {
-    Solution solution=new Solution(new File(solutionPath.getPath()));
-    mySolutions.add(solution);
-  }
-  Solution solution=Solution.createFromLegacyProjectFile(projectFile);
-  if (solution != null) {
-    SolutionPath solutionPath=SolutionPath.newInstance(myProjectModel);
-    solutionPath.setPath(solution.getDescriptorFile().getAbsolutePath());
-    myProjectDescriptor.addSolutionPath(solutionPath);
-    mySolutions.add(solution);
-  }
-  myLanguages=new LinkedList<Language>();
-  for (  ProjectLanguage languagePath : CollectionUtil.iteratorAsIterable(myProjectDescriptor.projectLanguages())) {
-    myLanguages.add(LanguageRepository.getInstance().registerLanguage(new File(languagePath.getPath()),this));
-  }
+  SModel model=ProjectModelDescriptor.createDescriptorFor(this).getSModel();
+  myProjectDescriptor=PersistenceUtil.loadProjectDescriptor(projectFile,model);
+  revalidateContent(projectFile,model);
   MPSProjects projects=ApplicationComponents.getInstance().getComponent(MPSProjects.class);
   projects.addProject(MPSProject.this);
+  myEventTranslator=new ProjectEventTranslator();
   CommandProcessor.instance().addCommandListener(myEventTranslator);
-  addMPSProjectListener(myEventTranslator);
 }
