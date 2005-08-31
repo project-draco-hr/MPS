@@ -4,12 +4,6 @@
     LOG.errorWithTrace("Error loading editor for node \"" + node.getDebugText() + "\".\n"+ "Couldn't find language for namespace: \""+ NameUtil.namespaceFromConceptFQName(node.getClass().getName())+ "\"");
     return null;
   }
-  String conceptName=JavaNameUtil.shortName(node.getClass().getName());
-  ConceptDeclaration nodeConcept=language.findConceptDeclaration(conceptName);
-  if (nodeConcept == null) {
-    LOG.errorWithTrace("Error loading editor for node \"" + node.getDebugText() + "\" : couldn't find the type declaration.");
-    return null;
-  }
   String stereotype=node.getModel().getStereotype();
   String languageEditorFQName=language.getEditorUID(stereotype);
   if (languageEditorFQName == null) {
@@ -19,16 +13,21 @@
       return null;
     }
   }
-  ConceptDeclaration superConcept=nodeConcept;
+  String conceptName=NameUtil.shortNameFromLongName(NameUtil.nodeConceptFQName(node));
+  ConceptDeclaration conceptDeclaration=language.findConceptDeclaration(conceptName);
+  if (conceptDeclaration == null) {
+    LOG.error("couldn't find concept " + conceptName + " in language "+ language.getNamespace());
+    return null;
+  }
   String editorClassName="";
-  while (superConcept != null) {
+  while (conceptDeclaration != null) {
     try {
-      editorClassName=languageEditorFQName + "." + superConcept.getName()+ "_Editor";
+      editorClassName=languageEditorFQName + "." + conceptDeclaration.getName()+ "_Editor";
       Class editorClass=Class.forName(editorClassName,true,ClassLoaderManager.getInstance().getClassLoader());
       return (INodeEditor)editorClass.newInstance();
     }
  catch (    ClassNotFoundException e) {
-      superConcept=superConcept.getExtends();
+      conceptDeclaration=conceptDeclaration.getExtends();
     }
 catch (    InstantiationException e) {
       LOG.error(e);
