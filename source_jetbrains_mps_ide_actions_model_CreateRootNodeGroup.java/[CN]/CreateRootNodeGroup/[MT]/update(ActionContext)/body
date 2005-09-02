@@ -22,26 +22,12 @@
     Language language=operationContext.getLanguage(languageNamespace);
     for (    final ConceptDeclaration conceptDeclaration : language.getConceptDeclarations()) {
       if (conceptDeclaration.getRootable()) {
-        String className=SModelUtil.getClassNameFor(conceptDeclaration);
-        Class cls=null;
+        String className=JavaNameUtil.className(conceptDeclaration);
         try {
-          cls=Class.forName(className,true,ClassLoaderManager.getInstance().getClassLoader());
-        }
- catch (        ClassNotFoundException e) {
-        }
-        if (cls != null) {
+          final Class<? extends SNode> nodeClass=(Class<? extends SNode>)Class.forName(className,true,ClassLoaderManager.getInstance().getClassLoader());
           langRootsGroup.add(new MPSAction(conceptDeclaration.getName()){
             public Icon getIcon(){
-              final Icon[] result=new Icon[1];
-              CommandProcessor.instance().executeCommand(new Runnable(){
-                public void run(){
-                  SNode node=SModelUtil.instantiateConceptDeclaration(conceptDeclaration,ApplicationComponents.getInstance().getComponent(ProjectModel.class).getSModel());
-                  LOG.assertLog(node != null,"Node isn't null");
-                  result[0]=IconManager.getIconFor(node);
-                }
-              }
-);
-              return result[0];
+              return IconManager.getIconFor(nodeClass);
             }
             public boolean executeInsideCommand(){
               return false;
@@ -62,7 +48,7 @@
 );
           addCount++;
         }
- else {
+ catch (        ClassNotFoundException e) {
           langRootsGroup.add(new MPSAction(conceptDeclaration.getName() + " (Structure Isn't Generated)"){
             public void update(            ActionContext context){
               setEnabled(false);
