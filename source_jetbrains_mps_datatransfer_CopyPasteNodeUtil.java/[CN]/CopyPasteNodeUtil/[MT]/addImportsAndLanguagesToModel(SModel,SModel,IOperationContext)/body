@@ -1,14 +1,20 @@
 {
   List<String> additionalLanguages=new ArrayList<String>();
   List<SModelUID> additionalModels=new ArrayList<SModelUID>();
-  for (  String namespace : modelPropertiesPattern.getLanguageNamespaces()) {
+  List<String> languagesFromPattern=new ArrayList<String>(modelPropertiesPattern.getLanguageNamespaces());
+  List<SModelUID> importsFromPattern=new ArrayList<SModelUID>(modelPropertiesPattern.getImportedModelUIDs());
+  importsFromPattern.addAll(ourNecessaryImports);
+  languagesFromPattern.addAll(ourNecessaryLanguages);
+  for (  String namespace : languagesFromPattern) {
     if (!targetModel.hasLanguage(namespace))     additionalLanguages.add(namespace);
   }
-  for (  SModelUID modelUID : modelPropertiesPattern.getImportedModelUIDs()) {
-    if (!targetModel.hasImportedModel(modelUID))     additionalModels.add(modelUID);
+  for (  SModelUID modelUID : importsFromPattern) {
+    if (!(targetModel.hasImportedModel(modelUID)) && !(targetModel.getUID().equals(modelUID)))     additionalModels.add(modelUID);
   }
+  ourNecessaryImports.retainAll(importsFromPattern);
+  ourNecessaryLanguages.retainAll(languagesFromPattern);
   if ((!additionalModels.isEmpty()) || (!additionalLanguages.isEmpty())) {
-    AddRequiredModelImportsDialog dialog=new AddRequiredModelImportsDialog(context.getComponent(IdeMain.class),targetModel,additionalModels,additionalLanguages);
+    AddRequiredModelImportsDialog dialog=new AddRequiredModelImportsDialog(context.getComponent(IdeMain.class),targetModel,additionalModels,additionalLanguages,ourNecessaryImports,ourNecessaryLanguages);
     dialog.setModal(true);
     dialog.showDialog();
     return (!dialog.isCanceled());
