@@ -1,0 +1,20 @@
+{
+  if (ourCache.get(conceptDeclaration) != null)   return Collections.unmodifiableList(ourCache.get(conceptDeclaration));
+  List<ConceptDeclaration> list=new LinkedList<ConceptDeclaration>();
+  FindUsagesManager manager=FindUsagesManager.getInstance();
+  Set<SReference> usages=manager.findUsages(conceptDeclaration,new FilterScope(manager.globalScope()){
+    protected boolean accept(    SModelDescriptor descriptor){
+      return descriptor.getModelUID().getShortName().equals("structure");
+    }
+  }
+,null);
+  for (  SReference ref : usages) {
+    if (ref.getRole().equals(ConceptDeclaration.EXTENDS)) {
+      ConceptDeclaration subtype=(ConceptDeclaration)ref.getSourceNode();
+      list.add(subtype);
+      list.addAll(allSubtypes(subtype));
+    }
+  }
+  ourCache.put(conceptDeclaration,list);
+  return Collections.unmodifiableList(list);
+}
