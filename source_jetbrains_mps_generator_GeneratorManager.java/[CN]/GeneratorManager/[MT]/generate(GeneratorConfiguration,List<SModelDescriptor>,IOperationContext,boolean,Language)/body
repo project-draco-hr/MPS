@@ -40,7 +40,7 @@
           LOG.debug("Executing command : " + cmd.getSourceLanguage().getName() + " -> "+ cmd.getTargetLanguage().getName());
           Set<SModelDescriptor> modelsWithLanguage=findModelsWithLanguage(modelDescriptors,cmd.getSourceLanguage().getName());
           Generator generator=findGenerator(cmd.getSourceLanguage().getName(),cmd.getTargetLanguage().getName(),invocationContext);
-          GeneratorContext generatorContext=new GeneratorContext(generator,invocationContext);
+          final GeneratorContext generatorContext=new GeneratorContext(generator,invocationContext);
           String generatorClass=findGeneratorClass(generator);
           if (generatorClass == null)           generatorClass=DefaultTemplateGenerator.class.getName();
           SModelDescriptor templatesModel=loadTemplatesModel(generator,generatorContext);
@@ -65,6 +65,17 @@ catch (            Exception e) {
             }
             addMessage(new Message(MessageKind.INFORMATION,model.getModelUID() + " model is generated"),invocationContext);
           }
+          CommandProcessor.instance().executeCommand(new Runnable(){
+            public void run(){
+              if (mySaveTransientModels) {
+                saveTransientModels(generatorContext);
+              }
+ else {
+                generatorContext.getModule().dispose();
+              }
+            }
+          }
+);
         }
         if (!generateText && isIdeaPresent && myCompileOnGeneration) {
           LOG.debug("Compiling in IDE after generation");
