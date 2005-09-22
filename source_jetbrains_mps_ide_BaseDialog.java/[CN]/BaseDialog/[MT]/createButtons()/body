@@ -1,0 +1,40 @@
+{
+  Map<Integer,Method> buttonMethods=new HashMap<Integer,Method>();
+  for (  Method m : getClass().getMethods()) {
+    if (m.isAnnotationPresent(Button.class) && !Modifier.isStatic(m.getModifiers())) {
+      Button b=m.getAnnotation(Button.class);
+      if (buttonMethods.containsKey(b.position())) {
+        throw new RuntimeException("BaseDialog has buttons with the same position");
+      }
+      if (m.getReturnType() != Void.TYPE || m.getParameterTypes().length != 0) {
+        throw new RuntimeException("Button methods should return void type and have no parameters");
+      }
+      buttonMethods.put(b.position(),m);
+    }
+  }
+  List<JButton> result=new ArrayList<JButton>();
+  for (int i=0; i < buttonMethods.keySet().size(); i++) {
+    if (!buttonMethods.containsKey(i))     throw new RuntimeException("BaseDialog doesn't contain button with index " + i);
+    Button b=buttonMethods.get(i).getAnnotation(Button.class);
+    final Method m=buttonMethods.get(i);
+    JButton button=new JButton(new AbstractAction(b.name()){
+      public void actionPerformed(      ActionEvent e){
+        try {
+          m.invoke(BaseDialog.this);
+        }
+ catch (        IllegalAccessException e1) {
+          LOG.error(e1);
+        }
+catch (        InvocationTargetException e1) {
+          LOG.error(e1);
+        }
+      }
+    }
+);
+    if (b.defaultButton()) {
+      setDefaultButton(button);
+    }
+    result.add(button);
+  }
+  return result.toArray(new JButton[0]);
+}
