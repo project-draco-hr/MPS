@@ -1,0 +1,37 @@
+{
+  if (events != null) {
+    AbstractEditorComponent nodeEditorComponent=context.getNodeEditorComponent();
+    EditorCell oldCell=nodeEditorComponent.getBigCellForNode(node);
+    boolean nodeChanged=false;
+    for (    SModelEvent event : events) {
+      SNode eventNode;
+      if (event instanceof SModelChildEvent) {
+        eventNode=((SModelChildEvent)event).getParent();
+      }
+ else       if (event instanceof SModelReferenceEvent) {
+        eventNode=((SModelReferenceEvent)event).getReference().getSourceNode();
+      }
+ else       continue;
+      if (nodeEditorComponent.doesCellDependOnNode(oldCell,eventNode)) {
+        nodeChanged=true;
+        break;
+      }
+    }
+    if (!nodeChanged) {
+      if (myMap.containsKey(node))       return myMap.get(node);
+    }
+ else {
+      myMap.putAll(findBigDescendantCellsAndTheirNodes(oldCell));
+    }
+  }
+  EditorCell editorCell=createEditorCell_internal(context,node);
+  boolean hasBadReference=false;
+  for (  SReference sr : node.getReferences()) {
+    if (!sr.isResolved()) {
+      hasBadReference=true;
+      break;
+    }
+  }
+  if (hasBadReference)   editorCell.setOutlined(true);
+  return editorCell;
+}
