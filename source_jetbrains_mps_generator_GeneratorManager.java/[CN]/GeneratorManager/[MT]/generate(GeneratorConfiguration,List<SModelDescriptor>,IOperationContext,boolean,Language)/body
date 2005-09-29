@@ -4,97 +4,12 @@
       setPriority(Thread.MIN_PRIORITY);
     }
     public void run(){
-      invocationContext.getComponent(ProjectPane.class).disableRebuild();
-      IProgressMonitor progress=new ProgressWindowProgressMonitor(invocationContext.getComponent(ProjectFrame.class),false);
-      boolean isIdeaPresent=MPSPlugin.getInstance().isIDEAPresent();
-      try {
-        int modelCount=0;
-        for (        GeneratorConfigurationCommand cmd : CollectionUtil.iteratorAsIterable(configuration.commands())) {
-          modelCount+=findModelsWithLanguage(modelDescriptors,cmd.getSourceLanguage().getName()).size();
+      CommandProcessor.instance().executeCommand(new Runnable(){
+        public void run(){
+          performGeneration(configuration,modelDescriptors,invocationContext,generateText,language);
         }
-        int ideaCompilations=0;
-        if (isIdeaPresent && myCompileOnGeneration) {
-          if (generateText) {
-            ideaCompilations=1;
-          }
- else {
-            ideaCompilations=2;
-          }
-        }
-        progress.start("Generating",(modelCount + ideaCompilations) * AMOUNT_PER_MODEL);
-        if (myCompileOnGeneration && ideaCompilations == 0) {
-          progress.addText("IntelliJ IDEA with installed MPS is not present");
-        }
-        if (!myCompileOnGeneration) {
-          progress.addText("Compilation in IDEA on generation is turned off");
-        }
-        clearMessages(invocationContext);
-        addMessage(new Message(MessageKind.INFORMATION,null,"Generating configuration " + configuration.getName(),invocationContext),invocationContext);
-        if (isIdeaPresent && myCompileOnGeneration) {
-          progress.addText("Compiling in IntelliJ IDEA...");
-          LOG.debug("Compiling in IDE before generation ");
-          compileAndReload();
-          progress.advance(AMOUNT_PER_MODEL);
-        }
-        for (        GeneratorConfigurationCommand cmd : CollectionUtil.iteratorAsIterable(configuration.commands())) {
-          LOG.debug("Executing command : " + cmd.getSourceLanguage().getName() + " -> "+ cmd.getTargetLanguage().getName());
-          Set<SModelDescriptor> modelsWithLanguage=findModelsWithLanguage(modelDescriptors,cmd.getSourceLanguage().getName());
-          Generator generator=findGenerator(cmd.getSourceLanguage().getName(),cmd.getTargetLanguage().getName(),invocationContext);
-          final GeneratorContext generatorContext=new GeneratorContext(generator,invocationContext);
-          String generatorClass=findGeneratorClass(generator);
-          if (generatorClass == null)           generatorClass=DefaultTemplateGenerator.class.getName();
-          SModelDescriptor templatesModel=loadTemplatesModel(generator,generatorContext);
-          for (          final SModelDescriptor model : modelsWithLanguage) {
-            try {
-              generate_internal(model,templatesModel,generatorContext,generatorClass,configuration.getOutputPath(),progress,generateText);
-            }
- catch (            final GenerationCanceledException e) {
-              addMessage(new Message(MessageKind.WARNING,"generation canceled"),invocationContext);
-              progress.addText("Generation canceled");
-              showMessageView(invocationContext);
-              return;
-            }
-catch (            final GenerationFailedException gfe) {
-              LOG.error(model.getModelUID() + " generation failed",gfe);
-              addMessage(new Message(MessageKind.ERROR,model.getModelUID() + " model generation failed"),invocationContext);
-              showMessageView(invocationContext);
-              return;
-            }
-catch (            Exception e) {
-              LOG.error("Exception ",e);
-            }
-            addMessage(new Message(MessageKind.INFORMATION,model.getModelUID() + " model is generated"),invocationContext);
-          }
-          CommandProcessor.instance().executeCommand(new Runnable(){
-            public void run(){
-              if (mySaveTransientModels) {
-                saveTransientModels(generatorContext);
-              }
- else {
-                generatorContext.getModule().dispose();
-              }
-            }
-          }
+      }
 );
-        }
-        if (!generateText && isIdeaPresent && myCompileOnGeneration) {
-          LOG.debug("Compiling in IDE after generation");
-          progress.addText("Compiling in IntelliJ IDEA...");
-          compileAndReload();
-          progress.advance(AMOUNT_PER_MODEL);
-        }
-        addMessage(new Message(MessageKind.INFORMATION,"Generation finished"),invocationContext);
-        if (!generateText) {
-          showMessageView(invocationContext);
-        }
-        progress.addText("Finished.");
-      }
-  finally {
-        progress.finish();
-        ReflectionClassifierFinder.generationFinished();
-        if (language != null)         language.updateLastGenerationTime();
-        invocationContext.getComponent(ProjectPane.class).enableRebuild();
-      }
     }
   }
 .start();

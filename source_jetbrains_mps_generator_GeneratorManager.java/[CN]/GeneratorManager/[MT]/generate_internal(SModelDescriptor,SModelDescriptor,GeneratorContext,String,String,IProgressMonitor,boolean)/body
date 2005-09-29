@@ -10,40 +10,29 @@
     }
   }
  catch (  Exception e) {
-    LOG.error("Exception",e);
-    return;
+    throw new GenerationFailedException(e);
   }
-  if (generator == null) {
-    return;
+  SModel targetModel;
+  if (generator instanceof ITemplateGenerator) {
+    GenerateWithTemplatesCommand command=new GenerateWithTemplatesCommand(sourceModel,templatesModel.getSModel(),(ITemplateGenerator)generator);
+    targetModel=command.execute();
   }
-  try {
-    final SModel targetModel;
-    if (generator instanceof ITemplateGenerator) {
-      GenerateWithTemplatesCommand command=new GenerateWithTemplatesCommand(sourceModel,templatesModel.getSModel(),(ITemplateGenerator)generator);
-      targetModel=command.execute();
+ else {
+    IProgressMonitor childMonitor=monitor.startSubTask(AMOUNT_PER_MODEL);
+    targetModel=JavaGenUtil.createTargetJavaModel(sourceModel.getSModel(),JavaNameUtil.packageNameForModelUID(sourceModel.getModelUID()),generatorContext);
+    generator.generate(sourceModel.getSModel(),targetModel,monitor);
+    childMonitor.finish();
+  }
+  if (targetModel != null) {
+    if (generateText) {
+      generateText(targetModel,generatorContext);
     }
  else {
-      IProgressMonitor childMonitor=monitor.startSubTask(AMOUNT_PER_MODEL);
-      targetModel=JavaGenUtil.createTargetJavaModel(sourceModel.getSModel(),JavaNameUtil.packageNameForModelUID(sourceModel.getModelUID()),generatorContext);
-      CommandProcessor.instance().executeCommand(new Runnable(){
-        public void run(){
-          generator.generate(sourceModel.getSModel(),targetModel,monitor);
-        }
-      }
-,"generate with " + generator.getClass().getName());
-      childMonitor.finish();
-    }
-    if (targetModel != null) {
-      if (generateText) {
-        generateText(targetModel,generatorContext);
-      }
- else {
-        generateFile(outputPath,sourceModel.getSModel(),targetModel);
-      }
+      generateFile(outputPath,sourceModel.getSModel(),targetModel);
     }
   }
- catch (  Exception e) {
-    monitor.addText("Exception during generation " + e.getMessage());
-    LOG.error("Errors during generation",e);
+  if (generator instanceof ITemplateGenerator) {
+    return ((ITemplateGenerator)generator).getErrorCount() > 0;
   }
+  return true;
 }
