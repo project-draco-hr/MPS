@@ -12,8 +12,9 @@
   SModel model=new SModel(new SModelUID(modelLongName,stereotype));
   model.setLoading(true);
   try {
-    Element maxRefID=rootElement.getChild(MAX_REFERENCE_ID);
-    model.setMaxReferenceID(readIntAttributeValue(maxRefID,VALUE));
+    Element maxImportIndex=rootElement.getChild(MAX_IMPORT_INDEX);
+    if (maxImportIndex == null)     maxImportIndex=rootElement.getChild("maxReferenceID");
+    model.setMaxImportIndex(readIntAttributeValue(maxImportIndex,VALUE));
   }
  catch (  Throwable e) {
     LOG.error(e);
@@ -36,20 +37,25 @@
   List imports=rootElement.getChildren(IMPORT_ELEMENT);
   for (Iterator iterator=imports.iterator(); iterator.hasNext(); ) {
     Element element=(Element)iterator.next();
-    int referenceID=readIntAttributeValue(element,MODEL_REFERENCE_ID);
-    String modelUID=element.getAttributeValue(MODEL_UID);
-    if (modelUID != null) {
-      SModelUID importedModelUID=SModelUID.fromString(modelUID);
-      model.addImportElement(importedModelUID,referenceID);
-      importedUIDtoIndex.put(referenceID,importedModelUID);
-    }
- else {
+    String indexValue=element.getAttributeValue(MODEL_IMPORT_INDEX,element.getAttributeValue("referenceID"));
+    int importIndex=Integer.parseInt(indexValue);
+    String importedModelUIDString=element.getAttributeValue(MODEL_UID);
+    if (importedModelUIDString == null) {
       String importedModelFQName=NameUtil.longNameFromNamespaceAndShortName(element.getAttributeValue(NAMESPACE),element.getAttributeValue(NAME));
       String importedModelStereotype=element.getAttributeValue(STEREOTYPE,"");
-      SModelUID importedModelUID=new SModelUID(importedModelFQName,importedModelStereotype);
-      model.addImportElement(importedModelUID,referenceID);
-      importedUIDtoIndex.put(referenceID,importedModelUID);
+      importedModelUIDString=new SModelUID(importedModelFQName,importedModelStereotype).toString();
     }
+    if (importedModelUIDString == null) {
+      LOG.error("Error loading import element for index " + importIndex + " in "+ model.getUID());
+      continue;
+    }
+    if (importIndex > model.getMaxImportIndex()) {
+      LOG.warning("Import element " + importIndex + ":"+ importedModelUIDString+ " greater then max import index ("+ model.getMaxImportIndex()+ ") in "+ model.getUID());
+      model.setMaxImportIndex(importIndex);
+    }
+    SModelUID importedModelUID=SModelUID.fromString(importedModelUIDString);
+    model.addImportElement(importedModelUID,importIndex);
+    importedUIDtoIndex.put(importIndex,importedModelUID);
   }
   ArrayList<ReferenceDescriptor> referenceDescriptors=new ArrayList<ReferenceDescriptor>();
   List children=rootElement.getChildren(NODE);
