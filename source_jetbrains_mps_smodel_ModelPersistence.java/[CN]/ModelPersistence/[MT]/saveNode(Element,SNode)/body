@@ -1,3 +1,36 @@
 {
-  saveNode(parentElement,node,false);
+  Element element=new Element(NODE);
+  setNotNullAttribute(element,ROLE,node.getRole_());
+  element.setAttribute(TYPE,node.getClass().getName());
+  element.setAttribute(ID,node.getId());
+  if (node.getModel().isExternallyResolvable()) {
+    try {
+      String extResolveInfo=ExternalResolverManager.getExternalResolveInfoFromTarget(node);
+      if (!ExternalResolverManager.isEmptyExtResolveInfo(extResolveInfo)) {
+        element.setAttribute(EXT_RESOLVE_INFO,extResolveInfo);
+      }
+    }
+ catch (    Exception e) {
+      LOG.error("Failed to save extResolveInfo for node " + node.getDebugText(),e);
+    }
+  }
+  Map<String,String> properties=node.getProperties();
+  Set<String> keys=properties.keySet();
+  for (Iterator<String> iterator=keys.iterator(); iterator.hasNext(); ) {
+    String propertyName=iterator.next();
+    Element propertyElement=new Element(PROPERTY);
+    element.addContent(propertyElement);
+    propertyElement.setAttribute(NAME,propertyName);
+    setNotNullAttribute(propertyElement,VALUE,node.getProperty(propertyName));
+  }
+  List<SReference> references=node.getReferences();
+  for (Iterator<SReference> iterator=references.iterator(); iterator.hasNext(); ) {
+    SReference reference=iterator.next();
+    saveReference(element,node,reference);
+  }
+  List<SNode> children=node.getChildren();
+  for (  SNode childNode : children) {
+    saveNode(element,childNode);
+  }
+  parentElement.addContent(element);
 }
