@@ -1,28 +1,29 @@
 {
   if (!projectFile.exists())   return null;
-  Solution solution=new Solution();
-  SModel model=ProjectModelDescriptor.createDescriptorFor(solution).getSModel();
+  ModelOwner tmpModelOwner=new ModelOwner(){
+  }
+;
+  SModel model=ProjectModelDescriptor.createDescriptorFor(tmpModelOwner).getSModel();
   SolutionDescriptor solutionDescriptor=PersistenceUtil.loadSolutionDescriptorFormOldMPR(projectFile,model);
   if (solutionDescriptor == null || (solutionDescriptor.getModelRootsCount() == 0 && solutionDescriptor.getLanguageRootsCount() == 0)) {
+    SModelRepository.getInstance().unRegisterModelDescriptors(tmpModelOwner);
     return null;
   }
   String solutionPathname=projectFile.getAbsolutePath();
   solutionPathname=solutionPathname.substring(0,solutionPathname.lastIndexOf('.')) + ".msd";
   File solutionDescriptorFile=new File(solutionPathname);
   if (solutionDescriptorFile.exists()) {
+    SModelRepository.getInstance().unRegisterModelDescriptors(tmpModelOwner);
     return null;
   }
   try {
     solutionDescriptorFile.createNewFile();
     PersistenceUtil.saveSolutionDescriptor(solutionDescriptorFile,solutionDescriptor);
+    SModelRepository.getInstance().unRegisterModelDescriptors(tmpModelOwner);
   }
  catch (  IOException e) {
     e.printStackTrace();
     return null;
   }
-  solution.myDescriptorFile=solutionDescriptorFile;
-  solution.mySolutionDescriptor=solutionDescriptor;
-  MPSModuleRepository.getInstance().readModuleDescriptors(solutionDescriptor.languageRoots(),solution);
-  SModelRepository.getInstance().readModelDescriptors(solutionDescriptor.modelRoots(),solution);
-  return solution;
+  return solutionDescriptorFile;
 }

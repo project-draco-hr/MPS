@@ -1,5 +1,16 @@
 {
-  List<Solution> newSolutions=new LinkedList<Solution>();
+  final File solutionDescriptorFile=Solution.createSolutionDescriptorFromLegacyProjectFile(projectFile);
+  if (solutionDescriptorFile != null) {
+    projectModel.runLoadingAction(new Runnable(){
+      public void run(){
+        SolutionPath solutionPath=SolutionPath.newInstance(projectModel);
+        solutionPath.setPath(solutionDescriptorFile.getAbsolutePath());
+        myProjectDescriptor.addProjectSolution(solutionPath);
+      }
+    }
+);
+  }
+  mySolutions=new LinkedList<Solution>();
   for (  SolutionPath solutionPath : CollectionUtil.iteratorAsIterable(myProjectDescriptor.projectSolutions())) {
     String path=solutionPath.getPath();
     if (path == null) {
@@ -7,43 +18,12 @@
       continue;
     }
     File descriptorFile=new File(path);
-    if (!descriptorFile.exists()) {
-      LOG.error("Couldn't load solution from: " + descriptorFile.getAbsolutePath() + " : file doesn't exist");
-      continue;
-    }
-    Solution loadedSolution=null;
-    for (    Solution solution : mySolutions) {
-      if (solution.getDescriptorFile().getAbsoluteFile().equals(descriptorFile.getAbsoluteFile())) {
-        loadedSolution=solution;
-        break;
-      }
-    }
-    if (loadedSolution != null) {
-      SolutionDescriptor solutionDescriptor=PersistenceUtil.loadSolutionDescriptor(descriptorFile,ProjectModelDescriptor.createDescriptorFor(loadedSolution).getSModel());
-      loadedSolution.setSolutionDescriptor(solutionDescriptor);
-      newSolutions.add(loadedSolution);
-      mySolutions.remove(loadedSolution);
+    if (descriptorFile.exists()) {
+      mySolutions.add((Solution)MPSModuleRepository.getInstance().registerSolution(descriptorFile,this));
     }
  else {
-      newSolutions.add(new Solution(descriptorFile));
+      LOG.error("Couldn't load solution from: " + descriptorFile.getAbsolutePath() + " : file doesn't exist");
     }
-  }
-  for (  Solution solution : mySolutions) {
-    solution.dispose();
-  }
-  mySolutions.clear();
-  mySolutions=newSolutions;
-  final Solution solution=Solution.createFromLegacyProjectFile(projectFile);
-  if (solution != null) {
-    projectModel.runLoadingAction(new Runnable(){
-      public void run(){
-        SolutionPath solutionPath=SolutionPath.newInstance(projectModel);
-        solutionPath.setPath(solution.getDescriptorFile().getAbsolutePath());
-        myProjectDescriptor.addProjectSolution(solutionPath);
-      }
-    }
-);
-    mySolutions.add(solution);
   }
   myLanguages=new LinkedList<Language>();
   for (  LanguagePath languagePath : CollectionUtil.iteratorAsIterable(myProjectDescriptor.projectLanguages())) {
