@@ -2,6 +2,7 @@
   AbstractEditorComponent nodeEditorComponent=context.getNodeEditorComponent();
   EditorCell oldCell=nodeEditorComponent.getBigCellForNode(node);
   if (events != null) {
+    boolean propertyChanged=false;
     boolean nodeChanged=false;
     for (    SModelEvent event : events) {
       SNode eventNode;
@@ -11,7 +12,13 @@
  else       if (event instanceof SModelReferenceEvent) {
         eventNode=((SModelReferenceEvent)event).getReference().getSourceNode();
       }
- else       continue;
+ else {
+        if (event instanceof SModelPropertyEvent) {
+          eventNode=((SModelPropertyEvent)event).getNode();
+          if (nodeEditorComponent.doesCellDependOnNode(oldCell,eventNode))           propertyChanged=true;
+        }
+        continue;
+      }
       if (nodeEditorComponent.doesCellDependOnNode(oldCell,eventNode)) {
         nodeChanged=true;
         break;
@@ -25,6 +32,9 @@
         NodeReadAccessCaster.setNodeReadAccessListener(listensNothingListener);
         listensNothingListener.addNodesToDependOn(nodesOldCellDependsOn);
         NodeReadAccessCaster.removeNodeAccessListener();
+        if (propertyChanged && !(editorCell instanceof EditorCell_Collection)) {
+          editorCell.synchronizeViewWithModel();
+        }
         return editorCell;
       }
     }
