@@ -23,14 +23,16 @@
     if (!myCompileOnGeneration) {
       progress.addText("Compilation in IDEA on generation is turned off");
     }
-    clearMessages(invocationContext);
-    addMessage(new Message(MessageKind.INFORMATION,null,"Generating configuration " + configuration.getName()),invocationContext);
+    clearMessages();
+    addMessage(new Message(MessageKind.INFORMATION,null,"Generating configuration " + configuration.getName()));
     if (isIdeaPresent && myCompileOnGeneration) {
       progress.addText("Compiling in IntelliJ IDEA...");
       LOG.debug("Compiling in IDE before generation ");
       compileAndReload();
       progress.advance(AMOUNT_PER_MODEL);
     }
+    boolean generationFailed=false;
+    boolean generationCancelled=false;
     for (    GeneratorConfigurationCommand cmd : CollectionUtil.iteratorAsIterable(configuration.commands())) {
       LOG.debug("Executing command : " + cmd.getSourceLanguage().getName() + " -> "+ cmd.getTargetLanguage().getName());
       Set<SModelDescriptor> modelsWithLanguage=findModelsWithLanguage(modelDescriptors,cmd.getSourceLanguage().getName());
@@ -38,37 +40,37 @@
       GeneratorSessionContext generatorContext=new GeneratorSessionContext(generator,invocationContext);
       String generatorClass=findGeneratorClass(generator);
       if (generatorClass == null)       generatorClass=DefaultTemplateGenerator.class.getName();
-      boolean generationOK=true;
+      boolean generationByCommandFailed=false;
       SModelDescriptor templatesModel=loadTemplatesModel(generator,generatorContext);
       for (      SModelDescriptor model : modelsWithLanguage) {
         try {
-          generationOK=generationOK && generate_internal(model,templatesModel,generatorContext,generatorClass,configuration.getOutputPath(),progress,generateText);
-          addMessage(new Message(MessageKind.INFORMATION,model.getModelUID() + " generated"),invocationContext);
+          boolean genOK=generate_internal(model,templatesModel,generatorContext,generatorClass,configuration.getOutputPath(),progress,generateText);
+          generationByCommandFailed=generationByCommandFailed || !genOK;
+          addMessage(new Message(MessageKind.INFORMATION,model.getModelUID() + " generated " + (genOK ? "successfully" : "with errors")));
         }
  catch (        GenerationCanceledException gce) {
           progress.addText("generation canceled");
-          addMessage(new Message(MessageKind.WARNING,"generation canceled"),invocationContext);
-          generatorContext.getModule().dispose();
-          return;
+          generationCancelled=true;
+          break;
         }
 catch (        GenerationFailedException gfe) {
           LOG.error(model.getModelUID() + " : generation failed",gfe);
-          progress.addText("exception during generation " + gfe.getMessage());
+          progress.addText(gfe.toString());
           GenerationFailueInfo failueInfo=gfe.getFailueInfo();
           if (failueInfo != null) {
             for (            Message message : failueInfo.createMessages()) {
-              addMessage(message,invocationContext);
+              addMessage(message);
             }
           }
-          addMessage(new Message(MessageKind.ERROR,model.getModelUID() + " : generation failed"),invocationContext);
-          generationOK=false;
+          addMessage(new Message(MessageKind.ERROR,model.getModelUID() + " : " + gfe));
+          generationByCommandFailed=true;
           break;
         }
 catch (        Exception e) {
           LOG.error(model.getModelUID() + " : generation failed",e);
-          progress.addText("exception during generation " + e.getMessage());
-          addMessage(new Message(MessageKind.ERROR,model.getModelUID() + " : generation failed"),invocationContext);
-          generationOK=false;
+          progress.addText(e.toString());
+          addMessage(new Message(MessageKind.ERROR,model.getModelUID() + " : " + e));
+          generationByCommandFailed=true;
           break;
         }
       }
@@ -76,22 +78,30 @@ catch (        Exception e) {
         saveTransientModels(generatorContext);
       }
  else {
-        if (generationOK) {
+        if (!generationByCommandFailed) {
           generatorContext.getModule().dispose();
         }
       }
+      generationFailed=generationFailed || generationByCommandFailed;
+      if (generationCancelled)       break;
     }
-    if (!generateText && isIdeaPresent && myCompileOnGeneration) {
-      LOG.debug("Compiling in IDE after generation");
-      progress.addText("Compiling in IntelliJ IDEA...");
-      compileAndReload();
+    if (myCompileOnGeneration) {
+      if (isIdeaPresent && !(generateText || generationFailed || generationCancelled)) {
+        LOG.debug("Compiling in IDE after generation");
+        progress.addText("Compiling in IntelliJ IDEA...");
+        compileAndReload();
+      }
       progress.advance(AMOUNT_PER_MODEL);
     }
-    addMessage(new Message(MessageKind.INFORMATION,"Generation finished"),invocationContext);
+    MessageKind messageKind=(generationCancelled || generationFailed) ? MessageKind.WARNING : MessageKind.INFORMATION;
+    String messageText="Generation complated successfully";
+    if (generationFailed)     messageText="Generation finished with errors";
+    if (generationCancelled)     messageText="Generation cancelled";
+    addMessage(new Message(messageKind,messageText));
     if (!generateText) {
-      showMessageView(invocationContext);
+      showMessageView();
     }
-    progress.addText("Finished.");
+    progress.addText("Finished");
   }
   finally {
     progress.finish();
