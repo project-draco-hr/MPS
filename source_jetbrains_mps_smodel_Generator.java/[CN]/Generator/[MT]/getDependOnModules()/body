@@ -1,17 +1,19 @@
 {
-  List<IModule> list=super.getDependOnModules();
-  list.add(mySourceLanguage);
+  List<IModule> result=new LinkedList<IModule>(getOwnModules());
+  if (!result.contains(mySourceLanguage)) {
+    result.add(mySourceLanguage);
+  }
   Language targetLanguage=getTargetLanguage();
-  if (targetLanguage != null) {
-    list.add(targetLanguage);
+  if (targetLanguage != null && !result.contains(targetLanguage)) {
+    result.add(targetLanguage);
   }
-  List<Language> languages=MPSModuleRepository.getInstance().getLanguages(this);
-  if (targetLanguage != null && !languages.contains(targetLanguage)) {
-    languages.add(targetLanguage);
+  result=appendBootstrapLangauges(result);
+  List<Generator> generators=new LinkedList<Generator>();
+  for (  IModule module : result) {
+    if (module instanceof Language && module != mySourceLanguage) {
+      generators.addAll(((Language)module).getGenerators());
+    }
   }
-  for (  Language language : languages) {
-    list.addAll(language.getGenerators());
-  }
-  list.remove(this);
-  return list;
+  result.addAll(generators);
+  return result;
 }
