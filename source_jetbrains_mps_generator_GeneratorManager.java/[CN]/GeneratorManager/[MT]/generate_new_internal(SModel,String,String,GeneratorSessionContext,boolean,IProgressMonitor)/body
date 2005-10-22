@@ -1,0 +1,37 @@
+{
+  final IModelGenerator generator;
+  try {
+    Class cls=Class.forName(generatorClassName,true,ClassLoaderManager.getInstance().getClassLoader());
+    if (ITemplateGenerator.class.isAssignableFrom(cls)) {
+      generator=(ITemplateGenerator)cls.getConstructor(IOperationContext.class,IProgressMonitor.class).newInstance(generatorContext,progress);
+    }
+ else {
+      generator=(IModelGenerator)cls.getConstructor(IOperationContext.class).newInstance(generatorContext);
+    }
+  }
+ catch (  Exception e) {
+    throw new GenerationFailedException(e);
+  }
+  SModel targetModel;
+  if (generator instanceof ITemplateGenerator) {
+    targetModel=generate_new_internal_internal(sourceModel,(ITemplateGenerator)generator,generatorContext);
+  }
+ else {
+    IProgressMonitor childMonitor=progress.startSubTask(AMOUNT_PER_MODEL);
+    targetModel=JavaGenUtil.createTargetJavaModel(sourceModel,JavaNameUtil.packageNameForModelUID(sourceModel.getUID()),generatorContext);
+    generator.generate(sourceModel,targetModel,progress);
+    childMonitor.finish();
+  }
+  if (targetModel != null) {
+    if (generateText) {
+      generateText(targetModel,generatorContext);
+    }
+ else {
+      generateFile(outputPath,sourceModel,targetModel);
+    }
+  }
+  if (generator instanceof ITemplateGenerator) {
+    return ((ITemplateGenerator)generator).getErrorCount() == 0;
+  }
+  return true;
+}
