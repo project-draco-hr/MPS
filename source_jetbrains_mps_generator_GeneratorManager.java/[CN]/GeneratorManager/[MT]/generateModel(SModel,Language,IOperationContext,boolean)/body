@@ -1,0 +1,54 @@
+{
+  clearMessages();
+  addMessage(MessageKind.INFORMATION,"Generating " + (generateText ? "text" : "files") + " from model \""+ sourceModel+ "\"");
+  addMessage(MessageKind.INFORMATION,"target language: \"" + targetLanguage.getNamespace() + "\"");
+  String outputFolder=invocationContext.getModule().getGeneratorOutputPath();
+  if (!generateText) {
+    addMessage(MessageKind.INFORMATION,"target folder  : \"" + outputFolder + "\"");
+  }
+  invocationContext.getComponent(ProjectPane.class).disableRebuild();
+  IProgressMonitor progress=new ProgressWindowProgressMonitor(invocationContext.getComponent(ProjectFrame.class),false);
+  try {
+    boolean compileBefore=false;
+    boolean compileAfter=false;
+    if (!myCompileOnGeneration) {
+      progress.addText("Compilation in IntelliJ IDEA on generation is turned off");
+    }
+ else     if (!MPSPlugin.getInstance().isIDEAPresent()) {
+      progress.addText("IntelliJ IDEA with installed MPS is not present");
+    }
+ else {
+      compileBefore=true;
+      compileAfter=!generateText;
+    }
+    progress.start("Generating",AMOUNT_PER_MODEL + ((compileBefore ? 1 : 0) + (compileAfter ? 1 : 0)) * AMOUNT_PER_COMPILATION);
+    GenerationStatus status=generate_new(sourceModel,targetLanguage,compileBefore,compileAfter,invocationContext,progress);
+    if (status.getOutputModel() != null) {
+      if (generateText) {
+        progress.addText("Generate text to Output view");
+        generateText(status.getOutputModel(),invocationContext);
+      }
+ else {
+        progress.addText("Generate files in folder: \"" + outputFolder + "\"");
+        generateFile(outputFolder,sourceModel,status.getOutputModel());
+      }
+    }
+    if (status.isOk()) {
+      addProgressMessage(MessageKind.INFORMATION,"Generation complated successfully",progress);
+    }
+ else     if (status.isError()) {
+      addProgressMessage(MessageKind.WARNING,"Generation finished with errors",progress);
+    }
+ else     if (status.isCanceled()) {
+      addProgressMessage(MessageKind.WARNING,"Generation cancelled",progress);
+    }
+    if (!generateText) {
+      showMessageView();
+    }
+  }
+  finally {
+    progress.finish();
+    ReflectionClassifierFinder.generationFinished();
+    invocationContext.getComponent(ProjectPane.class).enableRebuild();
+  }
+}
