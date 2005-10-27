@@ -1,0 +1,88 @@
+{
+  clearMessages();
+  addMessage(MessageKind.INFORMATION,"Generating " + (generateText ? "text" : "files"));
+  addMessage(MessageKind.INFORMATION," -- target language: \"" + targetLanguage.getNamespace() + "\"");
+  String outputFolder=invocationContext.getModule().getGeneratorOutputPath();
+  if (!generateText) {
+    addMessage(MessageKind.INFORMATION," -- target root folder: \"" + outputFolder + "\"");
+  }
+  invocationContext.getComponent(ProjectPane.class).disableRebuild();
+  IProgressMonitor progress=new ProgressWindowProgressMonitor(invocationContext.getComponent(ProjectFrame.class),false);
+  double totalJob=sourceModels.size() * AMOUNT_PER_MODEL;
+  boolean compile=false;
+  if (!myCompileOnGeneration) {
+    progress.addText("Compilation in IntelliJ IDEA on generation is turned off");
+  }
+ else   if (!MPSPlugin.getInstance().isIDEAPresent()) {
+    progress.addText("IntelliJ IDEA with installed MPS is not present");
+  }
+ else {
+    totalJob=totalJob + (1 + sourceModels.size()) * AMOUNT_PER_COMPILATION;
+    compile=true;
+  }
+  progress.start("Generating",totalJob);
+  try {
+    if (compile) {
+      progress.addText("Compiling in IntelliJ IDEA...");
+      MPSPlugin.getInstance().refreshFS();
+      progress.advance(AMOUNT_PER_COMPILATION / 4);
+      MPSPlugin.getInstance().buildProject();
+      progress.advance(AMOUNT_PER_COMPILATION / 4);
+      progress.addText("Reloading MPS classes...");
+      ReloadUtils.reloadAll();
+      progress.advance(AMOUNT_PER_COMPILATION / 2);
+    }
+    GenerationSession generationSession=new GenerationSession(targetLanguage,invocationContext,progress);
+    generationSession.setSaveTransientModels(isSaveTransientModels());
+    GenerationStatus status=null;
+    for (    SModel sourceModel : sourceModels) {
+      status=generationSession.generateModel(sourceModel);
+      if (status.getOutputModel() != null) {
+        if (generateText) {
+          progress.addText("Generate text to Output view");
+          generateText(status.getOutputModel(),invocationContext);
+        }
+ else {
+          progress.addText("Generate files to folder: \"" + getOutputFolderPath(outputFolder,sourceModel) + "\"");
+          generateFile(outputFolder,sourceModel,status.getOutputModel());
+          if (status.isOk() && compile) {
+            progress.addText("Compiling in IntelliJ IDEA...");
+            MPSPlugin.getInstance().refreshFS();
+            progress.advance(AMOUNT_PER_COMPILATION / 2);
+            MPSPlugin.getInstance().buildProject();
+            progress.advance(AMOUNT_PER_COMPILATION / 2);
+          }
+        }
+      }
+      if (!status.isOk()) {
+        break;
+      }
+    }
+    if (isSaveTransientModels()) {
+      addProgressMessage(MessageKind.INFORMATION,"creating generation session module \"" + generationSession.getSessionModuleName() + "\"",progress);
+      File sessionDescriptorFile=generationSession.getSessionDescriptorFile();
+      myProject.addProjectSolution(sessionDescriptorFile);
+    }
+    if (status.isOk()) {
+      addProgressMessage(MessageKind.INFORMATION,"Generation completed successfully",progress);
+    }
+ else     if (status.isError()) {
+      addProgressMessage(MessageKind.WARNING,"Generation finished with errors",progress);
+    }
+ else     if (status.isCanceled()) {
+      addProgressMessage(MessageKind.WARNING,"Generation cancelled",progress);
+    }
+    showMessageView();
+  }
+ catch (  Throwable t) {
+    LOG.error(t);
+    addProgressMessage(MessageKind.ERROR,t.toString(),progress);
+  }
+ finally {
+    progress.finish();
+    ReflectionClassifierFinder.generationFinished();
+    invocationContext.getComponent(ProjectPane.class).enableRebuild();
+    if (isSaveTransientModels()) {
+    }
+  }
+}
