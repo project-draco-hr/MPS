@@ -6,18 +6,8 @@
   if (!generateText) {
     addMessage(MessageKind.INFORMATION,"    target root folder: \"" + outputFolder + "\"");
   }
-  invocationContext.getComponent(ProjectPane.class).disableRebuild();
   double totalJob=sourceModels.size() * AMOUNT_PER_MODEL;
-  boolean compile=false;
-  if (!myCompileOnGeneration) {
-    progress.addText("compilation in IntelliJ IDEA on generation is turned off");
-  }
- else   if (!MPSPlugin.getInstance().isIDEAPresent()) {
-    progress.addText("IntelliJ IDEA with installed MPS is not present");
-  }
- else {
-    compile=true;
-  }
+  boolean compile=myCompileOnGeneration && MPSPlugin.getInstance().isIDEAPresent();
   if (compile) {
     if (generateText) {
       totalJob=totalJob + AMOUNT_PER_COMPILATION;
@@ -31,7 +21,13 @@
   }
   progress.start("generating",totalJob);
   try {
-    if (compile) {
+    if (!myCompileOnGeneration) {
+      progress.addText("compilation in IntelliJ IDEA on generation is turned off");
+    }
+ else     if (!compile) {
+      progress.addText("IntelliJ IDEA with installed MPS is not present");
+    }
+ else {
       progress.addText("compiling in IntelliJ IDEA...");
       MPSPlugin.getInstance().refreshFS();
       progress.advance(AMOUNT_PER_COMPILATION / 4);
@@ -82,7 +78,7 @@
       addProgressMessage(MessageKind.WARNING,"generation finished with errors",progress);
     }
  else     if (status.isCanceled()) {
-      addProgressMessage(MessageKind.WARNING,"generation cancelled",progress);
+      addProgressMessage(MessageKind.WARNING,"generation canceled",progress);
     }
     showMessageView();
   }
@@ -92,7 +88,5 @@
   }
  finally {
     progress.finish();
-    ReflectionClassifierFinder.generationFinished();
-    invocationContext.getComponent(ProjectPane.class).enableRebuild();
   }
 }
