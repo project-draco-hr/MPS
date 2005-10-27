@@ -1,16 +1,16 @@
 {
   addProgressMessage(MessageKind.INFORMATION,"generating model \"" + sourceModel.getUID() + "\"...");
   Class<? extends IModelGenerator> defaultGeneratorClass=getDefaultGeneratorClass();
-  addMessage(MessageKind.INFORMATION," -- default generator class: " + (defaultGeneratorClass != null ? defaultGeneratorClass.getName() : "<n/a>"));
+  addMessage(MessageKind.INFORMATION,"    default generator class: " + (defaultGeneratorClass != null ? defaultGeneratorClass.getName() : "<n/a>"));
   List<Generator> generators=getGeneratorModiles(sourceModel);
   if (generators.isEmpty()) {
     addProgressMessage(MessageKind.WARNING,"skip model \"" + sourceModel.getUID() + "\" : no generator avalable");
     return new GenerationStatus.OK(null);
   }
-  Class<? extends IModelGenerator> currentGeneratorClass=defaultGeneratorClass;
+  Class<? extends IModelGenerator> currentGeneratorClass=null;
   for (  Generator generator : generators) {
     Class<? extends IModelGenerator> generatorClass=getGeneratorClass(generator);
-    addMessage(MessageKind.INFORMATION," -- generator found: " + generator.getModuleUID() + " generator class: "+ (generatorClass != null ? generatorClass.getName() : "<default>"));
+    addMessage(MessageKind.INFORMATION,"    generator found: " + generator.getModuleUID() + " generator class: "+ (generatorClass != null ? generatorClass.getName() : "<default>"));
     if (generatorClass != null) {
       if (currentGeneratorClass == null) {
         currentGeneratorClass=generatorClass;
@@ -27,10 +27,13 @@
     }
   }
   if (currentGeneratorClass == null) {
-    addProgressMessage(MessageKind.ERROR,"generator class is not defined");
-    return new GenerationStatus.ERROR();
+    if (defaultGeneratorClass == null) {
+      addProgressMessage(MessageKind.ERROR,"generator class is not defined");
+      return new GenerationStatus.ERROR();
+    }
+    currentGeneratorClass=defaultGeneratorClass;
   }
-  addMessage(MessageKind.INFORMATION," -- use generator class: \"" + currentGeneratorClass + "\"");
+  addMessage(MessageKind.INFORMATION,"    use generator class: \"" + currentGeneratorClass + "\"");
   GeneratorSessionContext generatorContext=new GeneratorSessionContext(myTargetLanguage,generators,myInvocationContext);
   if (!ITemplateGenerator.class.isAssignableFrom(currentGeneratorClass)) {
     IModelGenerator handCodedGenerator=(IModelGenerator)currentGeneratorClass.getConstructor(IOperationContext.class).newInstance(generatorContext);
