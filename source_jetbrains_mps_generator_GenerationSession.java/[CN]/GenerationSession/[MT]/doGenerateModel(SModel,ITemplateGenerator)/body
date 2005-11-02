@@ -2,19 +2,21 @@
   GeneratorSessionContext generatorContext=generator.getGeneratorSessionContext();
   SModelDescriptor currentTargetModel=createTransientModel(0,sourceModel,generatorContext.getModule());
   int iterationCount=1;
-  generator.doMapping(sourceModel,currentTargetModel.getSModel(),null);
+  generator.doMapping(sourceModel,currentTargetModel.getSModel());
   while (true) {
     SModelDescriptor currentSourceModel=currentTargetModel;
-    int numReductions=generator.prepareReduction(currentSourceModel.getSModel(),null);
+    SModelDescriptor transientModel=createTransientModel(iterationCount,sourceModel,generatorContext.getModule());
+    int numReductions=generator.prepareReduction(currentSourceModel.getSModel(),transientModel.getSModel());
     while (numReductions == 0 && generator.hasPendingReductions()) {
       numReductions=generator.preparePendingReduction();
     }
     generator.getProgressMonitor().addText("found reductions : " + numReductions);
     if (numReductions == 0) {
+      SModelRepository.getInstance().unRegisterModelDescriptor(transientModel,generatorContext.getModule());
       break;
     }
-    currentTargetModel=createTransientModel(iterationCount,sourceModel,generatorContext.getModule());
-    generator.doReduction(currentTargetModel.getSModel());
+    currentTargetModel=transientModel;
+    generator.doReduction();
     if (++iterationCount > 10) {
       generator.showErrorMessage(null,"Failed to reduce model after 10 iterations");
       throw new GenerationFailedException("Failed to reduce model after 10 iterations");
