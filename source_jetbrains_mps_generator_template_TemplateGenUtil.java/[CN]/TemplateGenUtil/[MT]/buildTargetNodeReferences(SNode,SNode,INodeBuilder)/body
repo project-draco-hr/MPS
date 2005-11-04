@@ -1,10 +1,11 @@
 {
+  ITemplateGenerator generator=nodeBuilder.getGenerator();
   Iterator<SReference> iterator=templateNode.getReferences().iterator();
   while (iterator.hasNext()) {
     SReference templateReference=iterator.next();
     SNode templateReferentNode=templateReference.getTargetNode();
     if (templateReferentNode == null) {
-      nodeBuilder.getGenerator().showErrorMessage(templateNode,"Invalid reference \"" + templateReference.getRole() + "\" in templates model "+ templateNode.getModel().getUID());
+      generator.showErrorMessage(templateNode,"Invalid reference \"" + templateReference.getRole() + "\" in templates model "+ templateNode.getModel().getUID());
       continue;
     }
     if (templateReferentNode instanceof NodeMacro || templateReferentNode instanceof ReferenceMacro || templateReferentNode instanceof PropertyMacro) {
@@ -17,27 +18,26 @@
 {
       SNode targetReferentNode=nodeBuilder.resolveReference(templateReference);
       if (targetReferentNode != null) {
-        targetNode.addReferent(templateReference.getRole(),targetReferentNode);
+        if (checkResolvedReference(nodeBuilder.getSourceNode(),targetNode,templateNode,templateReference.getRole(),targetReferentNode,generator)) {
+          targetNode.addReferent(templateReference.getRole(),targetReferentNode);
+        }
         continue;
       }
     }
-    if (templateReferentNode.getModel() != templateNode.getModel() && templateReferentNode.getModel() != nodeBuilder.getGenerator().getSourceModel()) {
+    if (templateReferentNode.getModel() != templateNode.getModel() && templateReferentNode.getModel() != generator.getSourceModel()) {
       targetNode.addReferent(templateReference.getRole(),templateReferentNode);
       continue;
     }
-    IScope scope=nodeBuilder.getGenerator().getScope();
+    IScope scope=generator.getScope();
     IReferenceResolver referenceResolver=createReferenceResolver(templateNode,scope);
     SNode targetReferentNode=referenceResolver.resolveTarget(templateReference,nodeBuilder);
     if (targetReferentNode != null) {
-      if (SModelUtil.isAcceptableReferent(targetNode,templateReference.getRole(),targetReferentNode,scope)) {
+      if (checkResolvedReference(nodeBuilder.getSourceNode(),targetNode,templateNode,templateReference.getRole(),targetReferentNode,generator)) {
         targetNode.addReferent(templateReference.getRole(),targetReferentNode);
-      }
- else {
-        targetNode.addReferent(templateReference.getRole(),templateReferentNode);
       }
       continue;
     }
-    nodeBuilder.getGenerator().showErrorMessage(nodeBuilder.getSourceNode(),templateNode,nodeBuilder.getRuleNode(),"Couldn't resolve template reference \"" + templateReference.getRole() + "\"");
+    generator.showErrorMessage(nodeBuilder.getSourceNode(),templateNode,nodeBuilder.getRuleNode(),"Couldn't resolve template reference \"" + templateReference.getRole() + "\"");
     LOG.error("uhhh! error. set breakpoint here, referenceResolver:" + referenceResolver);
     StringBuffer buildersStack=new StringBuffer("    builders stack:");
     String indent="\n        ";
@@ -49,6 +49,6 @@
       indent+="    ";
       currBuilder=currBuilder.getParent();
     }
-    LOG.warning("WARN! Couldn't resolve template reference! " + nodeBuilder.getGenerator().getState().toString() + "\n    template       : "+ templateReference.getSourceNode().getDebugText()+ " --["+ templateReference.getRole()+ "]--> "+ templateReference.getTargetNode().getDebugText()+ "\n    template target: "+ targetNode.getDebugText()+ "\n"+ buildersStack);
+    LOG.warning("WARN! Couldn't resolve template reference! " + generator.getState().toString() + "\n    template       : "+ templateReference.getSourceNode().getDebugText()+ " --["+ templateReference.getRole()+ "]--> "+ templateReference.getTargetNode().getDebugText()+ "\n    template target: "+ targetNode.getDebugText()+ "\n"+ buildersStack);
   }
 }
