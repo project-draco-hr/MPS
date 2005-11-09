@@ -1,7 +1,7 @@
 {
   Clipboard cb=Toolkit.getDefaultToolkit().getSystemClipboard();
   Transferable content=cb.getContents(null);
-  if (content == null)   return null;
+  if (content == null)   return PasteNodeData.emptyPasteNodeData(model);
   if (content.isDataFlavorSupported(SModelDataFlavor.sNode)) {
     SNodeTransferable nodeTransferable=null;
     try {
@@ -14,6 +14,13 @@
 catch (    IOException e) {
       LOG.error("Exception",e);
     }
+  }
+ else   if (content.isDataFlavorSupported(SModelDataFlavor.stringFlavor) && canReceiveText(model)) {
+    String s=TextPasteUtil.getStringFromTransferable(content);
+    if (s == null || s.length() <= 0)     return PasteNodeData.emptyPasteNodeData(model);
+    @Hack List<SNode> nodes=Parser.parse(s,model,"jetbrains.mpswiki");
+    if (nodes == null)     return PasteNodeData.emptyPasteNodeData(model);
+    return new PasteNodeData(nodes,new HashSet<SReference>(),model,new HashSet<String>(),new HashSet<SModelUID>());
   }
   return null;
 }
