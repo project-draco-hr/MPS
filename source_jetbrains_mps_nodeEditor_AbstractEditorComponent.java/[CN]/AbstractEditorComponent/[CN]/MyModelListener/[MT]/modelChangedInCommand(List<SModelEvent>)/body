@@ -1,6 +1,25 @@
 {
   if (!EventUtil.isDramaticalChange(events)) {
-    rebuildEditorContent(events);
+    if (EventUtil.isPropertyChange(events)) {
+      String propertyName=((SModelPropertyEvent)events.get(0)).getPropertyName();
+      SNodeProxy nodeProxy=new SNodeProxy(((SModelPropertyEvent)events.get(0)).getNode());
+      Pair<SNodeProxy,String> pair=new Pair<SNodeProxy,String>(nodeProxy,propertyName);
+      Set<EditorCell_Property> editorCell_properties=myNodePropertiesAccessedCleanlyToDependentCellsMap.get(pair);
+      Set<EditorCell> editorCells=myNodePropertiesAccessedDirtilyToDependentCellsMap.get(pair);
+      if (editorCells != null) {
+        System.err.println("dirtily accessed property changed");
+        rebuildEditorContent(events);
+      }
+      if (editorCell_properties != null) {
+        for (        EditorCell_Property cell : editorCell_properties) {
+          cell.synchronizeViewWithModel();
+        }
+        relayout();
+      }
+    }
+ else {
+      rebuildEditorContent(events);
+    }
   }
  else {
     String cellRole=null;
