@@ -20,12 +20,21 @@
   sourceLanguage.save();
   List<Generator> generators=sourceLanguage.getGenerators();
   Generator newGenerator=generators.get(generators.size() - 1);
-  SModelDescriptor templateModelDescriptor=newGenerator.createModel(new SModelUID(templateModelNamePrefix,"main",SModelStereotype.TEMPLATES),templateModelsRoot.getPath(),templateModelsRoot.getPrefix());
-  SModel templateModel=templateModelDescriptor.getSModel();
-  templateModel.addLanguage(BootstrapLanguages.getInstance().getTLBase());
-  templateModel.addLanguage(targetLanguage);
-  MappingConfiguration mappingConfiguration=new MappingConfiguration(templateModel);
-  mappingConfiguration.setName("main");
-  templateModel.addRoot(mappingConfiguration);
-  templateModelDescriptor.save();
+  boolean alreadyOwnsTemplateModel=false;
+  for (  SModelDescriptor modelDescriptor : newGenerator.getOwnModelDescriptors()) {
+    if (SModelStereotype.TEMPLATES.equals(modelDescriptor.getStereotype())) {
+      alreadyOwnsTemplateModel=true;
+      break;
+    }
+  }
+  if (!alreadyOwnsTemplateModel) {
+    SModelDescriptor templateModelDescriptor=newGenerator.createModel(new SModelUID(templateModelNamePrefix,"main",SModelStereotype.TEMPLATES),templateModelsRoot.getPath(),templateModelsRoot.getPrefix());
+    SModel templateModel=templateModelDescriptor.getSModel();
+    templateModel.addLanguage(BootstrapLanguages.getInstance().getTLBase());
+    templateModel.addLanguage(targetLanguage);
+    MappingConfiguration mappingConfiguration=new MappingConfiguration(templateModel);
+    mappingConfiguration.setName("main");
+    templateModel.addRoot(mappingConfiguration);
+    templateModelDescriptor.save();
+  }
 }
