@@ -1,0 +1,31 @@
+{
+  LanguageDescriptor languageDescriptor=sourceLanguage.getLanguageDescriptor();
+  SModel model=languageDescriptor.getModel();
+  model.setLoading(true);
+  GeneratorDescriptor generatorDescriptor=new GeneratorDescriptor(model);
+  generatorDescriptor.setGeneratorUID(Generator.generateGeneratorUID(sourceLanguage));
+  jetbrains.mps.projectLanguage.Language _targetLanguage=new jetbrains.mps.projectLanguage.Language(model);
+  _targetLanguage.setName(targetLanguage.getNamespace());
+  generatorDescriptor.setTargetLanguage(_targetLanguage);
+  String templateModelNamePrefix=sourceLanguage.getNamespace() + ".generator." + NameUtil.shortNameFromLongName(targetLanguage.getNamespace())+ ".template";
+  ModelRoot templateModelsRoot=new ModelRoot(model);
+  templateModelsRoot.setPrefix(templateModelNamePrefix);
+  templateModelsRoot.setPath(templateModelsDir.getAbsolutePath());
+  generatorDescriptor.addModelRoot(templateModelsRoot);
+  Root targetLanguageModuleRoot=new Root(model);
+  targetLanguageModuleRoot.setPath(targetLanguage.getDescriptorFile().getParentFile().getAbsolutePath());
+  generatorDescriptor.addModuleRoot(targetLanguageModuleRoot);
+  languageDescriptor.addGenerator(generatorDescriptor);
+  sourceLanguage.setLanguageDescriptor(languageDescriptor);
+  sourceLanguage.save();
+  List<Generator> generators=sourceLanguage.getGenerators();
+  Generator newGenerator=generators.get(generators.size() - 1);
+  SModelDescriptor templateModelDescriptor=newGenerator.createModel(new SModelUID(templateModelNamePrefix,"main",SModelStereotype.TEMPLATES),templateModelsRoot.getPath(),templateModelsRoot.getPrefix());
+  SModel templateModel=templateModelDescriptor.getSModel();
+  templateModel.addLanguage(BootstrapLanguages.getInstance().getTLBase());
+  templateModel.addLanguage(targetLanguage);
+  MappingConfiguration mappingConfiguration=new MappingConfiguration(templateModel);
+  mappingConfiguration.setName("main");
+  templateModel.addRoot(mappingConfiguration);
+  templateModelDescriptor.save();
+}
