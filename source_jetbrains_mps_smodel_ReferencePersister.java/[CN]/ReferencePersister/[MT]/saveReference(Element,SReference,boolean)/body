@@ -1,0 +1,40 @@
+{
+  SNode node=reference.getSourceNode();
+  Element linkElement=new Element(ModelPersistence.LINK);
+  parentElement.addContent(linkElement);
+  linkElement.setAttribute(ModelPersistence.ROLE,reference.getRole());
+  if (reference.isExternal()) {
+    SReference sReference=reference;
+    SModelUID targetModelUID=sReference.getTargetModelUID();
+    String targetModelInfo="";
+    if (useUIDs) {
+      SModel.ImportElement importElement=node.getModel().getImportElement(targetModelUID);
+      int importIndex=-1;
+      if (importElement != null) {
+        importIndex=importElement.getReferenceID();
+        targetModelInfo=importIndex + ".";
+      }
+ else {
+        LOG.error("Couldn't save reference \"" + sReference.getRole() + "\" in "+ node.getDebugText()+ "\n -- importz element for model \""+ targetModelUID+ "\" not found");
+      }
+    }
+ else {
+      targetModelInfo=targetModelUID.toString() + "#";
+    }
+    String extResolveInfo=sReference.getExtResolveInfo();
+    if (ExternalResolver.isEmptyExtResolveInfo(extResolveInfo)) {
+      linkElement.setAttribute(ModelPersistence.TARGET_NODE_ID,targetModelInfo + reference.getTargetNodeId());
+    }
+ else {
+      linkElement.setAttribute(ModelPersistence.EXT_RESOLVE_INFO,targetModelInfo + extResolveInfo);
+    }
+  }
+ else {
+    if (reference.isResolved())     linkElement.setAttribute(ModelPersistence.TARGET_NODE_ID,reference.getTargetNodeId());
+    String resolveInfo=reference.getResolveInfo();
+    if (!reference.isResolved() && resolveInfo != null)     linkElement.setAttribute(ModelPersistence.RESOLVE_INFO,resolveInfo);
+    String targetClassResolveInfo=reference.getTargetClassResolveInfo();
+    if (!reference.isResolved() && targetClassResolveInfo != null)     linkElement.setAttribute(ModelPersistence.TARGET_CLASS_RESOLVE_INFO,targetClassResolveInfo);
+  }
+  return linkElement;
+}
