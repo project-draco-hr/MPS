@@ -1,48 +1,18 @@
 {
-  Language language=SModelUtil.getLanguage(node,context.getOperationContext().getScope());
-  if (language == null) {
-    LOG.errorWithTrace("Error loading editor for node \"" + node.getDebugText() + "\".\n"+ "Couldn't find language for namespace: \""+ NameUtil.namespaceFromConceptFQName(node.getClass().getName())+ "\"\n"+ "In scope "+ context.getOperationContext().getScope());
-    SModelUtil.getLanguage(node,context.getOperationContext().getScope());
+  IScope scope=context.getOperationContext().getScope();
+  ConceptDeclaration nodeConcept=SModelUtil.getConceptDeclaration(node,scope);
+  if (nodeConcept == null) {
+    LOG.errorWithTrace("Error loading editor for node \"" + node.getDebugText() + "\".\n"+ "Couldn't find node concept in scope: "+ scope);
     return null;
   }
   String stereotype=node.getModel().getStereotype();
-  String languageEditorFQName=language.getEditorUID(stereotype);
-  if (languageEditorFQName == null) {
-    languageEditorFQName=language.getEditorUID();
-    if (languageEditorFQName == null) {
-      LOG.errorWithTrace("Error loading editor for node \"" + node.getDebugText() + "\" <<"+ stereotype+ ">> : no editor model.");
-      return null;
+  while (nodeConcept != null) {
+    INodeEditor nodeEditor=loadEditor(nodeConcept,stereotype,scope);
+    if (nodeEditor != null) {
+      return nodeEditor;
     }
+    nodeConcept=nodeConcept.getExtends();
   }
-  String conceptName=NameUtil.shortNameFromLongName(NameUtil.nodeConceptFQName(node));
-  ConceptDeclaration conceptDeclaration=language.findConceptDeclaration(conceptName);
-  if (conceptDeclaration == null) {
-    LOG.error("couldn't find concept " + conceptName + " in language "+ language.getModuleUID());
-    return null;
-  }
-  String editorClassName="";
-  while (conceptDeclaration != null) {
-    try {
-      editorClassName=languageEditorFQName + "." + conceptDeclaration.getName()+ "_Editor";
-      Class editorClass=Class.forName(editorClassName,true,ClassLoaderManager.getInstance().getClassLoader());
-      return (INodeEditor)editorClass.newInstance();
-    }
- catch (    ClassNotFoundException e) {
-      conceptDeclaration=conceptDeclaration.getExtends();
-    }
-catch (    InstantiationException e) {
-      LOG.error(e);
-      return null;
-    }
-catch (    IllegalAccessException e) {
-      LOG.error(e);
-      return null;
-    }
-catch (    Exception e) {
-      LOG.error(e);
-      return null;
-    }
-  }
-  LOG.warning("Couldn't load editor " + editorClassName + " : Class Not Found!");
+  LOG.error("Couldn't load editor for node " + node.getDebugText());
   return null;
 }
