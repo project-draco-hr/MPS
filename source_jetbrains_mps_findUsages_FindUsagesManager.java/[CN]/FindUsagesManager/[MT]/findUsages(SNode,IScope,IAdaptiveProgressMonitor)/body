@@ -1,0 +1,25 @@
+{
+  Set<SReference> result=new HashSet<SReference>();
+  try {
+    if (progress == null)     progress=IAdaptiveProgressMonitor.NULL_PROGRESS_MONITOR;
+    List<SModelDescriptor> models=scope.getModelDescriptors();
+    long estimatedTime=ModelsProgressUtil.estimateFindUsagesTimeMillis(models);
+    progress.start("Find Usages...",estimatedTime);
+    progress.addText("Finding usages...");
+    progress.startTask(ModelsProgressUtil.TASK_KIND_FIND_USAGES,estimatedTime);
+    for (    SModelDescriptor model : new ArrayList<SModelDescriptor>(models)) {
+      String taskName=ModelsProgressUtil.findUsagesModelTaskName(model);
+      progress.startTask(taskName,ModelsProgressUtil.TASK_KIND_FIND_USAGES);
+      result.addAll(model.findUsages(node));
+      if (progress.isCanceled()) {
+        return result;
+      }
+      progress.finishTask(taskName);
+    }
+    progress.finishTask(ModelsProgressUtil.TASK_KIND_FIND_USAGES);
+    return result;
+  }
+  finally {
+    progress.finish();
+  }
+}
