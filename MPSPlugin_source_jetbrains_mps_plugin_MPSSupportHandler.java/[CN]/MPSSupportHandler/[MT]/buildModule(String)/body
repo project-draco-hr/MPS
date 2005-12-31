@@ -8,9 +8,14 @@ synchronized (lock) {
         ApplicationManager.getApplication().runWriteAction(new Runnable(){
           public void run(){
             Module module=findModule(path);
-            if (module == null)             return;
+            if (module == null) {
+synchronized (lock) {
+                lock.notifyAll();
+              }
+              return;
+            }
             CompilerManager compilerManager=myProject.getComponent(CompilerManager.class);
-            compilerManager.make(new CompileStatusNotification(){
+            compilerManager.make(module,new CompileStatusNotification(){
               public void finished(              boolean aborted,              int errors,              int warnings){
 synchronized (lock) {
                   lock.notifyAll();
