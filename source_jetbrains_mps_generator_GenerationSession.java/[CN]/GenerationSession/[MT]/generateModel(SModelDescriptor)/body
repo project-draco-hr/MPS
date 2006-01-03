@@ -1,4 +1,5 @@
 {
+  SModel sourceModel=sourceModelDescriptor.getSModel();
   addProgressMessage(MessageKind.INFORMATION,"generating model \"" + sourceModel.getUID() + "\"");
   Class<? extends IModelGenerator> defaultGeneratorClass=getDefaultGeneratorClass();
   addMessage(MessageKind.INFORMATION,"    default generator class: " + (defaultGeneratorClass != null ? defaultGeneratorClass.getName() : "<n/a>"));
@@ -37,13 +38,11 @@
   GeneratorSessionContext generatorContext=new GeneratorSessionContext(myTargetLanguage,generators,myInvocationContext);
   if (!ITemplateGenerator.class.isAssignableFrom(currentGeneratorClass)) {
     IModelGenerator handCodedGenerator=currentGeneratorClass.getConstructor(IOperationContext.class).newInstance(generatorContext);
-    IProgressMonitor childMonitor=myProgressMonitor.startSubTask(GeneratorManager.AMOUNT_PER_MODEL);
     SModel targetModel=JavaGenUtil.createTargetJavaModel(sourceModel,JavaNameUtil.packageNameForModelUID(sourceModel.getUID()),generatorContext);
-    handCodedGenerator.generate(sourceModel,targetModel,childMonitor);
-    childMonitor.finish();
+    handCodedGenerator.generate(sourceModel,targetModel);
     return new GenerationStatus.OK(targetModel);
   }
-  ITemplateGenerator generator=(ITemplateGenerator)currentGeneratorClass.getConstructor(GeneratorSessionContext.class,IProgressMonitor.class).newInstance(generatorContext,myProgressMonitor);
+  ITemplateGenerator generator=(ITemplateGenerator)currentGeneratorClass.getConstructor(GeneratorSessionContext.class,IAdaptiveProgressMonitor.class).newInstance(generatorContext,myProgressMonitor);
   GenerationStatus status;
   try {
     SModel outputModel=doGenerateModel(sourceModel,generator);

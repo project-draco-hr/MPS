@@ -20,44 +20,39 @@
   if (!generateText) {
     addMessage(MessageKind.INFORMATION,"    target root folder: \"" + outputFolder + "\"");
   }
-  double totalJob=sourceModels.size() * AMOUNT_PER_MODEL;
-  boolean compile=myCompileOnGeneration && MPSPlugin.getInstance().isIDEAPresent();
-  if (compile) {
-    if (generateText) {
-      totalJob=totalJob + AMOUNT_PER_COMPILATION;
-    }
- else {
-      totalJob=totalJob + AMOUNT_PER_COMPILATION + AMOUNT_PER_COMPILATION;
-    }
-  }
- else {
-    totalJob=totalJob + AMOUNT_PER_COMPILATION / 2;
-  }
+  boolean ideaPresent=MPSPlugin.getInstance().isIDEAPresent();
+  boolean compile=myCompileOnGeneration && ideaPresent;
+  long totalJob=ModelsProgressUtil.estimateTotalGenerationJobMillis(compile,generateText,sourceModels);
   progress.start("generating",totalJob);
   try {
     if (!myCompileOnGeneration) {
       progress.addText("compilation in IntelliJ IDEA on generation is turned off");
     }
- else     if (!compile) {
+ else     if (!ideaPresent) {
       progress.addText("IntelliJ IDEA with installed MPS is not present");
     }
  else {
       progress.addText("compiling in IntelliJ IDEA...");
+      progress.startLeafTask(ModelsProgressUtil.TASK_NAME_REFRESH_FS);
       MPSPlugin.getInstance().refreshFS();
-      progress.advance(AMOUNT_PER_COMPILATION / 4);
+      progress.finishTask(ModelsProgressUtil.TASK_NAME_REFRESH_FS);
+      progress.startLeafTask(ModelsProgressUtil.TASK_NAME_COMPILE_ON_GENERATION);
       MPSPlugin.getInstance().buildModule(outputFolder);
-      progress.advance(AMOUNT_PER_COMPILATION / 4);
+      progress.finishTask(ModelsProgressUtil.TASK_NAME_COMPILE_ON_GENERATION);
     }
     progress.addText("reloading MPS classes...");
+    progress.startLeafTask(ModelsProgressUtil.TASK_NAME_RELOAD_ALL);
     ReloadUtils.reloadAll();
-    progress.advance(AMOUNT_PER_COMPILATION / 2);
+    progress.finishTask(ModelsProgressUtil.TASK_NAME_RELOAD_ALL);
     GenerationSession generationSession=new GenerationSession(targetLanguage,invocationContext,progress);
     generationSession.setSaveTransientModels(isSaveTransientModels());
     GenerationStatus status=null;
     for (    SModelDescriptor sourceModelDescriptor : sourceModels) {
       SModel sourceModel=sourceModelDescriptor.getSModel();
       progress.addText("");
-      status=generationSession.generateModel(sourceModel);
+      String taskName=ModelsProgressUtil.generationModelTaskName(sourceModelDescriptor);
+      progress.startLeafTask(taskName,ModelsProgressUtil.generationModelTaskKind());
+      status=generationSession.generateModel(sourceModelDescriptor);
       if (status.getOutputModel() != null) {
         if (generateText) {
           progress.addText("generate text to Output view");
@@ -68,6 +63,7 @@
           generateFile(outputFolder,sourceModel,status.getOutputModel());
         }
       }
+      progress.finishTask(taskName);
       if (!status.isOk()) {
         break;
       }
@@ -81,13 +77,16 @@
     if (status.isOk()) {
       if (compile && !generateText) {
         progress.addText("compiling in IntelliJ IDEA...");
+        progress.startLeafTask(ModelsProgressUtil.TASK_NAME_REFRESH_FS);
         MPSPlugin.getInstance().refreshFS();
-        progress.advance(AMOUNT_PER_COMPILATION / 4);
+        progress.finishTask(ModelsProgressUtil.TASK_NAME_REFRESH_FS);
+        progress.startLeafTask(ModelsProgressUtil.TASK_NAME_COMPILE_ON_GENERATION);
         MPSPlugin.getInstance().buildModule(outputFolder);
-        progress.advance(AMOUNT_PER_COMPILATION / 4);
+        progress.finishTask(ModelsProgressUtil.TASK_NAME_COMPILE_ON_GENERATION);
         progress.addText("reloading MPS classes...");
+        progress.startLeafTask(ModelsProgressUtil.TASK_NAME_RELOAD_ALL);
         ReloadUtils.reloadAll();
-        progress.advance(AMOUNT_PER_COMPILATION / 2);
+        progress.finishTask(ModelsProgressUtil.TASK_NAME_RELOAD_ALL);
       }
       addProgressMessage(MessageKind.INFORMATION,"generation completed successfully",progress);
     }
