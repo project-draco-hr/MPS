@@ -1,0 +1,40 @@
+{
+  AttributeConcept patternAttribute=patternNode.getAttribute();
+  if (patternAttribute instanceof WildcardPattern) {
+    return true;
+  }
+  if (patternAttribute instanceof ListPattern) {
+  }
+ else   if (patternAttribute instanceof AsPattern) {
+    bindNodeWithVar(substitution,(PatternVariableDeclaration)patternAttribute,node);
+  }
+ else   if (patternAttribute instanceof PatternVariableDeclaration) {
+    bindNodeWithVar(substitution,(PatternVariableDeclaration)patternAttribute,node);
+    return true;
+  }
+  if (node.getClass() != patternNode.getClass())   return false;
+  Set<String> childRoles=node.getChildRoles();
+  for (  String role : childRoles) {
+    List<SNode> children=node.getChildren(role);
+    List<SNode> patternChildren=patternNode.getChildren(role);
+    SNode listPatternChild=null;
+    for (    SNode patternChild : patternChildren) {
+      if (patternChild.getAttribute() instanceof ListPattern) {
+        listPatternChild=patternChild;
+        break;
+      }
+    }
+    if (listPatternChild != null) {
+      if (!matchListOfNodes(children,listPatternChild,substitution))       return false;
+    }
+ else {
+      Iterator<SNode> childrenIterator=children.iterator();
+      for (      SNode patternChild : patternChildren) {
+        if (!childrenIterator.hasNext())         return false;
+        SNode child=childrenIterator.next();
+        if (!matchNodes(child,patternChild,substitution))         return false;
+      }
+    }
+  }
+  return true;
+}
