@@ -2,38 +2,20 @@
   for (  SReference sourceReference : allReferences) {
     SNode oldSourceNode=sourceReference.getSourceNode();
     SNode newSourceNode=sourceNodesToNewNodes.get(oldSourceNode);
-    if (!sourceReference.isExternal()) {
-      SNode oldTargetNode=sourceReference.getTargetNode();
-      SNode newTargetNode=sourceNodesToNewNodes.get(oldTargetNode);
-      if (newTargetNode != null) {
-        newSourceNode.addSemanticReference(SReference.newInstance(sourceReference.getRole(),newSourceNode,newTargetNode));
-      }
- else {
-        SReference newReference=SReference.newInstance(sourceReference.getRole(),newSourceNode,oldTargetNode);
-        if (oldTargetNode == null) {
-          newReference.setResolveInfo(sourceReference.getResolveInfo());
-          newReference.setTargetClassResolveInfo(sourceReference.getTargetClassResolveInfo());
-        }
- else {
-          Resolver.setResolveInfo(newReference);
-          if (newReference.getResolveInfo() == null) {
-            String extResolveInfo=null;
-            if (newReference.getSourceNode().getModel().isExternallyResolvable()) {
-              extResolveInfo=ExternalResolver.getExternalResolveInfoFromTarget(newReference.getTargetNode());
-            }
-            if (extResolveInfo != null) {
-              newReference=new SReference(newReference.getRole(),newReference.getSourceNode(),null,extResolveInfo,newReference.getTargetModelUID());
-            }
- else {
-              newReference=new SReference(newReference.getRole(),newReference.getSourceNode(),newReference.getTargetNodeId(),null,newReference.getTargetModelUID());
-            }
-          }
-        }
-        newSourceNode.addSemanticReference(newReference);
-      }
+    SNode oldTargetNode=sourceReference.getTargetNode();
+    SNode newTargetNode=sourceNodesToNewNodes.get(oldTargetNode);
+    if (newTargetNode != null) {
+      newSourceNode.addSemanticReference(SReference.newInstance(sourceReference.getRole(),newSourceNode,newTargetNode));
     }
  else {
-      SReference newReference=SReference.newInstance(sourceReference.getRole(),newSourceNode,sourceReference);
+      SReference newReference;
+      if (!sourceReference.isExternal()) {
+        newReference=SReference.newInstance(sourceReference.getRole(),newSourceNode,oldTargetNode);
+        SReference.setResolveInfoByOldReference(sourceReference,newReference);
+      }
+ else {
+        newReference=SReference.newInstance(sourceReference.getRole(),newSourceNode,sourceReference);
+      }
       newSourceNode.addSemanticReference(newReference);
     }
   }
