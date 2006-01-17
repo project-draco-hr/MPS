@@ -1,5 +1,31 @@
 {
+  String propertyName="dontSubstituteByDefault";
+  ConceptPropertyDeclaration newPropertyDeclaration=null;
+  ConceptDeclaration baseConcept=SModelUtil.findConceptDeclaration("jetbrains.mps.core.structure.BaseConcept",GlobalScope.getInstance());
+  Iterator<ConceptPropertyDeclaration> iterator=baseConcept.conceptPropertyDeclarations();
+  while (iterator.hasNext()) {
+    ConceptPropertyDeclaration conceptPropertyDeclaration=iterator.next();
+    if (conceptPropertyDeclaration.getName().equals(propertyName)) {
+      newPropertyDeclaration=conceptPropertyDeclaration;
+      break;
+    }
+  }
+  if (newPropertyDeclaration == null) {
+    throw new RuntimeException("Couldn't find new property declaration" + propertyName);
+  }
+  ConceptPropertyDeclaration oldPropertyDeclaration=SModelUtil.findNodeByFQName("jetbrains.mps.bootstrap.structureLanguage.library." + propertyName,ConceptPropertyDeclaration.class,GlobalScope.getInstance());
+  if (oldPropertyDeclaration == null) {
+    throw new RuntimeException("Couldn't find old property declaration" + propertyName);
+  }
   Collection<? extends SNode> allNodes=SModelUtil.allNodes(model);
   for (  SNode node : allNodes) {
+    if (node instanceof ConceptProperty) {
+      ConceptProperty conceptProperty=(ConceptProperty)node;
+      ConceptPropertyDeclaration conceptPropertyDeclaration=conceptProperty.getConceptPropertyDeclaration();
+      if (conceptPropertyDeclaration == oldPropertyDeclaration) {
+        conceptProperty.setConceptPropertyDeclaration(newPropertyDeclaration);
+        System.out.println("-- replace in " + SModelUtil.getRootParent(node).getDebugText());
+      }
+    }
   }
 }
