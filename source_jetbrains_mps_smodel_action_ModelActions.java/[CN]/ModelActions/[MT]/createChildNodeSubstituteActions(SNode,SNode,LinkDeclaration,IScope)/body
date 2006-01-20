@@ -1,30 +1,11 @@
 {
-  final ConceptDeclaration targetConcept=linkDeclaration.getTarget();
-  List<ConceptDeclaration> targetConcepts=getDefaultSubstitutableConcepts(sourceNode,scope,targetConcept);
+  ConceptDeclaration targetConcept=linkDeclaration.getTarget();
+  List<ConceptDeclaration> targetConcepts=getDefaultSubstitutableConcepts(sourceNode.getModel(),scope,targetConcept);
   List<INodeSubstituteAction> defaultActions=new LinkedList<INodeSubstituteAction>();
   for (  ConceptDeclaration conceptDeclaration : targetConcepts) {
     defaultActions.add(new DefaultChildNodeSubstituteAction(conceptDeclaration,sourceNode,currentTargetNode,linkDeclaration,scope));
   }
-  List<NodeSubstituteActionsBuilder> substituteActionsBuilders=new LinkedList<NodeSubstituteActionsBuilder>();
-  SModel model=sourceNode.getModel();
-  List<Language> languages=model.getLanguages(scope);
-  for (  Language language : languages) {
-    SModelDescriptor actionsModelDescr=language.getActionsModelDescriptor();
-    if (actionsModelDescr != null) {
-      List<SNode> roots=actionsModelDescr.getSModel().getRoots();
-      for (      SNode root : roots) {
-        if (root instanceof NodeSubstituteActions) {
-          Iterator<NodeSubstituteActionsBuilder> iterator=((NodeSubstituteActions)root).actionsBuilders();
-          while (iterator.hasNext()) {
-            NodeSubstituteActionsBuilder substituteActionsBuilder=iterator.next();
-            if (substituteActionsBuilder.getApplicableLinkMetaclass() == LinkMetaclass.aggregation && SModelUtil.isAssignableConcept(targetConcept,substituteActionsBuilder.getApplicableConcept())) {
-              substituteActionsBuilders.add(substituteActionsBuilder);
-            }
-          }
-        }
-      }
-    }
-  }
+  List<NodeSubstituteActionsBuilder> substituteActionsBuilders=getNodeSubstituteActionBuilders(LinkMetaclass.aggregation,targetConcept,sourceNode.getModel(),scope);
   if (substituteActionsBuilders.size() == 0) {
     return defaultActions;
   }
