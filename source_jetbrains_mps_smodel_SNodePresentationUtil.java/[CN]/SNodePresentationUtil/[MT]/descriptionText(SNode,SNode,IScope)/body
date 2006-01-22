@@ -2,18 +2,28 @@
   if (node == null) {
     return "";
   }
-  String result=null;
-  if (node instanceof BaseMethodDeclaration) {
-    result=descriptionText_BaseMethodDeclaration((BaseMethodDeclaration)node,referenceContext,scope);
+  if (node instanceof ParameterDeclaration) {
+    return "parameter";
   }
- else   if (node instanceof VariableDeclaration) {
-    result=descriptionText_VariableDeclaration((VariableDeclaration)node,referenceContext,scope);
+ else   if (node instanceof LocalVariableDeclaration) {
+    return "local variable";
+  }
+ else   if (node instanceof MethodDeclaration) {
+    return getAliasOrConceptName(node,scope) + " in " + node.getModel().getUID().getLongName();
+  }
+ else   if (node instanceof BaseMethodDeclaration || node instanceof VariableDeclaration || node instanceof EnumConstantDeclaration) {
+    String prefix=getAliasOrConceptName(node,scope) + " in ";
+    Classifier parent=SModelUtil.findParent(node,Classifier.class);
+    if (parent == null) {
+      return prefix + "?declaring classifer?";
+    }
+ else     if (isReferenceContext(parent,referenceContext)) {
+      return prefix + "this " + parent.getName();
+    }
+    return prefix + NameUtil.nodeFQName(parent);
   }
  else   if (node instanceof Classifier) {
-    result=descriptionText_Classifier((Classifier)node,scope);
-  }
-  if (result != null) {
-    return result;
+    return getAliasOrConceptName(node,scope) + " in " + node.getModel().getUID();
   }
   if (node instanceof LinkDeclaration) {
     SNode containingRoot=node.getContainingRoot();
@@ -23,5 +33,8 @@
   if (description != null) {
     return description;
   }
-  return "";
+  if (node.isRoot()) {
+    return getAliasOrConceptName(node,scope) + " in " + node.getModel().getUID();
+  }
+  return getAliasOrConceptName(node,scope) + " in " + NameUtil.nodeFQName(SModelUtil.getRootParent(node));
 }
