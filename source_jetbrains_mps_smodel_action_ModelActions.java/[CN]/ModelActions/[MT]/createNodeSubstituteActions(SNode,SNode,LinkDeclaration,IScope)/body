@@ -1,0 +1,41 @@
+{
+  List<INodeSubstituteAction> resultActions=new LinkedList<INodeSubstituteAction>();
+  final ConceptDeclaration targetConcept=linkDeclaration.getTarget();
+  if (targetConcept == null) {
+    return resultActions;
+  }
+  Language mainLanguage=SModelUtil.getDeclaringLanguage(targetConcept,scope);
+  if (mainLanguage == null) {
+    LOG.error("Couldn't build actions : couldn't get declaring language for concept " + targetConcept.getDebugText());
+    return resultActions;
+  }
+  LinkMetaclass linkMetaclass=SModelUtil.getGenuineLinkMetaclass(linkDeclaration);
+  List<NodeSubstituteActionsBuilder> mainSubstituteActionsBuilders=getNodeSubstituteActionBuilders(mainLanguage,linkMetaclass,targetConcept,sourceNode.getModel(),scope);
+  if (mainSubstituteActionsBuilders.isEmpty()) {
+    if (linkMetaclass == LinkMetaclass.reference) {
+      resultActions=createDefaultReferentNodeSubstituteActions(sourceNode,currentTargetNode,linkDeclaration,targetConcept,scope);
+    }
+ else {
+      resultActions=createDefaultChildNodeSubstituteActions(sourceNode,currentTargetNode,linkDeclaration,targetConcept,scope);
+    }
+  }
+ else {
+    for (    NodeSubstituteActionsBuilder builder : mainSubstituteActionsBuilders) {
+      resultActions.addAll(createActions(builder,sourceNode,currentTargetNode,linkDeclaration,scope));
+    }
+  }
+  List<NodeSubstituteActionsBuilder> extendedSubstituteActionsBuilders=new LinkedList<NodeSubstituteActionsBuilder>();
+  List<Language> languages=sourceNode.getModel().getLanguages(scope);
+  for (  Language language : languages) {
+    if (language == mainLanguage) {
+      continue;
+    }
+    extendedSubstituteActionsBuilders.addAll(getNodeSubstituteActionBuilders(language,linkMetaclass,targetConcept,sourceNode.getModel(),scope));
+  }
+  for (  NodeSubstituteActionsBuilder builder : extendedSubstituteActionsBuilders) {
+    List<INodeSubstituteAction> addActions=createActions(builder,sourceNode,currentTargetNode,linkDeclaration,scope);
+    addActions=filterActions(addActions,extendedSubstituteActionsBuilders,builder,scope);
+    resultActions.addAll(addActions);
+  }
+  return resultActions;
+}
