@@ -4,6 +4,8 @@
   Class<? extends IModelGenerator> defaultGeneratorClass=getDefaultGeneratorClass();
   addMessage(MessageKind.INFORMATION,"    default generator class: " + (defaultGeneratorClass != null ? defaultGeneratorClass.getName() : "<n/a>"));
   List<Generator> generators=getGeneratorModules(sourceModel);
+  GeneratorSessionContext generatorSessionContext=new GeneratorSessionContext(myTargetLanguage,generators,myInvocationContext);
+  setGeneratorSessionContext(generatorSessionContext);
   if (generators.isEmpty()) {
     addProgressMessage(MessageKind.WARNING,"skip model \"" + sourceModel.getUID() + "\" : no generator avalable");
     return new GenerationStatus.OK(null);
@@ -35,14 +37,13 @@
     currentGeneratorClass=defaultGeneratorClass;
   }
   addMessage(MessageKind.INFORMATION,"    use generator class: \"" + currentGeneratorClass + "\"");
-  GeneratorSessionContext generatorContext=new GeneratorSessionContext(myTargetLanguage,generators,myInvocationContext);
   if (!ITemplateGenerator.class.isAssignableFrom(currentGeneratorClass)) {
-    IModelGenerator handCodedGenerator=currentGeneratorClass.getConstructor(IOperationContext.class).newInstance(generatorContext);
-    SModel targetModel=JavaGenUtil.createTargetJavaModel(sourceModel,JavaNameUtil.packageNameForModelUID(sourceModel.getUID()),generatorContext);
+    IModelGenerator handCodedGenerator=currentGeneratorClass.getConstructor(IOperationContext.class).newInstance(generatorSessionContext);
+    SModel targetModel=JavaGenUtil.createTargetJavaModel(sourceModel,JavaNameUtil.packageNameForModelUID(sourceModel.getUID()),generatorSessionContext);
     handCodedGenerator.generate(sourceModel,targetModel);
     return new GenerationStatus.OK(targetModel);
   }
-  ITemplateGenerator generator=(ITemplateGenerator)currentGeneratorClass.getConstructor(GeneratorSessionContext.class,IAdaptiveProgressMonitor.class).newInstance(generatorContext,myProgressMonitor);
+  ITemplateGenerator generator=(ITemplateGenerator)currentGeneratorClass.getConstructor(GeneratorSessionContext.class,IAdaptiveProgressMonitor.class).newInstance(generatorSessionContext,myProgressMonitor);
   GenerationStatus status;
   try {
     SModel outputModel=doGenerateModel(sourceModel,generator);
@@ -70,13 +71,6 @@ catch (  Exception e) {
     myProgressMonitor.addText(e.toString());
     addMessage(MessageKind.ERROR,"model \"" + sourceModel.getUID() + "\" generation failed : "+ e);
     status=new GenerationStatus.ERROR();
-  }
-  if (mySaveTransientModels) {
-    saveTransientModels(generatorContext);
-    generatorContext.getModule().dispose();
-  }
- else   if (!status.isError()) {
-    generatorContext.getModule().dispose();
   }
   return status;
 }
