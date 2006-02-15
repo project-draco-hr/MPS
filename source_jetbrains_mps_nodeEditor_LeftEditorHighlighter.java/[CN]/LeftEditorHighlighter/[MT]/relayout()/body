@@ -1,0 +1,48 @@
+{
+  for (  HighlighterBracket bracket : myBrackets.values()) {
+    bracket.relayout();
+    bracket.setX(myWidth);
+  }
+  myBracketEdges.clear();
+  myBracketsLayoutStack.clear();
+  for (  HighlighterBracket bracket : myBrackets.values()) {
+    myBracketEdges.add(bracket.getBeginningEdge());
+    myBracketEdges.add(bracket.getEndingEdge());
+  }
+  Collections.sort(myBracketEdges);
+  try {
+    int maxDepth=0;
+    for (int i=0; i < myBracketEdges.size(); i++) {
+      BracketEdge edge=myBracketEdges.get(i);
+      HighlighterBracket bracket=edge.myHighlighterBracket;
+      if (edge.isBeginning) {
+        myBracketsLayoutStack.push(bracket);
+      }
+ else {
+        HighlighterBracket poppedBracket=myBracketsLayoutStack.pop();
+        if (poppedBracket == bracket) {
+          int wasDepth=myBracketsLayoutStack.size() + 1;
+          maxDepth=Math.max(wasDepth,maxDepth);
+          bracket.myDepth=wasDepth;
+        }
+ else {
+          while (poppedBracket != bracket) {
+            myBracketEdges.remove(poppedBracket.getEndingEdge());
+            myBrackets.remove(poppedBracket.myEditorCellInfo);
+            poppedBracket=myBracketsLayoutStack.pop();
+          }
+        }
+      }
+    }
+    myCurrentBracketsWidth=(myWidth - maxDepth) / (2 + maxDepth);
+    for (    HighlighterBracket bracket : myBrackets.values()) {
+      int inverseDepth=maxDepth - bracket.myDepth;
+      bracket.myCurrentWidth=getCurrentBracketsWidth() * 2 + inverseDepth * (getCurrentBracketsWidth() + 1);
+    }
+  }
+ catch (  EmptyStackException ex) {
+    LOG.error("brackets error");
+  }
+  myBracketsLayoutStack.clear();
+  myBracketEdges.clear();
+}
