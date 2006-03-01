@@ -1,0 +1,40 @@
+{
+  List<INodeSubstituteAction> resultActions=new LinkedList<INodeSubstituteAction>();
+  final ConceptDeclaration referentConcept=linkDeclaration.getTarget();
+  if (referentConcept == null) {
+    return resultActions;
+  }
+  ConceptDeclaration sourceConcept=SModelUtil.getConceptDeclaration(sourceNode,scope);
+  if (sourceConcept == null) {
+    LOG.error("Couldn't build actions : couldn't get concept for source node" + sourceNode.getDebugText());
+    return resultActions;
+  }
+  Language primaryLanguage=SModelUtil.getDeclaringLanguage(sourceConcept,scope);
+  if (primaryLanguage == null) {
+    LOG.error("Couldn't build actions : couldn't get declaring language for concept " + referentConcept.getDebugText());
+    return resultActions;
+  }
+  List<ReferentSubstituteActionsBuilder> primarySubstituteActionsBuilders=getActionBuilders(primaryLanguage,sourceConcept,referentConcept);
+  if (primarySubstituteActionsBuilders.isEmpty()) {
+    resultActions=createPrimaryReferentSubstituteActions(sourceNode,currentReferent,linkDeclaration,TRUE_CONDITION,scope);
+  }
+ else {
+    for (    ReferentSubstituteActionsBuilder builder : primarySubstituteActionsBuilders) {
+      resultActions.addAll(invokeActionBulder(builder,sourceNode,currentReferent,linkDeclaration,scope));
+    }
+  }
+  List<ReferentSubstituteActionsBuilder> extendedBuilders=new LinkedList<ReferentSubstituteActionsBuilder>();
+  List<Language> languages=sourceNode.getModel().getLanguages(scope);
+  for (  Language language : languages) {
+    if (language == primaryLanguage) {
+      continue;
+    }
+    extendedBuilders.addAll(getActionBuilders(language,sourceConcept,referentConcept));
+  }
+  for (  ReferentSubstituteActionsBuilder builder : extendedBuilders) {
+    List<INodeSubstituteAction> addActions=invokeActionBulder(builder,sourceNode,currentReferent,linkDeclaration,scope);
+    addActions=applyActionFilters(addActions,extendedBuilders,builder,scope);
+    resultActions.addAll(addActions);
+  }
+  return resultActions;
+}
