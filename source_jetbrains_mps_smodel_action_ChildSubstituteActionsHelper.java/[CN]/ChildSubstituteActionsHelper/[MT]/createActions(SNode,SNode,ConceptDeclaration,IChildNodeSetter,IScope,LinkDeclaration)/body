@@ -1,0 +1,34 @@
+{
+  List<INodeSubstituteAction> resultActions=new LinkedList<INodeSubstituteAction>();
+  if (childConcept == null) {
+    return resultActions;
+  }
+  Language mainLanguage=SModelUtil.getDeclaringLanguage(childConcept,scope);
+  if (mainLanguage == null) {
+    LOG.error("Couldn't build actions : couldn't get declaring language for concept " + childConcept.getDebugText());
+    return resultActions;
+  }
+  List<NodeSubstituteActionsBuilder> mainSubstituteActionsBuilders=getActionBuilders(mainLanguage,childConcept);
+  if (mainSubstituteActionsBuilders.isEmpty()) {
+    resultActions=createPrimaryChildSubstituteActions(parentNode,currentChild,childConcept,childSetter,TRUE_CONDITION,scope);
+  }
+ else {
+    for (    NodeSubstituteActionsBuilder builder : mainSubstituteActionsBuilders) {
+      resultActions.addAll(invokeActionFactory(builder,parentNode,currentChild,childConcept,childSetter,scope,linkDeclaration_tmp));
+    }
+  }
+  List<NodeSubstituteActionsBuilder> extendedSubstituteActionsBuilders=new LinkedList<NodeSubstituteActionsBuilder>();
+  List<Language> languages=parentNode.getModel().getLanguages(scope);
+  for (  Language language : languages) {
+    if (language == mainLanguage) {
+      continue;
+    }
+    extendedSubstituteActionsBuilders.addAll(getActionBuilders(language,childConcept));
+  }
+  for (  NodeSubstituteActionsBuilder builder : extendedSubstituteActionsBuilders) {
+    List<INodeSubstituteAction> addActions=invokeActionFactory(builder,parentNode,currentChild,childConcept,childSetter,scope,linkDeclaration_tmp);
+    addActions=applyActionFilters(addActions,extendedSubstituteActionsBuilders,builder,scope);
+    resultActions.addAll(addActions);
+  }
+  return resultActions;
+}
