@@ -1,0 +1,55 @@
+{
+  final Object lock=new Object(){
+  }
+;
+  final StringBuilder result=new StringBuilder();
+synchronized (lock) {
+    ApplicationManager.getApplication().invokeLater(new Runnable(){
+      public void run(){
+        ApplicationManager.getApplication().runWriteAction(new Runnable(){
+          public void run(){
+            Module module=findModule(path);
+            if (module == null) {
+synchronized (lock) {
+                lock.notifyAll();
+              }
+              return;
+            }
+            CompilerManager compilerManager=myProject.getComponent(CompilerManager.class);
+            compilerManager.make(module,new CompileStatusNotification(){
+              public void finished(              boolean aborted,              int errors,              int warnings){
+                compilationFinished(aborted,errors,warnings);
+              }
+              public void finished(              boolean aborted,              int errors,              int warnings,              CompileContext compileContext){
+                compilationFinished(aborted,errors,warnings);
+              }
+              private void compilationFinished(              boolean aborted,              int errorsNumber,              int warningsNumber){
+synchronized (lock) {
+                  if (aborted) {
+                    result.append("compilation aborted");
+                  }
+ else {
+                    result.append("compilation finished : ");
+                    result.append(errorsNumber).append(" errors ");
+                    result.append(warningsNumber).append(" warnings");
+                  }
+                  lock.notifyAll();
+                }
+              }
+            }
+);
+          }
+        }
+);
+      }
+    }
+);
+    try {
+      lock.wait();
+    }
+ catch (    InterruptedException e) {
+      e.printStackTrace();
+    }
+  }
+  return result.toString();
+}
