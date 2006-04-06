@@ -55,7 +55,7 @@
       progress.finishTask(ModelsProgressUtil.TASK_NAME_RELOAD_ALL);
       checkMonitorCanceled(progress);
     }
-    GenerationSession generationSession=new GenerationSession(targetLanguage,invocationContext,progress);
+    GenerationSession generationSession=new GenerationSession(targetLanguage,invocationContext,isSaveTransientModels(),progress);
     GenerationStatus status=null;
     for (    SModelDescriptor sourceModelDescriptor : sourceModels) {
       SModel sourceModel=sourceModelDescriptor.getSModel();
@@ -74,20 +74,16 @@
           generateFile(outputFolder,sourceModel,status.getOutputModel());
         }
       }
-      if (isSaveTransientModels()) {
-        generationSession.saveTransientModels();
-        addProgressMessage(MessageKind.INFORMATION,"adding module \"" + generationSession.getSessionModuleName() + "\"",progress);
-        File sessionDescriptorFile=generationSession.getSessionDescriptorFile();
-        generationSession.dispose();
-        myProject.addProjectSolution(sessionDescriptorFile);
-      }
- else       if (!status.isError()) {
-        generationSession.dispose();
-      }
+      generationSession.discardTransients();
       progress.finishTask(taskName);
       if (!status.isOk()) {
         break;
       }
+    }
+    if (isSaveTransientModels()) {
+      File solutionDescriptorFile=generationSession.saveTransientModels();
+      addProgressMessage(MessageKind.INFORMATION,"adding module \"" + generationSession.getSessionModuleName() + "\"",progress);
+      myProject.addProjectSolution(solutionDescriptorFile);
     }
     updateLanguagesGenerationRequiredStatus(invocationContext);
     checkMonitorCanceled(progress);

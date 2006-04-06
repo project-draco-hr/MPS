@@ -1,3 +1,65 @@
 {
-  saveTransientModels(myGeneratorSessionContext);
+  String projectDir=myInvocationContext.getProject().getProjectFile().getParentFile().getAbsolutePath();
+  String solutionDir=projectDir + File.separatorChar + "outputModels"+ File.separatorChar+ getSessionId();
+  addProgressMessage(MessageKind.INFORMATION,"saving transient models to \"" + solutionDir + "\"");
+  List<IModule> transientModules=new LinkedList<IModule>();
+  for (  GenerationSessionContext context : mySavedContexts) {
+    transientModules.add(context.getModule());
+  }
+  List<SModelDescriptor> transientModels=new LinkedList<SModelDescriptor>();
+  for (  IModule module : transientModules) {
+    List<SModelDescriptor> descriptors=module.getOwnModelDescriptors();
+    for (    SModelDescriptor descriptor : descriptors) {
+      if (descriptor.isTransient()) {
+        transientModels.add(descriptor);
+      }
+    }
+  }
+  for (  SModelDescriptor descriptor : transientModels) {
+    String modelFqName=descriptor.getModelUID().toString();
+    String modelFileName=modelFqName.replace('.',File.separatorChar) + ".mps";
+    File modelFile=new File(solutionDir,modelFileName);
+    ModelPersistence.saveModel(descriptor.getSModel(),modelFile);
+  }
+  ModelOwner tmpOwner=new ModelOwner(){
+  }
+;
+  SModel solutionDescriptorModel=ProjectModels.createDescriptorFor(tmpOwner).getSModel();
+  SolutionDescriptor solutionDescriptor=new SolutionDescriptor(solutionDescriptorModel);
+  solutionDescriptorModel.setLoading(true);
+  solutionDescriptor.setName(getSessionModuleName());
+  addModelRoot("",solutionDir,solutionDescriptor);
+  Set<Language> usedLang=new HashSet<Language>();
+  for (  SModelDescriptor descriptor : transientModels) {
+    List<Language> languages=descriptor.getSModel().getLanguages(GlobalScope.getInstance());
+    for (    Language language : languages) {
+      if (!usedLang.contains(language)) {
+        usedLang.add(language);
+        LanguageRoot languageRoot=new LanguageRoot(solutionDescriptor.getModel());
+        languageRoot.setPath(language.getDescriptorFile().getParentFile().getAbsolutePath());
+        solutionDescriptor.addLanguageRoot(languageRoot);
+      }
+    }
+  }
+  for (  GenerationSessionContext context : mySavedContexts) {
+    List<Generator> generatorModules=context.getGeneratorModules();
+    for (    Generator generator : generatorModules) {
+      List<ModelRoot> modelRoots=generator.getNonDefaultModelRoots();
+      for (      ModelRoot modelRoot : modelRoots) {
+        addModelRoot(modelRoot.getPrefix(),modelRoot.getPath(),solutionDescriptor);
+      }
+    }
+  }
+  IModule invocationModule=myInvocationContext.getModule();
+  List<ModelRoot> modelRoots=invocationModule.getNonDefaultModelRoots();
+  for (  ModelRoot modelRoot : modelRoots) {
+    addModelRoot(modelRoot.getPrefix(),modelRoot.getPath(),solutionDescriptor);
+  }
+  for (  IModule module : transientModules) {
+    module.dispose();
+  }
+  File solutionDescriptorFile=new File(solutionDir,getSessionModuleName() + ".msd");
+  PersistenceUtil.saveSolutionDescriptor(solutionDescriptorFile,solutionDescriptor);
+  SModelRepository.getInstance().unRegisterModelDescriptor(solutionDescriptorModel.getModelDescriptor(),tmpOwner);
+  return solutionDescriptorFile;
 }
