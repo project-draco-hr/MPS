@@ -3,32 +3,35 @@
   if (childConcept == null) {
     return resultActions;
   }
-  Language mainLanguage=SModelUtil.getDeclaringLanguage(childConcept,scope);
-  if (mainLanguage == null) {
+  Language primaryLanguage=SModelUtil.getDeclaringLanguage(childConcept,scope);
+  if (primaryLanguage == null) {
     LOG.error("Couldn't build actions : couldn't get declaring language for concept " + childConcept.getDebugText());
     return resultActions;
   }
-  List<NodeSubstituteActionsBuilder> mainSubstituteActionsBuilders=getActionBuilders(mainLanguage,childConcept);
-  if (mainSubstituteActionsBuilders.isEmpty()) {
+  List<NodeSubstituteActionsBuilder> primaryBuilders=getActionBuilders(primaryLanguage,childConcept);
+  if (primaryBuilders.isEmpty()) {
     resultActions=createPrimaryChildSubstituteActions(parentNode,currentChild,childConcept,childSetter,TRUE_CONDITION,scope);
   }
  else {
-    for (    NodeSubstituteActionsBuilder builder : mainSubstituteActionsBuilders) {
+    for (    NodeSubstituteActionsBuilder builder : primaryBuilders) {
       resultActions.addAll(invokeActionFactory(builder,parentNode,currentChild,childConcept,childSetter,scope));
     }
   }
-  List<NodeSubstituteActionsBuilder> extendedSubstituteActionsBuilders=new LinkedList<NodeSubstituteActionsBuilder>();
+  List<NodeSubstituteActionsBuilder> extendedBuilders=new LinkedList<NodeSubstituteActionsBuilder>();
   List<Language> languages=parentNode.getModel().getLanguages(scope);
   for (  Language language : languages) {
-    if (language == mainLanguage) {
+    if (language == primaryLanguage) {
       continue;
     }
-    extendedSubstituteActionsBuilders.addAll(getActionBuilders(language,childConcept));
+    extendedBuilders.addAll(getActionBuilders(language,childConcept));
   }
-  for (  NodeSubstituteActionsBuilder builder : extendedSubstituteActionsBuilders) {
+  for (  NodeSubstituteActionsBuilder builder : extendedBuilders) {
     List<INodeSubstituteAction> addActions=invokeActionFactory(builder,parentNode,currentChild,childConcept,childSetter,scope);
-    addActions=applyActionFilters(addActions,extendedSubstituteActionsBuilders,builder,scope);
     resultActions.addAll(addActions);
+  }
+  primaryBuilders.addAll(extendedBuilders);
+  for (  NodeSubstituteActionsBuilder builder : primaryBuilders) {
+    resultActions=applyActionFilter(builder,resultActions,scope);
   }
   return resultActions;
 }
