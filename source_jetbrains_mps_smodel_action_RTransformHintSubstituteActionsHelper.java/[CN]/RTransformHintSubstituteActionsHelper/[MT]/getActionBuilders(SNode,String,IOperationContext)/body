@@ -1,0 +1,30 @@
+{
+  List<RTransformHintSubstituteActionsBuilder> actionsBuilders=new LinkedList<RTransformHintSubstituteActionsBuilder>();
+  IScope scope=context.getScope();
+  final ConceptDeclaration sourceConcept=SModelUtil.getConceptDeclaration(sourceNode,scope);
+  if (sourceConcept == null) {
+    return actionsBuilders;
+  }
+  final RTransformTag tag=RTransformTag.parseValue(transformTag);
+  List<Language> languages=sourceNode.getModel().getLanguages(scope);
+  for (  Language language : languages) {
+    SModelDescriptor actionsModel=language.getActionsModelDescriptor();
+    if (actionsModel != null && actionsModel.getSModel() != null) {
+      List<SNode> list=SModelUtil.allNodes(actionsModel.getSModel(),new Condition<SNode>(){
+        public boolean met(        SNode node){
+          if (node instanceof RTransformHintSubstituteActionsBuilder) {
+            RTransformHintSubstituteActionsBuilder actionsBuilder=(RTransformHintSubstituteActionsBuilder)node;
+            if (actionsBuilder.getTransformTag() != tag) {
+              return false;
+            }
+            return SModelUtil.isAssignableConcept(sourceConcept,actionsBuilder.getApplicableConcept()) && satisfiesPrecondition(actionsBuilder,sourceNode,context);
+          }
+          return false;
+        }
+      }
+);
+      actionsBuilders.addAll((List)list);
+    }
+  }
+  return actionsBuilders;
+}
