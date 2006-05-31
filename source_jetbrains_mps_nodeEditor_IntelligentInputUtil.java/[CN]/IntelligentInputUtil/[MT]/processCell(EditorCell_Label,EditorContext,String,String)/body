@@ -1,0 +1,53 @@
+{
+  INodeSubstituteInfo substituteInfo=cell.getSubstituteInfo();
+  if (substituteInfo == null) {
+    substituteInfo=new NullSubstituteInfo();
+  }
+  List<INodeSubstituteItem> matchingActions=substituteInfo.getMatchingItems(smallPattern,true);
+  EditorCell cellForNewNode;
+  SNode newNode;
+  if (cell.isValidText(smallPattern)) {
+    newNode=cell.getSNode();
+    cellForNewNode=cell;
+  }
+ else   if (uniqueAction(substituteInfo,smallPattern,tail)) {
+    INodeSubstituteItem item=matchingActions.get(0);
+    newNode=item.doSubstitute(smallPattern);
+    cellForNewNode=editorContext.createNodeCell(newNode);
+  }
+ else {
+    return;
+  }
+  EditorCellAction rtAction=EditorUtil.getCellAction(cellForNewNode,EditorCellAction.RIGHT_TRANSFORM,editorContext);
+  if (rtAction == null) {
+    return;
+  }
+  final SNode final_newNode=newNode;
+  rtAction.execute(editorContext);
+  CellFounder cellFounder=new CellFounder(editorContext,final_newNode,tail);
+  cellFounder.run(editorContext.createNodeCell(final_newNode));
+  EditorCell_Label foundCell=cellFounder.getFoundCell();
+  if (foundCell != null) {
+    INodeSubstituteInfo rtSubstituteInfo=foundCell.getSubstituteInfo();
+    if (rtSubstituteInfo == null) {
+      rtSubstituteInfo=new NullSubstituteInfo();
+    }
+    List<INodeSubstituteItem> rtMatchingActions=rtSubstituteInfo.getMatchingItems(tail,true);
+    if (!uniqueAction(rtSubstituteInfo,tail,"")) {
+      CommandProcessor.instance().invokeLater(cellFounder);
+      return;
+    }
+    INodeSubstituteItem rtItem=rtMatchingActions.get(0);
+    final SNode yetNewNode=rtItem.doSubstitute(smallPattern);
+    CommandProcessor.instance().invokeLater(new Runnable(){
+      public void run(){
+        EditorCell yetNewNodeCell=editorContext.getNodeEditorComponent().findNodeCell(yetNewNode);
+        editorContext.getNodeEditorComponent().changeSelectionWRTFocusPolicy(yetNewNodeCell);
+      }
+    }
+);
+  }
+ else {
+    CommandProcessor.instance().invokeLater(cellFounder);
+  }
+}
