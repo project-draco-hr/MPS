@@ -1,9 +1,9 @@
 {
   SModel sourceModel=sourceModelDescriptor.getSModel();
   addProgressMessage(MessageKind.INFORMATION,"generating model \"" + sourceModel.getUID() + "\"");
-  Class<? extends IModelGenerator> defaultGeneratorClass=getDefaultGeneratorClass();
+  Class<? extends IModelGenerator> defaultGeneratorClass=getDefaultGeneratorClass(targetLanguage);
   addMessage(MessageKind.INFORMATION,"    default generator class: " + (defaultGeneratorClass != null ? defaultGeneratorClass.getName() : "<n/a>"));
-  GenerationSessionContext context=new GenerationSessionContext(myTargetLanguage,sourceModel,myInvocationContext);
+  GenerationSessionContext context=new GenerationSessionContext(targetLanguage,sourceModel,myInvocationContext);
   List<Generator> generators=context.getGeneratorModules();
   if (generators.isEmpty()) {
     addProgressMessage(MessageKind.WARNING,"skip model \"" + sourceModel.getUID() + "\" : no generator avalable");
@@ -39,14 +39,14 @@
   addMessage(MessageKind.INFORMATION,"    use generator class: \"" + currentGeneratorClass + "\"");
   if (!ITemplateGenerator.class.isAssignableFrom(currentGeneratorClass)) {
     IModelGenerator handCodedGenerator=currentGeneratorClass.getConstructor(IOperationContext.class).newInstance(context);
-    SModelDescriptor outputModel=createTransientModel(0,sourceModel,context.getModule());
+    SModelDescriptor outputModel=createTransientModel(sourceModel,context.getModule());
     handCodedGenerator.generate(sourceModel,outputModel.getSModel());
     return new GenerationStatus.OK(outputModel.getSModel());
   }
   ITemplateGenerator generator=(ITemplateGenerator)currentGeneratorClass.getConstructor(GenerationSessionContext.class,IAdaptiveProgressMonitor.class).newInstance(context,myProgressMonitor);
   GenerationStatus status;
   try {
-    SModel outputModel=generateModel(sourceModel,generator);
+    SModel outputModel=generateModel(sourceModel,targetLanguage,generator,primaryMappingOnly);
     boolean wasErrors=generator.getErrorCount() > 0;
     status=new GenerationStatus(outputModel,wasErrors,false);
     addMessage(status.isError() ? MessageKind.WARNING : MessageKind.INFORMATION,"model \"" + sourceModel.getUID() + "\" has been generated "+ (status.isError() ? "with errors" : "successfully"));

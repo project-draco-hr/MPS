@@ -1,5 +1,19 @@
 {
-  GenerationStatus status=generateModel_internal(sourceModel);
+  GenerationStatus status=null;
+  List<Language> sourceModelLanguages=sourceModel.getSModel().getLanguages(myInvocationContext.getScope());
+  for (  Language language : sourceModelLanguages) {
+    if (language == myTargetLanguage)     continue;
+    if (GeneratorManager.isPossibleTargetLanguage(language,myInvocationContext.getScope())) {
+      status=generateModel_internal(sourceModel,language,true);
+      if (status.isError()) {
+        break;
+      }
+      sourceModel=status.getOutputModel().getModelDescriptor();
+    }
+  }
+  if (status == null || status.isOk()) {
+    status=generateModel_internal(sourceModel,myTargetLanguage,false);
+  }
   if (mySaveTransientModels || status.isError()) {
     if (myCurrentContext != null) {
       mySavedContexts.add(myCurrentContext);
