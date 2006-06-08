@@ -1,0 +1,28 @@
+{
+  String expectedReferentRole=null;
+  String matchingText=NodePresentationUtil.matchingText(referenceDeclaringConcept,null,NodePresentationUtil.CHILD_PRESENTATION,scope);
+  if (!(matchingText == null || matchingText.equals(referenceDeclaringConcept.getName()))) {
+    if (!matchingText.matches("<\\{.+\\}>")) {
+      return null;
+    }
+    String[] matches=matchingText.split("<\\{|\\}>");
+    expectedReferentRole=matches[1];
+  }
+  List<LinkDeclaration> links=SModelSearchUtil.getReferenceLinkDeclarationsExcludingOverridden(referenceDeclaringConcept);
+  if (expectedReferentRole != null) {
+    for (    LinkDeclaration linkDeclaration : links) {
+      if (expectedReferentRole.equals(linkDeclaration.getRole())) {
+        return linkDeclaration;
+      }
+    }
+    LOG.warning("The '" + matchingText + "' doesn't match any link in "+ referenceDeclaringConcept.getDebugText());
+  }
+ else {
+    if (links.size() == 1) {
+      if (SModelUtil.getGenuineLinkSourceCardinality(links.get(0)) == Cardinality._1) {
+        return links.get(0);
+      }
+    }
+  }
+  return null;
+}

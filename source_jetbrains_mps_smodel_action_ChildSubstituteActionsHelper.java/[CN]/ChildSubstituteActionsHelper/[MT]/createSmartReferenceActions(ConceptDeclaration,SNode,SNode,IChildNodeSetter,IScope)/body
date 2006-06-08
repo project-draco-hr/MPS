@@ -1,0 +1,32 @@
+{
+  LinkDeclaration referenceLink=getSmartReference(referenceDeclaringConcept,scope);
+  if (referenceLink == null)   return null;
+  IStatus status=ModelConstraintsUtil.getReferentSearchScope(parentNode,null,referenceDeclaringConcept,referenceLink,scope);
+  if (status.isError())   return null;
+  List<INodeSubstituteAction> actions=new LinkedList<INodeSubstituteAction>();
+  final LinkDeclaration referenceLink_final=referenceLink;
+  ISearchScope searchScope=(ISearchScope)status.getUserObject();
+  ConceptDeclaration targetConcept=referenceLink.getTarget();
+  List<SNode> referentNodes=searchScope.getNodes();
+  for (  SNode referentNode : referentNodes) {
+    if (SModelUtil.isInstanceOfConcept(referentNode,targetConcept,scope)) {
+      actions.add(new DefaultChildNodeSubstituteAction(referentNode,parentNode,currentChild,childSetter,scope){
+        public String getMatchingText(        String pattern){
+          return NodePresentationUtil.matchingText(getParameterNode(),null,NodePresentationUtil.REFERENT_PRESENTATION,getScope());
+        }
+        public String getDescriptionText(        String pattern){
+          String prefix="(smart ref:" + referenceDeclaringConcept.getName() + ") ";
+          return prefix + NodePresentationUtil.descriptionText(getParameterNode(),null,NodePresentationUtil.REFERENT_PRESENTATION,getScope());
+        }
+        public SNode createChildNode(        SNode parameterNode,        SModel model,        String pattern){
+          SNode childNode=super.createChildNode(referenceDeclaringConcept,model,pattern);
+          String referentRole=SModelUtil.getGenuineLinkRole(referenceLink_final);
+          childNode.setReferent(referentRole,parameterNode);
+          return childNode;
+        }
+      }
+);
+    }
+  }
+  return actions;
+}
