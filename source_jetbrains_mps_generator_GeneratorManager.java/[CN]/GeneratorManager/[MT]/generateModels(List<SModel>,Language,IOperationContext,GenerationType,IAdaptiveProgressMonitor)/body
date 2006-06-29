@@ -36,6 +36,14 @@ boolean compile=myCompileOnGeneration && ideaPresent;
 long totalJob=ModelsProgressUtil.estimateTotalGenerationJobMillis(compile,(generationType == GenerationType.GENERATE_TEXT),sourceModels);
 progress.start("generating",totalJob);
 try {
+if (_sourceModels.size() == 1 && generationType == GenerationType.GENERATE_AND_EXECUTE) {
+SModelDescriptor source=_sourceModels.get(0).getModelDescriptor();
+ClassLoader cachedClassLoader=ExecutionManager.getExecutionManager().get(source);
+if (cachedClassLoader != null) {
+execute(source.getLongName(),cachedClassLoader,invocationContext);
+return;
+}
+}
 boolean reloadClasses=true;
 if (!myCompileOnGeneration) {
 progress.addText("compilation in IntelliJ IDEA on generation is turned off");
@@ -87,7 +95,7 @@ generateFile(outputFolder,sourceModel,status.getOutputModel());
 break;
 case GENERATE_AND_EXECUTE:
 progress.addText("compiling generated code in memory...");
-generateTextAndExecute(status.getOutputModel(),invocationContext,progress);
+generateTextAndExecute(sourceModel,status.getOutputModel(),invocationContext,progress);
 break;
 }
 }
