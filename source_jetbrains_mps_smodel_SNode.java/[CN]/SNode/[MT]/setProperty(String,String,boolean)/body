@@ -1,0 +1,38 @@
+{
+  if (!myPropertySetterInProgress && !myModel.isLoading() && usePropertySetter) {
+    INodePropertySetter setter=ModelConstraintsManager.getInstance().getNodePropertySetter(this,propertyName);
+    if (setter != null) {
+      myPropertySetterInProgress=true;
+      setter.execPropertySet(this,propertyName,propertyValue);
+      myPropertySetterInProgress=false;
+      return;
+    }
+  }
+  NodeSecurityManager.getInstance().checkPropertyAvailable(this,propertyName,true);
+  final String oldValue=myProperties.get(propertyName);
+  if (propertyValue == null) {
+    myProperties.remove(propertyName);
+  }
+ else {
+    myProperties.put(propertyName,propertyValue);
+  }
+  if (!getModel().isLoading()) {
+    UndoManager.instance().undoableActionPerformed(new IUndoableAction(){
+      public void undo() throws UnexpectedUndoException {
+        setProperty(propertyName,oldValue);
+      }
+    }
+);
+  }
+  boolean addedOrRemoved=false;
+  boolean isRemoved=false;
+  if (isEmptyPropertyValue(oldValue)) {
+    addedOrRemoved=true;
+    isRemoved=false;
+  }
+  if (isEmptyPropertyValue(propertyValue)) {
+    addedOrRemoved=true;
+    isRemoved=true;
+  }
+  getModel().firePropertyChangedEvent(this,propertyName,oldValue,propertyValue,addedOrRemoved,isRemoved);
+}
