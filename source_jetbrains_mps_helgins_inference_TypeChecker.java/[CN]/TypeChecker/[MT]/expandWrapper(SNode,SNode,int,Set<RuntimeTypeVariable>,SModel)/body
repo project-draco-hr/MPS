@@ -1,0 +1,37 @@
+{
+  if (nodeWrapper == null)   return null;
+  if (nodeWrapper instanceof RuntimeTypeVariable) {
+    RuntimeTypeVariable var=(RuntimeTypeVariable)nodeWrapper;
+    SNode type=EquationManager.getInstance().getRepresentator(nodeWrapper);
+    if (type != representator || depth > 0) {
+      if (variablesMet.contains(var)) {
+        RuntimeErrorType error=new RuntimeErrorType(typesModel);
+        error.setErrorText("recursion types not allowed");
+        return error;
+      }
+      variablesMet.add(var);
+      nodeWrapper=expandWrapper(type,type,0,variablesMet,typesModel);
+      variablesMet.remove(var);
+    }
+    return nodeWrapper;
+  }
+  Map<SNode,SNode> childrenReplacement=new HashMap<SNode,SNode>();
+  for (  SNode child : nodeWrapper.getChildren()) {
+    SNode newChild=expandWrapper(child,representator,depth + 1,variablesMet,typesModel);
+    if (newChild != child) {
+      childrenReplacement.put(child,newChild);
+    }
+  }
+  for (  SNode child : childrenReplacement.keySet()) {
+    if (child.getParent() == null) {
+      System.err.println("debug");
+      RuntimeErrorType error=new RuntimeErrorType(typesModel);
+      error.setErrorText("recursion types not allowed");
+      return error;
+    }
+    SNode parent=child.getParent();
+    parent.removeChild(child);
+    parent.addChild(child.getRole_(),childrenReplacement.get(child));
+  }
+  return nodeWrapper;
+}
