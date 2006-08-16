@@ -1,22 +1,67 @@
 {
-  Set<SNode> nodes=new HashSet<SNode>(mySubtypesToSupertypesMap.keySet());
-  for (  SNode subtype : nodes) {
-    if (subtype instanceof RuntimeTypeVariable) {
-      Set<SNode> subsubtypes=getSubtypes(subtype);
-      Set<SNode> supertypes=getSupertypes(subtype);
-      for (      SNode supertype : supertypes) {
-        if (supertype instanceof RuntimeTypeVariable) {
-          removeSubtyping(subtype,supertype);
-          for (          SNode supersupertype : getSupertypes(supertype)) {
-            removeSubtyping(supertype,supersupertype);
-            addSubtyping(subtype,supersupertype);
-          }
+  Set<SNode> nodes=subtypingGraphVertices();
+  for (  SNode node1 : nodes) {
+    for (    SNode node2 : nodes) {
+      for (      SNode node3 : nodes) {
+        if (node1 == node2 || node2 == node3 || node1 == node3)         continue;
+        Set<SNode> supertypes1=mySubtypesToSupertypesMap.get(node1);
+        if (supertypes1 == null)         continue;
+        Set<SNode> supertypes2=mySubtypesToSupertypesMap.get(node2);
+        if (supertypes2 == null)         continue;
+        if (supertypes1.contains(node2) && supertypes2.contains(node3)) {
+          supertypes1.add(node3);
+          mySupertypesToSubtypesMap.get(node3).add(node1);
         }
       }
-      if (supertypes.isEmpty()) {
+    }
+  }
+  for (  SNode node : subtypingGraphVertices()) {
+    if (node instanceof RuntimeTypeVariable)     continue;
+    Set<SNode> supertypes=mySubtypesToSupertypesMap.get(node);
+    if (supertypes == null)     continue;
+    for (    SNode supertype : new HashSet<SNode>(supertypes)) {
+      if (supertype instanceof RuntimeTypeVariable)       continue;
+      addInequation(node,supertype);
+      supertypes.remove(supertype);
+      mySupertypesToSubtypesMap.get(supertype).remove(node);
+    }
+  }
+  outer:   for (  SNode node : subtypingGraphVertices()) {
+    if (node instanceof RuntimeTypeVariable) {
+      Set<SNode> subtypes=mySupertypesToSubtypesMap.get(node);
+      if (subtypes == null)       continue;
+      Set<SNode> concreteSubtypes=new HashSet<SNode>();
+      for (      SNode subtype : new HashSet<SNode>(subtypes)) {
+        if (subtype instanceof RuntimeTypeVariable) {
+          continue outer;
+        }
+        concreteSubtypes.add(subtype);
+        subtypes.remove(subtype);
+        mySubtypesToSupertypesMap.get(subtype).remove(node);
+      }
+      Set<SNode> lcs=SubtypingManager.lowestCommonSupertypes(concreteSubtypes);
+      if (lcs.isEmpty()) {
+        ErrorReporter.getInstance().setErrorString(node,"can't find common supertype");
+        TypeChecker.reportTypeError(node);
+      }
+ else {
+        addEquation(node,lcs.iterator().next());
       }
     }
- else {
+  }
+  for (  SNode node : subtypingGraphVertices()) {
+    if (node instanceof RuntimeTypeVariable) {
+      Set<SNode> supertypes=mySubtypesToSupertypesMap.get(node);
+      if (supertypes == null)       continue;
+      if (supertypes.size() == 1) {
+        SNode supertype=supertypes.iterator().next();
+        Set<SNode> subtypes=mySupertypesToSubtypesMap.get(node);
+        if (subtypes == null || subtypes.isEmpty()) {
+          supertypes.remove(supertype);
+          mySupertypesToSubtypesMap.get(supertype).remove(node);
+          addEquation(supertype,node);
+        }
+      }
     }
   }
 }
