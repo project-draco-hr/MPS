@@ -1,6 +1,76 @@
 {
   SNode subRepresentator=EquationManager.getInstance().getRepresentator(subtype);
   SNode superRepresentator=EquationManager.getInstance().getRepresentator(supertype);
+  if ("String".equals(subRepresentator.getName()) && "CharSequence".equals(superRepresentator.getName())) {
+    System.err.println("APVS? VA?");
+  }
+  Set<ConceptDeclaration> superConcepts=new HashSet<ConceptDeclaration>();
+{
+    Set<ConceptDeclaration> subConcepts=new HashSet<ConceptDeclaration>();
+    ConceptDeclaration subConcept=SModelUtil.getConceptDeclaration(subtype,GlobalScope.getInstance());
+    subConcepts.add(subConcept);
+    while (subConcept.getExtends() != null) {
+      subConcept=subConcept.getExtends();
+      subConcepts.add(subConcept);
+    }
+    ConceptDeclaration superConcept=SModelUtil.getConceptDeclaration(supertype,GlobalScope.getInstance());
+    superConcepts.add(superConcept);
+    while (superConcept.getExtends() != null) {
+      superConcept=superConcept.getExtends();
+      superConcepts.add(superConcept);
+    }
+    superConcepts.retainAll(subConcepts);
+  }
+  if (!superConcepts.isEmpty()) {
+    Set<String> roles=new HashSet<String>();
+    Set<String> covariantRoles=new HashSet<String>();
+    Set<String> contraVariantRoles=new HashSet<String>();
+    for (    ConceptDeclaration superConcept : superConcepts) {
+      if (myVarianceRules.containsKey(superConcept)) {
+        SubtypingVarianceRule rule=myVarianceRules.get(superConcept);
+        for (        LinkVariance linkVariance : CollectionUtil.iteratorAsIterable(rule.linkVariances())) {
+          String role=linkVariance.getLinkDeclaration().getRole();
+          if (linkVariance.getVariance() == _Variance_Enum.covariant) {
+            covariantRoles.add(role);
+          }
+ else {
+            contraVariantRoles.add(role);
+          }
+        }
+        roles.addAll(CollectionUtil.map(CollectionUtil.iteratorAsList(superConcept.linkDeclarations()),new Mapper<LinkDeclaration,String>(){
+          public String map(          LinkDeclaration p){
+            return p.getRole();
+          }
+        }
+));
+      }
+    }
+    if (!covariantRoles.isEmpty() || !contraVariantRoles.isEmpty()) {
+      for (      String role : roles) {
+        List<SNode> subChildren=subRepresentator.getChildren(role);
+        subChildren.add(subRepresentator.getReferent(role));
+        List<SNode> superChildren=superRepresentator.getChildren(role);
+        superChildren.add(superRepresentator.getReferent(role));
+        if (subChildren.size() != superChildren.size())         return false;
+        Iterator<SNode> subIt=subChildren.iterator();
+        Iterator<SNode> superIt=superChildren.iterator();
+        for (; subIt.hasNext(); ) {
+          SNode subChild=AdaptationManager.getInstance().adaptType(subIt.next());
+          SNode superChild=AdaptationManager.getInstance().adaptType(superIt.next());
+          if (covariantRoles.contains(role)) {
+            if (!isSubtype(subChild,superChild))             return false;
+          }
+ else           if (contraVariantRoles.contains(role)) {
+            if (!isSubtype(superChild,subChild))             return false;
+          }
+ else {
+            if (!MatchingUtil.matchNodes(subChild,superChild))             return false;
+          }
+        }
+      }
+      return true;
+    }
+  }
   Set<SNode> frontier=new HashSet<SNode>();
   Set<SNode> newFrontier=new HashSet<SNode>();
   frontier.add(subRepresentator);
