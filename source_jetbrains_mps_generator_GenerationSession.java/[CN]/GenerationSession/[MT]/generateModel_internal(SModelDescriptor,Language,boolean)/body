@@ -7,7 +7,7 @@
   List<Generator> generators=context.getGeneratorModules();
   if (generators.isEmpty()) {
     addProgressMessage(MessageKind.WARNING,"skip model \"" + sourceModel.getUID() + "\" : no generator avalable");
-    return new GenerationStatus.OK(null);
+    return new GenerationStatus(null,null,false,false);
   }
   setGenerationSessionContext(context);
   Class<? extends IModelGenerator> currentGeneratorClass=null;
@@ -41,14 +41,14 @@
     IModelGenerator handCodedGenerator=currentGeneratorClass.getConstructor(IOperationContext.class).newInstance(context);
     SModelDescriptor outputModel=createTransientModel(sourceModel,context.getModule());
     handCodedGenerator.generate(sourceModel,outputModel.getSModel());
-    return new GenerationStatus.OK(outputModel.getSModel());
+    return new GenerationStatus(outputModel.getSModel(),null,false,false);
   }
   ITemplateGenerator generator=(ITemplateGenerator)currentGeneratorClass.getConstructor(GenerationSessionContext.class,IAdaptiveProgressMonitor.class).newInstance(context,myProgressMonitor);
   GenerationStatus status;
   try {
     SModel outputModel=generateModel(sourceModel,targetLanguage,generator,primaryMappingOnly);
     boolean wasErrors=generator.getErrorCount() > 0;
-    status=new GenerationStatus(outputModel,wasErrors,false);
+    status=new GenerationStatus(outputModel,context.getTraceMap(),wasErrors,false);
     addMessage(status.isError() ? MessageKind.WARNING : MessageKind.INFORMATION,"model \"" + sourceModel.getUID() + "\" has been generated "+ (status.isError() ? "with errors" : "successfully"));
     generator.reset();
   }
