@@ -1,7 +1,7 @@
 {
   clear();
-  final SModelDescriptor modelDescriptor=context.get(SModelDescriptor.class);
-  final IDEProjectFrame ide=context.get(IDEProjectFrame.class);
+  SModelDescriptor modelDescriptor=context.get(SModelDescriptor.class);
+  IDEProjectFrame ide=context.get(IDEProjectFrame.class);
   IOperationContext operationContext=context.get(IOperationContext.class);
   List<Language> modelLanguages=modelDescriptor.getSModel().getLanguages(operationContext.getScope());
   if (modelLanguages.size() == 0) {
@@ -12,47 +12,21 @@
 );
   }
   for (  final Language language : modelLanguages) {
-    int addCount=0;
     ActionGroup langRootsGroup=new ActionGroup(language.getNamespace()){
       public Icon getIcon(){
         return IconManager.getIconFor(language.getNamespace());
       }
     }
 ;
-    add(langRootsGroup);
-    for (    final ConceptDeclaration conceptDeclaration : language.getConceptDeclarations()) {
+    for (    ConceptDeclaration conceptDeclaration : language.getConceptDeclarations()) {
       if (conceptDeclaration.getRootable()) {
-        String className=JavaNameUtil.className(conceptDeclaration);
+        String nodeClassName=JavaNameUtil.className(conceptDeclaration);
         try {
-          final Class<? extends SNode> nodeClass=(Class<? extends SNode>)Class.forName(className,true,ClassLoaderManager.getInstance().getClassLoader());
-          langRootsGroup.add(new MPSAction(conceptDeclaration.getName()){
-            public Icon getIcon(){
-              return IconManager.getIconFor(nodeClass);
-            }
-            public boolean executeInsideCommand(){
-              return false;
-            }
-            public void execute(            ActionContext context){
-              final SNode[] node=new SNode[1];
-              CommandProcessor.instance().executeCommand(new Runnable(){
-                public void run(){
-                  node[0]=NodeFactoryManager.initializeNode(conceptDeclaration,modelDescriptor.getSModel());
-                  node[0].getModel().addRoot(node[0]);
-                }
-              }
-);
-              ide.getProjectPane().selectNode(node[0],context.get(IOperationContext.class));
-              ide.getProjectPane().openEditor();
-            }
-          }
-);
-          addCount++;
+          Class<? extends SNode> nodeClass=(Class<? extends SNode>)Class.forName(nodeClassName,true,ClassLoaderManager.getInstance().getClassLoader());
+          langRootsGroup.add(newRootNodeAction(conceptDeclaration,nodeClass,modelDescriptor.getSModel(),ide));
         }
  catch (        ClassNotFoundException e) {
-          langRootsGroup.add(new MPSAction(conceptDeclaration.getName() + " (Structure Isn't Generated)"){
-            public void update(            ActionContext context){
-              setEnabled(false);
-            }
+          langRootsGroup.add(new MPSAction("class not found: " + nodeClassName){
             public void execute(            ActionContext context){
             }
           }
@@ -60,15 +34,8 @@
         }
       }
     }
-    if (addCount == 0) {
-      langRootsGroup.add(new MPSAction("<EMPTY>"){
-        public void update(        ActionContext context){
-          setEnabled(false);
-        }
-        public void execute(        ActionContext context){
-        }
-      }
-);
+    if (langRootsGroup.getElements().size() > 0) {
+      this.add(langRootsGroup);
     }
   }
 }
