@@ -7,7 +7,7 @@
   List<Generator> generators=context.getGeneratorModules();
   if (generators.isEmpty()) {
     addProgressMessage(MessageKind.WARNING,"skip model \"" + sourceModel.getUID() + "\" : no generator avalable");
-    return new GenerationStatus(null,null,false,false);
+    return new GenerationStatus(sourceModel,null,null,false,false);
   }
   setGenerationSessionContext(context);
   Class<? extends IModelGenerator> currentGeneratorClass=null;
@@ -25,14 +25,14 @@
  else       if (!generatorClass.isAssignableFrom(currentGeneratorClass)) {
         addProgressMessage(MessageKind.ERROR,"couldn't choose generator class");
         addMessage(MessageKind.ERROR,"generator classes \"" + currentGeneratorClass.getName() + "\" and "+ generatorClass.getName()+ " are not compatible");
-        return new GenerationStatus.ERROR();
+        return new GenerationStatus.ERROR(sourceModel);
       }
     }
   }
   if (currentGeneratorClass == null) {
     if (defaultGeneratorClass == null) {
       addProgressMessage(MessageKind.ERROR,"generator class is not defined");
-      return new GenerationStatus.ERROR();
+      return new GenerationStatus.ERROR(sourceModel);
     }
     currentGeneratorClass=defaultGeneratorClass;
   }
@@ -41,14 +41,14 @@
     IModelGenerator handCodedGenerator=currentGeneratorClass.getConstructor(IOperationContext.class).newInstance(context);
     SModelDescriptor outputModel=createTransientModel(sourceModel,context.getModule());
     handCodedGenerator.generate(sourceModel,outputModel.getSModel());
-    return new GenerationStatus(outputModel.getSModel(),null,false,false);
+    return new GenerationStatus(sourceModel,outputModel.getSModel(),null,false,false);
   }
   ITemplateGenerator generator=(ITemplateGenerator)currentGeneratorClass.getConstructor(GenerationSessionContext.class,IAdaptiveProgressMonitor.class).newInstance(context,myProgressMonitor);
   GenerationStatus status;
   try {
     SModel outputModel=generateModel(sourceModel,targetLanguage,generator,primaryMappingOnly);
     boolean wasErrors=generator.getErrorCount() > 0;
-    status=new GenerationStatus(outputModel,context.getTraceMap(),wasErrors,false);
+    status=new GenerationStatus(sourceModel,outputModel,context.getTraceMap(),wasErrors,false);
     addMessage(status.isError() ? MessageKind.WARNING : MessageKind.INFORMATION,"model \"" + sourceModel.getUID() + "\" has been generated "+ (status.isError() ? "with errors" : "successfully"));
     generator.reset();
   }
@@ -65,13 +65,13 @@ catch (  GenerationFailedException gfe) {
       }
     }
     addMessage(MessageKind.ERROR,"model \"" + sourceModel.getUID() + "\" generation failed : "+ gfe);
-    status=new GenerationStatus.ERROR();
+    status=new GenerationStatus.ERROR(sourceModel);
   }
 catch (  Exception e) {
     LOG.error(e);
     myProgressMonitor.addText(e.toString());
     addMessage(MessageKind.ERROR,"model \"" + sourceModel.getUID() + "\" generation failed : "+ e);
-    status=new GenerationStatus.ERROR();
+    status=new GenerationStatus.ERROR(sourceModel);
   }
   return status;
 }
