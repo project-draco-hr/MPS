@@ -63,17 +63,37 @@
   }
   if (myGridLayout) {
     int x0=x;
+    int size=editorCells.getContentCellsCount();
+    int[] maxHeights=new int[size];
+    for (int j=0; j < maxHeights.length; j++) {
+      maxHeights[j]=0;
+    }
     for (int i=0; ; i++) {
       int maxWidth=-1;
+      int j=0;
       for (      EditorCell editorCell : editorCells.contentCells()) {
         if (editorCell instanceof EditorCell_Collection) {
           EditorCell_Collection editorCellCollection=(EditorCell_Collection)editorCell;
           CellLayout cellLayout=editorCellCollection.getCellLayout();
-          if (cellLayout instanceof CellLayout_Horizontal && i < editorCellCollection.getChildCount()) {
-            EditorCell cell=editorCellCollection.getChildAt(i);
-            maxWidth=Math.max(maxWidth,cell.getWidth());
+          if (cellLayout instanceof CellLayout_Horizontal) {
+            if (i < editorCellCollection.getChildCount()) {
+              EditorCell cell=editorCellCollection.getChildAt(i);
+              cell.setX(x0);
+              cell.relayout();
+              maxWidth=Math.max(maxWidth,cell.getWidth());
+              maxHeights[j]=Math.max(maxHeights[j],cell.getHeight());
+            }
+          }
+ else {
+            editorCellCollection.relayout();
+            maxHeights[j]=Math.max(maxHeights[j],editorCell.getHeight());
           }
         }
+ else {
+          editorCell.relayout();
+          maxHeights[j]=Math.max(maxHeights[j],editorCell.getHeight());
+        }
+        j++;
       }
       for (      EditorCell editorCell : editorCells.contentCells()) {
         if (editorCell instanceof EditorCell_Collection) {
@@ -81,8 +101,6 @@
           CellLayout cellLayout=editorCellCollection.getCellLayout();
           if (cellLayout instanceof CellLayout_Horizontal && i < editorCellCollection.getChildCount()) {
             EditorCell cell=editorCellCollection.getChildAt(i);
-            cell.setX(x0);
-            cell.relayout();
             cell.setWidth(maxWidth);
           }
         }
@@ -92,14 +110,22 @@
       }
       x0+=maxWidth;
     }
+    int j=0;
+    height=0;
+    for (    EditorCell editorCell : editorCells.contentCells()) {
+      editorCell.moveTo(editorCell.getX(),y + height);
+      int deltaHeight=maxHeights[j];
+      editorCell.setHeight(deltaHeight);
+      height+=deltaHeight;
+      j++;
+    }
     for (    EditorCell editorCell : editorCells.contentCells()) {
       if (editorCell instanceof EditorCell_Collection) {
         EditorCell_Collection editorCellCollection=(EditorCell_Collection)editorCell;
         CellLayout cellLayout=editorCellCollection.getCellLayout();
         if (cellLayout instanceof CellLayout_Horizontal) {
           int width0=0;
-          for (          Object aEditorCellCollection : editorCellCollection) {
-            EditorCell cell=(EditorCell)aEditorCellCollection;
+          for (          EditorCell cell : editorCellCollection) {
             width0+=cell.getWidth();
           }
           editorCellCollection.setWidth(width0);
