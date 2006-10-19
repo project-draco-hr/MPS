@@ -13,6 +13,16 @@
     return null;
   }
   ConceptDeclaration concept=SModelUtil.getConceptDeclaration(node,GlobalScope.getInstance());
+  ConceptDeclaration sourceConcept=concept;
+  String sourceConceptFqName=NameUtil.nodeFQName(sourceConcept);
+  if (isSetter) {
+    INodePropertySetter setter=myNodePropertySettersCache.get(sourceConceptFqName);
+    if (setter != null || myNodePropertySettersCache.containsKey(sourceConceptFqName))     return setter;
+  }
+ else {
+    INodePropertyGetter getter=myNodePropertyGettersCache.get(sourceConceptFqName);
+    if (getter != null || myNodePropertyGettersCache.containsKey(sourceConceptFqName))     return getter;
+  }
   while (concept != null) {
     String conceptFqName=NameUtil.nodeFQName(concept);
     IModelConstraints result;
@@ -22,8 +32,22 @@
  else {
       result=myNodePropertyGettersMap.get(conceptFqName + "#" + propertyName);
     }
-    if (result != null)     return result;
+    if (result != null) {
+      if (isSetter) {
+        myNodePropertySettersCache.put(sourceConceptFqName,(INodePropertySetter)result);
+      }
+ else {
+        myNodePropertyGettersCache.put(sourceConceptFqName,(INodePropertyGetter)result);
+      }
+      return result;
+    }
     concept=concept.getExtends();
+  }
+  if (isSetter) {
+    myNodePropertySettersCache.put(sourceConceptFqName,null);
+  }
+ else {
+    myNodePropertyGettersCache.put(sourceConceptFqName,null);
   }
   return null;
 }
