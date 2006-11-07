@@ -1,0 +1,48 @@
+{
+  clear();
+  List<Language> languages=root.getModel().getLanguages(GlobalScope.getInstance());
+  Set<SModel> typesModels=new HashSet<SModel>();
+  for (  Language language : languages) {
+    SModelDescriptor helginsModelDescriptor=language.getHelginsTypesystemModelDescriptor();
+    if (helginsModelDescriptor != null) {
+      typesModels.add(helginsModelDescriptor.getSModel());
+    }
+  }
+  if (typesModels.isEmpty())   return;
+  ourRules=new ArrayList<Rule>();
+  for (  SModel typesModel : typesModels) {
+    for (    ContextDeclaration contextDeclaration : typesModel.getRoots(ContextDeclaration.class)) {
+      if (contextDeclaration.getMain()) {
+        if (ContextsManager.getInstance().isMainContextRegistered())         continue;
+        ContextsManager.getInstance().registerMainContext(contextDeclaration.getName());
+      }
+ else {
+        ContextsManager.getInstance().registerNewContext(contextDeclaration.getName());
+      }
+    }
+    for (    VariableSetDeclaration varset : typesModel.getRoots(VariableSetDeclaration.class)) {
+      TypeVariablesManager.getInstance().registerNewVarset(varset);
+    }
+    for (    Rule rule : typesModel.getRoots(Rule.class)) {
+      ourRules.add(rule);
+    }
+    SubtypingManager.getInstance().initiate(typesModel);
+    AdaptationManager.getInstance().initiate(typesModel);
+  }
+  doCheckTypes(root);
+  EquationManager.getInstance().solveInequations();
+  Set<Pair<SNode,SNode>> mainContext=ContextsManager.getInstance().getMainContext();
+  for (  Pair<SNode,SNode> contextEntry : mainContext) {
+    SNode term=contextEntry.o1;
+    if (term == null)     continue;
+    SNode type=expandType(contextEntry.o2,Interpretator.getRuntimeTypesModel());
+    if (type instanceof RuntimeErrorType) {
+      reportTypeError(term,((RuntimeErrorType)type).getErrorText());
+    }
+    term.putUserObject(TYPE_OF_TERM,type);
+  }
+  for (  SNode node : ourNodesWithErrors.keySet()) {
+    String errorString=ourNodesWithErrors.get(node);
+    node.putUserObject(TYPE_OF_TERM,errorString);
+  }
+}
