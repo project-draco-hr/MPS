@@ -5,6 +5,10 @@
       toDelete.add(reference);
     }
   }
+  SNode oldReferent=null;
+  if (!toDelete.isEmpty()) {
+    oldReferent=toDelete.get(0).getTargetNode();
+  }
   if (toDelete.size() > 1) {
     LOG.errorWithTrace("ERROR! " + toDelete.size() + " references found for role: "+ role+ " node: "+ this.getDebugText());
   }
@@ -12,8 +16,23 @@
     int index=myReferences.indexOf(reference);
     removeReferenceAt(index);
   }
-  if (target != null) {
-    return addReferent(role,target);
+  SReference resultReference=null;
+  if (newReferent != null) {
+    resultReference=addReferent(role,newReferent);
   }
- else   return null;
+  if (!getModel().isLoading()) {
+    if (!mySetReferentEventHandlersInProgress.contains(role)) {
+      INodeReferentSetEventHandler handler=ModelConstraintsManager.getInstance().getNodeReferentSetEventHandler(this,role);
+      if (handler != null) {
+        mySetReferentEventHandlersInProgress.add(role);
+        try {
+          handler.processReferentSetEvent(this,oldReferent,newReferent,GlobalScope.getInstance());
+        }
+  finally {
+          mySetReferentEventHandlersInProgress.remove(role);
+        }
+      }
+    }
+  }
+  return resultReference;
 }
