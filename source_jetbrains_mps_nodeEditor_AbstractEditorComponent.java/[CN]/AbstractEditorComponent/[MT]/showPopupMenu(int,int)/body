@@ -1,12 +1,39 @@
 {
-  final SNode selectedNode=getSelectedCell().getSNode();
+  EditorCell cell=getSelectedCell();
+  final SNode selectedNode=cell.getSNode();
   if (selectedNode == null)   return;
-  JPopupMenu popupMenu=new JPopupMenu();
   ActionGroup group=ActionManager.instance().getGroup(EDITOR_POPUP_MENU_ACTIONS);
   if (group == null)   return;
+  final EditorContext editorContext=new EditorContext(this,null,getOperationContext());
+  JPopupMenu popupMenu=new JPopupMenu();
   List<SNode> selectedNodes=myNodeRangeSelection.getNodes();
   ActionContext context=new ActionContext(getOperationContext(),selectedNode,selectedNodes);
-  context.put(EditorContext.class,new EditorContext(this,null,getOperationContext()));
+  context.put(EditorContext.class,editorContext);
+  context.put(EditorCell.class,cell);
   group.add(popupMenu,context);
+{
+    List<EditorCellKeyMapAction> actions=new ArrayList<EditorCellKeyMapAction>();
+    for (    EditorCellKeyMapAction action : KeyMapUtil.getRegisteredActions(cell,editorContext)) {
+      try {
+        if (action.canExecute(null,editorContext)) {
+          actions.add(action);
+        }
+      }
+ catch (      Throwable t) {
+        LOG.error(t);
+      }
+    }
+    if (!actions.isEmpty())     popupMenu.addSeparator();
+    for (    final EditorCellKeyMapAction action : actions) {
+      MPSAction mpsAction=new MPSAction(action.getDescriptionText()){
+        private EditorCellKeyMapAction myAction=action;
+        public void execute(        @NotNull ActionContext context){
+          myAction.execute(null,editorContext);
+        }
+      }
+;
+      mpsAction.add(popupMenu,context);
+    }
+  }
   popupMenu.show(AbstractEditorComponent.this,x,y);
 }
