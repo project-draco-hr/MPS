@@ -1,76 +1,9 @@
 {
-  INodeBuilder builder=null;
-  boolean builderComplete=false;
-  List<NodeMacro> nodeMacros=NodeMacro_AnnotationLink.getNodeMacros((BaseConcept)templateNode);
-  NodeMacro nodeMacro=null;
-  if (nodeMacros.size() > currentMacroIndex) {
-    nodeMacro=nodeMacros.get(currentMacroIndex);
+  try {
+    return createNodeBuilder_impl(sourceNode,templateNode,mappingName,currentMacroIndex,generator);
   }
-  if (nodeMacro != null) {
-    if (nodeMacro.getMappingId() != null) {
-      mappingName=nodeMacro.getMappingId();
-    }
-    if (nodeMacro instanceof SwitchMacro) {
-      TemplateSwitch templateSwitch=((SwitchMacro)nodeMacro).getTemplateSwitch();
-      builder=createNodeBuilderForSwitch(sourceNode,templateSwitch,mappingName,generator);
-      if (builder != null) {
-        builder.setRoleInParent(templateNode.getRole_());
-        builderComplete=true;
-      }
-    }
- else     if (nodeMacro instanceof CopySrcNodeMacro) {
-      builder=generator.createCopyingNodeBuilder(sourceNode,templateNode);
-      builderComplete=true;
-    }
- else     if (nodeMacro instanceof CopySrcListMacro) {
-      builder=generator.createCopyingNodeBuilder(sourceNode,templateNode);
-      builderComplete=true;
-    }
- else     if (nodeMacro instanceof MapSrcNodeMacro) {
-      MapSrcNodeMacro mapSrcNodeMacro=(MapSrcNodeMacro)nodeMacro;
-      String sourceNodeMapperId=mapSrcNodeMacro.getSourceNodeMapperId();
-      if (sourceNodeMapperId != null) {
-        builder=new QueryMethodMapperNodeBuilder(sourceNode,templateNode,mapSrcNodeMacro,generator);
-        builderComplete=true;
-      }
-    }
- else     if (nodeMacro instanceof MapSrcListMacro) {
-      MapSrcListMacro mapSrcListMacro=(MapSrcListMacro)nodeMacro;
-      String sourceNodeMapperId=mapSrcListMacro.getSourceNodeMapperId();
-      if (sourceNodeMapperId != null) {
-        builder=new QueryMethodMapperNodeBuilder(sourceNode,templateNode,mapSrcListMacro,generator);
-        builderComplete=true;
-      }
-    }
- else {
-      String targetBuilderAspectMethodName=nodeMacro.getTargetBuilderAspectMethodName();
-      if (targetBuilderAspectMethodName != null) {
-        String methodName="templateTargetBuilder_" + targetBuilderAspectMethodName;
-        Object[] args=new Object[]{sourceNode,templateNode,mappingName,generator};
-        builder=(INodeBuilder)QueryMethod.invoke(methodName,args,nodeMacro.getModel());
-      }
-    }
+ catch (  Exception e) {
+    generator.showErrorMessage(sourceNode,templateNode,"node builde creation failure: " + e.getClass().getName() + " "+ e.getMessage());
   }
-  if (builderComplete) {
-    return builder;
-  }
-  if (nodeMacros.size() > currentMacroIndex + 1) {
-    currentMacroIndex=currentMacroIndex + 1;
-    List<INodeBuilder> nestedBuilders=createNodeBuildersForTemplateNode(sourceNode,templateNode,mappingName,currentMacroIndex,generator);
-    if (builder == null) {
-      builder=new DefaultNodeBuilderList(nestedBuilders);
-    }
- else {
-      for (      INodeBuilder nestedBuilder : nestedBuilders) {
-        builder.addChildBuilder(nestedBuilder);
-      }
-    }
-  }
- else {
-    if (builder == null) {
-      builder=createDefaultNodeBuilder(sourceNode,templateNode,mappingName,false,generator);
-    }
-    createChildBuilders(builder);
-  }
-  return builder;
+  return new Void_NodeBuilder(sourceNode,templateNode,mappingName,generator);
 }
