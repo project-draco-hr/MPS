@@ -1,0 +1,52 @@
+{
+  final ConceptDeclaration conceptDeclaration=(ConceptDeclaration)context.getNode();
+  IOperationContext operationContext=context.getOperationContext();
+  Language language=SModelUtil.getDeclaringLanguage(conceptDeclaration,operationContext.getScope());
+  List<SNode> rules=new ArrayList<SNode>();
+  if (language != null && language.getHelginsTypesystemModelDescriptor() != null) {
+    SModelDescriptor helginsDescriptor=language.getHelginsTypesystemModelDescriptor();
+    if (helginsDescriptor != null) {
+      rules.addAll(helginsDescriptor.getSModel().getRoots(new Condition<SNode>(){
+        public boolean met(        SNode object){
+          AnalyzedTermDeclaration analyzedTermDeclaration=null;
+          if (object instanceof Rule) {
+            analyzedTermDeclaration=((Rule)object).getApplicableNodes().get(0);
+          }
+          if (object instanceof SubtypingRule) {
+            analyzedTermDeclaration=((SubtypingRule)object).getApplicableNode();
+          }
+          if (object instanceof SubtypingVarianceRule) {
+            return SModelUtil.isAssignableConcept(conceptDeclaration,((SubtypingVarianceRule)object).getConceptDeclaration());
+          }
+          if (object instanceof TypeAdaptationRule) {
+            analyzedTermDeclaration=((TypeAdaptationRule)object).getApplicableNodes().get(0);
+          }
+          return maybeApplicable(conceptDeclaration,analyzedTermDeclaration);
+        }
+      }
+));
+    }
+  }
+  EditorsPane editorsPane=operationContext.getComponent(EditorsPane.class);
+  IEditor currentEditor=editorsPane.getCurrentEditor();
+  if (rules.size() == 1) {
+    NavigationActionProcessor.executeNavigationAction(new EditorNavigationCommand(rules.get(0),currentEditor,editorsPane),operationContext);
+    return;
+  }
+  MyMenu m=new MyMenu(rules,operationContext);
+  int x=0;
+  int y=0;
+  EditorCell cell=context.get(EditorCell.class);
+  if (cell != null) {
+    x=cell.getX();
+    y=cell.getY();
+  }
+  Component invoker;
+  if (currentEditor == null) {
+    invoker=context.getFrame();
+  }
+ else {
+    invoker=currentEditor.getCurrentEditorComponent();
+  }
+  m.show(invoker,x,y);
+}
