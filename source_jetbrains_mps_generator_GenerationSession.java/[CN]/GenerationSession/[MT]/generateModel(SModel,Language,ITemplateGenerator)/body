@@ -1,2 +1,46 @@
 {
+  GenerationSessionContext generationContext=generator.getGeneratorSessionContext();
+  IModule module=generationContext.getModule();
+  SModelDescriptor currentInputModel=inputModel.getModelDescriptor();
+  SModelDescriptor currentOutputModel=createTransientModel(inputModel,module);
+  int preliminaryRewritingRepeatCount=1;
+  while (generator.doPreliminaryRewriting(currentInputModel.getSModel(),currentOutputModel.getSModel())) {
+    if (++preliminaryRewritingRepeatCount > 10) {
+      generator.showErrorMessage(null,"Failed to rewrite input after 10 repeated preliminari rewritings");
+      throw new GenerationFailedException("Failed to rewrite input after 10 repeated preliminari rewritings");
+    }
+    currentOutputModel.getSModel().validateLanguagesAndImports();
+    currentInputModel=currentOutputModel;
+    myCurrentContext.replaceInputModel(currentInputModel);
+    currentOutputModel=createTransientModel(currentInputModel.getSModel(),module);
+  }
+  boolean somethingHasBeenGenerated=generator.doPrimaryMapping(currentInputModel.getSModel(),currentOutputModel.getSModel());
+  if (!somethingHasBeenGenerated) {
+    SModel model=currentOutputModel.getSModel();
+    model.validateLanguagesAndImports();
+    return model;
+  }
+  int secondaryMappingRepeatCount=1;
+  while (true) {
+    currentOutputModel.getSModel().validateLanguagesAndImports();
+    if (targetLanguage.getNamespace().equals("jetbrains.mps.baseLanguage")) {
+      List<String> languageNamespaces=currentOutputModel.getSModel().getLanguageNamespaces();
+      if (languageNamespaces.size() == 1 && languageNamespaces.get(0).equals(targetLanguage.getNamespace())) {
+        break;
+      }
+    }
+    myCurrentContext.replaceInputModel(currentOutputModel);
+    SModelDescriptor transientModel=createTransientModel(currentInputModel.getSModel(),module);
+    currentInputModel=currentOutputModel;
+    if (!generator.doSecondaryMapping(currentInputModel.getSModel(),transientModel.getSModel())) {
+      SModelRepository.getInstance().unRegisterModelDescriptor(transientModel,module);
+      break;
+    }
+    if (++secondaryMappingRepeatCount > 10) {
+      generator.showErrorMessage(null,"Failed to generate output after 10 repeated mappings");
+      throw new GenerationFailedException("Failed to generate output after 10 repeated mappings");
+    }
+    currentOutputModel=transientModel;
+  }
+  return currentOutputModel.getSModel();
 }
