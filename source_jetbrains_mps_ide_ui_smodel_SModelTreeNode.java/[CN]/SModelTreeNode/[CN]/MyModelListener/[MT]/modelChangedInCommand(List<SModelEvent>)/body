@@ -1,49 +1,46 @@
 {
   getTree().rebuildTree(new Runnable(){
     public void run(){
-      SModelEventVisitor visitor=new SModelEventVisitor(){
-        public void visitRootEvent(        SModelRootEvent event){
-          SModelTreeNode.this.update();
-          updateTreeWithRoot(event.getRoot());
-        }
-        public void visitChildEvent(        SModelChildEvent event){
-          updateTreeWithRoot(event.getParent());
-        }
-        public void visitPropertyEvent(        SModelPropertyEvent event){
-          if (event.getNode().isRoot() && needChangeRootNodePosition(event)) {
-            SModelTreeNode.this.update();
-            updateTreeWithRoot(event.getNode());
-            return;
-          }
-          DefaultTreeModel treeModel=(DefaultTreeModel)getTree().getModel();
-          MPSTreeNode nodeTreeNode=findDescendantWith(event.getNode());
-          if (nodeTreeNode == null)           return;
-          if (!nodeTreeNode.isInitialized()) {
-            treeModel.nodeChanged(nodeTreeNode);
-            return;
-          }
-          MPSTreeNodeEx propsNode=(MPSTreeNodeEx)nodeTreeNode.getChildAt(0);
-          propsNode.update();
-          propsNode.init();
-          treeModel.nodeStructureChanged(propsNode);
-          treeModel.nodeChanged(nodeTreeNode);
-        }
-        public void visitReferenceEvent(        SModelReferenceEvent event){
-          DefaultTreeModel treeModel=(DefaultTreeModel)getTree().getModel();
-          SNode sourceNode=event.getReference().getSourceNode();
-          MPSTreeNode nodeTreeNode=findDescendantWith(sourceNode);
-          if (nodeTreeNode == null || !nodeTreeNode.isInitialized())           return;
-          MPSTreeNodeEx refsNode=(MPSTreeNodeEx)nodeTreeNode.getChildAt(1);
-          refsNode.update();
-          refsNode.init();
-          treeModel.nodeStructureChanged(refsNode);
-        }
-      }
-;
+      final Set<SNode> addedRoots=new HashSet<SNode>();
+      final Set<SNode> removedRoots=new HashSet<SNode>();
+      final Set<SNode> addedNodes=new HashSet<SNode>();
+      final Set<SNode> removedNodes=new HashSet<SNode>();
+      final Set<SNode> nodesWithChangedProperties=new HashSet<SNode>();
+      final Set<SNode> nodesWithChangedRefs=new HashSet<SNode>();
       for (      SModelEvent event : events) {
-        event.accept(visitor);
+        event.accept(new SModelEventVisitor(){
+          public void visitRootEvent(          SModelRootEvent event){
+            if (event.isAdded()) {
+              addedRoots.add(event.getRoot());
+              removedRoots.remove(event.getRoot());
+            }
+            if (event.isRemoved()) {
+              removedRoots.add(event.getRoot());
+              addedRoots.remove(event.getRoot());
+            }
+          }
+          public void visitChildEvent(          SModelChildEvent event){
+            if (event.isAdded()) {
+              addedNodes.add(event.getChild());
+            }
+            if (event.isRemoved()) {
+              removedNodes.add(event.getChild());
+            }
+          }
+          public void visitPropertyEvent(          SModelPropertyEvent event){
+            nodesWithChangedProperties.add(event.getNode());
+          }
+          public void visitReferenceEvent(          SModelReferenceEvent event){
+            nodesWithChangedRefs.add(event.getReference().getSourceNode());
+          }
+        }
+);
       }
+      addAndRemoveRoots(removedRoots,addedRoots);
+      addAndRemoveVisibleChildren(removedNodes,addedNodes);
+      updateChangedProperties(nodesWithChangedProperties);
+      updateChangedRefs(nodesWithChangedRefs);
     }
   }
-,EventUtil.isDramaticalChange(events) || EventUtil.isRootNameChange(events));
+,false);
 }
