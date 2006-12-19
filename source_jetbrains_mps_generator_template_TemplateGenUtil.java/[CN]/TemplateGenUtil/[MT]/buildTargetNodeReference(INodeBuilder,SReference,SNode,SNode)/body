@@ -1,0 +1,29 @@
+{
+  ITemplateGenerator generator=nodeBuilder.getGenerator();
+  SNode templateReferentNode=templateReference.getTargetNode();
+  if (templateReferentNode == null) {
+    generator.showErrorMessage(templateNode,"Invalid reference \"" + templateReference.getRole() + "\" in templates model "+ templateNode.getModel().getUID());
+    return true;
+  }
+  if (templateReferentNode instanceof NodeMacro || templateReferentNode instanceof ReferenceMacro || templateReferentNode instanceof PropertyMacro) {
+    return true;
+  }
+  if (ReferenceMacro_AnnotationLink.getReferenceMacro((BaseConcept)templateNode,templateReference.getRole()) != null) {
+    return true;
+  }
+  if (templateReferentNode.getModel() != templateNode.getModel() && templateReferentNode.getModel() != generator.getSourceModel()) {
+    targetNode.setReferent(templateReference.getRole(),templateReferentNode);
+    return true;
+  }
+  IScope scope=generator.getScope();
+  IReferenceResolver referenceResolver=createReferenceResolver(templateNode,scope);
+  SNode targetReferentNode=referenceResolver.resolveTarget(templateReference,nodeBuilder);
+  if (targetReferentNode != null) {
+    if (checkResolvedReference(nodeBuilder.getSourceNode(),targetNode,templateNode,templateReference.getRole(),targetReferentNode,generator)) {
+      targetNode.setReferent(templateReference.getRole(),targetReferentNode);
+    }
+    return true;
+  }
+  generator.addUnresolvedReference(nodeBuilder,templateReference);
+  return false;
+}
