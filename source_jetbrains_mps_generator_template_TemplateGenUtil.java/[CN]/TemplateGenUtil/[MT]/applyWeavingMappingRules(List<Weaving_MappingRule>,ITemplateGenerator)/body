@@ -1,0 +1,32 @@
+{
+  if (weavingRules.isEmpty())   return;
+  final HashSet<Weaving_MappingRule> failedRules=new HashSet<Weaving_MappingRule>();
+  SModelUtil.allNodes(generator.getSourceModel(),new Condition<SNode>(){
+    public boolean met(    SNode sourceNode){
+      ConceptDeclaration nodeConcept=SModelUtil.getConceptDeclaration(sourceNode,generator.getScope());
+      for (      Weaving_MappingRule weavingRule : weavingRules) {
+        if (failedRules.contains(weavingRule))         continue;
+        ConceptDeclaration applicableConcept=weavingRule.getApplicableConcept();
+        if (applicableConcept != null) {
+          if (!SModelUtil.isAssignableConcept(nodeConcept,applicableConcept))           continue;
+        }
+        if (checkConditionForBaseMappingRule(sourceNode,weavingRule,generator)) {
+          TemplateDeclaration templateDeclaration=weavingRule.getTemplate();
+          if (templateDeclaration == null) {
+            generator.showErrorMessage(sourceNode,null,weavingRule,"weaving rule has no template");
+            failedRules.add(weavingRule);
+            continue;
+          }
+          INodeBuilder contextBuilder=getContextNodeBuilderForWeavingingRule(sourceNode,weavingRule,generator);
+          if (contextBuilder == null) {
+            generator.showErrorMessage(sourceNode,weavingRule,"couldn't create context node builder");
+            continue;
+          }
+          weaveTemplateDeclaration(sourceNode,templateDeclaration,contextBuilder,generator,weavingRule);
+        }
+      }
+      return false;
+    }
+  }
+);
+}
