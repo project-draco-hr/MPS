@@ -1,0 +1,49 @@
+{
+  List<SNode> sourceNodes=new LinkedList<SNode>();
+  String sourceQueryAspectMethodName;
+  if (macro instanceof CopySrcNodeMacro) {
+    sourceQueryAspectMethodName=((CopySrcNodeMacro)macro).getSourceNodeQueryId();
+  }
+ else {
+    sourceQueryAspectMethodName=((MapSrcNodeMacro)macro).getSourceNodeQueryId();
+  }
+  if (query == null && sourceQueryAspectMethodName == null && optionalQuery) {
+    sourceNodes.add(sourceNode);
+    return sourceNodes;
+  }
+  if (query != null) {
+    String methodName=TemplateFunctionMethodName.sourceSubstituteMacro_SourceNodeQuery(query);
+    Object[] args=new Object[]{sourceNode,generator.getSourceModel(),generator,generator.getScope(),generator.getGeneratorSessionContext()};
+    try {
+      SNode outputSourceNode=(SNode)QueryMethodGenerated.invoke(methodName,args,macro.getModel());
+      if (outputSourceNode != null) {
+        sourceNodes.add(outputSourceNode);
+        checkNodesFromQuery(sourceNodes,macro,generator);
+      }
+      return sourceNodes;
+    }
+ catch (    Exception e) {
+      generator.showErrorMessage(sourceNode,null,macro,"couldn't evaluate macro query - try to generate template models");
+      e.printStackTrace();
+      return new LinkedList<SNode>();
+    }
+  }
+  if (sourceQueryAspectMethodName != null) {
+    String methodName="templateSourceNodeQuery_" + sourceQueryAspectMethodName;
+    Object[] args=new Object[]{sourceNode,generator};
+    try {
+      SNode outputSourceNode=(SNode)QueryMethod.invoke(methodName,args,macro.getModel());
+      if (outputSourceNode != null) {
+        sourceNodes.add(outputSourceNode);
+        checkNodesFromQuery(sourceNodes,macro,generator);
+      }
+      return sourceNodes;
+    }
+ catch (    Exception e) {
+      generator.showErrorMessage(sourceNode,null,macro,"couldn't evaluate macro query: " + NameUtil.shortNameFromLongName(e.getClass().getName()) + " : "+ e.getMessage());
+      e.printStackTrace();
+      return new LinkedList<SNode>();
+    }
+  }
+  throw new GenerationFailedException(new GenerationFailueInfo("couldn't evaluate macro query",sourceNode,macro,null,generator.getGeneratorSessionContext()));
+}
