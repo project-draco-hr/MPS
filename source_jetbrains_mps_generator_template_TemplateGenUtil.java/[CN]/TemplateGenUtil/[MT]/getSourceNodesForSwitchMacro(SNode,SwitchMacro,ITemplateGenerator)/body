@@ -1,0 +1,38 @@
+{
+  List<SNode> sourceNodes=new LinkedList<SNode>();
+  String sourceQueryAspectMethodName=macro.getSourceQueryAspectMethodName();
+  SourceSubstituteMacro_SourceNodeQuery query=macro.getSourceNodeQuery();
+  if (query == null && sourceQueryAspectMethodName == null) {
+    sourceNodes.add(sourceNode);
+    return sourceNodes;
+  }
+  if (query != null) {
+    String methodName=TemplateFunctionMethodName.sourceSubstituteMacro_SourceNodeQuery(query);
+    Object[] args=new Object[]{sourceNode,generator.getSourceModel(),generator,generator.getScope(),generator.getGeneratorSessionContext()};
+    try {
+      SNode outputSourceNode=(SNode)QueryMethodGenerated.invoke(methodName,args,macro.getModel());
+      if (outputSourceNode != null) {
+        sourceNodes.add(outputSourceNode);
+        checkNodesFromQuery(sourceNodes,macro,generator);
+      }
+      return sourceNodes;
+    }
+ catch (    Exception e) {
+      generator.showErrorMessage(sourceNode,null,macro,"couldn't evaluate macro query - try to generate template models");
+      e.printStackTrace();
+      return new LinkedList<SNode>();
+    }
+  }
+  String methodName="templateSourceQuery_" + sourceQueryAspectMethodName;
+  Object[] args=new Object[]{sourceNode,generator};
+  try {
+    sourceNodes=(List<SNode>)QueryMethod.invoke(methodName,args,macro.getModel());
+    checkNodesFromQuery(sourceNodes,macro,generator);
+    return sourceNodes;
+  }
+ catch (  Exception e) {
+    generator.showErrorMessage(sourceNode,null,macro,"couldn't evaluate macro query: " + NameUtil.shortNameFromLongName(e.getClass().getName()) + " : "+ e.getMessage());
+    e.printStackTrace();
+    return new LinkedList<SNode>();
+  }
+}
