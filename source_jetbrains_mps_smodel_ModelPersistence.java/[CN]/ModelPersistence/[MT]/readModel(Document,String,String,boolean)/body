@@ -9,7 +9,8 @@
     String shortName=NameUtil.shortNameFromLongName(modelLongName);
     LOG.assertLog(shortName.equals(modelName));
   }
-  SModel model=new SModel(new SModelUID(modelLongName,stereotype));
+  SModelUID modelUID=new SModelUID(modelLongName,stereotype);
+  SModel model=new SModel(modelUID);
   model.setLoading(true);
   try {
     Element maxImportIndex=rootElement.getChild(MAX_IMPORT_INDEX);
@@ -78,32 +79,32 @@
       model.setMaxImportIndex(importIndex);
     }
     SModelUID importedModelUID=SModelUID.fromString(importedModelUIDString);
-    if (checkVersion) {
+    if (checkVersion && !(importedModelUID.equals(modelUID))) {
       SModelDescriptor importedModelDescriptor=SModelRepository.getInstance().getModelDescriptor(importedModelUID);
       if (importedModelDescriptor != null) {
-        File importedModelFile=importedModelDescriptor.getModelFile();
-        if (importedModelFile != null) {
-          int newVersion=readVersionFromFile(importedModelFile);
-          if (newVersion > importedModelVersion) {
-            System.err.println("new imported model version detected: model = " + model + " imported model = "+ importedModelUID+ " current import version: "+ importedModelVersion+ " new version: "+ newVersion);
-            try {
-              SModel importedModel=SModelRepository.getInstance().getModelDescriptor(importedModelUID).getSModel();
-              logs.add(new LogInfo(importedModel.getLog(),importedModelVersion,newVersion));
-            }
- catch (            Throwable t) {
-              t.printStackTrace();
-            }
+        int newVersion=importedModelDescriptor.getVersion();
+        if (newVersion > importedModelVersion) {
+          System.err.println("new imported model version detected: model = " + model + " imported model = "+ importedModelUID+ " current import version: "+ importedModelVersion+ " new version: "+ newVersion);
+          try {
+            SModel importedModel=SModelRepository.getInstance().getModelDescriptor(importedModelUID).getSModel();
+            logs.add(new LogInfo(importedModel.getLog(),importedModelVersion,newVersion));
+          }
+ catch (          Throwable t) {
+            t.printStackTrace();
           }
         }
       }
     }
-    model.addImportElement(importedModelUID,importIndex,importedModelVersion);
+    model.addImportElement(importedModelUID,importIndex);
   }
   if (logs.size() > 0) {
     ModelLogger modelLogger=new ModelLogger();
     for (    LogInfo log : logs) {
+      modelLogger.playRefactoringSequence(log.myNode,document,log.myOldVersion,log.myNewVersion);
     }
-    return readModel(document,modelName,stereotype,false);
+    SModel sModel=readModel(document,modelName,stereotype,false);
+    SModelRepository.getInstance().markChanged(sModel,true);
+    return sModel;
   }
   ArrayList<ReferencePersister> referenceDescriptors=new ArrayList<ReferencePersister>();
   String versionString=rootElement.getAttributeValue(VERSION);
