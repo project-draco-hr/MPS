@@ -38,7 +38,7 @@
           System.err.println("new language version detected: model = " + model + " language = "+ languageNamespace+ " current language version: "+ oldVersion+ " new version: "+ newVersion);
           try {
             SModel structureModel=modelLanguage.getStructureModelDescriptor().getSModel();
-            logs.add(new LogInfo(structureModel.getLog(),oldVersion,newVersion));
+            logs.add(new LogInfo(structureModel.getLog(),oldVersion,newVersion,element));
           }
  catch (          Throwable t) {
             t.printStackTrace();
@@ -59,11 +59,6 @@
     Element element=(Element)anImport;
     String indexValue=element.getAttributeValue(MODEL_IMPORT_INDEX,element.getAttributeValue("referenceID"));
     int importIndex=Integer.parseInt(indexValue);
-    int importedModelVersion=-1;
-    String importedModelVersionValue=element.getAttributeValue(VERSION);
-    if (importedModelVersionValue != null) {
-      importedModelVersion=Integer.parseInt(importedModelVersionValue);
-    }
     String importedModelUIDString=element.getAttributeValue(MODEL_UID);
     if (importedModelUIDString == null) {
       String importedModelFQName=NameUtil.longNameFromNamespaceAndShortName(element.getAttributeValue(NAMESPACE),element.getAttributeValue(NAME));
@@ -80,6 +75,11 @@
     }
     SModelUID importedModelUID=SModelUID.fromString(importedModelUIDString);
     if (checkVersion && !(importedModelUID.equals(modelUID))) {
+      int importedModelVersion=-1;
+      String importedModelVersionValue=element.getAttributeValue(VERSION);
+      if (importedModelVersionValue != null) {
+        importedModelVersion=Integer.parseInt(importedModelVersionValue);
+      }
       SModelDescriptor importedModelDescriptor=SModelRepository.getInstance().getModelDescriptor(importedModelUID);
       if (importedModelDescriptor != null) {
         int newVersion=importedModelDescriptor.getVersion();
@@ -87,7 +87,7 @@
           System.err.println("new imported model version detected: model = " + model + " imported model = "+ importedModelUID+ " current import version: "+ importedModelVersion+ " new version: "+ newVersion);
           try {
             SModel importedModel=SModelRepository.getInstance().getModelDescriptor(importedModelUID).getSModel();
-            logs.add(new LogInfo(importedModel.getLog(),importedModelVersion,newVersion));
+            logs.add(new LogInfo(importedModel.getLog(),importedModelVersion,newVersion,element));
           }
  catch (          Throwable t) {
             t.printStackTrace();
@@ -101,6 +101,7 @@
     ModelLogger modelLogger=new ModelLogger();
     for (    LogInfo log : logs) {
       modelLogger.playRefactoringSequence(log.myNode,document,log.myOldVersion,log.myNewVersion);
+      log.myElement.setAttribute(VERSION,log.myNewVersion + "");
     }
     SModel sModel=readModel(document,modelName,stereotype,false);
     SModelRepository.getInstance().markChanged(sModel,true);
