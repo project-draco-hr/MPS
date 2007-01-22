@@ -45,7 +45,25 @@
     handCodedGenerator.generate(sourceModel,outputModel.getSModel());
     return new GenerationStatus(sourceModel,outputModel.getSModel(),null,false,false);
   }
-  ITemplateGenerator generator=(ITemplateGenerator)currentGeneratorClass.getConstructor(GenerationSessionContext.class,IAdaptiveProgressMonitor.class).newInstance(context,myProgressMonitor);
+  ITemplateGenerator generator=null;
+  try {
+    Constructor c=currentGeneratorClass.getConstructor(GenerationSessionContext.class,IAdaptiveProgressMonitor.class);
+    generator=(ITemplateGenerator)c.newInstance(context,myProgressMonitor);
+  }
+ catch (  NoSuchMethodException e) {
+  }
+  if (generator == null) {
+    try {
+      Constructor c=currentGeneratorClass.getConstructor(GenerationSessionContext.class,IAdaptiveProgressMonitor.class,IMessageHandler.class);
+      generator=(ITemplateGenerator)c.newInstance(context,myProgressMonitor,myHandler);
+    }
+ catch (    NoSuchMethodException e) {
+    }
+  }
+  if (generator == null) {
+    myHandler.handle(new Message(MessageKind.ERROR,"Generator Class Not Found"));
+    return new GenerationStatus.ERROR(sourceModel);
+  }
   GenerationStatus status;
   try {
     SModel outputModel=generateModel(sourceModel,targetLanguage,generator);
