@@ -1,30 +1,26 @@
 {
   final List<INodeBuilder> builders=new LinkedList<INodeBuilder>();
-  if (mappingRules.isEmpty())   return builders;
-  for (  final Root_MappingRule mappingRule : mappingRules) {
-    Condition<SNode> condition=new Condition<SNode>(){
-      public boolean met(      SNode sourceNode){
-        ConceptDeclaration nodeConcept=sourceNode.getConceptDeclaration(generator.getScope());
-        if (checkPremiseForBaseMappingRule(sourceNode,nodeConcept,mappingRule,generator)) {
-          NamedConcept template=mappingRule.getTemplate();
-          if (template == null) {
-            generator.showErrorMessage(sourceNode,null,mappingRule,"root mapping rule has no template");
-            return false;
-          }
-          String mappingName=mappingRule.getName();
-          INodeBuilder nodeBuilder=createNodeBuilder(sourceNode,template,mappingName,0,generator);
-          nodeBuilder.setRuleNode(mappingRule);
-          builders.add(nodeBuilder);
+  if (rules.isEmpty())   return builders;
+  for (  Root_MappingRule rule : rules) {
+    ConceptDeclaration applicableConcept=rule.getApplicableConcept();
+    if (applicableConcept == null) {
+      generator.showErrorMessage(null,null,rule,"rule has no applicable concept defined");
+      continue;
+    }
+    boolean includeInheritors=rule.getApplyToConceptInheritors();
+    List<SNode> nodes=generator.getSourceModel().getModelDescriptor().getFastNodeFinder().getNodes(applicableConcept,includeInheritors);
+    for (    SNode node : nodes) {
+      if (checkConditionForBaseMappingRule(node,rule,generator)) {
+        NamedConcept template=rule.getTemplate();
+        if (template == null) {
+          generator.showErrorMessage(node,null,rule,"rule has no template");
+          break;
         }
-        return false;
+        String mappingName=rule.getName();
+        INodeBuilder nodeBuilder=createNodeBuilder(node,template,mappingName,0,generator);
+        nodeBuilder.setRuleNode(rule);
+        builders.add(nodeBuilder);
       }
-    }
-;
-    if (mappingRule.getSearchImportedModels()) {
-      generator.getSourceModel().allNodesIncludingImported(generator.getScope(),condition);
-    }
- else {
-      generator.getSourceModel().allNodes(condition);
     }
   }
   return builders;
