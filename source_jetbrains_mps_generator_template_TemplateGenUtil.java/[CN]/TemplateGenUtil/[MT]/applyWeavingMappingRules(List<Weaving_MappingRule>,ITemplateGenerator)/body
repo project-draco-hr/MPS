@@ -13,20 +13,53 @@
     }
     boolean includeInheritors=rule.getApplyToConceptInheritors();
     List<SNode> nodes=generator.getSourceModel().getModelDescriptor().getFastNodeFinder().getNodes(applicableConcept,includeInheritors);
-    for (    SNode node : nodes) {
-      if (checkConditionForBaseMappingRule(node,rule,generator)) {
-        TemplateDeclaration template=rule.getTemplate();
-        if (template == null) {
-          generator.showErrorMessage(node,rule,"rule has no template");
-          break;
-        }
-        List<INodeBuilder> contextBuilders=getContextNodeBuilderForWeavingingRule(node,rule,generator);
+    for (    SNode applicableNode : nodes) {
+      if (checkConditionForBaseMappingRule(applicableNode,rule,generator)) {
+        List<INodeBuilder> contextBuilders=getContextNodeBuilderForWeavingingRule(applicableNode,rule,generator);
         if (contextBuilders == null) {
-          generator.showErrorMessage(node,rule,"couldn't create context node builder");
+          generator.showErrorMessage(applicableNode,rule,"couldn't create context node builder");
           continue;
         }
-        for (        INodeBuilder builder : contextBuilders) {
-          weaveTemplateDeclaration(node,template,builder,generator,rule);
+        TemplateDeclaration template=rule.getTemplate();
+        if (template != null) {
+          for (          INodeBuilder builder : contextBuilders) {
+            weaveTemplateDeclaration(applicableNode,template,builder,generator,rule);
+          }
+        }
+ else {
+          RuleConsequence ruleConsequence=rule.getRuleConsequence();
+          if (ruleConsequence instanceof DismissTopMappingRule) {
+            throw new ReductionNotNeededException();
+          }
+ else           if (ruleConsequence instanceof TemplateDeclarationReference) {
+            template=((TemplateDeclarationReference)ruleConsequence).getTemplate();
+            if (template == null) {
+              generator.showErrorMessage(applicableNode,rule,"rule has no template");
+              break;
+            }
+            for (            INodeBuilder builder : contextBuilders) {
+              weaveTemplateDeclaration(applicableNode,template,builder,generator,rule);
+            }
+          }
+ else           if (ruleConsequence instanceof WeaveEach_RuleConsequence) {
+            WeaveEach_RuleConsequence weaveEach=(WeaveEach_RuleConsequence)ruleConsequence;
+            template=weaveEach.getTemplate();
+            if (template == null) {
+              generator.showErrorMessage(applicableNode,rule,"rule has no template");
+              break;
+            }
+            SourceSubstituteMacro_SourceNodesQuery nodesQuery=weaveEach.getSourceNodesQuery();
+            if (nodesQuery == null) {
+              generator.showErrorMessage(applicableNode,rule,"couldn't create list of source nodes");
+              break;
+            }
+            List<SNode> queryNodes=evaluateSourceNodesQuery(applicableNode,nodesQuery,ruleConsequence,generator);
+            for (            SNode queryNode : queryNodes) {
+              for (              INodeBuilder builder : contextBuilders) {
+                weaveTemplateDeclaration(queryNode,template,builder,generator,rule);
+              }
+            }
+          }
         }
       }
     }
