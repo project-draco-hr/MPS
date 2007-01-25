@@ -4,13 +4,30 @@
     generator.showErrorMessage(null,templateNode,"'createNodeFromTemplate' cannot create root node");
     return null;
   }
+  generator.addOutputNodeByTemplateNodeAndSourceNode(templateNode,sourceNode,outputNode);
   outputModel.addLanguage(templateNode.getLanguage(generator.getScope()));
   for (  String property : templateNode.getProperties().keySet()) {
     outputNode.setProperty(property,templateNode.getProperty(property),false);
   }
+  for (  SReference reference : templateNode.getReferences()) {
+    SNode templatereferentNode=reference.getTargetNode();
+    if (templatereferentNode == null) {
+      generator.showErrorMessage(null,templateNode,"'createNodeFromTemplate' referent node is null in template model");
+      continue;
+    }
+    if (templatereferentNode.getModel().equals(outputModel)) {
+      generator.addReferenceInfo(new ReferenceInfo_Default(outputNode,reference.getRole(),templatereferentNode));
+    }
+ else {
+      outputNode.addReferent(reference.getRole(),templatereferentNode);
+    }
+  }
   for (  SNode templateChildNode : templateNode.getChildren()) {
     if (templateChildNode instanceof PropertyMacro) {
       MacroUtil.expandPropertyMacro(generator,(PropertyMacro)templateChildNode,sourceNode,templateNode,outputNode);
+    }
+ else     if (templateChildNode instanceof ReferenceMacro) {
+      generator.addReferenceInfo(new ReferenceInfo_Macro(outputNode,templateChildNode,(ReferenceMacro)templateChildNode));
     }
  else {
       SNode outputChildNode=createNodeFromTemplate(generator,outputModel,templateChildNode,sourceNode);
