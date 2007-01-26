@@ -1,4 +1,23 @@
 {
+  int i=0;
+  for (  SNode templateChildNode : templateNode.getChildren()) {
+    if (!(templateChildNode instanceof NodeMacro))     continue;
+    i++;
+    if (i <= nodeMacrosToSkip)     continue;
+    if (templateChildNode instanceof LoopMacro) {
+      List<SNode> newInputNodes=TemplateGenUtil.createSourceNodeListForTemplateNode_ForNewGenerator(inputNode,templateNode,nodeMacrosToSkip,generator);
+      for (      SNode newInputNode : newInputNodes) {
+        SNode outputChildNode=createNodeFromTemplate(generator,((LoopMacro)templateChildNode).getMappingId(),outputModel,templateNode,newInputNode,outputParentNode,nodeMacrosToSkip + 1);
+        if (outputParentNode != null) {
+          SNode templateParentNode=templateNode.getParent();
+          if (templateParentNode != null) {
+            generator.getDelayedChanges().addAddChildChange(outputParentNode,outputChildNode,templateParentNode.getRoleOf(templateNode));
+          }
+        }
+      }
+      return null;
+    }
+  }
   SNode outputNode=ModelPersistence.createNodeInstance(templateNode.getClass().getName(),outputModel);
   if (outputNode == null) {
     generator.showErrorMessage(null,templateNode,"'createNodeFromTemplate' cannot create root node");
@@ -24,14 +43,15 @@
     }
   }
   for (  SNode templateChildNode : templateNode.getChildren()) {
+    if (templateChildNode instanceof NodeMacro)     continue;
     if (templateChildNode instanceof PropertyMacro) {
       MacroUtil.expandPropertyMacro(generator,(PropertyMacro)templateChildNode,inputNode,templateNode,outputNode);
     }
  else     if (templateChildNode instanceof ReferenceMacro) {
-      generator.addReferenceInfo(new ReferenceInfo_Macro(outputNode,templateChildNode,(ReferenceMacro)templateChildNode));
+      generator.addReferenceInfo(new ReferenceInfo_Macro((ReferenceMacro)templateChildNode,inputNode,templateNode,outputNode));
     }
  else {
-      SNode outputChildNode=createNodeFromTemplate(generator,ruleName,outputModel,templateChildNode,inputNode);
+      SNode outputChildNode=createNodeFromTemplate(generator,ruleName,outputModel,templateChildNode,inputNode,outputNode,0);
       if (outputChildNode != null) {
         outputNode.addChild(templateNode.getRoleOf(templateChildNode),outputChildNode);
       }
