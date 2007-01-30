@@ -5,33 +5,27 @@
   }
   String packageName=JavaNameUtil.packageNameForModelUID(sourceModel.getUID());
   String queriesClassName=packageName + ".QueriesGenerated";
-  Class queriesClass=null;
+  Class queriesClass;
   try {
     queriesClass=Class.forName(queriesClassName,true,ClassLoaderManager.getInstance().getClassLoader());
   }
- catch (  ClassNotFoundException e) {
-    throw new RuntimeException(e);
-  }
- finally {
-    if (queriesClass == null) {
-      if (!suppressErrorLogging) {
-        QueryMethodGenerated.LOG.error("Couldn't find QueriesGenerated class for model " + sourceModel.getUID());
-      }
+ catch (  ClassNotFoundException cfe) {
+    if (!suppressErrorLogging) {
+      LOG.error("couldn't find class 'QueriesGenerated' for model '" + sourceModel.getUID() + "' : TRY TO GENERATE");
     }
+    throw cfe;
   }
   Method method=null;
-  outer:   while (queriesClass != null) {
-    Method[] declaredMethods=queriesClass.getDeclaredMethods();
-    for (    Method declaredMethod : declaredMethods) {
-      if (declaredMethod.getName().equals(methodName)) {
-        method=declaredMethod;
-        break outer;
-      }
+  Method[] declaredMethods=queriesClass.getDeclaredMethods();
+  for (  Method declaredMethod : declaredMethods) {
+    if (declaredMethod.getName().equals(methodName)) {
+      method=declaredMethod;
+      break;
     }
-    queriesClass=queriesClass.getSuperclass();
   }
   if (method == null) {
-    throw new RuntimeException("Couldn't find method \"" + methodName + "\" in "+ queriesClassName+ " or in its supers");
+    LOG.error("couldn't find method '" + methodName + "' in '"+ queriesClassName+ "' : TRY TO GENERATE model '"+ sourceModel.getUID()+ "'");
+    throw new NoSuchMethodException("couldn't find method '" + methodName + "' in '"+ queriesClassName+ "'");
   }
   QueryMethodGenerated.ourMethods.put(pair,method);
   return method;
