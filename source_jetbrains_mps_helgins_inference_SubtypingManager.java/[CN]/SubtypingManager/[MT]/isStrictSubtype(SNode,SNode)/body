@@ -1,55 +1,14 @@
 {
   SNode subRepresentator=myTypeChecker.getEquationManager().getRepresentator(subtype);
   SNode superRepresentator=myTypeChecker.getEquationManager().getRepresentator(supertype);
-  Set<ConceptDeclaration> superConcepts=new HashSet<ConceptDeclaration>();
-{
-    Set<ConceptDeclaration> subConcepts=new HashSet<ConceptDeclaration>();
-    ConceptDeclaration subConcept=subtype.getConceptDeclaration(GlobalScope.getInstance());
-    subConcepts.add(subConcept);
-    while (subConcept.getExtends() != null) {
-      subConcept=subConcept.getExtends();
-      subConcepts.add(subConcept);
-    }
-    ConceptDeclaration superConcept=supertype.getConceptDeclaration(GlobalScope.getInstance());
-    superConcepts.add(superConcept);
-    while (superConcept.getExtends() != null) {
-      superConcept=superConcept.getExtends();
-      superConcepts.add(superConcept);
-    }
-    superConcepts.retainAll(subConcepts);
-  }
+  Set<ConceptDeclaration> superConcepts=getSuperConcepts(subtype,supertype);
   if (!superConcepts.isEmpty()) {
     Set<String> roles=new HashSet<String>();
     Set<String> covariantRoles=new HashSet<String>();
     Set<String> contraVariantRoles=new HashSet<String>();
     Set<String> invariantRoles=new HashSet<String>();
     Set<String> allowsNull=new HashSet<String>();
-    for (    ConceptDeclaration superConcept : superConcepts) {
-      if (myVarianceRules.containsKey(superConcept)) {
-        SubtypingVarianceRule rule=myVarianceRules.get(superConcept);
-        for (        LinkVariance linkVariance : CollectionUtil.iteratorAsIterable(rule.linkVariances())) {
-          String role=linkVariance.getLinkDeclaration().getRole();
-          if (linkVariance.getAllowsNull()) {
-            allowsNull.add(role);
-          }
-          if (linkVariance.getVariance() == _Variance_Enum.covariant) {
-            covariantRoles.add(role);
-          }
-          if (linkVariance.getVariance() == _Variance_Enum.contravariant) {
-            contraVariantRoles.add(role);
-          }
-          if (linkVariance.getVariance() == _Variance_Enum.invariant) {
-            invariantRoles.add(role);
-          }
-        }
-        roles.addAll(CollectionUtil.map(CollectionUtil.iteratorAsList(superConcept.linkDeclarations()),new Mapper<LinkDeclaration,String>(){
-          public String map(          LinkDeclaration p){
-            return p.getRole();
-          }
-        }
-));
-      }
-    }
+    collectVariantRoles(superConcepts,allowsNull,covariantRoles,contraVariantRoles,invariantRoles,roles);
     if (!covariantRoles.isEmpty() || !contraVariantRoles.isEmpty() || !invariantRoles.isEmpty()) {
       for (      String role : roles) {
         List<SNode> subChildren=subRepresentator.getChildren(role);
