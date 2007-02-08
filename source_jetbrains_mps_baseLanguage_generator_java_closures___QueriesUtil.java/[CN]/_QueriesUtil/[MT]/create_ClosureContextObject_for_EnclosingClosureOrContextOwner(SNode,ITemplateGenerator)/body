@@ -1,0 +1,40 @@
+{
+  BaseAdapter enclosingClosureOrContextOwner=nodeInsideClosure.getAdapter().findParent(new Condition<BaseAdapter>(){
+    public boolean met(    BaseAdapter object){
+      if (object instanceof Closure)       return true;
+      return ClosuresUtil.isClosureContextOwner(object.getNode());
+    }
+  }
+);
+  SModel model=generator.getTargetModel();
+  if (enclosingClosureOrContextOwner instanceof Closure) {
+    Closure enclosingClosure=(Closure)enclosingClosureOrContextOwner;
+    INodeBuilder builder=generator.findNodeBuilderForSource(enclosingClosure,ClosuresMappingId.CLOSURE__ADAPTER_CLASS);
+    ClassConcept closureAdapter=(ClassConcept)BaseAdapter.fromNode(builder.getTargetNode());
+    FieldDeclaration field=JavaModelUtil_new.findField(closureAdapter,ClosuresMappingId.NAME__CLOSURE_ADAPTER__CLOSURE_CONTEXT_FIELD);
+    if (field == null) {
+      List<INodeBuilder> fieldBuilders=builder.getChildBuildersForRole(ClassConcept.FIELD);
+      for (      INodeBuilder fieldBuilder : fieldBuilders) {
+        fieldBuilder.execute(generator.getState(),new HashMap<String,Object>());
+      }
+      field=JavaModelUtil_new.findField(closureAdapter,ClosuresMappingId.NAME__CLOSURE_ADAPTER__CLOSURE_CONTEXT_FIELD);
+    }
+    if (field != null) {
+      FieldReference fieldRef=FieldReference.newInstance(model);
+      fieldRef.setInstance(ThisExpression.newInstance(model));
+      fieldRef.setFieldDeclaration(field);
+      return BaseAdapter.fromAdapter(fieldRef);
+    }
+  }
+  if (enclosingClosureOrContextOwner != null && ClosuresUtil.isClosureContextOwner(BaseAdapter.fromAdapter(enclosingClosureOrContextOwner))) {
+    INodeBuilder builder=generator.findNodeBuilderForSource(enclosingClosureOrContextOwner,ClosuresMappingId.CONTEXT_OWNER__CLOSURE_CONTEXT__VARIABLE_DECL_STMT);
+    if (builder != null) {
+      LocalVariableDeclarationStatement varDeclStmt=(LocalVariableDeclarationStatement)BaseAdapter.fromNode(builder.getTargetNode());
+      LocalVariableDeclaration varible=varDeclStmt.getLocalVariableDeclaration();
+      LocalVariableReference variableRef=LocalVariableReference.newInstance(model);
+      variableRef.setLocalVariableDeclaration(varible);
+      return BaseAdapter.fromAdapter(variableRef);
+    }
+  }
+  return BaseAdapter.fromAdapter(NullLiteral.newInstance(model));
+}
