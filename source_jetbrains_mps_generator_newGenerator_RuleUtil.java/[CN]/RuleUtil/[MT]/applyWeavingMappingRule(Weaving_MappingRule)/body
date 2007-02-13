@@ -1,0 +1,45 @@
+{
+  ConceptDeclaration applicableConcept=rule.getApplicableConcept();
+  if (applicableConcept == null) {
+    myGenerator.showErrorMessage(null,rule.getNode(),"rule has no applicable concept defined");
+    return;
+  }
+  boolean includeInheritors=rule.getApplyToConceptInheritors();
+  List<SNode> nodes=myGenerator.getSourceModel().getModelDescriptor().getFastNodeFinder().getNodes(applicableConcept,includeInheritors);
+  for (  SNode applicableNode : nodes) {
+    if (checkConditionForBaseMappingRule(applicableNode,rule)) {
+      SNode contextNode=getContextNodeForWeavingingRule(applicableNode,rule.getNode(),rule.getContextProviderAspectId());
+      if (contextNode == null) {
+        myGenerator.showErrorMessage(applicableNode,rule.getNode(),"couldn't find context node");
+        continue;
+      }
+      TemplateDeclaration template=rule.getTemplate();
+      if (template != null) {
+        weaveTemplateDeclaration(applicableNode,template,contextNode,rule.getNode());
+      }
+ else {
+        RuleConsequence ruleConsequence=rule.getRuleConsequence();
+        if (ruleConsequence instanceof TemplateDeclarationReference) {
+          template=((TemplateDeclarationReference)ruleConsequence).getTemplate();
+          weaveTemplateDeclaration(applicableNode,template,contextNode,rule.getNode());
+        }
+ else         if (ruleConsequence instanceof WeaveEach_RuleConsequence) {
+          WeaveEach_RuleConsequence weaveEach=(WeaveEach_RuleConsequence)ruleConsequence;
+          SourceSubstituteMacro_SourceNodesQuery nodesQuery=weaveEach.getSourceNodesQuery();
+          if (nodesQuery == null) {
+            myGenerator.showErrorMessage(applicableNode,rule.getNode(),"couldn't create list of source nodes");
+            break;
+          }
+          template=weaveEach.getTemplate();
+          List<SNode> queryNodes=evaluateSourceNodesQuery(applicableNode,nodesQuery,ruleConsequence.getNode());
+          for (          SNode queryNode : queryNodes) {
+            weaveTemplateDeclaration(queryNode,template,contextNode,rule.getNode());
+          }
+        }
+ else {
+          myGenerator.showErrorMessage(applicableNode,null,ruleConsequence.getNode(),"unsapported rule consequence");
+        }
+      }
+    }
+  }
+}
