@@ -6,32 +6,19 @@
   ISearchScope searchScope=(ISearchScope)status.getUserObject();
   final ConceptDeclaration targetConcept=smartReference.getTarget();
   List<SNode> referentNodes=searchScope.getNodes();
-  for (  SNode referentNode : referentNodes) {
-    if (referentNode.isInstanceOfConcept(targetConcept,scope)) {
-      actions.add(new DefaultChildNodeSubstituteAction(referentNode,parentNode,currentChild,childSetter,scope){
-        String myMatchingText=null;
-        public String getMatchingText(        String pattern){
-          if (myMatchingText == null) {
-            myMatchingText=getSmartMatchingText(referenceNodeConcept,(SNode)getParameterObject(),getScope());
-          }
-          return myMatchingText;
-        }
-        public String getDescriptionText(        String pattern){
-          BaseConcept parameterNode=(BaseConcept)BaseAdapter.fromNode((SNode)getParameterObject());
-          if (parameterNode.getShortDescription() == null) {
-            return "(smart ref:" + referenceNodeConcept.getName() + ") "+ NodePresentationUtil.descriptionText(parameterNode,true);
-          }
-          return "(smart ref:" + NodePresentationUtil.descriptionText(parameterNode,true) + ")";
-        }
-        public SNode createChildNode(        Object parameterObject,        SModel model,        String pattern){
-          SNode childNode=SModelUtil_new.instantiateConceptDeclaration((ConceptDeclaration)referenceNodeConcept,model).getNode();
-          String referentRole=SModelUtil_new.getGenuineLinkRole(referenceLink_final);
-          childNode.setReferent(referentRole,(SNode)parameterObject);
-          NodeFactoryManager.setupNode(referenceNodeConcept,childNode,currentChild,parentNode,model,getScope());
-          return childNode;
-        }
+  Class adapterClass=getAdapterClass(targetConcept);
+  if (adapterClass == null) {
+    for (    SNode referentNode : referentNodes) {
+      if (referentNode.isInstanceOfConcept(targetConcept,scope)) {
+        actions.add(new SmartRefChildNodeSubstituteAction(referentNode,parentNode,currentChild,childSetter,scope,referenceNodeConcept,referenceLink_final));
       }
-);
+    }
+  }
+ else {
+    for (    SNode referentNode : referentNodes) {
+      if (adapterClass.isInstance(referentNode.getAdapter().getClass())) {
+        actions.add(new SmartRefChildNodeSubstituteAction(referentNode,parentNode,currentChild,childSetter,scope,referenceNodeConcept,referenceLink_final));
+      }
     }
   }
   return actions;
