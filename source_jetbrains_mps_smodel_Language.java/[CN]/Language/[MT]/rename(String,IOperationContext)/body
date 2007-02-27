@@ -1,0 +1,52 @@
+{
+  String oldNamespace=getNamespace();
+  renameLanguageModel(oldNamespace,newNamespace,myLanguageDescriptor.getStructureModel(),operationContext);
+  Model editorModel=null;
+  for (  Editor editor : myLanguageDescriptor.getEditors()) {
+    if (editor.getStereotype() == null || editor.getStereotype().equals(SModelStereotype.NONE)) {
+      editorModel=editor.getEditorModel();
+      break;
+    }
+  }
+  renameLanguageModel(oldNamespace,newNamespace,editorModel,operationContext);
+  renameLanguageModel(oldNamespace,newNamespace,myLanguageDescriptor.getActionsModel(),operationContext);
+  renameLanguageModel(oldNamespace,newNamespace,myLanguageDescriptor.getHelginsTypesystemModel(),operationContext);
+  renameLanguageModel(oldNamespace,newNamespace,myLanguageDescriptor.getTypeSystem(),operationContext);
+  MPSModuleRepository.getInstance().renameUID(this,newNamespace);
+  myLanguageDescriptor.setNamespace(newNamespace);
+  String oldLanguageModelsRoot=new File(myDescriptorFile.getParentFile(),LANGUAGE_MODELS).getAbsolutePath();
+  String oldLanguageAccesoriesRoot=new File(myDescriptorFile.getParentFile(),LANGUAGE_ACCESSORIES).getAbsolutePath();
+  for (  ModelRoot modelRoot : myLanguageDescriptor.getModelRoots()) {
+    if (modelRoot.getPath().equals(oldLanguageModelsRoot)) {
+      modelRoot.delete();
+    }
+    if (modelRoot.getPath().equals(oldLanguageAccesoriesRoot)) {
+      modelRoot.delete();
+    }
+  }
+  IProjectHandler projectHandler=operationContext.getProject().getProjectHandler();
+  if (projectHandler != null) {
+    try {
+      projectHandler.deleteFilesAndRemoveFromVCS(CollectionUtil.asList(myDescriptorFile));
+    }
+ catch (    RemoteException e) {
+      LOG.error(e);
+    }
+  }
+ else {
+    myDescriptorFile.delete();
+  }
+  File descriptorFile=newDescriptorFileByNewName(newNamespace);
+  SModel descriptorModel=myLanguageDescriptor.getModel();
+  ModelRoot modelRoot=ModelRoot.newInstance(descriptorModel);
+  modelRoot.setPath(new File(descriptorFile.getParentFile(),LANGUAGE_MODELS).getAbsolutePath());
+  modelRoot.setPrefix(newNamespace);
+  myLanguageDescriptor.addModelRoot(modelRoot);
+  modelRoot=ModelRoot.newInstance(descriptorModel);
+  modelRoot.setPath(new File(descriptorFile.getParentFile(),LANGUAGE_ACCESSORIES).getAbsolutePath());
+  modelRoot.setPrefix(newNamespace);
+  myLanguageDescriptor.addModelRoot(modelRoot);
+  myDescriptorFile=descriptorFile;
+  setLanguageDescriptor(myLanguageDescriptor);
+  save();
+}
