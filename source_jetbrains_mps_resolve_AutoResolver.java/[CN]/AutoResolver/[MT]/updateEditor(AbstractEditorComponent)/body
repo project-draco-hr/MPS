@@ -1,0 +1,30 @@
+{
+  if (editor == null || editor.getRootCell() == null) {
+    return false;
+  }
+  SNode node=editor.getEditedNode();
+  if (node == null)   return false;
+  NodeHighlightManager highlightManager=editor.getHighlightManager();
+  highlightManager.clearForOwner(this);
+  List<SReference> yetBadReferences=new ArrayList<SReference>();
+  SReference.disableLogging();
+  boolean someReferencesResolved=false;
+  try {
+    Set<SReference> badReferences=collectBadReferences(editor);
+    int oldSize=badReferences.size();
+    yetBadReferences=Resolver.resolveReferences(badReferences,editor.getOperationContext());
+    int newSize=yetBadReferences.size();
+    someReferencesResolved=oldSize > newSize;
+  }
+  finally {
+    SReference.enableLogging();
+  }
+  if (!someReferencesResolved) {
+    CommandProcessor.instance().doNotFireEvents();
+  }
+  for (  SReference ref : yetBadReferences) {
+    NodeHighlightManager.HighlighterMessage message=new MyResolverMessage(ref.getSourceNode(),Color.RED,"unresolved reference",editor,this);
+    highlightManager.mark(message);
+  }
+  return true;
+}
