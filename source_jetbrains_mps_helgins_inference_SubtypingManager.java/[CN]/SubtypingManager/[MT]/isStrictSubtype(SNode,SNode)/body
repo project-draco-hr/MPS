@@ -1,54 +1,6 @@
 {
   SNode subRepresentator=myTypeChecker.getEquationManager().getRepresentator(subtype);
   SNode superRepresentator=myTypeChecker.getEquationManager().getRepresentator(supertype);
-  Set<ConceptDeclaration> superConcepts=getSuperConcepts(subtype,supertype);
-  if (!superConcepts.isEmpty()) {
-    Set<LinkDeclaration> linkDeclarations=new HashSet<LinkDeclaration>();
-    Set<LinkDeclaration> covariantRoles=new HashSet<LinkDeclaration>();
-    Set<LinkDeclaration> contraVariantRoles=new HashSet<LinkDeclaration>();
-    Set<LinkDeclaration> invariantRoles=new HashSet<LinkDeclaration>();
-    Set<LinkDeclaration> allowsNull=new HashSet<LinkDeclaration>();
-    for (    ConceptDeclaration superConcept : superConcepts) {
-      if (myVarianceRules.containsKey(superConcept)) {
-        SubtypingVarianceRule rule=myVarianceRules.get(superConcept);
-        collectRolesForVarianceRule(rule,allowsNull,covariantRoles,contraVariantRoles,invariantRoles);
-        linkDeclarations.addAll(CollectionUtil.iteratorAsList(superConcept.linkDeclarations()));
-      }
-    }
-    if (!covariantRoles.isEmpty() || !contraVariantRoles.isEmpty() || !invariantRoles.isEmpty()) {
-      for (      LinkDeclaration linkDeclaration : linkDeclarations) {
-        List<SNode> subChildren=subRepresentator.getChildren(linkDeclaration.getRole());
-        subChildren.add(subRepresentator.getReferent(linkDeclaration.getRole()));
-        List<SNode> superChildren=superRepresentator.getChildren(linkDeclaration.getRole());
-        superChildren.add(superRepresentator.getReferent(linkDeclaration.getRole()));
-        while (subChildren.size() < superChildren.size()) {
-          subChildren.add(null);
-        }
-        while (superChildren.size() < subChildren.size()) {
-          superChildren.add(null);
-        }
-        Iterator<SNode> subIt=subChildren.iterator();
-        Iterator<SNode> superIt=superChildren.iterator();
-        for (; subIt.hasNext(); ) {
-          SNode subChild=myTypeChecker.getAdaptationManager().adaptType(subIt.next());
-          SNode superChild=myTypeChecker.getAdaptationManager().adaptType(superIt.next());
-          if (covariantRoles.contains(linkDeclaration)) {
-            if (allowsNull.contains(linkDeclaration) && superChild == null)             continue;
-            if (!isSubtype(subChild,superChild))             return false;
-          }
- else           if (contraVariantRoles.contains(linkDeclaration)) {
-            if (allowsNull.contains(linkDeclaration) && subChild == null)             continue;
-            if (!isSubtype(superChild,subChild))             return false;
-          }
- else           if (invariantRoles.contains(linkDeclaration)) {
-            if (allowsNull.contains(linkDeclaration) && superChild == null)             continue;
-            if (!MatchingUtil.matchNodes(subChild,superChild))             return false;
-          }
-        }
-      }
-      return true;
-    }
-  }
   Set<SNode> frontier=new HashSet<SNode>();
   Set<SNode> newFrontier=new HashSet<SNode>();
   frontier.add(subRepresentator);
