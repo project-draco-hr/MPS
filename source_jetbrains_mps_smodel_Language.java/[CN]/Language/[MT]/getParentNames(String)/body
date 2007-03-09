@@ -4,14 +4,25 @@
   }
  else {
     Set<String> result=new HashSet<String>();
-    ConceptDeclaration declaration=findConceptDeclaration(NameUtil.shortNameFromLongName(conceptFqName));
+    AbstractConceptDeclaration declaration=findConceptDeclaration(NameUtil.shortNameFromLongName(conceptFqName));
     if (declaration == null) {
       return result;
     }
     result.add(conceptFqName);
-    ConceptDeclaration conceptDeclaration=declaration.getExtends();
-    if (conceptDeclaration != null) {
-      result.addAll(SModelUtil_new.getDeclaringLanguage(declaration.getExtends(),GlobalScope.getInstance()).getParentNames(NameUtil.nodeFQName(conceptDeclaration)));
+    if (declaration instanceof ConceptDeclaration) {
+      ConceptDeclaration cd=(ConceptDeclaration)declaration;
+      if (cd.getExtends() != null) {
+        result.addAll(SModelUtil_new.getDeclaringLanguage(cd.getExtends(),GlobalScope.getInstance()).getParentNames(NameUtil.nodeFQName(cd.getExtends())));
+      }
+      for (      InterfaceConceptReference icr : cd.getImplementses()) {
+        result.addAll(SModelUtil_new.getDeclaringLanguage(icr.getIntfc(),GlobalScope.getInstance()).getParentNames(NameUtil.nodeFQName(icr.getIntfc())));
+      }
+    }
+    if (declaration instanceof InterfaceConceptDeclaration) {
+      InterfaceConceptDeclaration icd=(InterfaceConceptDeclaration)declaration;
+      for (      InterfaceConceptReference icr : icd.getExtendses()) {
+        result.addAll(SModelUtil_new.getDeclaringLanguage(icr.getIntfc(),GlobalScope.getInstance()).getParentNames(NameUtil.nodeFQName(icr.getIntfc())));
+      }
     }
     myParentsNamesMap.put(conceptFqName,result);
     return new HashSet<String>(result);
