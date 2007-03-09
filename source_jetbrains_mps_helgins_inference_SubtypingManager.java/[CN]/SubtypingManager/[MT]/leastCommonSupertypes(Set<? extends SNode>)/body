@@ -1,4 +1,43 @@
 {
-  Set<SNode> result=leastCommonSupertypes(types,new NodeSupertypesCollector(this));
-  return result;
+  Set<SNode> allTypes=new HashSet<SNode>();
+  addAllStructurally(allTypes,(Set<SNode>)types);
+  HashMap<SNode,Set<SNode>> subTypesToSupertypes=new HashMap<SNode,Set<SNode>>();
+  Set<SNode> frontier=new HashSet<SNode>(types);
+  Set<SNode> newFrontier=new HashSet<SNode>();
+  while (!frontier.isEmpty()) {
+    for (    SNode type : frontier) {
+      if (containsStructurally(subTypesToSupertypes.keySet(),type)) {
+        continue;
+      }
+      Set<SNode> superTypes=collectImmediateSubtypes(type);
+      subTypesToSupertypes.put(type,superTypes);
+      newFrontier.addAll(superTypes);
+      addAllStructurally(allTypes,superTypes);
+    }
+    frontier=newFrontier;
+    newFrontier=new HashSet<SNode>();
+  }
+  for (  SNode node2 : allTypes) {
+    for (    SNode node1 : allTypes) {
+      for (      SNode node3 : allTypes) {
+        if (MatchingUtil.matchNodes(node1,node2) || MatchingUtil.matchNodes(node2,node3) || MatchingUtil.matchNodes(node1,node3))         continue;
+        Set<SNode> supertypes1=subTypesToSupertypes.get(node1);
+        if (supertypes1 == null)         continue;
+        Set<SNode> supertypes2=subTypesToSupertypes.get(node2);
+        if (supertypes2 == null)         continue;
+        if (containsStructurally(supertypes1,node2) && containsStructurally(supertypes2,node3)) {
+          supertypes1.add(node3);
+        }
+      }
+    }
+  }
+  while (types.size() >= 2) {
+    Iterator<? extends SNode> iterator=types.iterator();
+    SNode a=iterator.next();
+    SNode b=iterator.next();
+    types.remove(a);
+    types.remove(b);
+    addAllStructurally((Set<SNode>)types,leastCommonSupertypes(a,b,subTypesToSupertypes));
+  }
+  return (Set<SNode>)types;
 }
