@@ -1,0 +1,35 @@
+{
+  SNode referentNode;
+  String linkRole=myReferenceMacro.getLink().getRole();
+  ReferenceMacro_GetReferent function=myReferenceMacro.getReferentFunction();
+  if (function != null) {
+    SNode templateValue=myTemplateReferentNode.getReferent(linkRole);
+    String methodName=TemplateFunctionMethodName.referenceMacro_GetReferent(function.getNode());
+    Object[] args=new Object[]{myInputNode,templateValue,myTemplateReferentNode,generator.getSourceModel(),generator,generator.getScope(),generator.getGeneratorSessionContext()};
+    try {
+      referentNode=(SNode)QueryMethodGenerated.invoke(methodName,args,myReferenceMacro.getModel());
+    }
+ catch (    Exception e) {
+      generator.showErrorMessage(myInputNode,myTemplateReferentNode,myReferenceMacro.getNode(),"couldn't evaluate reference macro");
+      return;
+    }
+  }
+ else {
+    Object[] args=new Object[]{myInputNode,myTemplateReferentNode,myReferenceMacro.getLink(),generator};
+    try {
+      referentNode=(SNode)QueryMethod.invoke("referenceMacro_" + myReferenceMacro.getAspectMethodName(),args,myReferenceMacro.getModel());
+    }
+ catch (    Throwable t) {
+      String message=NameUtil.shortNameFromLongName(t.getClass().getName()) + " occured while expanding reference macro with query: \"referenceMacro_" + myReferenceMacro.getAspectMethodName();
+      generator.showErrorMessage(myInputNode,myTemplateReferentNode,message);
+      return;
+    }
+  }
+  if (referentNode == null) {
+    if (myOutputNode.isReferentRequired(linkRole,generator.getScope())) {
+      generator.showErrorMessage(myInputNode,myTemplateReferentNode,"unresolved reference for role \"" + linkRole + "\" in "+ myOutputNode.getDebugText());
+    }
+    return;
+  }
+  myOutputNode.setReferent(linkRole,referentNode);
+}
