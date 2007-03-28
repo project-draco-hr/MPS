@@ -1,0 +1,141 @@
+{
+  int i=0;
+  List<SNode> outputNodes=new LinkedList<SNode>();
+  for (  INodeAdapter templateChildNode : templateNode.getAdapter().getChildren()) {
+    if (!(templateChildNode instanceof NodeMacro))     continue;
+    i++;
+    if (i <= nodeMacrosToSkip)     continue;
+    NodeMacro nodeMacro=(NodeMacro)templateChildNode;
+    if (templateChildNode instanceof LoopMacro) {
+      List<SNode> newInputNodes=TemplateGenUtil.createSourceNodeListForTemplateNode_ForNewGenerator(inputNode,templateNode,nodeMacrosToSkip,myGenerator);
+      for (      SNode newInputNode : newInputNodes) {
+        List<SNode> outputChildNodes=createNodeFromTemplate(nodeMacro.getMappingId(),templateNode,newInputNode,outputParentNode,childRole,nodeMacrosToSkip + 1);
+        if (outputChildNodes != null) {
+          outputNodes.addAll(outputChildNodes);
+        }
+      }
+      return outputNodes;
+    }
+ else     if (templateChildNode instanceof CopySrcNodeMacro || templateChildNode instanceof CopySrcListMacro) {
+      List<SNode> newInputNodes=TemplateGenUtil.createSourceNodeListForTemplateNode_ForNewGenerator(inputNode,templateNode,nodeMacrosToSkip,myGenerator);
+      for (      SNode newInputNode : newInputNodes) {
+        String mappingId=nodeMacro.getMappingId();
+        List<SNode> newOutputNodes=copyNodeFromInputNode(mappingId,newInputNode,newInputNode);
+        outputNodes.addAll(newOutputNodes);
+      }
+      return outputNodes;
+    }
+ else     if (templateChildNode instanceof IfMacro) {
+      List<SNode> newInputNodes=TemplateGenUtil.createSourceNodeListForTemplateNode_ForNewGenerator(inputNode,templateNode,nodeMacrosToSkip,myGenerator);
+      for (      SNode newInputNode : newInputNodes) {
+        List<SNode> outputChildNodes=createNodeFromTemplate(nodeMacro.getMappingId(),templateNode,newInputNode,outputParentNode,childRole,nodeMacrosToSkip + 1);
+        if (outputChildNodes != null) {
+          outputNodes.addAll(outputChildNodes);
+        }
+      }
+      return outputNodes;
+    }
+ else     if (templateChildNode instanceof MapSrcNodeMacro || templateChildNode instanceof MapSrcListMacro) {
+      List<SNode> newInputNodes=TemplateGenUtil.createSourceNodeListForTemplateNode_ForNewGenerator(inputNode,templateNode,nodeMacrosToSkip,myGenerator);
+      for (      SNode newInputNode : newInputNodes) {
+        MapSrcNodeMacro mapSrcNodeMacro=(MapSrcNodeMacro)nodeMacro;
+        MapSrcMacro_MapperFunction macro_mapperFunction=mapSrcNodeMacro.getMapperFunction();
+        String mapperId=mapSrcNodeMacro.getSourceNodeMapperId();
+        if (mapperId != null || macro_mapperFunction != null) {
+          SNode newOutputNode=MacroUtil.executeMapSrcNodeMacro(newInputNode,nodeMacro.getNode(),myGenerator);
+          outputNodes.add(newOutputNode);
+        }
+ else {
+          List<SNode> outputChildNodes=createNodeFromTemplate(nodeMacro.getMappingId(),templateNode,newInputNode,outputParentNode,childRole,nodeMacrosToSkip + 1);
+          if (outputChildNodes != null) {
+            outputNodes.addAll(outputChildNodes);
+          }
+        }
+      }
+      return outputNodes;
+    }
+ else     if (templateChildNode instanceof SwitchMacro) {
+      TemplateSwitch templateSwitch=((SwitchMacro)nodeMacro).getTemplateSwitch();
+      List<SNode> newInputNodes=TemplateGenUtil.createSourceNodeListForTemplateNode_ForNewGenerator(inputNode,templateNode,0,myGenerator);
+      for (      SNode newInputNode : newInputNodes) {
+        TemplateDeclaration templateForSwitchCase=(TemplateDeclaration)myGenerator.getTemplateForSwitchCase(newInputNode,templateSwitch);
+        if (templateForSwitchCase == null) {
+          continue;
+        }
+        List<TemplateFragment> templateFragments=getTemplateFragments(templateForSwitchCase);
+        if (templateFragments.isEmpty()) {
+          myGenerator.showErrorMessage(newInputNode,BaseAdapter.fromAdapter(templateForSwitchCase),BaseAdapter.fromAdapter(templateSwitch),"couldn't create builder for switch: no template fragments found");
+          continue;
+        }
+        if (templateFragments.size() > 1) {
+          myGenerator.showErrorMessage(newInputNode,BaseAdapter.fromAdapter(templateForSwitchCase),BaseAdapter.fromAdapter(templateSwitch),"couldn't create builder for switch: more than one (" + templateFragments.size() + ") fragments found");
+          continue;
+        }
+        TemplateFragment templateFragment=templateFragments.get(0);
+        SNode templateNodeForCase=BaseAdapter.fromAdapter(templateFragment.getParent());
+        List<SNode> outputChildNodes=createNodeFromTemplate(nodeMacro.getMappingId(),templateNodeForCase,newInputNode,outputParentNode,childRole,0);
+        if (outputChildNodes != null) {
+          outputNodes.addAll(outputChildNodes);
+        }
+      }
+      return outputNodes;
+    }
+ else {
+      List<SNode> newInputNodes=TemplateGenUtil.createSourceNodeListForTemplateNode_ForNewGenerator(inputNode,templateNode,nodeMacrosToSkip,myGenerator);
+      for (      SNode newInputNode : newInputNodes) {
+        if (processTargetBuilderAspectMethod(newInputNode,templateNode,ruleName,nodeMacro,outputParentNode,childRole) == null) {
+          List<SNode> outputChildNodes=createNodeFromTemplate(nodeMacro.getMappingId(),templateNode,newInputNode,outputParentNode,childRole,nodeMacrosToSkip + 1);
+          if (outputChildNodes != null) {
+            outputNodes.addAll(outputChildNodes);
+          }
+        }
+      }
+      return outputNodes;
+    }
+  }
+  SNode outputNode=SModelUtil_new.instantiateConceptDeclaration(templateNode.getConceptFqName(),myOutputModel,myGenerator.getScope(),false);
+  if (outputNode == null) {
+    myGenerator.showErrorMessage(null,templateNode,"'createNodeFromTemplate' cannot create output node");
+    return null;
+  }
+  outputNodes.add(outputNode);
+  myGenerator.addOutputNodeByTemplateNodeAndInputNode(templateNode,inputNode,outputNode);
+  myGenerator.addOutputNodeByRuleNameAndInputNode(templateNode,ruleName,inputNode,outputNode);
+  myOutputModel.addLanguage(templateNode.getLanguage(myGenerator.getScope()));
+  for (  String property : templateNode.getProperties().keySet()) {
+    outputNode.setProperty(property,templateNode.getProperty(property),false);
+  }
+  SModel templateModel=templateNode.getModel();
+  for (  SReference reference : templateNode.getReferences()) {
+    SNode templateReferentNode=reference.getTargetNode();
+    if (templateReferentNode == null) {
+      myGenerator.showErrorMessage(null,templateNode,"'createNodeFromTemplate' referent node is null in template model");
+      continue;
+    }
+    if (templateReferentNode.getModel().equals(templateModel)) {
+      myGenerator.addReferenceInfo(new ReferenceInfo_Default(outputNode,reference,templateNode,templateReferentNode,inputNode));
+    }
+ else {
+      outputNode.addReferent(reference.getRole(),templateReferentNode);
+    }
+  }
+  for (  INodeAdapter templateChildNode : templateNode.getAdapter().getChildren()) {
+    if (templateChildNode instanceof NodeMacro)     continue;
+    if (templateChildNode instanceof PropertyMacro) {
+      MacroUtil.expandPropertyMacro(myGenerator,(PropertyMacro)templateChildNode,inputNode,templateNode,outputNode);
+    }
+ else     if (templateChildNode instanceof ReferenceMacro) {
+      myGenerator.addReferenceInfo(new ReferenceInfo_Macro((ReferenceMacro)templateChildNode,inputNode,templateNode,outputNode));
+    }
+ else {
+      String role=templateChildNode.getRole_();
+      List<SNode> outputChildNodes=createNodeFromTemplate(ruleName,templateChildNode.getNode(),inputNode,outputNode,role,0);
+      if (outputChildNodes != null) {
+        for (        SNode outputChildNode : outputChildNodes) {
+          outputNode.addChild(role,outputChildNode);
+        }
+      }
+    }
+  }
+  return outputNodes;
+}

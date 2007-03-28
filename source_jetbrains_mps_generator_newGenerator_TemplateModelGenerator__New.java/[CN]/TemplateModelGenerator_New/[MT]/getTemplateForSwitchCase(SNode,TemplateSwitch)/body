@@ -1,3 +1,53 @@
 {
+  ConceptDeclaration nodeConcept=sourceNode.getConceptDeclarationAdapter(getScope());
+  if (myTemplateSwitchGraph == null) {
+    myTemplateSwitchGraph=new TemplateSwitchGraph(getGeneratorSessionContext().getTemplateModels());
+    myTemplateSwitchToListCache=new HashMap<TemplateSwitch,List<TemplateSwitch>>();
+  }
+  List<TemplateSwitch> switches=myTemplateSwitchToListCache.get(templateSwitch);
+  if (switches == null) {
+    switches=myTemplateSwitchGraph.getSubgraphAsList(templateSwitch);
+    myTemplateSwitchToListCache.put(templateSwitch,switches);
+  }
+  for (  TemplateSwitch aSwitch : switches) {
+    Iterator<ConditionalTemplate> iterator=aSwitch.templates();
+    while (iterator.hasNext()) {
+      ConditionalTemplate conditionalTemplate=iterator.next();
+      String conditionAspectId=conditionalTemplate.getConditionAspectId();
+      String methodName="semanticNodeCondition_" + conditionAspectId;
+      Object[] args=new Object[]{sourceNode};
+      try {
+        Boolean condition=(Boolean)QueryMethod.invokeWithOptionalArg(methodName,args,conditionalTemplate.getModel(),getOperationContext());
+        if (condition) {
+          return conditionalTemplate.getTemplate();
+        }
+      }
+ catch (      Throwable t) {
+        throw new GenerationFailedException(new GenerationFailueInfo("Error while processing template switch",sourceNode,null,conditionalTemplate.getNode(),getGeneratorSessionContext()),t);
+      }
+    }
+    List<Reduction_MappingRule> rules=aSwitch.getReductionMappingRules();
+    for (    Reduction_MappingRule rule : rules) {
+      if (TemplateGenUtil.checkPremiseForBaseMappingRule(sourceNode,nodeConcept,rule,this)) {
+        RuleConsequence ruleConsequence=rule.getRuleConsequence();
+        if (ruleConsequence != null) {
+          return processSwitchRuleConsequence(ruleConsequence,sourceNode,this);
+        }
+        TemplateDeclaration ruleTemplate=rule.getTemplate();
+        if (ruleTemplate == null) {
+          showErrorMessage(sourceNode,null,rule.getNode(),"couldn't apply reduction: no template declaration");
+        }
+        return ruleTemplate;
+      }
+    }
+    TemplateDeclaration defaultTemplate=aSwitch.getDefaultTemplate();
+    if (defaultTemplate != null) {
+      return defaultTemplate;
+    }
+    RuleConsequence ruleConsequence=aSwitch.getDefaultConsequence();
+    if (ruleConsequence != null) {
+      return processSwitchRuleConsequence(ruleConsequence,sourceNode,this);
+    }
+  }
   return null;
 }
