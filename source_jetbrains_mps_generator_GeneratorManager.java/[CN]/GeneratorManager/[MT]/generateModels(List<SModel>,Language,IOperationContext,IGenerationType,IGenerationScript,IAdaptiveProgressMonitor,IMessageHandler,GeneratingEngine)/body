@@ -21,13 +21,13 @@
   }
   handler.handle(new Message(MessageKind.INFORMATION,"    target root folder: \"" + outputFolder + "\""));
   boolean ideaPresent=myProject.getProjectHandler() != null;
-  boolean compile=myCompileOnGeneration && ideaPresent && generationType.requiresCompilationInIDEAfterGeneration();
+  boolean compile=ideaPresent && ((myCompileOnGeneration && generationType.requiresCompilationInIDEAfterGeneration()) || (myCompileBeforeGeneration && generationType.requiresCompilationInIDEABeforeGeneration()));
   long totalJob=ModelsProgressUtil.estimateTotalGenerationJobMillis(compile,sourceModels);
   progress.startTaskAnyway("generating",null,totalJob);
   try {
     boolean reloadClasses=true;
-    if (!myCompileOnGeneration || !generationType.requiresCompilationInIDEABeforeGeneration()) {
-      progress.addText("compilation in IntelliJ IDEA on generation is turned off or not needed");
+    if (!myCompileBeforeGeneration || !generationType.requiresCompilationInIDEABeforeGeneration()) {
+      progress.addText("compilation in IntelliJ IDEA before generation is turned off or not needed");
       reloadClasses=false;
     }
  else     if (!ideaPresent) {
@@ -121,7 +121,10 @@
     checkMonitorCanceled(progress);
     progress.addText("");
     if (status.isOk()) {
-      if (compile) {
+      if (!myCompileOnGeneration || !ideaPresent || !generationType.requiresCompilationInIDEAfterGeneration()) {
+        progress.addText("compilation in IntelliJ IDEA after generation is turned off or not needed");
+      }
+ else {
         progress.addText("compiling in IntelliJ IDEA...");
         progress.startLeafTask(ModelsProgressUtil.TASK_NAME_REFRESH_FS);
         myProject.getProjectHandler().refreshFS();
