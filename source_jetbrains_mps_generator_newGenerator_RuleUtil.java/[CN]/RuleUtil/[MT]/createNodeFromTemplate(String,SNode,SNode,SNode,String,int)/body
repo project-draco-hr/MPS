@@ -20,7 +20,10 @@
       List<SNode> newInputNodes=TemplateGenUtil.createSourceNodeListForTemplateNode_ForNewGenerator(inputNode,templateNode,nodeMacrosToSkip,myGenerator);
       for (      SNode newInputNode : newInputNodes) {
         String mappingId=nodeMacro.getMappingId();
-        List<SNode> newOutputNodes=copyNodeFromInputNode(mappingId,newInputNode,newInputNode);
+        List<SNode> newOutputNodes=copyNodeFromInputNode(mappingId,templateNode,newInputNode);
+        if (newOutputNodes.size() == 1) {
+          myGenerator.addOutputNodeByTemplateNodeAndInputNode(templateNode,inputNode,newOutputNodes.get(0));
+        }
         outputNodes.addAll(newOutputNodes);
       }
       return outputNodes;
@@ -42,8 +45,9 @@
         MapSrcMacro_MapperFunction macro_mapperFunction=mapSrcNodeMacro.getMapperFunction();
         String mapperId=mapSrcNodeMacro.getSourceNodeMapperId();
         if (mapperId != null || macro_mapperFunction != null) {
-          SNode newOutputNode=MacroUtil.executeMapSrcNodeMacro(newInputNode,nodeMacro.getNode(),myGenerator);
-          outputNodes.add(newOutputNode);
+          SNode childToReplace=SModelUtil_new.instantiateConceptDeclaration(templateNode.getConceptFqName(),myOutputModel,myGenerator.getScope(),false);
+          outputParentNode.addChild(childRole,childToReplace);
+          myGenerator.getDelayedChanges().addExecuteMapSrcNodeMacroChange(outputParentNode,nodeMacro,childToReplace,inputNode,myGenerator);
         }
  else {
           List<SNode> outputChildNodes=createNodeFromTemplate(nodeMacro.getMappingId(),templateNode,newInputNode,outputParentNode,childRole,nodeMacrosToSkip + 1);
@@ -57,11 +61,13 @@
  else     if (templateChildNode instanceof SwitchMacro) {
       TemplateSwitch templateSwitch=((SwitchMacro)nodeMacro).getTemplateSwitch();
       List<SNode> newInputNodes=TemplateGenUtil.createSourceNodeListForTemplateNode_ForNewGenerator(inputNode,templateNode,0,myGenerator);
+      boolean isProcessed=false;
       for (      SNode newInputNode : newInputNodes) {
         TemplateDeclaration templateForSwitchCase=(TemplateDeclaration)myGenerator.getTemplateForSwitchCase(newInputNode,templateSwitch);
         if (templateForSwitchCase == null) {
           continue;
         }
+        isProcessed=true;
         List<TemplateFragment> templateFragments=getTemplateFragments(templateForSwitchCase);
         if (templateFragments.isEmpty()) {
           myGenerator.showErrorMessage(newInputNode,BaseAdapter.fromAdapter(templateForSwitchCase),BaseAdapter.fromAdapter(templateSwitch),"couldn't create builder for switch: no template fragments found");
@@ -78,7 +84,9 @@
           outputNodes.addAll(outputChildNodes);
         }
       }
-      return outputNodes;
+      if (isProcessed) {
+        return outputNodes;
+      }
     }
  else {
       List<SNode> newInputNodes=TemplateGenUtil.createSourceNodeListForTemplateNode_ForNewGenerator(inputNode,templateNode,nodeMacrosToSkip,myGenerator);
@@ -101,6 +109,7 @@
   outputNodes.add(outputNode);
   myGenerator.addOutputNodeByTemplateNodeAndInputNode(templateNode,inputNode,outputNode);
   myGenerator.addOutputNodeByRuleNameAndInputNode(templateNode,ruleName,inputNode,outputNode);
+  myGenerator.addTemplateNodeByOutputNode(outputNode,templateNode);
   myOutputModel.addLanguage(templateNode.getLanguage(myGenerator.getScope()));
   for (  String property : templateNode.getProperties().keySet()) {
     outputNode.setProperty(property,templateNode.getProperty(property),false);
