@@ -4,10 +4,22 @@
   SModel sourceModel=sourceModelDescriptor.getSModel();
   addProgressMessage(MessageKind.INFORMATION,"generating model \"" + sourceModel.getUID() + "\"");
   GenerationSessionContext context=new GenerationSessionContext(targetLanguage,sourceModel,myInvocationContext,mappings,myCurrentContext);
-  List<Generator> generators=context.getGeneratorModules();
-  if (generators.isEmpty()) {
-    addProgressMessage(MessageKind.WARNING,"skip model \"" + sourceModel.getUID() + "\" : no generator avalable");
-    return new GenerationStatus(sourceModel,null,null,false,false,false);
+  if (context.getGenerationStepData() != null) {
+    if (!checkGenerationStepData(context.getGenerationStepData())) {
+      throw new GenerationCanceledException();
+    }
+    if (context.getGenerationStepData().getMappings().isEmpty()) {
+      addProgressMessage(MessageKind.WARNING,"skip model \"" + sourceModel.getUID() + "\" : no generator avalable");
+      return new GenerationStatus(sourceModel,null,null,false,false,false);
+    }
+    printGenerationStepData(context.getGenerationStepData());
+  }
+ else {
+    List<Generator> generators=context.getGeneratorModules();
+    if (generators.isEmpty()) {
+      addProgressMessage(MessageKind.WARNING,"skip model \"" + sourceModel.getUID() + "\" : no generator avalable");
+      return new GenerationStatus(sourceModel,null,null,false,false,false);
+    }
   }
   setGenerationSessionContext(context);
   ITemplateGenerator generator=new DefaultTemplateGenerator(context,myProgressMonitor,myHandler);

@@ -1,0 +1,38 @@
+{
+  IModule module=generationContext.getModule();
+  SModelDescriptor currentInputModel=inputModel.getModelDescriptor();
+  SModelDescriptor currentOutputModel=createTransientModel(inputModel,module);
+  boolean somethingHasBeenGenerated=generator.doPrimaryMapping(currentInputModel.getSModel(),currentOutputModel.getSModel());
+  if (!somethingHasBeenGenerated) {
+    SModel model=currentOutputModel.getSModel();
+    model.validateLanguagesAndImports();
+    return model;
+  }
+  int secondaryMappingRepeatCount=1;
+  while (true) {
+    currentOutputModel.getSModel().validateLanguagesAndImports();
+    if (generationContext.getGenerationStepData() == null) {
+      if (targetLanguage.getNamespace().equals("jetbrains.mps.baseLanguage")) {
+        List<String> languageNamespaces=currentOutputModel.getSModel().getLanguageNamespaces(module.getScope());
+        if (languageNamespaces.size() == 1 && languageNamespaces.get(0).equals(targetLanguage.getNamespace())) {
+          break;
+        }
+      }
+    }
+    addMessage(MessageKind.INFORMATION,"generating model \"" + currentOutputModel.getModelUID() + "\"");
+    generationContext.replaceInputModel(currentOutputModel);
+    SModelDescriptor transientModel=createTransientModel(currentInputModel.getSModel(),module);
+    currentInputModel=currentOutputModel;
+    if (!generator.doSecondaryMapping(currentInputModel.getSModel(),transientModel.getSModel())) {
+      SModelRepository.getInstance().removeModelDescriptor(transientModel);
+      myTransientModelsCount--;
+      break;
+    }
+    if (++secondaryMappingRepeatCount > 10) {
+      generator.showErrorMessage(null,"Failed to generate output after 10 repeated mappings");
+      throw new GenerationFailedException("Failed to generate output after 10 repeated mappings");
+    }
+    currentOutputModel=transientModel;
+  }
+  return currentOutputModel.getSModel();
+}

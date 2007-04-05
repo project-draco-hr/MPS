@@ -1,45 +1,25 @@
 {
   GenerationSessionContext generationContext=generator.getGeneratorSessionContext();
-  if (generationContext.getGenerationStepData() != null) {
-    checkGenerationStepData(generationContext.getGenerationStepData());
+  if (generationContext.getGenerationStepData() == null) {
+    return generateModel(inputModel,targetLanguage,generator,generationContext);
   }
-  IModule module=generationContext.getModule();
-  SModelDescriptor currentInputModel=inputModel.getModelDescriptor();
-  SModelDescriptor currentOutputModel=createTransientModel(inputModel,module);
-  boolean somethingHasBeenGenerated=generator.doPrimaryMapping(currentInputModel.getSModel(),currentOutputModel.getSModel());
-  if (!somethingHasBeenGenerated) {
-    SModel model=currentOutputModel.getSModel();
-    model.validateLanguagesAndImports();
-    return model;
-  }
-  int secondaryMappingRepeatCount=1;
+  SModel outputModel=null;
+  GenerationStepData generationStepData=generationContext.getGenerationStepData();
   while (true) {
-    currentOutputModel.getSModel().validateLanguagesAndImports();
-    if (generationContext.getGenerationStepData() == null) {
-      if (targetLanguage.getNamespace().equals("jetbrains.mps.baseLanguage")) {
-        List<String> languageNamespaces=currentOutputModel.getSModel().getLanguageNamespaces(module.getScope());
-        if (languageNamespaces.size() == 1 && languageNamespaces.get(0).equals(targetLanguage.getNamespace())) {
-          break;
-        }
-      }
-    }
-    addMessage(MessageKind.INFORMATION,"generating model \"" + currentOutputModel.getModelUID() + "\"");
-    generationContext.replaceInputModel(currentOutputModel);
-    if (generationContext.getGenerationStepData() != null) {
-      checkGenerationStepData(generationContext.getGenerationStepData());
-    }
-    SModelDescriptor transientModel=createTransientModel(currentInputModel.getSModel(),module);
-    currentInputModel=currentOutputModel;
-    if (!generator.doSecondaryMapping(currentInputModel.getSModel(),transientModel.getSModel())) {
-      SModelRepository.getInstance().removeModelDescriptor(transientModel);
-      myTransientModelsCount--;
+    outputModel=generateModel(inputModel,targetLanguage,generator,generationContext);
+    if (!generationStepData.update(outputModel)) {
       break;
     }
-    if (++secondaryMappingRepeatCount > 10) {
-      generator.showErrorMessage(null,"Failed to generate output after 10 repeated mappings");
-      throw new GenerationFailedException("Failed to generate output after 10 repeated mappings");
+    if (!checkGenerationStepData(generationStepData)) {
+      throw new GenerationCanceledException();
     }
-    currentOutputModel=transientModel;
+    if (generationStepData.getMappings().isEmpty()) {
+      break;
+    }
+    printGenerationStepData(generationStepData);
+    inputModel=outputModel;
+    generationContext.replaceInputModel(inputModel.getModelDescriptor());
+    generationContext.replaceGenerationStepData(generationStepData);
   }
-  return currentOutputModel.getSModel();
+  return outputModel;
 }
