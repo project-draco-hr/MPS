@@ -1,17 +1,32 @@
 {
-  List<MappingConfiguration> step=new ArrayList<MappingConfiguration>();
-  for (  MappingConfiguration mappingConfig : priorityMap.keySet()) {
-    if (priorityMap.get(mappingConfig).isEmpty()) {
-      step.add(mappingConfig);
+  List<MappingConfiguration> stepMappings=new ArrayList<MappingConfiguration>();
+  while (true) {
+    List<MappingConfiguration> mappingsForStep=new ArrayList<MappingConfiguration>();
+    for (    MappingConfiguration mapping : priorityMap.keySet()) {
+      if (priorityMap.get(mapping).isEmpty()) {
+        mappingsForStep.add(mapping);
+      }
+    }
+    if (mappingsForStep.isEmpty())     break;
+    stepMappings.addAll(mappingsForStep);
+    for (    MappingConfiguration mappingForStep : mappingsForStep) {
+      priorityMap.remove(mappingForStep);
+    }
+    for (    MappingConfiguration mappingForStep : mappingsForStep) {
+      for (      Map<MappingConfiguration,MappingPriorityRule> greaterPriMappings : priorityMap.values()) {
+        if (greaterPriMappings.containsKey(mappingForStep)) {
+          MappingPriorityRule priorityRule=greaterPriMappings.get(mappingForStep);
+          if (priorityRule.getKind() == MappingPriorityRuleKind.before_or_together) {
+            greaterPriMappings.remove(mappingForStep);
+          }
+        }
+      }
     }
   }
-  for (  MappingConfiguration mappingConfig : step) {
-    priorityMap.remove(mappingConfig);
-  }
-  for (  MappingConfiguration mappingConfig : step) {
-    for (    Map<MappingConfiguration,MappingPriorityRule> set : priorityMap.values()) {
-      set.remove(mappingConfig);
+  for (  MappingConfiguration mapping : stepMappings) {
+    for (    Map<MappingConfiguration,MappingPriorityRule> greaterPriMappings : priorityMap.values()) {
+      greaterPriMappings.remove(mapping);
     }
   }
-  return step;
+  return stepMappings;
 }
