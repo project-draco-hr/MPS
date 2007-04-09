@@ -4,7 +4,7 @@
   }
   for (  MappingConfiguration mapping : myAllMappings) {
     if (!myPriorityMap.containsKey(mapping)) {
-      myPriorityMap.put(mapping,new HashMap<MappingConfiguration,MappingPriorityRule>());
+      myPriorityMap.put(mapping,new HashMap<MappingConfiguration,PriorityData>());
     }
   }
   for (  Generator generator : generators) {
@@ -20,12 +20,28 @@
       processRule(rule,generator,ignoreGreaterPriMappings);
     }
   }
+  for (  Pair<MappingPriorityRule,List<MappingConfiguration>> strictlyTogetherMappingData : myStrictlyTogetherMappings) {
+    Map<MappingConfiguration,PriorityData> allGrtPriMappings=new HashMap<MappingConfiguration,PriorityData>();
+    for (    MappingConfiguration strictlyTogetherMapping : strictlyTogetherMappingData.o2) {
+      allGrtPriMappings.putAll(myPriorityMap.get(strictlyTogetherMapping));
+    }
+    for (    MappingConfiguration strictlyTogetherMapping : strictlyTogetherMappingData.o2) {
+      Map<MappingConfiguration,PriorityData> grtPriMappings=myPriorityMap.get(strictlyTogetherMapping);
+      for (      MappingConfiguration grtPriMappingToAdd : allGrtPriMappings.keySet()) {
+        if (!grtPriMappings.containsKey(grtPriMappingToAdd)) {
+          PriorityData priorityDataToAdd=allGrtPriMappings.get(grtPriMappingToAdd);
+          PriorityData priorityDataUpdated=new PriorityData(priorityDataToAdd.isStrict,strictlyTogetherMappingData.o1);
+          grtPriMappings.put(grtPriMappingToAdd,priorityDataUpdated);
+        }
+      }
+    }
+  }
   List<List<MappingConfiguration>> steps=createSteps();
   List<MappingPriorityRule> conflictingRules=new ArrayList<MappingPriorityRule>();
-  for (  Map<MappingConfiguration,MappingPriorityRule> value : myPriorityMap.values()) {
-    for (    MappingPriorityRule rule : value.values()) {
-      if (!conflictingRules.contains(rule)) {
-        conflictingRules.add(rule);
+  for (  Map<MappingConfiguration,PriorityData> grtPriMappings : myPriorityMap.values()) {
+    for (    PriorityData priorityData : grtPriMappings.values()) {
+      if (!conflictingRules.contains(priorityData.causeRule)) {
+        conflictingRules.add(priorityData.causeRule);
       }
     }
   }
