@@ -1,0 +1,43 @@
+{
+  if (mappingRef instanceof MappingConfig_RefAllLocal) {
+    return "*";
+  }
+  if (mappingRef instanceof MappingConfig_RefAllGlobal) {
+    return "[*:*]";
+  }
+  if (mappingRef instanceof MappingConfig_SimpleRefSet) {
+    String s="{";
+    int count=((MappingConfig_SimpleRefSet)mappingRef).getMappingConfigsCount();
+    for (    MappingConfig_SimpleRef mappingSimpleRef : ((MappingConfig_SimpleRefSet)mappingRef).getMappingConfigs()) {
+      count--;
+      s=s + asString(mappingSimpleRef);
+      if (count > 0)       s+=", ";
+    }
+    return s + "}";
+  }
+  if (mappingRef instanceof MappingConfig_SimpleRef) {
+    String modelUID=((MappingConfig_SimpleRef)mappingRef).getModelUID();
+    String nodeID=((MappingConfig_SimpleRef)mappingRef).getNodeID();
+    String s=SModelUID.fromString(modelUID).getShortName() + ".";
+    if (nodeID.equals("*")) {
+      return s + "*";
+    }
+ else {
+      GlobalScope scope=GlobalScope.getInstance();
+      SModelDescriptor refModel=scope.getModelDescriptor(SModelUID.fromString(modelUID));
+      if (refModel != null) {
+        SNode mappingConfig=refModel.getSModel().getNodeById(nodeID);
+        if (mappingConfig != null) {
+          return s + mappingConfig.getName();
+        }
+      }
+    }
+    return s + nodeID;
+  }
+  if (mappingRef instanceof MappingConfig_ExtRef) {
+    GeneratorReference generatorRef=((MappingConfig_ExtRef)mappingRef).getGenerator();
+    MappingConfig_AbstractRef extMappingRef=((MappingConfig_ExtRef)mappingRef).getMappingConfig();
+    return "[" + asString(generatorRef) + ":"+ asString(extMappingRef)+ "]";
+  }
+  return "???";
+}
