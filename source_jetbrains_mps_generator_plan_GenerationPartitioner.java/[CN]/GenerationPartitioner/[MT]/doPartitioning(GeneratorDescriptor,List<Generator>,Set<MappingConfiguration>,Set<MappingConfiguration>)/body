@@ -1,4 +1,5 @@
 {
+  reset();
   for (  Generator generator : generators) {
     myAllMappings.addAll(generator.getOwnMappings());
   }
@@ -17,8 +18,34 @@
       rules=descriptor.getPriorityRules();
     }
     for (    MappingPriorityRule rule : rules) {
-      processRule(rule,generator,ignoreGreaterPriMappings);
+      processRule(rule,generator);
     }
+  }
+  if (processedLockingMappings != null && processedNotLockingMappings != null) {
+    Collection<Map<MappingConfiguration,PriorityData>> grtPriMappings=myPriorityMap.values();
+    Iterator<MappingConfiguration> iterator=processedNotLockingMappings.iterator();
+    while (iterator.hasNext()) {
+      MappingConfiguration processedMapping=iterator.next();
+      boolean becameLocking=false;
+      for (      Map<MappingConfiguration,PriorityData> grtPriMapping : grtPriMappings) {
+        if (grtPriMapping.containsKey(processedMapping)) {
+          becameLocking=true;
+          break;
+        }
+      }
+      if (becameLocking) {
+        iterator.remove();
+        processedLockingMappings.add(processedMapping);
+      }
+    }
+    for (    MappingConfiguration processedLockingMapping : processedLockingMappings) {
+      myPriorityMap.remove(processedLockingMapping);
+      for (      Map<MappingConfiguration,PriorityData> grtPriMapping : grtPriMappings) {
+        grtPriMapping.remove(processedLockingMapping);
+      }
+    }
+    myLockingMappingsInFirstSet.addAll(processedLockingMappings);
+    myNotLockingMappingsInFirstSet.addAll(processedNotLockingMappings);
   }
   for (  Pair<MappingPriorityRule,List<MappingConfiguration>> strictlyTogetherMappingData : myStrictlyTogetherMappings) {
     Map<MappingConfiguration,PriorityData> allGrtPriMappings=new HashMap<MappingConfiguration,PriorityData>();
@@ -36,7 +63,7 @@
       }
     }
   }
-  List<List<MappingConfiguration>> steps=createSteps();
+  List<List<MappingConfiguration>> mappingSets=createMappingSets();
   for (  Map<MappingConfiguration,PriorityData> grtPriMappings : myPriorityMap.values()) {
     for (    PriorityData priorityData : grtPriMappings.values()) {
       if (!myConflictingRules.contains(priorityData.causeRule)) {
@@ -44,5 +71,5 @@
       }
     }
   }
-  return steps;
+  return mappingSets;
 }
