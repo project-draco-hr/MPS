@@ -1,0 +1,69 @@
+{
+  List<MappingConfiguration> mappingSet=new ArrayList<MappingConfiguration>();
+  List<MappingConfiguration> unlockedMappingsPostponed=new ArrayList<MappingConfiguration>();
+  while (true) {
+    List<MappingConfiguration> unlockedMappingsToAdd=new ArrayList<MappingConfiguration>();
+    for (    MappingConfiguration mapping : myPriorityMap.keySet()) {
+      if (myPriorityMap.get(mapping).isEmpty()) {
+        if (lockingMappings.contains(mapping)) {
+          unlockedMappingsToAdd.add(mapping);
+        }
+ else {
+          unlockedMappingsPostponed.add(mapping);
+        }
+      }
+    }
+    if (unlockedMappingsToAdd.isEmpty()) {
+      break;
+    }
+    mappingSet.addAll(unlockedMappingsToAdd);
+    for (    MappingConfiguration mappingToAdd : unlockedMappingsToAdd) {
+      myPriorityMap.remove(mappingToAdd);
+    }
+    for (    MappingConfiguration mappingForSet : unlockedMappingsToAdd) {
+      for (      Map<MappingConfiguration,PriorityData> grtPriMappings : myPriorityMap.values()) {
+        if (grtPriMappings.containsKey(mappingForSet)) {
+          PriorityData priorityData=grtPriMappings.get(mappingForSet);
+          if (!priorityData.isStrict) {
+            grtPriMappings.remove(mappingForSet);
+          }
+        }
+      }
+    }
+  }
+  if (mappingSet.isEmpty()) {
+    mappingSet.addAll(unlockedMappingsPostponed);
+    for (    MappingConfiguration mappingPostponed : unlockedMappingsPostponed) {
+      myPriorityMap.remove(mappingPostponed);
+    }
+  }
+ else {
+    for (    Pair<MappingPriorityRule,List<MappingConfiguration>> strictlyTogetherInfo : myStrictlyTogetherMappings) {
+      List<MappingConfiguration> strictlyTogetherSet=strictlyTogetherInfo.o2;
+      List<MappingConfiguration> intersection=CollectionUtil.intersect(strictlyTogetherSet,mappingSet);
+      if (intersection.isEmpty())       continue;
+      if (intersection.size() == strictlyTogetherSet.size())       continue;
+      List<MappingConfiguration> neededMappings=CollectionUtil.substruct(strictlyTogetherSet,mappingSet);
+      boolean foundAllNeeded=true;
+      for (      MappingConfiguration neededMapping : neededMappings) {
+        if (unlockedMappingsPostponed.contains(neededMapping)) {
+          mappingSet.add(neededMapping);
+          unlockedMappingsPostponed.remove(neededMapping);
+          myPriorityMap.remove(neededMapping);
+        }
+ else {
+          foundAllNeeded=false;
+        }
+      }
+      if (!foundAllNeeded) {
+        myConflictingRules.add(strictlyTogetherInfo.o1);
+      }
+    }
+    for (    MappingConfiguration mappingInSet : mappingSet) {
+      for (      Map<MappingConfiguration,PriorityData> grtPriMappings : myPriorityMap.values()) {
+        grtPriMappings.remove(mappingInSet);
+      }
+    }
+  }
+  return mappingSet;
+}
