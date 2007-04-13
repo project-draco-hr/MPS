@@ -5,9 +5,24 @@
   List<MappingConfiguration> greaterPriMappings=getMappingsFromRef(greaterPriMappingRef,generator);
   List<MappingConfiguration> lesserPriMappings=getMappingsFromRef(lesserPriMappingRef,generator);
   if (rule.getKind() == MappingPriorityRuleKind.strictly_together) {
-    List<MappingConfiguration> coherentMappings=new ArrayList<MappingConfiguration>(lesserPriMappings);
-    CollectionUtil.addAllNotPresent(greaterPriMappings,coherentMappings);
-    myStrictlyTogetherMappings.add(new Pair<MappingPriorityRule,List<MappingConfiguration>>(rule,coherentMappings));
+    Set<MappingConfiguration> coherentMappings=new HashSet<MappingConfiguration>(lesserPriMappings);
+    coherentMappings.addAll(greaterPriMappings);
+    Pair<List<MappingPriorityRule>,Set<MappingConfiguration>> toUnite=null;
+    for (    Pair<List<MappingPriorityRule>,Set<MappingConfiguration>> pair : myStrictlyTogetherMappings) {
+      if (!CollectionUtil.intersect(coherentMappings,pair.o2).isEmpty()) {
+        toUnite=pair;
+        break;
+      }
+    }
+    if (toUnite != null) {
+      toUnite.o2.addAll(coherentMappings);
+      toUnite.o1.add(rule);
+    }
+ else {
+      List<MappingPriorityRule> rules=new ArrayList<MappingPriorityRule>();
+      rules.add(rule);
+      myStrictlyTogetherMappings.add(new Pair<List<MappingPriorityRule>,Set<MappingConfiguration>>(rules,coherentMappings));
+    }
   }
  else {
     lesserPriMappings=CollectionUtil.substruct(lesserPriMappings,greaterPriMappings);
