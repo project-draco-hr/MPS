@@ -7,30 +7,34 @@
   if (rule.getKind() == MappingPriorityRuleKind.strictly_together) {
     Set<MappingConfiguration> coherentMappings=new HashSet<MappingConfiguration>(lesserPriMappings);
     coherentMappings.addAll(greaterPriMappings);
-    Pair<List<MappingPriorityRule>,Set<MappingConfiguration>> toUnite=null;
-    for (    Pair<List<MappingPriorityRule>,Set<MappingConfiguration>> pair : myStrictlyTogetherMappings) {
-      if (!CollectionUtil.intersect(coherentMappings,pair.o2).isEmpty()) {
+    CoherentSetData toUnite=null;
+    for (    CoherentSetData pair : myCoherentMappings) {
+      if (!CollectionUtil.intersection(coherentMappings,pair.myMappings).isEmpty()) {
         toUnite=pair;
         break;
       }
     }
     if (toUnite != null) {
-      toUnite.o2.addAll(coherentMappings);
-      toUnite.o1.add(rule);
+      toUnite.myMappings.addAll(coherentMappings);
+      toUnite.myCauseRules.add(rule);
     }
  else {
-      List<MappingPriorityRule> rules=new ArrayList<MappingPriorityRule>();
-      rules.add(rule);
-      myStrictlyTogetherMappings.add(new Pair<List<MappingPriorityRule>,Set<MappingConfiguration>>(rules,coherentMappings));
+      myCoherentMappings.add(new CoherentSetData(coherentMappings,rule));
     }
   }
  else {
-    lesserPriMappings=CollectionUtil.substruct(lesserPriMappings,greaterPriMappings);
+    lesserPriMappings=CollectionUtil.subtraction(lesserPriMappings,greaterPriMappings);
     for (    MappingConfiguration lesserPriMapping : lesserPriMappings) {
       Map<MappingConfiguration,PriorityData> grtPriMappings=myPriorityMap.get(lesserPriMapping);
       for (      MappingConfiguration grtPriMapping : greaterPriMappings) {
+        boolean isStrict=(rule.getKind() == MappingPriorityRuleKind.strictly_before);
         if (!grtPriMappings.containsKey(grtPriMapping)) {
-          grtPriMappings.put(grtPriMapping,new PriorityData(rule.getKind() == MappingPriorityRuleKind.strictly_before,rule));
+          grtPriMappings.put(grtPriMapping,new PriorityData(isStrict,rule));
+        }
+ else {
+          PriorityData priorityData=grtPriMappings.get(grtPriMapping);
+          if (isStrict)           priorityData.myStrict=true;
+          priorityData.myCauseRules.add(rule);
         }
       }
     }
