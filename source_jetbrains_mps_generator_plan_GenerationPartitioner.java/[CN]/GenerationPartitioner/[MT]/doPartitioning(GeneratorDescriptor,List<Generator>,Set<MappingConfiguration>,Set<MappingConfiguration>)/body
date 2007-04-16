@@ -5,7 +5,8 @@
   }
   myAllMappings.addAll(mappingsFromEarlierStepsToProcess);
   for (  MappingConfiguration mapping : myAllMappings) {
-    myPriorityMap.put(mapping,new HashMap<MappingConfiguration,PriorityData>());
+    myLsrToGrtPriorityMap.put(mapping,new HashMap<MappingConfiguration,PriorityData>());
+    myGrtToLsrPriorityMap.put(mapping,new HashSet<MappingConfiguration>());
   }
   for (  Generator generator : generators) {
     GeneratorDescriptor descriptor=(GeneratorDescriptor)generator.getModuleDescriptor();
@@ -21,11 +22,13 @@
     }
   }
 {
+  }
+{
     for (    CoherentSetData coherentSetData : myCoherentMappings) {
       Set<MappingConfiguration> coherentMappingSet=coherentSetData.myMappings;
       Map<MappingConfiguration,PriorityData> commonGrtPriMappings=new HashMap<MappingConfiguration,PriorityData>();
       for (      MappingConfiguration coherentMapping : coherentMappingSet) {
-        Map<MappingConfiguration,PriorityData> grtPriMappings=myPriorityMap.get(coherentMapping);
+        Map<MappingConfiguration,PriorityData> grtPriMappings=myLsrToGrtPriorityMap.get(coherentMapping);
         for (        MappingConfiguration grtPriMapping : grtPriMappings.keySet()) {
           PriorityData priorityData=grtPriMappings.get(grtPriMapping);
           PriorityData commonPriorityData=commonGrtPriMappings.get(grtPriMapping);
@@ -38,15 +41,15 @@
         }
       }
       for (      MappingConfiguration coherentMapping : coherentMappingSet) {
-        myPriorityMap.put(coherentMapping,commonGrtPriMappings);
+        myLsrToGrtPriorityMap.put(coherentMapping,commonGrtPriMappings);
       }
     }
   }
   for (  CoherentSetData coherentSetData : myCoherentMappings) {
     Set<MappingConfiguration> coherentMappingSet=coherentSetData.myMappings;
-    for (    MappingConfiguration mapping : myPriorityMap.keySet()) {
+    for (    MappingConfiguration mapping : myLsrToGrtPriorityMap.keySet()) {
       if (coherentMappingSet.contains(mapping))       continue;
-      Map<MappingConfiguration,PriorityData> grtPriMappings=myPriorityMap.get(mapping);
+      Map<MappingConfiguration,PriorityData> grtPriMappings=myLsrToGrtPriorityMap.get(mapping);
       List<MappingConfiguration> list=CollectionUtil.intersection(coherentMappingSet,grtPriMappings.keySet());
       if (list.isEmpty())       continue;
       boolean isStrict=false;
@@ -69,23 +72,23 @@
     }
   }
 {
-    Collection<Map<MappingConfiguration,PriorityData>> grtPriMappings=myPriorityMap.values();
+    Collection<Map<MappingConfiguration,PriorityData>> grtPriMappings=myLsrToGrtPriorityMap.values();
     for (    MappingConfiguration processedMapping : mappingsFromEarlierStepsToDisable) {
       for (      Map<MappingConfiguration,PriorityData> grtPriMapping : grtPriMappings) {
         grtPriMapping.remove(processedMapping);
       }
     }
     for (    MappingConfiguration processedMapping : mappingsFromEarlierStepsToDisable) {
-      if (myPriorityMap.containsKey(processedMapping) && !myPriorityMap.get(processedMapping).isEmpty()) {
-        for (        PriorityData priorityData : myPriorityMap.get(processedMapping).values()) {
+      if (myLsrToGrtPriorityMap.containsKey(processedMapping) && !myLsrToGrtPriorityMap.get(processedMapping).isEmpty()) {
+        for (        PriorityData priorityData : myLsrToGrtPriorityMap.get(processedMapping).values()) {
           myConflictingRules.addAll(priorityData.myCauseRules);
         }
       }
-      myPriorityMap.remove(processedMapping);
+      myLsrToGrtPriorityMap.remove(processedMapping);
     }
   }
   List<List<MappingConfiguration>> mappingSets=createMappingSets();
-  for (  Map<MappingConfiguration,PriorityData> grtPriMappings : myPriorityMap.values()) {
+  for (  Map<MappingConfiguration,PriorityData> grtPriMappings : myLsrToGrtPriorityMap.values()) {
     for (    PriorityData priorityData : grtPriMappings.values()) {
       myConflictingRules.addAll(priorityData.myCauseRules);
     }
