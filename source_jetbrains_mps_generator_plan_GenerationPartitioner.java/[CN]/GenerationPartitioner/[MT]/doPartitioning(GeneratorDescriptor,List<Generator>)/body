@@ -1,0 +1,57 @@
+{
+  reset();
+  for (  Generator generator : generators) {
+    for (    MappingConfiguration mapping : generator.getOwnMappings()) {
+      myPriorityMap.put(mapping,new HashMap<MappingConfiguration,PriorityData>());
+    }
+  }
+  for (  Generator generator : generators) {
+    GeneratorDescriptor descriptor=(GeneratorDescriptor)generator.getModuleDescriptor();
+    List<MappingPriorityRule> rules;
+    if (descriptorWorkingCopy != null && descriptorWorkingCopy.getGeneratorUID().equals(descriptor.getGeneratorUID())) {
+      rules=descriptorWorkingCopy.getPriorityRules();
+    }
+ else {
+      rules=descriptor.getPriorityRules();
+    }
+    for (    MappingPriorityRule rule : rules) {
+      processRule(rule,generator);
+    }
+  }
+  for (  MappingConfiguration mapping : myPriorityMap.keySet()) {
+    checkSelfLocking(mapping);
+  }
+  PriorityMapUtil.makeLocksEqualsForCoherentMappings(myCoherentMappings,myPriorityMap,myConflictingRules);
+  PriorityMapUtil.makeLockedByAllCoherentIfLockedByOne(myCoherentMappings,myPriorityMap);
+  for (  MappingConfiguration mapping : myPriorityMap.keySet()) {
+    while (true) {
+      List<MappingConfiguration> weakLockMappings=PriorityMapUtil.getWeakLockMappingsForLockedMapping(mapping,myPriorityMap);
+      if (weakLockMappings.isEmpty())       break;
+      for (      MappingConfiguration weakLockMapping : weakLockMappings) {
+        PriorityMapUtil.replaceWeakLock(mapping,weakLockMapping,myPriorityMap);
+        checkSelfLocking(mapping);
+        List<MappingConfiguration> lockedMappings_1=PriorityMapUtil.getStrictLockedMappingsForLockMapping(mapping,myPriorityMap);
+        for (        MappingConfiguration lockedMapping_1 : lockedMappings_1) {
+          Map<MappingConfiguration,PriorityData> locks_1=myPriorityMap.get(lockedMapping_1);
+          PriorityData priorityDataToApply=locks_1.get(mapping);
+          PriorityMapUtil.addLock(lockedMapping_1,weakLockMapping,priorityDataToApply,myPriorityMap);
+          checkSelfLocking(lockedMapping_1);
+        }
+      }
+    }
+  }
+  for (  Map<MappingConfiguration,PriorityData> locks : myPriorityMap.values()) {
+    for (    PriorityData priorityData : locks.values()) {
+      if (!priorityData.isStrict()) {
+        throw new RuntimeException("Unexpected weak priority");
+      }
+    }
+  }
+  List<List<MappingConfiguration>> mappingSets=createMappingSets();
+  for (  Map<MappingConfiguration,PriorityData> grtPriMappings : myPriorityMap.values()) {
+    for (    PriorityData priorityData : grtPriMappings.values()) {
+      myConflictingRules.addAll(priorityData.myCauseRules);
+    }
+  }
+  return mappingSets;
+}

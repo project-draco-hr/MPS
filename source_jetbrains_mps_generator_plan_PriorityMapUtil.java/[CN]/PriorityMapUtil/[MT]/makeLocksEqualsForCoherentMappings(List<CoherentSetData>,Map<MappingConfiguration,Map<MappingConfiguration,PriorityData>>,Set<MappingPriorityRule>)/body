@@ -1,0 +1,34 @@
+{
+  for (  CoherentSetData coherentSetData : coherentMappings) {
+    Set<MappingConfiguration> coherentMappingSet=coherentSetData.myMappings;
+    Map<MappingConfiguration,PriorityData> joinedLocks=new HashMap<MappingConfiguration,PriorityData>();
+    for (    MappingConfiguration coherentMapping : coherentMappingSet) {
+      Map<MappingConfiguration,PriorityData> locks=priorityMap.get(coherentMapping);
+      for (      Map.Entry<MappingConfiguration,PriorityData> entry : locks.entrySet()) {
+        MappingConfiguration lockMapping=entry.getKey();
+        PriorityData priorityData=entry.getValue();
+        if (coherentMappingSet.contains(lockMapping)) {
+          if (priorityData.isStrict()) {
+            conflictingRules.addAll(priorityData.myCauseRules);
+            conflictingRules.addAll(coherentSetData.myCauseRules);
+          }
+          continue;
+        }
+        PriorityData joinedPriorityData=joinedLocks.get(lockMapping);
+        if (joinedPriorityData != null) {
+          joinedPriorityData.update(priorityData);
+        }
+ else {
+          joinedLocks.put(lockMapping,new PriorityData(priorityData));
+        }
+      }
+    }
+    for (    MappingConfiguration coherentMapping : coherentMappingSet) {
+      Map<MappingConfiguration,PriorityData> joinedLocks_1=new HashMap<MappingConfiguration,PriorityData>();
+      for (      Map.Entry<MappingConfiguration,PriorityData> entry : joinedLocks.entrySet()) {
+        joinedLocks_1.put(entry.getKey(),new PriorityData(entry.getValue()));
+      }
+      priorityMap.put(coherentMapping,joinedLocks_1);
+    }
+  }
+}
