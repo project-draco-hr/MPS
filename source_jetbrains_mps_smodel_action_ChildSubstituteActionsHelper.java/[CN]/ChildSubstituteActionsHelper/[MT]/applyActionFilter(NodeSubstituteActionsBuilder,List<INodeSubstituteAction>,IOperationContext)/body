@@ -1,11 +1,27 @@
 {
-  String filterQueryMethodId=substituteActionsBuilder.getActionsFilterAspectId();
-  if (filterQueryMethodId == null) {
+  if (!substituteActionsBuilder.getUseNewActions()) {
+    String filterQueryMethodId=substituteActionsBuilder.getActionsFilterAspectId();
+    if (filterQueryMethodId == null) {
+      return actions;
+    }
+    Object[] args1=new Object[]{actions,context};
+    Object[] args2=new Object[]{actions,context.getScope()};
+    String methodName="nodeSubstituteActionsBuilder_ActionsFilter_" + filterQueryMethodId;
+    SModel model=substituteActionsBuilder.getModel();
+    return (List<INodeSubstituteAction>)QueryMethod.invoke_alternativeArguments(methodName,args1,args2,model);
+  }
+ else {
+    Set<SNode> conceptsToRemove=new HashSet<SNode>();
+    for (    RemovePart rp : substituteActionsBuilder.getSubnodes(RemovePart.class)) {
+      conceptsToRemove.add(rp.getConceptToRemove().getNode());
+    }
+    Iterator<INodeSubstituteAction> it=actions.iterator();
+    while (it.hasNext()) {
+      INodeSubstituteAction action=it.next();
+      if (conceptsToRemove.contains(action.getParameterObject())) {
+        it.remove();
+      }
+    }
     return actions;
   }
-  Object[] args1=new Object[]{actions,context};
-  Object[] args2=new Object[]{actions,context.getScope()};
-  String methodName="nodeSubstituteActionsBuilder_ActionsFilter_" + filterQueryMethodId;
-  SModel model=substituteActionsBuilder.getModel();
-  return (List<INodeSubstituteAction>)QueryMethod.invoke_alternativeArguments(methodName,args1,args2,model);
 }
