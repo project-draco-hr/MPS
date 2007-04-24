@@ -15,11 +15,26 @@
     for (    RemovePart rp : substituteActionsBuilder.getSubnodes(RemovePart.class)) {
       conceptsToRemove.add(rp.getConceptToRemove().getNode());
     }
+    List<RemoveByConditionPart> removesByCondition=substituteActionsBuilder.getSubnodes(RemoveByConditionPart.class);
     Iterator<INodeSubstituteAction> it=actions.iterator();
     while (it.hasNext()) {
       INodeSubstituteAction action=it.next();
-      if (conceptsToRemove.contains(action.getParameterObject())) {
-        it.remove();
+      if (action.getParameterObject() instanceof SNode && ((SNode)action.getParameterObject()).getAdapter() instanceof ConceptDeclaration) {
+        if (conceptsToRemove.contains(action.getParameterObject())) {
+          it.remove();
+        }
+        for (        RemoveByConditionPart part : removesByCondition) {
+          String methodName="removeConceptByCondition_" + part.getId();
+          Object[] args={(SNode)action.getParameterObject(),parentNode,currentChild,context};
+          try {
+            if ((Boolean)QueryMethodGenerated.invoke(methodName,args,substituteActionsBuilder.getModel())) {
+              it.remove();
+            }
+          }
+ catch (          Exception e) {
+            LOG.error(e);
+          }
+        }
       }
     }
     return actions;
