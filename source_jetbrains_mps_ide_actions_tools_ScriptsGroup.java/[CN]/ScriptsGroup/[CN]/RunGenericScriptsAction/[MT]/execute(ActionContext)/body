@@ -1,0 +1,48 @@
+{
+  String fqClassName=ScriptNameUtil.getGenericScriptFqClassName(myScript);
+  Class<BaseScript> aClass;
+  try {
+    aClass=(Class<BaseScript>)Class.forName(fqClassName);
+  }
+ catch (  ClassNotFoundException e) {
+    JOptionPane.showMessageDialog(actionContext.get(IOperationContext.class).getMainFrame(),e.getMessage(),"",JOptionPane.ERROR_MESSAGE);
+    return;
+  }
+  final BaseScript baseScript;
+  try {
+    baseScript=aClass.newInstance();
+  }
+ catch (  InstantiationException e) {
+    throw new RuntimeException(e);
+  }
+catch (  IllegalAccessException e) {
+    throw new RuntimeException(e);
+  }
+  Runnable runnable=new Runnable(){
+    public void run(){
+      final IDEProjectFrame ideProjectFrame=actionContext.get(IDEProjectFrame.class);
+      IAdaptiveProgressMonitor progressMonitor=ideProjectFrame.createAdaptiveProgressMonitor();
+      final UsagesModel_Composite usagesModel_composite=new UsagesModel_Composite();
+      try {
+        final ScriptContext scriptContext=new ScriptContext(actionContext,progressMonitor,usagesModel_composite);
+        CommandProcessor.instance().executeCommand(new Runnable(){
+          public void run(){
+            baseScript.executeScript(scriptContext);
+          }
+        }
+);
+      }
+  finally {
+        progressMonitor.finishAnyway();
+        ThreadUtils.runInUIThreadAndWait(new Runnable(){
+          public void run(){
+            ideProjectFrame.showUsagesView(usagesModel_composite);
+          }
+        }
+);
+      }
+    }
+  }
+;
+  new Thread(runnable).start();
+}
