@@ -1,0 +1,30 @@
+{
+  List<INodeSubstituteAction> result=new ArrayList<INodeSubstituteAction>();
+{
+    ConceptDeclaration concept=SModelUtil_new.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.BinaryOperation",operationContext.getScope());
+    Calculable calculable=new Calculable(){
+      public Object calculate(){
+        SNode binaryOp=SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.BinaryOperation");
+        List<SNode> result=BaseAdapter.toNodes(SModelUtil_new.getSubconcepts(((ConceptDeclaration)SNodeOperations.getAdapter(binaryOp)),SNodeOperations.getModel(sourceNode),operationContext.getScope()));
+        return result;
+      }
+    }
+;
+    List<SNode> parameterObjects=(List<SNode>)calculable.calculate();
+    for (    SNode parameter : parameterObjects) {
+      result.add(new AbstractRTransformHintSubstituteAction((parameter instanceof SNode ? (SNode)parameter : null),sourceNode){
+        public SNode doSubstitute(        String pattern){
+          INodeAdapter newNode=SModelUtil_new.instantiateConceptDeclaration(((ConceptDeclaration)SNodeOperations.getAdapter(((SNode)this.getParameterObject()))),model);
+          SNode result=newNode.getNode();
+          SNodeOperations.replaceWithAnother(sourceNode,result);
+          SLinkOperations.setTarget(result,"leftExpression",sourceNode,true);
+          SNode boToCheck=(SNodeOperations.isInstanceOf(result,"jetbrains.mps.baseLanguage.structure.BinaryOperation") ? SNodeOperations.getParent(result,null,false,false) : result);
+          ParenthesisUtil.checkOperationWRTPriority(boToCheck);
+          return boToCheck;
+        }
+      }
+);
+    }
+  }
+  return result;
+}
