@@ -1,30 +1,12 @@
 {
   clear();
   clearTypeUserObjects(root);
-  List<Language> languages=root.getModel().getLanguages(GlobalScope.getInstance());
-  Set<SModel> typesModels=new HashSet<SModel>();
-  for (  Language language : languages) {
-    myRulesManager.loadLanguage(language);
-    SModelDescriptor helginsModelDescriptor=language.getHelginsTypesystemModelDescriptor();
-    if (helginsModelDescriptor != null) {
-      typesModels.add(helginsModelDescriptor.getSModel());
-    }
+  NodeTypesComponent nodeTypesComponent=NodeTypesComponentsRepository.getInstance().getNodeTypesComponent(root);
+  if (nodeTypesComponent != null) {
+    nodeTypesComponent.clear();
   }
-  if (typesModels.isEmpty())   return;
-  myConceptsToRulesCache=new ConceptToRulesMap<Rule>();
-  for (  SModel typesModel : typesModels) {
-    for (    VariableSetDeclaration varset : typesModel.getRootsAdapters(VariableSetDeclaration.class)) {
-      myTypeVariablesManager.registerNewVarset(varset);
-    }
-    for (    Rule rule : typesModel.getRootsAdapters(Rule.class)) {
-      if (!rule.applicableNodes().hasNext())       continue;
-      AnalyzedTermDeclaration analyzedTermDeclaration=rule.applicableNodes().next();
-      AbstractConceptDeclaration ruleConcept=ConditionMatcher.getConcept(analyzedTermDeclaration.getCondition());
-      myConceptsToRulesCache.putRule(ruleConcept,rule);
-    }
-    myConceptsToRulesCache.makeConsistent();
-    mySubtypingManager.initiate(typesModel);
-    myAdaptationManager.initiate(typesModel);
+  if (!loadTypesystemRules(root)) {
+    return;
   }
   doCheckTypes(root);
   myEquationManagersStack.peek().solveInequations();
