@@ -1,12 +1,18 @@
 {
-  AbstractConceptDeclaration nodeConcept=node.getConceptDeclarationAdapter();
-  if (nodeConcept instanceof ConceptDeclaration) {
-    while (nodeConcept != null) {
-      String conceptFqName=NameUtil.nodeFQName(nodeConcept);
-      INodeReferentSetEventHandler handler=myNodeReferentSetEventHandlersMap.get(conceptFqName + "#" + referentRole);
-      if (handler != null)       return handler;
-      nodeConcept=((ConceptDeclaration)nodeConcept).getExtends();
+  String nodeConceptFqName=node.getConceptFqName();
+  String originalKey=nodeConceptFqName + "#" + referentRole;
+  if (myNodeReferentSetEventHandlersMap.containsKey(originalKey)) {
+    return myNodeReferentSetEventHandlersMap.get(originalKey);
+  }
+  Set<AbstractConceptDeclaration> hierarchy=SModelUtil_new.getConceptHierarchy(node.getConceptDeclarationAdapter());
+  for (  AbstractConceptDeclaration concept : hierarchy) {
+    String conceptFqName=NameUtil.nodeFQName(concept);
+    INodeReferentSetEventHandler result=myNodeReferentSetEventHandlersMap.get(conceptFqName + "#" + referentRole);
+    if (result != null) {
+      myNodeReferentSetEventHandlersMap.put(originalKey,result);
+      return result;
     }
   }
+  myNodeReferentSetEventHandlersMap.put(originalKey,null);
   return null;
 }
