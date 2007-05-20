@@ -1,21 +1,43 @@
 {
-  String name=baseMethodDeclaration.getName();
-  String conceptName=baseMethodDeclaration.getShortConceptName();
+  final String name=baseMethodDeclaration.getName();
+  final String conceptName=baseMethodDeclaration.getShortConceptName();
   Pair<String,String> typeObject=adaptNode(baseMethodDeclaration.getReturnType());
   if (typeObject == null)   return ExternalResolver.NO_MEMBER_TYPE;
-  String methodTypeName=typeObject.o1;
-  String methodTypeSignature=typeObject.o2;
-  String methodType="(" + methodTypeName + "/"+ methodTypeSignature+ ")";
-  String result="[" + conceptName + "]"+ name+ "(";
-  Iterator<ParameterDeclaration> pIterator=baseMethodDeclaration.parameters();
-  while (pIterator.hasNext()) {
-    ParameterDeclaration parameterDeclaration=pIterator.next();
-    typeObject=adaptNode(parameterDeclaration.getType());
-    if (typeObject == null)     return ExternalResolver.NO_MEMBER_TYPE;
-    result+="(" + typeObject.o1 + "/"+ typeObject.o2+ ")";
-    if (pIterator.hasNext())     result+=", ";
+  final String methodTypeName=typeObject.o1;
+  final String methodTypeSignature=typeObject.o2;
+  final StringBuilder builder=StringBuilderSpinAllocator.alloc();
+  try {
+    builder.append('(');
+    builder.append(methodTypeName);
+    builder.append('/');
+    builder.append(methodTypeSignature);
+    builder.append(')');
+    final String methodType=builder.toString();
+    builder.setLength(0);
+    builder.append('[');
+    builder.append(conceptName);
+    builder.append(']');
+    builder.append(name);
+    builder.append('(');
+    Iterator<ParameterDeclaration> pIterator=baseMethodDeclaration.parameters();
+    while (pIterator.hasNext()) {
+      ParameterDeclaration parameterDeclaration=pIterator.next();
+      typeObject=adaptNode(parameterDeclaration.getType());
+      if (typeObject == null)       return ExternalResolver.NO_MEMBER_TYPE;
+      builder.append('(');
+      builder.append(typeObject.o1);
+      builder.append('/');
+      builder.append(typeObject.o2);
+      builder.append(')');
+      if (pIterator.hasNext()) {
+        builder.append(", ");
+      }
+    }
+    builder.append(") : ");
+    builder.append(methodType);
+    return builder.toString();
   }
-  result+=") : ";
-  result+=methodType;
-  return result;
+  finally {
+    StringBuilderSpinAllocator.dispose(builder);
+  }
 }
