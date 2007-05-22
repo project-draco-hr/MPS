@@ -1,0 +1,34 @@
+{
+  final Map<SNode,Map<SNode,SNode>> supertypesToSubtypesMap;
+  final Map<SNode,Map<SNode,SNode>> subtypesToSupertypesMap;
+  if (isWeak) {
+    supertypesToSubtypesMap=mySupertypesToSubtypesMap;
+    subtypesToSupertypesMap=mySubtypesToSupertypesMap;
+  }
+ else {
+    supertypesToSubtypesMap=mySupertypesToSubtypesMapStrong;
+    subtypesToSupertypesMap=mySubtypesToSupertypesMapStrong;
+  }
+  Map<SNode,SNode> supertypes=subtypesToSupertypesMap.get(type);
+  if (supertypes == null) {
+    return;
+  }
+  if (supertypes.isEmpty()) {
+    subtypesToSupertypesMap.remove(type);
+    return;
+  }
+  Set<SNode> concreteSupertypes=new HashSet<SNode>();
+  for (  SNode supertypeNode : supertypes.keySet()) {
+    if (!BaseAdapter.isInstance(supertypeNode,RuntimeTypeVariable.class)) {
+      concreteSupertypes.add(supertypeNode);
+    }
+  }
+  if (concreteSupertypes.isEmpty())   return;
+  SNode supertype=concreteSupertypes.iterator().next();
+  SNode nodeToCheck=supertypes.get(supertype);
+  for (  SNode supertypeNode : concreteSupertypes) {
+    subtypesToSupertypesMap.get(type).remove(supertypeNode);
+    supertypesToSubtypesMap.get(supertypeNode).remove(type);
+  }
+  addEquation(type,supertype,nodeToCheck);
+}
