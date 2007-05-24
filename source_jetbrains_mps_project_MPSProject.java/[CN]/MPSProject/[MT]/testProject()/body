@@ -1,3 +1,58 @@
 {
-  return testProject(false);
+  final List<Message> errors=new ArrayList<Message>();
+  final List<Message> warnings=new ArrayList<Message>();
+  final IMessageHandler handler=new IMessageHandler(){
+    public void handle(    Message msg){
+      final String message=msg.getText();
+switch (msg.getKind()) {
+case ERROR:
+        errors.add(msg);
+      LOG.error(message);
+    break;
+case WARNING:
+  warnings.add(msg);
+LOG.warning(message);
+break;
+case INFORMATION:
+LOG.info(message);
+break;
+}
+}
+}
+;
+final GenerateFilesAndClassesGenerationType generationType=new GenerateFilesAndClassesGenerationType(false){
+public boolean requiresCompilationInIDEABeforeGeneration(){
+return false;
+}
+public boolean requiresCompilationInIDEAfterGeneration(){
+return false;
+}
+protected boolean isPutClassesOnTheDisk(){
+return false;
+}
+}
+;
+CommandProcessor.instance().executeCommand(new Runnable(){
+public void run(){
+addTextGenerators();
+for (BaseGeneratorConfiguration t : myProjectDescriptor.getRunConfigurations()) {
+if (!t.getTest()) continue;
+GenParameters parms;
+try {
+parms=GeneratorConfigUtil.calculate(MPSProject.this,t);
+}
+ catch (GeneratorConfigUtil.GeneratorConfigurationException e) {
+errors.add(new Message(MessageKind.ERROR,"Can't create a generator configuration : " + e.getMessage()));
+return;
+}
+getComponentSafe(GeneratorManager.class).generateModels(parms.getModels(),parms.getTarget(),new ModuleContext(parms.getModule(),MPSProject.this),generationType,parms.getScript(),IAdaptiveProgressMonitor.NULL_PROGRESS_MONITOR,handler);
+generationType.compile(IAdaptiveProgressMonitor.NULL_PROGRESS_MONITOR);
+System.out.println("");
+System.out.println("");
+System.out.println("");
+}
+}
+}
+);
+return new TestResult(errors,warnings,createCompilationProblemsList(generationType.getCompilationResults()));
 }
