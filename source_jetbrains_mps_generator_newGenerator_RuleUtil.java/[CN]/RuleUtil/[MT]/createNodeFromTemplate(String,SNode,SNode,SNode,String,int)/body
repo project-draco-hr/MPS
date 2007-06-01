@@ -61,7 +61,6 @@
  else     if (templateChildNode instanceof SwitchMacro) {
       TemplateSwitch templateSwitch=((SwitchMacro)nodeMacro).getTemplateSwitch();
       List<SNode> newInputNodes=TemplateGenUtil.createSourceNodeListForTemplateNode_ForNewGenerator(inputNode,templateNode,0,myGenerator);
-      boolean isProcessed=false;
       for (      SNode newInputNode : newInputNodes) {
         RuleConsequence consequenceForCase=(RuleConsequence)myGenerator.getConsequenceForSwitchCase(newInputNode,templateSwitch);
         SNode templateNodeForCase=null;
@@ -78,7 +77,8 @@
             templateNodeForCase=BaseAdapter.fromAdapter(((InlineTemplate_RuleConsequence)consequenceForCase).getTemplateNode());
           }
  else {
-            myGenerator.showErrorMessage(newInputNode,null,consequenceForCase.getNode(),"unsupported rule consequence");
+            myGenerator.showErrorMessage(newInputNode,null,consequenceForCase.getNode(),"failed to process switch : unsupported rule consequence");
+            return null;
           }
         }
  else {
@@ -87,20 +87,20 @@
             templateNodeForCase=getTemplateNodeForSwitchCaseTemplate(newInputNode,templateForSwitchCase,templateSwitch,myGenerator);
           }
         }
-        if (templateNodeForCase == null) {
-          myGenerator.showErrorMessage(newInputNode,null,BaseAdapter.fromAdapter(templateSwitch),"failed to process switch");
+        if (templateNodeForCase != null) {
+          List<SNode> outputChildNodes=createNodeFromTemplate(nodeMacro.getMappingId(),templateNodeForCase,newInputNode,outputParentNode,childRole,0);
+          if (outputChildNodes != null) {
+            outputNodes.addAll(outputChildNodes);
+          }
         }
  else {
-          isProcessed=true;
-        }
-        List<SNode> outputChildNodes=createNodeFromTemplate(nodeMacro.getMappingId(),templateNodeForCase,newInputNode,outputParentNode,childRole,0);
-        if (outputChildNodes != null) {
-          outputNodes.addAll(outputChildNodes);
+          List<SNode> outputChildNodes=createNodeFromTemplate(nodeMacro.getMappingId(),templateNode,newInputNode,outputParentNode,childRole,nodeMacrosToSkip + 1);
+          if (outputChildNodes != null) {
+            outputNodes.addAll(outputChildNodes);
+          }
         }
       }
-      if (isProcessed) {
-        return outputNodes;
-      }
+      return outputNodes;
     }
  else {
       List<SNode> newInputNodes=TemplateGenUtil.createSourceNodeListForTemplateNode_ForNewGenerator(inputNode,templateNode,nodeMacrosToSkip,myGenerator);
