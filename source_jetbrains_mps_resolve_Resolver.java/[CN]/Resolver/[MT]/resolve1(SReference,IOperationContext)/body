@@ -1,0 +1,30 @@
+{
+  SNode referenceNode=reference.getSourceNode();
+  ConceptDeclaration referenceNodeConcept=(ConceptDeclaration)referenceNode.getConceptDeclarationAdapter();
+  LinkDeclaration linkDeclaration=SModelUtil_new.findLinkDeclaration(referenceNodeConcept,reference.getRole());
+  final AbstractConceptDeclaration referentConcept=linkDeclaration.getTarget();
+  TypeChecker.getInstance().checkTypes(reference.getSourceNode().getParent());
+  IStatus status=ModelConstraintsUtil.getReferentSearchScope(referenceNode.getParent(),referenceNode,referenceNodeConcept,linkDeclaration,operationContext.getScope());
+  if (status.isError()) {
+    LOG.error("Couldn't create referent search scope : " + status.getMessage());
+    return false;
+  }
+  ISearchScope searchScope=(ISearchScope)status.getUserObject();
+  List<SNode> nodes=searchScope.getNodes(new Condition<SNode>(){
+    public boolean met(    SNode node){
+      return node.isInstanceOfConcept(referentConcept);
+    }
+  }
+);
+  List<SNode> filtered=CollectionUtil.filter(nodes,new Condition<SNode>(){
+    public boolean met(    SNode object){
+      return reference.getResolveInfo().equals(object.getName());
+    }
+  }
+);
+  if (filtered.isEmpty()) {
+    return false;
+  }
+  reference.getSourceNode().setReferent(reference.getRole(),filtered.get(0));
+  return true;
+}
