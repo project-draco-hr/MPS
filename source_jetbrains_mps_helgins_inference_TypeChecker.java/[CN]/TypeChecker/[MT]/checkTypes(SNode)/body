@@ -1,0 +1,31 @@
+{
+  clear();
+  NodeTypesComponent nodeTypesComponent=NodeTypesComponentsRepository.getInstance().getNodeTypesComponent(root.getContainingRoot());
+  if (nodeTypesComponent != null) {
+    nodeTypesComponent.clear();
+  }
+  if (!loadTypesystemRules(root)) {
+    return;
+  }
+  doCheckTypes(root);
+  myEquationManagersStack.peek().solveInequations();
+  Map<SNode,SNode> mainContext=getMainContext();
+  for (  Map.Entry<SNode,SNode> contextEntry : mainContext.entrySet()) {
+    SNode term=contextEntry.getKey();
+    if (term == null)     continue;
+    SNode type=expandType(contextEntry.getValue(),getRuntimeTypesModel());
+    if (BaseAdapter.isInstance(type,RuntimeErrorType.class)) {
+      reportTypeError(term,((RuntimeErrorType)BaseAdapter.fromNode(type)).getErrorText());
+    }
+    SNode containingRoot=term.getContainingRoot();
+    if (containingRoot != null) {
+      NodeTypesComponentsRepository.getInstance().createNodeTypesComponent(containingRoot).setTypeToNode(term,type);
+    }
+ else     LOG.error("containingRoot == null");
+  }
+  for (  SNode node : myNodesWithErrors.keySet()) {
+    String errorString="HELGINS ERROR: " + myNodesWithErrors.get(node).reportError();
+    myNodesWithErrorStrings.put(node,errorString);
+    NodeTypesComponentsRepository.getInstance().createNodeTypesComponent(node.getContainingRoot()).setErrorToNode(node,errorString);
+  }
+}
