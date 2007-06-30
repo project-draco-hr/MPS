@@ -1,41 +1,41 @@
 {
   if (myRules_all.containsKey(inputConcept))   return;
-  List<AbstractConceptDeclaration> hierarchy=new ArrayList<AbstractConceptDeclaration>(5);
+  List<ConceptDeclaration> partialHierarchy=new ArrayList<ConceptDeclaration>(5);
   while (inputConcept != null) {
-    hierarchy.add(inputConcept);
+    partialHierarchy.add(inputConcept);
     if (myRules_all.containsKey(inputConcept)) {
       break;
     }
-    myRules_applicableInheritor.put(inputConcept,new ArrayList<Reduction_MappingRule>(5));
     inputConcept=getExtendedConcept(inputConcept,baseConcept);
   }
-  List<AbstractConceptDeclaration> interfacesHierarchy=new ArrayList<AbstractConceptDeclaration>(5);
-  for (  AbstractConceptDeclaration hrrConcept : hierarchy) {
-    addInterfacesToHierarchy(((ConceptDeclaration)hrrConcept).getImplementses(),interfacesHierarchy);
-  }
-  hierarchy.addAll(interfacesHierarchy);
-  Collections.reverse(hierarchy);
-  List<Reduction_MappingRule> rulesForInheritor=null;
-  for (  AbstractConceptDeclaration hrrConcept : hierarchy) {
-    rulesForInheritor=updateRulesForInheritor(hrrConcept,rulesForInheritor);
-    List<Reduction_MappingRule> list=myRules_applicableExactly.get(hrrConcept);
-    if (list != null) {
-      for (      Reduction_MappingRule rule : list) {
+  Collections.reverse(partialHierarchy);
+  List<Reduction_MappingRule> rulesForInheritor=new ArrayList(myRules_applicableInheritor.get(partialHierarchy.get(0)));
+  for (  ConceptDeclaration hrrConcept : partialHierarchy) {
+    if (myRules_all.containsKey(hrrConcept)) {
+      continue;
+    }
+    myRules_all.put(hrrConcept,new ArrayList<Reduction_MappingRule>(rulesForInheritor));
+    List<Reduction_MappingRule> rulesApplicableExactly=myRules_applicableExactly.get(hrrConcept);
+    if (rulesApplicableExactly != null) {
+      myRules_all.get(hrrConcept).addAll(rulesApplicableExactly);
+      for (      Reduction_MappingRule rule : rulesApplicableExactly) {
         if (rule.getApplyToConceptInheritors()) {
           rulesForInheritor.add(rule);
         }
       }
     }
-  }
-  for (  AbstractConceptDeclaration hrrConcept : hierarchy) {
-    if (myRules_all.containsKey(hrrConcept)) {
-      continue;
+    Set<AbstractConceptDeclaration> implInterfaces=SModelUtil_new.getDirectlyImplementedInterfaces(hrrConcept);
+    for (    AbstractConceptDeclaration implInterface : implInterfaces) {
+      List<Reduction_MappingRule> rulesApplicableToInterface=myRules_applicableExactly.get(implInterface);
+      if (rulesApplicableToInterface != null) {
+        for (        Reduction_MappingRule rule : rulesApplicableToInterface) {
+          if (!rulesForInheritor.contains(rule)) {
+            myRules_all.get(hrrConcept).add(rule);
+            rulesForInheritor.add(rule);
+          }
+        }
+      }
     }
-    myRules_all.put(hrrConcept,new ArrayList<Reduction_MappingRule>(5));
-    List<Reduction_MappingRule> rulesExectly=myRules_applicableExactly.get(hrrConcept);
-    if (rulesExectly != null) {
-      myRules_all.get(hrrConcept).addAll(rulesExectly);
-    }
-    myRules_all.get(hrrConcept).addAll(myRules_applicableInheritor.get(hrrConcept));
+    myRules_applicableInheritor.put(hrrConcept,new ArrayList<Reduction_MappingRule>(rulesForInheritor));
   }
 }
