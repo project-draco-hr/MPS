@@ -1,0 +1,32 @@
+{
+  NodeWrapper representator1=getRepresentatorWrapper(type1);
+  NodeWrapper representator2=getRepresentatorWrapper(type2);
+  if (representator1.getNode() == representator2.getNode())   return;
+  RuntimeTypeVariable varSubtype=RuntimeSupport.getTypeVar(representator1.getNode());
+  RuntimeTypeVariable varSupertype=RuntimeSupport.getTypeVar(representator2.getNode());
+  if (varSubtype != null || varSupertype != null) {
+    if (isWeak) {
+      addComparable(representator1,representator2,errorInfo);
+    }
+ else {
+      addStrongComparable(representator1,representator2,errorInfo);
+    }
+    return;
+  }
+  if (myTypeChecker.getSubtypingManager().isComparableWRTRules(representator1.getNode(),representator2.getNode())) {
+    return;
+  }
+  if (myTypeChecker.getSubtypingManager().isSubtype(representator1.getNode(),representator2.getNode(),isWeak)) {
+    return;
+  }
+  if (myTypeChecker.getSubtypingManager().isSubtype(representator2.getNode(),representator1.getNode(),isWeak)) {
+    return;
+  }
+  if (errorInfo.getErrorString() != null) {
+    myTypeChecker.reportTypeError(errorInfo.getNodeWithError(),errorInfo.getErrorString());
+    return;
+  }
+  String strongString=isWeak ? "" : " strongly";
+  IErrorReporter errorReporter=new EquationErrorReporter(this,"type ",representator1.getNode()," is not" + strongString + " comparable with ",representator2.getNode(),"");
+  myTypeChecker.reportTypeError(errorInfo.getNodeWithError(),errorReporter);
+}
