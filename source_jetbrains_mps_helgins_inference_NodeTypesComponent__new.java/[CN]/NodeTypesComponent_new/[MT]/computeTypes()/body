@@ -1,6 +1,11 @@
 {
   try {
 {
+      myNotSkippedNodes.clear();
+      AbstractEditorComponent component=getEditorComponent();
+      if (component != null) {
+        component.getHighlightManager().clearForOwner(this);
+      }
       myPartlyCheckedNodes.addAll(myFullyCheckedNodes);
       myFullyCheckedNodes.clear();
     }
@@ -29,8 +34,20 @@
     for (    SNode nodeToDependOn : myNodesToDependentNodes.keySet()) {
       addOurListener(nodeToDependOn.getModel().getModelDescriptor());
     }
+    final Set<SNodeProxy> skippedNodes=new HashSet<SNodeProxy>(myNotSkippedNodes);
+    CommandProcessor.instance().invokeLater(new Runnable(){
+      public void run(){
+        AbstractEditorComponent component=getEditorComponent();
+        if (component == null)         return;
+        for (        SNodeProxy skippedNode : skippedNodes) {
+          component.getHighlightManager().mark(skippedNode.getNode(),new Color(255,127,0,50),"",NodeTypesComponent_new.this);
+        }
+      }
+    }
+);
   }
   finally {
     myTypeChecker.clearCurrentTypesComponent();
+    myNotSkippedNodes.clear();
   }
 }
