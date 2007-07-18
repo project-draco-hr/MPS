@@ -6,6 +6,7 @@
   if (child.isRoot()) {
     throw new RuntimeException(child.getDebugText() + " is root node. Can't add it as a child");
   }
+  ModelChange.assertLegalNodeChange(this);
   _children().add(index,child);
   child.myRoleInParent=InternUtil.intern(role);
   child.myParent=this;
@@ -15,7 +16,7 @@
  else {
     child.changeModel(getModel());
   }
-  if (!getModel().isLoading()) {
+  if (ModelChange.needRegisterUndo(getModel())) {
     UndoManager.instance().undoableActionPerformed(new NodeUndoableAction(){
       public void undo() throws UnexpectedUndoException {
         removeChildAt(index);
@@ -26,8 +27,7 @@
     }
 );
   }
-  if (!isRegistered()) {
-    return;
+  if (ModelChange.needFireEvents(getModel(),this)) {
+    getModel().fireChildAddedEvent(this,role,child,index);
   }
-  getModel().fireChildAddedEvent(this,role,child,index);
 }

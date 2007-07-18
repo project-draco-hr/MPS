@@ -1,4 +1,5 @@
 {
+  ModelChange.assertLegalNodeChange(this);
   propertyValue=InternUtil.intern(propertyValue);
   if (usePropertySetter) {
     if ((myPropertySettersInProgress == null || !myPropertySettersInProgress.contains(propertyName)) && !myModel.isLoading()) {
@@ -26,8 +27,8 @@
  else {
     myProperties.put(propertyName,propertyValue);
   }
-  final String pv=propertyValue;
-  if (!getModel().isLoading()) {
+  if (ModelChange.needRegisterUndo(getModel())) {
+    final String pv=propertyValue;
     UndoManager.instance().undoableActionPerformed(new NodeUndoableAction(){
       public void undo() throws UnexpectedUndoException {
         setProperty(propertyName,oldValue);
@@ -38,18 +39,17 @@
     }
 );
   }
-  if (!isRegistered()) {
-    return;
+  if (ModelChange.needFireEvents(getModel(),this)) {
+    boolean addedOrRemoved=false;
+    boolean isRemoved=false;
+    if (SModelUtil_new.isEmptyPropertyValue(oldValue)) {
+      addedOrRemoved=true;
+      isRemoved=false;
+    }
+    if (SModelUtil_new.isEmptyPropertyValue(propertyValue)) {
+      addedOrRemoved=true;
+      isRemoved=true;
+    }
+    getModel().firePropertyChangedEvent(this,propertyName,oldValue,propertyValue,addedOrRemoved,isRemoved);
   }
-  boolean addedOrRemoved=false;
-  boolean isRemoved=false;
-  if (SModelUtil_new.isEmptyPropertyValue(oldValue)) {
-    addedOrRemoved=true;
-    isRemoved=false;
-  }
-  if (SModelUtil_new.isEmptyPropertyValue(propertyValue)) {
-    addedOrRemoved=true;
-    isRemoved=true;
-  }
-  getModel().firePropertyChangedEvent(this,propertyName,oldValue,propertyValue,addedOrRemoved,isRemoved);
 }
