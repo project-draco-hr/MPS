@@ -1,0 +1,34 @@
+{
+  final Map<IWrapper,Map<IWrapper,ErrorInfo>> supertypesToSubtypesMap;
+  final Map<IWrapper,Map<IWrapper,ErrorInfo>> subtypesToSupertypesMap;
+  if (isWeak) {
+    supertypesToSubtypesMap=mySupertypesToSubtypesMap;
+    subtypesToSupertypesMap=mySubtypesToSupertypesMap;
+  }
+ else {
+    supertypesToSubtypesMap=mySupertypesToSubtypesMapStrong;
+    subtypesToSupertypesMap=mySubtypesToSupertypesMapStrong;
+  }
+  Map<IWrapper,ErrorInfo> supertypes=subtypesToSupertypesMap.get(type);
+  if (supertypes == null) {
+    return;
+  }
+  if (supertypes.isEmpty()) {
+    subtypesToSupertypesMap.remove(type);
+    return;
+  }
+  Set<IWrapper> concreteSupertypes=new HashSet<IWrapper>();
+  for (  IWrapper supertypeNode : supertypes.keySet()) {
+    if (!supertypeNode.isVariable()) {
+      concreteSupertypes.add(supertypeNode);
+    }
+  }
+  if (concreteSupertypes.isEmpty())   return;
+  IWrapper supertype=concreteSupertypes.iterator().next();
+  SNode nodeToCheck=supertypes.get(supertype).getNodeWithError();
+  for (  IWrapper supertypeNode : concreteSupertypes) {
+    subtypesToSupertypesMap.get(type).remove(supertypeNode);
+    supertypesToSubtypesMap.get(supertypeNode).remove(type);
+  }
+  addEquation(type,supertype,nodeToCheck);
+}
