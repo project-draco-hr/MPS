@@ -1,0 +1,65 @@
+{
+  if (node == null)   return;
+  if (isNodeBeingChecked(node)) {
+    LOG.error("your HELGINS rules for this node try to loop infinitely",node);
+    LOG.error("LOOP:");
+    boolean reachedOurNode=false;
+    for (    SNode nodeBeingChecked : myNodesBeingChecked) {
+      if (nodeBeingChecked == node) {
+        reachedOurNode=true;
+      }
+      if (!reachedOurNode) {
+        continue;
+      }
+      Pair<String,String> checkStatementId=myNodesToCheckStatementsIdMap.get(nodeBeingChecked);
+      SNode checkStatement=null;
+      if (checkStatementId != null) {
+        String modelString=checkStatementId.o1;
+        String idString=checkStatementId.o2;
+        if (modelString != null && idString != null) {
+          SModelDescriptor modelDescriptor=SModelRepository.getInstance().getModelDescriptor(SModelUID.fromString(modelString));
+          if (modelDescriptor == null) {
+            LOG.error("can't find rule's model: " + modelString);
+            return;
+          }
+          checkStatement=modelDescriptor.getSModel().getNodeById(idString);
+          if (checkStatement == null) {
+            LOG.error("can't find a node with id " + idString + " in the model "+ modelDescriptor);
+          }
+        }
+        LOG.error("click here",checkStatement);
+      }
+    }
+    return;
+  }
+  pushNodeBeingChecked(node,nodeModel,nodeId);
+  try {
+    if (myFullyCheckedNodes.contains(node)) {
+      return;
+    }
+    if ((NodeTypesComponentsRepository.getInstance().createNodeTypesComponent(node)).isInCheckedNodes(node)) {
+      return;
+    }
+    EquationManager oldSlave=new EquationManager(this.myTypeChecker,this);
+    myEquationManagersStack.push(oldSlave);
+    try {
+      computeTypesForNode(node);
+    }
+ catch (    Throwable t) {
+      LOG.error(t);
+    }
+    EquationManager slave=myEquationManagersStack.pop();
+    if (slave != oldSlave) {
+      LOG.error("equation managers' stack violated");
+    }
+    slave.solveInequations();
+    myEquationManagersStack.peek().putAllEquations(slave);
+    myFullyCheckedNodes.add(node);
+  }
+ catch (  Throwable t) {
+    LOG.error(t);
+  }
+ finally {
+    popNodeBeingChecked();
+  }
+}

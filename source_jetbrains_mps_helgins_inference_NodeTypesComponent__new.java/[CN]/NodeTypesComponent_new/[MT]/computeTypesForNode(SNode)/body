@@ -1,2 +1,35 @@
 {
+  if (node == null)   return;
+  List<SNode> frontier=new ArrayList<SNode>();
+  List<SNode> newFrontier=new ArrayList<SNode>();
+  frontier.add(node);
+  while (!(frontier.isEmpty())) {
+    for (    SNode sNode : frontier) {
+      if (myFullyCheckedNodes.contains(sNode)) {
+        continue;
+      }
+      newFrontier.addAll(sNode.getChildren());
+      if (!myPartlyCheckedNodes.contains(sNode)) {
+        myNotSkippedNodes.add(new SNodeProxy(sNode));
+        myNodesReadListener.clear();
+        NodeReadEventsCaster.setNodesReadListener(myNodesReadListener);
+        try {
+          applyRulesToNode(sNode);
+        }
+  finally {
+          NodeReadEventsCaster.removeNodesReadListener();
+        }
+synchronized (ACCESS_LOCK) {
+          myNodesReadListener.setAccessReport(true);
+          addDepedentNodes(sNode,new HashSet<SNode>(myNodesReadListener.myAcessedNodes));
+          myNodesReadListener.setAccessReport(false);
+        }
+        myNodesReadListener.clear();
+        myPartlyCheckedNodes.add(sNode);
+      }
+      myFullyCheckedNodes.add(sNode);
+    }
+    frontier=newFrontier;
+    newFrontier=new ArrayList<SNode>();
+  }
 }
