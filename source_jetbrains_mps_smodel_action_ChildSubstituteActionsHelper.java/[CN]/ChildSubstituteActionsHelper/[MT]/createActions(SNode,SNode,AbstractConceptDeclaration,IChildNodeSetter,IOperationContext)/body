@@ -1,51 +1,10 @@
 {
-  SModel model=parentNode.getModel();
-  boolean wasLoading=model.isLoading();
-  model.setLoading(true);
-  model.setRegistrationsForbidden(true);
-  try {
-    List<INodeSubstituteAction> resultActions=new ArrayList<INodeSubstituteAction>();
-    if (childConcept == null) {
-      return resultActions;
+  final List<INodeSubstituteAction>[] result=new List[1];
+  CommandProcessor.instance().executeLightweightCommand(new Runnable(){
+    public void run(){
+      result[0]=createActions_internal(parentNode,currentChild,childConcept,childSetter,context);
     }
-    IScope scope=context.getScope();
-    Language primaryLanguage=SModelUtil_new.getDeclaringLanguage(childConcept,scope);
-    if (primaryLanguage == null) {
-      LOG.error("Couldn't build actions : couldn't get declaring language for concept " + childConcept.getDebugText());
-      return resultActions;
-    }
-    List<NodeSubstituteActionsBuilder> primaryBuilders=getActionBuilders(parentNode,primaryLanguage,childConcept,context);
-    if (primaryBuilders.isEmpty()) {
-      resultActions=createPrimaryChildSubstituteActions(parentNode,currentChild,childConcept,childSetter,TRUE_CONDITION,context);
-    }
- else {
-      if (!containsLegacyQueries(primaryBuilders) && !containsRemoveDefaults(primaryBuilders)) {
-        resultActions.addAll(createPrimaryChildSubstituteActions(parentNode,currentChild,childConcept,childSetter,TRUE_CONDITION,context));
-      }
-      for (      NodeSubstituteActionsBuilder builder : primaryBuilders) {
-        resultActions.addAll(invokeActionFactory(builder,parentNode,currentChild,childConcept,childSetter,context));
-      }
-    }
-    List<NodeSubstituteActionsBuilder> extendedBuilders=new ArrayList<NodeSubstituteActionsBuilder>();
-    List<Language> languages=parentNode.getModel().getLanguages(scope);
-    for (    Language language : languages) {
-      if (language == primaryLanguage) {
-        continue;
-      }
-      extendedBuilders.addAll(getActionBuilders(parentNode,language,childConcept,context));
-    }
-    for (    NodeSubstituteActionsBuilder builder : extendedBuilders) {
-      List<INodeSubstituteAction> addActions=invokeActionFactory(builder,parentNode,currentChild,childConcept,childSetter,context);
-      resultActions.addAll(addActions);
-    }
-    primaryBuilders.addAll(extendedBuilders);
-    for (    NodeSubstituteActionsBuilder builder : primaryBuilders) {
-      resultActions=applyActionFilter(builder,resultActions,parentNode,currentChild,childConcept.getNode(),context);
-    }
-    return resultActions;
   }
-  finally {
-    model.setLoading(wasLoading);
-    model.setRegistrationsForbidden(false);
-  }
+);
+  return result[0];
 }
