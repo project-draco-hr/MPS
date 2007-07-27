@@ -9,7 +9,7 @@
     sourceModels.add(model.getModelDescriptor());
   }
   clearMessageVew(project);
-  handler.handle(new Message(MessageKind.INFORMATION,generationType.getStartText()));
+  messages.handle(new Message(MessageKind.INFORMATION,generationType.getStartText()));
   String outputFolder=invocationContext.getModule().getGeneratorOutputPath();
   if (!new File(outputFolder).exists()) {
     new File(outputFolder).mkdirs();
@@ -17,10 +17,10 @@
       projectHandler.addSourceRoot(outputFolder);
     }
  catch (    Exception e) {
-      handler.handle(new Message(MessageKind.WARNING,"Can't add output folder to IDEA as sources"));
+      messages.handle(new Message(MessageKind.WARNING,"Can't add output folder to IDEA as sources"));
     }
   }
-  handler.handle(new Message(MessageKind.INFORMATION,"    target root folder: \"" + outputFolder + "\""));
+  messages.handle(new Message(MessageKind.INFORMATION,"    target root folder: \"" + outputFolder + "\""));
   boolean ideaPresent=projectHandler != null;
   boolean compile=ideaPresent && ((myCompileOnGeneration && generationType.requiresCompilationInIDEAfterGeneration()) || (myCompileBeforeGeneration && generationType.requiresCompilationInIDEABeforeGeneration()));
   long totalJob=ModelsProgressUtil.estimateTotalGenerationJobMillis(compile,sourceModels);
@@ -75,7 +75,7 @@
       checkMonitorCanceled(progress);
     }
     GenerationStatus status=null;
-    IGenerationSession generationSession=new GenerationSession(invocationContext,isSaveTransientModels(),progress,handler);
+    IGenerationSession generationSession=new GenerationSession(invocationContext,isSaveTransientModels(),progress,messages);
     try {
       TypeChecker.getInstance().setIncrementalMode(false);
       for (      SModelDescriptor sourceModelDescriptor : sourceModels) {
@@ -117,7 +117,7 @@
       if (isSaveTransientModels()) {
         File solutionDescriptorFile=generationSession.saveTransientModels();
         progress.addText("update output models solution");
-        handler.handle(new Message(MessageKind.INFORMATION,"update output models solution"));
+        messages.handle(new Message(MessageKind.INFORMATION,"update output models solution"));
         Solution outputModels=project.findSolution("outputModels");
         if (outputModels != null) {
           outputModels.reloadFromDisk();
@@ -158,12 +158,12 @@
         }
       }
       progress.addText("generation completed successfully");
-      handler.handle(new Message(MessageKind.INFORMATION,"generation completed successfully"));
+      messages.handle(new Message(MessageKind.INFORMATION,"generation completed successfully"));
       progress.finishSomehow();
     }
  else     if (status.isError()) {
       progress.addText("generation finished with errors");
-      handler.handle(new Message(MessageKind.WARNING,"generation finished with errors"));
+      messages.handle(new Message(MessageKind.WARNING,"generation finished with errors"));
       progress.finishSomehow();
     }
     if (generationType instanceof GenerateFilesGenerationType && ideaPresent && !generationType.requiresCompilationInIDEAfterGeneration()) {
@@ -172,7 +172,7 @@
   }
  catch (  GenerationCanceledException gce) {
     progress.addText("generation canceled");
-    handler.handle(new Message(MessageKind.WARNING,"generation canceled"));
+    messages.handle(new Message(MessageKind.WARNING,"generation canceled"));
     progress.finishAnyway();
     showMessageView(project);
   }
@@ -180,7 +180,7 @@ catch (  Throwable t) {
     LOG.error(t);
     final String text=t.toString();
     progress.addText(text);
-    handler.handle(new Message(MessageKind.ERROR,text));
+    messages.handle(new Message(MessageKind.ERROR,text));
     progress.finishSomehow();
   }
  finally {
