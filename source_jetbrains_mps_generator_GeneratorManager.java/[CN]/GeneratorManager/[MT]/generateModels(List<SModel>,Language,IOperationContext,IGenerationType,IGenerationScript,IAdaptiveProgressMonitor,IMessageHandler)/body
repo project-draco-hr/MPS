@@ -1,25 +1,27 @@
 {
   MPSModuleRepository.getInstance().removeTransientModules();
-  showMessageView();
-  invocationContext.getProject().saveModels();
+  MPSProject project=invocationContext.getProject();
+  IProjectHandler projectHandler=project.getProjectHandler();
+  showMessageView(project);
+  project.saveModels();
   List<SModelDescriptor> sourceModels=new ArrayList<SModelDescriptor>();
   for (  SModel model : _sourceModels) {
     sourceModels.add(model.getModelDescriptor());
   }
-  clearMessages();
+  clearMessageVew(project);
   handler.handle(new Message(MessageKind.INFORMATION,generationType.getStartText()));
   String outputFolder=invocationContext.getModule().getGeneratorOutputPath();
   if (!new File(outputFolder).exists()) {
     new File(outputFolder).mkdirs();
     try {
-      myProject.getProjectHandler().addSourceRoot(outputFolder);
+      projectHandler.addSourceRoot(outputFolder);
     }
  catch (    Exception e) {
       handler.handle(new Message(MessageKind.WARNING,"Can't add output folder to IDEA as sources"));
     }
   }
   handler.handle(new Message(MessageKind.INFORMATION,"    target root folder: \"" + outputFolder + "\""));
-  boolean ideaPresent=myProject.getProjectHandler() != null;
+  boolean ideaPresent=projectHandler != null;
   boolean compile=ideaPresent && ((myCompileOnGeneration && generationType.requiresCompilationInIDEAfterGeneration()) || (myCompileBeforeGeneration && generationType.requiresCompilationInIDEABeforeGeneration()));
   long totalJob=ModelsProgressUtil.estimateTotalGenerationJobMillis(compile,sourceModels);
   progress.startTaskAnyway("generating",null,totalJob);
@@ -35,12 +37,12 @@
  else {
       checkMonitorCanceled(progress);
       progress.startLeafTask(ModelsProgressUtil.TASK_NAME_REFRESH_FS);
-      myProject.getProjectHandler().refreshFS();
+      projectHandler.refreshFS();
       progress.finishTask(ModelsProgressUtil.TASK_NAME_REFRESH_FS);
       checkMonitorCanceled(progress);
       progress.startLeafTask(ModelsProgressUtil.TASK_NAME_COMPILE_ON_GENERATION);
       progress.addText("compiling output module...");
-      CompilationResult compilationResult=myProject.getProjectHandler().buildModule(outputFolder);
+      CompilationResult compilationResult=projectHandler.buildModule(outputFolder);
       progress.addText("" + compilationResult);
       if (!compilationResult.isOk()) {
         reloadClasses=false;
@@ -55,7 +57,7 @@
       if (myCompileSourceLanguageModules && needCompileSourceLanguageModules) {
         for (        Language l : getPossibleSourceLanguages(_sourceModels,invocationContext.getScope())) {
           progress.addText("compiling " + l + "'s  module...");
-          compilationResult=myProject.getProjectHandler().buildModule(l.getSourceDir().getPath());
+          compilationResult=projectHandler.buildModule(l.getSourceDir().getPath());
           progress.addText("" + compilationResult);
           if (!compilationResult.isOk()) {
             reloadClasses=false;
@@ -116,12 +118,12 @@
         File solutionDescriptorFile=generationSession.saveTransientModels();
         progress.addText("update output models solution");
         handler.handle(new Message(MessageKind.INFORMATION,"update output models solution"));
-        Solution outputModels=myProject.findSolution("outputModels");
+        Solution outputModels=project.findSolution("outputModels");
         if (outputModels != null) {
           outputModels.reloadFromDisk();
         }
  else {
-          myProject.addProjectSolution(solutionDescriptorFile);
+          project.addProjectSolution(solutionDescriptorFile);
         }
       }
     }
@@ -139,11 +141,11 @@
  else {
         progress.addText("compiling in IntelliJ IDEA...");
         progress.startLeafTask(ModelsProgressUtil.TASK_NAME_REFRESH_FS);
-        myProject.getProjectHandler().refreshFS();
+        projectHandler.refreshFS();
         progress.finishTask(ModelsProgressUtil.TASK_NAME_REFRESH_FS);
         checkMonitorCanceled(progress);
         progress.startLeafTask(ModelsProgressUtil.TASK_NAME_COMPILE_ON_GENERATION);
-        CompilationResult compilationResult=myProject.getProjectHandler().buildModule(outputFolder);
+        CompilationResult compilationResult=projectHandler.buildModule(outputFolder);
         progress.addText("" + compilationResult);
         progress.finishTask(ModelsProgressUtil.TASK_NAME_COMPILE_ON_GENERATION);
         checkMonitorCanceled(progress);
@@ -165,14 +167,14 @@
       progress.finishSomehow();
     }
     if (generationType instanceof GenerateFilesGenerationType && ideaPresent && !generationType.requiresCompilationInIDEAfterGeneration()) {
-      myProject.getProjectHandler().refreshFS();
+      projectHandler.refreshFS();
     }
   }
  catch (  GenerationCanceledException gce) {
     progress.addText("generation canceled");
     handler.handle(new Message(MessageKind.WARNING,"generation canceled"));
     progress.finishAnyway();
-    showMessageView();
+    showMessageView(project);
   }
 catch (  Throwable t) {
     LOG.error(t);
