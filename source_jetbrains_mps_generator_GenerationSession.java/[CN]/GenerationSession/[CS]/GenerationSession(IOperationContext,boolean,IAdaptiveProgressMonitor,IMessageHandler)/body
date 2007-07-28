@@ -2,6 +2,27 @@
   myInvocationContext=invocationContext;
   myDiscardTransients=!saveTransientModels;
   myProgressMonitor=progressMonitor;
-  myHandler=handler;
   mySessionId="" + System.currentTimeMillis();
+  if (!messagesHandler.isNavigatable()) {
+    myMessagesHandler=messagesHandler;
+  }
+ else {
+    myMessagesHandler=new IMessageHandler(){
+      public void handle(      Message msg){
+        messagesHandler.handle(msg);
+        Object o=msg.getHintObject();
+        if (o instanceof NodeWithContext) {
+          SNode node=((NodeWithContext)o).getNode();
+          SModelDescriptor modelDescriptor=node.getModel().getModelDescriptor();
+          if (modelDescriptor.isTransient()) {
+            myTransientModelsToKeep.add(modelDescriptor);
+          }
+        }
+      }
+      public boolean isNavigatable(){
+        return true;
+      }
+    }
+;
+  }
 }
