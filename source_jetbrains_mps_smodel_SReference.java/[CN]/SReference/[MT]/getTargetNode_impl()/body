@@ -1,20 +1,7 @@
 {
-  SModel model;
-  if (mySourceNode.getModel().getUID().equals(myTargetModelUID)) {
-    model=mySourceNode.getModel();
-  }
- else {
-    SModelDescriptor modelDescriptor=SModelRepository.getInstance().getModelDescriptor(myTargetModelUID);
-    if (modelDescriptor == null) {
-      logGetTargetNodeErrors(GetTargetNodeErrorState.NO_MODEL_DESCRIPTOR);
-      model=mySourceNode.getModel();
-    }
- else {
-      model=modelDescriptor.getSModel();
-    }
-  }
+  SModel targetModel=getTargetModel();
   SModel sourceModel=mySourceNode.getModel();
-  if (model == null) {
+  if (targetModel == null) {
     logGetTargetNodeErrors(GetTargetNodeErrorState.NO_MODEL);
     return null;
   }
@@ -23,20 +10,20 @@
       logGetTargetNodeErrors(GetTargetNodeErrorState.CANT_RESOLVE_BY_ID);
       return null;
     }
-    SNode nodeById=model.getNodeById(myTargetNodeId);
+    SNode nodeById=targetModel.getNodeById(myTargetNodeId);
     if (nodeById == null) {
-      nodeById=UnregisteredNodes.instance().get(model.getUID(),myTargetNodeId);
+      nodeById=UnregisteredNodes.instance().get(targetModel.getUID(),myTargetNodeId);
       if (nodeById == null) {
         logGetTargetNodeErrors(GetTargetNodeErrorState.CANT_RESOLVE_BY_ID);
       }
     }
  else {
-      if (model.isExternallyResolvable() && model != sourceModel) {
+      if (targetModel.isExternallyResolvable() && targetModel != sourceModel) {
         String extResolveInfo=ExternalResolver.getExternalResolveInfoFromTarget(nodeById);
         if (extResolveInfo != null) {
           LOG.warning("reference is resolved by ID, while should be resolved by ERI");
           LOG.info("re-resolving reference");
-          model.setNodeExtResolveInfo(nodeById,extResolveInfo);
+          targetModel.setNodeExtResolveInfo(nodeById,extResolveInfo);
           myExtResolveInfo=extResolveInfo;
           myTargetNodeId=null;
           markChanged();
@@ -46,7 +33,7 @@
     return nodeById;
   }
  else {
-    SNode nodeByExtResolveInfo=model.getNodeByExtResolveInfo(myExtResolveInfo);
+    SNode nodeByExtResolveInfo=targetModel.getNodeByExtResolveInfo(myExtResolveInfo);
     if (nodeByExtResolveInfo == null) {
       logGetTargetNodeErrors(GetTargetNodeErrorState.CANT_RESOLVE_BY_ERI);
     }
