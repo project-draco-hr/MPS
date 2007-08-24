@@ -1,0 +1,23 @@
+{
+  SNode castType=null;
+  if (SNodeOperations.hasRole(contextNode,"jetbrains.mps.baseLanguage.structure.BaseMethodCall","actualArgument")) {
+    SNode methodCall=SNodeOperations.getParent(contextNode,null,false,false);
+    SNode method=SLinkOperations.getTarget(methodCall,"baseMethodDeclaration",false);
+    int index=SNodeOperations.getIndexInParent(contextNode);
+    if (index < SLinkOperations.getCount(method,"parameter")) {
+      SNode declaredParm=ListOperations.getElement(SLinkOperations.getTargets(method,"parameter",true),index);
+      castType=SNodeOperations.copyNode(SLinkOperations.getTarget(declaredParm,"type",true));
+    }
+  }
+ else   if (SNodeOperations.hasRole(contextNode,"jetbrains.mps.baseLanguage.structure.VariableDeclaration","initializer")) {
+    castType=SNodeOperations.copyNode(SLinkOperations.getTarget(SNodeOperations.getParent(contextNode,null,false,false),"type",true));
+  }
+ else   if (SNodeOperations.hasRole(contextNode,"jetbrains.mps.baseLanguage.structure.ReturnStatement","expression")) {
+    castType=SNodeOperations.copyNode(SLinkOperations.getTarget(SNodeOperations.getAncestor(contextNode,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration",false,false),"returnType",true));
+  }
+ else   if (SNodeOperations.hasRole(contextNode,"jetbrains.mps.baseLanguage.structure.AssignmentExpression","rValue")) {
+    SNode type=TypeChecker.getInstance().getTypeOf(SLinkOperations.getTarget(SNodeOperations.getParent(contextNode,null,false,false),"lValue",true));
+    castType=SNodeOperations.copyNode(type);
+  }
+  return castType;
+}
