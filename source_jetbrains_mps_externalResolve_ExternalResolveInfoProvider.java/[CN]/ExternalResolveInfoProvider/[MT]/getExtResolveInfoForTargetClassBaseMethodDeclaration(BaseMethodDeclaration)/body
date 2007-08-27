@@ -1,33 +1,24 @@
 {
   final String name=baseMethodDeclaration.getName();
   final String conceptName=baseMethodDeclaration.getShortConceptName();
-  Pair<String,String> typeObject;
-  final StringBuilder builder=StringBuilderSpinAllocator.alloc();
-  try {
-    builder.setLength(0);
-    builder.append('[');
-    builder.append(conceptName);
-    builder.append(']');
-    builder.append(name);
-    builder.append('(');
-    Iterator<ParameterDeclaration> pIterator=baseMethodDeclaration.parameters();
-    while (pIterator.hasNext()) {
-      ParameterDeclaration parameterDeclaration=pIterator.next();
-      typeObject=adaptNode(parameterDeclaration.getType());
-      if (typeObject == null)       return ExternalResolver.NO_MEMBER_TYPE;
-      builder.append('(');
-      builder.append(typeObject.o1);
-      builder.append('/');
-      builder.append(typeObject.o2);
-      builder.append(')');
-      if (pIterator.hasNext()) {
-        builder.append(", ");
+  List<String> list=CollectionUtil.map(baseMethodDeclaration.getParameters(),new Mapper<ParameterDeclaration,String>(){
+    public String map(    ParameterDeclaration parameterDeclaration){
+      Pair<String,String> pair=adaptNode(parameterDeclaration.getType());
+      if (pair == null)       return ExternalResolver.NO_MEMBER_TYPE;
+      StringBuilder stringBuilder=StringBuilderSpinAllocator.alloc();
+      try {
+        stringBuilder.append('(');
+        stringBuilder.append(pair.o1);
+        stringBuilder.append('/');
+        stringBuilder.append(pair.o2);
+        stringBuilder.append(')');
+        return stringBuilder.toString();
+      }
+  finally {
+        StringBuilderSpinAllocator.dispose(stringBuilder);
       }
     }
-    builder.append(")");
-    return builder.toString();
   }
-  finally {
-    StringBuilderSpinAllocator.dispose(builder);
-  }
+);
+  return getMethodExternalResolveInfo(name,conceptName,list);
 }
