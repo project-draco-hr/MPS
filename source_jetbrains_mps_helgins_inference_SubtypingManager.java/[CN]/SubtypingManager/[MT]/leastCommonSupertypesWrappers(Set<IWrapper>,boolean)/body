@@ -1,0 +1,55 @@
+{
+  if (types.size() == 1)   return new HashSet<IWrapper>(types);
+  StructuralWrapperSet<?> allTypes=new StructuralWrapperSet();
+  StructuralWrapperSet<?> result=new StructuralWrapperSet(types);
+  allTypes.addCollectionStructurally((Set<IWrapper>)types);
+  StructuralWrapperMap<StructuralWrapperSet<Integer>> subTypesToSupertypes=new StructuralWrapperMap<StructuralWrapperSet<Integer>>();
+  Set<IWrapper> frontier=new HashSet<IWrapper>(types);
+  Set<IWrapper> newFrontier=new HashSet<IWrapper>();
+  StructuralWrapperSet subTypesToSupertypesKeySet=new StructuralWrapperSet(subTypesToSupertypes.keySet());
+  while (!frontier.isEmpty()) {
+    for (    IWrapper type : frontier) {
+      if (subTypesToSupertypesKeySet.containsStructurally(type)) {
+        continue;
+      }
+      StructuralWrapperSet superTypes=collectImmediateSupertypes(type,isWeak);
+      superTypes.setAllTags(1);
+      subTypesToSupertypes.put(type,superTypes);
+      subTypesToSupertypesKeySet.addStructurally(type);
+      newFrontier.addAll(superTypes);
+      allTypes.addAllStructurally(superTypes);
+      superTypes.putStructurally(type,0);
+    }
+    frontier=newFrontier;
+    newFrontier=new HashSet<IWrapper>();
+  }
+  for (  IWrapper node2 : allTypes) {
+    for (    IWrapper node1 : allTypes) {
+      for (      IWrapper node3 : allTypes) {
+        StructuralWrapperSet<Integer> supertypes1=subTypesToSupertypes.get(node1);
+        if (supertypes1 == null)         continue;
+        StructuralWrapperSet<Integer> supertypes2=subTypesToSupertypes.get(node2);
+        if (supertypes2 == null)         continue;
+        if (supertypes1.containsStructurally(node2) && supertypes2.containsStructurally(node3)) {
+          Integer dist1_2=supertypes1.getTag(node2);
+          Integer dist2_3=supertypes2.getTag(node3);
+          Integer sum=0;
+          sum=dist1_2 + dist2_3;
+          Integer dist1_3=supertypes1.getTag(node3);
+          if (dist1_3 == null || dist1_3 > sum) {
+            supertypes1.putStructurally(node3,sum);
+          }
+        }
+      }
+    }
+  }
+  while (result.size() >= 2) {
+    Iterator<? extends IWrapper> iterator=result.iterator();
+    IWrapper a=iterator.next();
+    IWrapper b=iterator.next();
+    result.remove(a);
+    result.remove(b);
+    result.addAllStructurally(leastCommonSupertypes(a,b,subTypesToSupertypes,isWeak));
+  }
+  return result;
+}

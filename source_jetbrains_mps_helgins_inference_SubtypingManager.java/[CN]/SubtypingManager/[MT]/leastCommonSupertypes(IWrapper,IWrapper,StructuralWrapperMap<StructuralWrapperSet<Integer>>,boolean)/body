@@ -1,0 +1,59 @@
+{
+  StructuralWrapperSet result=new StructuralWrapperSet();
+  if ((a.isConcrete() && b.isConcrete() && MatchingUtil.matchNodes(a.getNode(),b.getNode())) || a.equals(b)) {
+    result.add(a);
+    return result;
+  }
+  if (collectBottoms(a,isWeak).contains(b)) {
+    result.add(a);
+    return result;
+  }
+  if (collectBottoms(b,isWeak).contains(a)) {
+    result.add(b);
+    return result;
+  }
+  StructuralWrapperSet<?> superTypesA=subTypesToSuperTypes.get(a) != null ? new StructuralWrapperSet(subTypesToSuperTypes.get(a)) : new StructuralWrapperSet();
+  superTypesA.add(a);
+  StructuralWrapperSet<?> superTypesB=subTypesToSuperTypes.get(b) != null ? new StructuralWrapperSet(subTypesToSuperTypes.get(b)) : new StructuralWrapperSet();
+  superTypesB.add(b);
+  for (  IWrapper superTypeA : new HashSet<IWrapper>(superTypesA)) {
+    boolean matches=false;
+    for (    IWrapper superTypeB : superTypesB) {
+      if ((superTypeA.isConcrete() && superTypeB.isConcrete() && MatchingUtil.matchNodes(superTypeA.getNode(),superTypeB.getNode())) || superTypeA.equals(superTypeB)) {
+        matches=true;
+        break;
+      }
+    }
+    if (!matches) {
+      superTypesA.remove(superTypeA);
+    }
+  }
+  StructuralWrapperSet commonSupertypes=superTypesA;
+  List<IWrapper> commonSupertypesSorted=new ArrayList<IWrapper>(commonSupertypes);
+  Collections.sort(commonSupertypesSorted,new Comparator<IWrapper>(){
+    public int compare(    IWrapper o1,    IWrapper o2){
+      Integer distA1=subTypesToSuperTypes.get(a).getTag(o1);
+      Integer distA2=subTypesToSuperTypes.get(a).getTag(o2);
+      Integer distB1=subTypesToSuperTypes.get(b).getTag(o1);
+      Integer distB2=subTypesToSuperTypes.get(b).getTag(o2);
+      return (distA1 + distB1) - (distA2 + distB2);
+    }
+  }
+);
+  for (  IWrapper commonSupertype : commonSupertypesSorted) {
+    if (!commonSupertypes.contains(commonSupertype)) {
+      continue;
+    }
+    Set<IWrapper> superTypes=subTypesToSuperTypes.get(commonSupertype);
+    if (superTypes != null) {
+      for (      IWrapper superType : superTypes) {
+        if ((superType.isConcrete() && commonSupertype.isConcrete() && !MatchingUtil.matchNodes(superType.getNode(),commonSupertype.getNode())) && !superType.equals(commonSupertype)) {
+          commonSupertypes.removeStructurally(superType);
+        }
+      }
+    }
+  }
+  StructuralWrapperSet result_=new StructuralWrapperSet();
+  result_.add(LatticeUtil.meet(commonSupertypes));
+  return result_;
+}
