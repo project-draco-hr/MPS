@@ -1,36 +1,43 @@
 {
-  myLinkDeclarationByRole=new HashMap<String,LinkDeclaration>();
+  List<LinkDeclaration> allLinks=new ArrayList<LinkDeclaration>();
+  myLinkByRole=new HashMap<String,LinkDeclaration>();
   List<AbstractConceptDeclaration> concepts=((ConceptAndSuperConceptsCache)getOwnerCache()).getConcepts();
   for (  AbstractConceptDeclaration concept : concepts) {
     List<LinkDeclaration> list=concept.getLinkDeclarations();
+    allLinks.addAll(list);
     for (    LinkDeclaration link : list) {
       String role1=link.getRole();
       if (role1 == null)       continue;
-      if (myLinkDeclarationByRole.containsKey(role1))       continue;
-      myLinkDeclarationByRole.put(role1,link);
+      if (myLinkByRole.containsKey(role1))       continue;
+      myLinkByRole.put(role1,link);
     }
   }
-  Collection<LinkDeclaration> links=myLinkDeclarationByRole.values();
-  Set<LinkDeclaration> overriddenLinks=new HashSet<LinkDeclaration>();
-  for (  LinkDeclaration link : links) {
-    if (overriddenLinks.contains(link))     continue;
+  Map<LinkDeclaration,LinkDeclaration> specializedLinks=new HashMap<LinkDeclaration,LinkDeclaration>();
+  for (  LinkDeclaration link : allLinks) {
     LinkDeclaration specializedLink=link.getSpecializedLink();
-    while (specializedLink != null) {
-      overriddenLinks.add(specializedLink);
-      specializedLink=specializedLink.getSpecializedLink();
+    if (specializedLink != null) {
+      specializedLinks.put(specializedLink,link);
     }
   }
-  myLinkDeclarationsExcludingOverridden=new ArrayList<LinkDeclaration>(5);
-  for (  LinkDeclaration link : links) {
-    if (!overriddenLinks.contains(link)) {
-      myLinkDeclarationsExcludingOverridden.add(link);
+  myMostSpecificLinkBySpecializedLink=new HashMap<LinkDeclaration,LinkDeclaration>();
+  myMostSpecificLinks=new ArrayList<LinkDeclaration>(5);
+  for (  LinkDeclaration link : allLinks) {
+    LinkDeclaration moreSpecificLink=specializedLinks.get(link);
+    if (moreSpecificLink == null) {
+      myMostSpecificLinks.add(link);
+    }
+ else {
+      while (moreSpecificLink != null) {
+        myMostSpecificLinkBySpecializedLink.put(link,moreSpecificLink);
+        moreSpecificLink=specializedLinks.get(moreSpecificLink);
+      }
     }
   }
   myDependsOnNodes=new HashSet<SNode>();
   for (  AbstractConceptDeclaration concept : concepts) {
     myDependsOnNodes.add(concept.getNode());
   }
-  for (  LinkDeclaration link : links) {
+  for (  LinkDeclaration link : allLinks) {
     myDependsOnNodes.add(link.getNode());
   }
 }
