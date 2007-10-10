@@ -1,0 +1,64 @@
+{
+  if (myUseSystemClassLoader)   return;
+  LOG.debug("Updating class path");
+  if (myItems != null) {
+    cacheOldItems(myItems,changeModule != null);
+  }
+  if (changeModule != null) {
+    List<String> items=changeModule.getClassPathItems();
+    for (    String item : items) {
+      myCachedItems.remove(item);
+    }
+  }
+  myItems=new CompositeClassPathItem();
+  IClassPathItem rtJar=getRTJar();
+  if (rtJar != null) {
+    myItems.add(rtJar);
+  }
+  IClassPathItem mpsPath=getMPSPath();
+  if (mpsPath != null) {
+    myItems.add(mpsPath);
+  }
+  IClassPathItem supportPath=getMPSSupportPath();
+  if (supportPath != null) {
+    myItems.add(supportPath);
+  }
+  boolean useTimestamps=changeModule == null;
+  if (myModuleRepository != null) {
+    for (    IModule l : myModuleRepository.getAllModules()) {
+      LOG.debug("Adding classpath from model " + l);
+      for (      String s : l.getClassPathItems()) {
+        LOG.debug("Add " + s);
+        addClassPathItem(s,useTimestamps);
+      }
+    }
+  }
+  Set<String> classPath=new LinkedHashSet<String>();
+  if (myProjects != null) {
+    for (    MPSProject project : myProjects.getProjects()) {
+      for (      String s : project.getClassPath()) {
+        classPath.add(s);
+      }
+    }
+  }
+  for (  String s : classPath) {
+    addClassPathItem(s,useTimestamps);
+  }
+  myClassLoader=new MPSClassLoader(myItems);
+  if (myProjects != null) {
+    LOG.debug("Updating java stubs");
+    for (    MPSProject project : myProjects.getProjects()) {
+      for (      IModule module : project.getModules()) {
+        LOG.debug("Updating in module " + module);
+        AbstractModule am=(AbstractModule)module;
+        ClassPathModelRootManager manager=new ClassPathModelRootManager();
+        for (        ModelRoot r : am.getDefaultModelRoots()) {
+          manager.read(r,module);
+        }
+      }
+    }
+  }
+  myCachedItems.clear();
+  myAlreadyAdded.clear();
+  LOG.debug("Done");
+}
