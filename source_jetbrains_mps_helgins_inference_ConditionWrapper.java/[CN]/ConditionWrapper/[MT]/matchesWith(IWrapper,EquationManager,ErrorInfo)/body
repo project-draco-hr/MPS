@@ -6,5 +6,34 @@
   if (equationManager == null) {
     return false;
   }
-  return myCondition.met(type.getNode());
+  if (myWrapperToCheck == null) {
+    myWrapperToCheck=type;
+    for (    RuntimeTypeVariable var : type.getNode().allChildrenByAdaptor(RuntimeTypeVariable.class)) {
+      if (myVariables == null) {
+        myVariables=new HashSet<SNodePointer>(1);
+      }
+      myVariables.add(new SNodePointer(var.getNode()));
+    }
+  }
+  if (myVariables != null) {
+    for (    SNodePointer var : new HashSet<SNodePointer>(myVariables)) {
+      if (var.getNode() == null) {
+        myVariables.remove(var);
+        continue;
+      }
+      if (equationManager.getRepresentatorWrapper(new NodeWrapper(var.getNode())).isConcrete()) {
+        myVariables.remove(var);
+        for (        RuntimeTypeVariable varChild : type.getNode().allChildrenByAdaptor(RuntimeTypeVariable.class)) {
+          myVariables.add(new SNodePointer(varChild.getNode()));
+        }
+      }
+    }
+  }
+  if (myVariables != null && !(myVariables.isEmpty())) {
+    return false;
+  }
+ else {
+    myVariables=null;
+    return myCondition.met(type.getNode());
+  }
 }
