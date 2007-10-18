@@ -3,15 +3,25 @@
   if (type.isCondition() || type.isVariable()) {
     return false;
   }
-  boolean hasVars=false;
-  for (  RuntimeTypeVariable var : type.getNode().allChildrenByAdaptor(RuntimeTypeVariable.class)) {
-    hasVars=true;
-    if (equationManager != null) {
-      equationManager.addEquation(new NodeWrapper(var.getNode()),this,errorInfo);
+  if (equationManager == null) {
+    return false;
+  }
+  if (myWrapperToCheck == null) {
+    myWrapperToCheck=type;
+    for (    RuntimeTypeVariable var : type.getNode().allChildrenByAdaptor(RuntimeTypeVariable.class)) {
+      myVariables.add(var.getNode());
     }
   }
-  if (hasVars) {
-    return true;
+  for (  SNode var : new HashSet<SNode>(myVariables)) {
+    if (equationManager.getRepresentatorWrapper(new NodeWrapper(var)).isConcrete()) {
+      myVariables.remove(var);
+      for (      RuntimeTypeVariable varChild : type.getNode().allChildrenByAdaptor(RuntimeTypeVariable.class)) {
+        myVariables.add(varChild.getNode());
+      }
+    }
+  }
+  if (!(myVariables.isEmpty())) {
+    return false;
   }
  else {
     return myCondition.met(type.getNode());
