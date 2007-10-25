@@ -5,13 +5,34 @@
   CommandProcessor.instance().addCommandListener(new CommandAdapter(){
     public void commandFinished(    @NotNull CommandEvent event){
       try {
-        if (!myRemoveList.isEmpty()) {
-          String[] toUnload=myRemoveList.toArray(new String[0]);
-          myRuntimeEnvironment.unload(toUnload);
+        Set<String> toReload=new LinkedHashSet<String>(myToAdd);
+        toReload.retainAll(myToRemove);
+        Set<String> toRemove=new LinkedHashSet<String>(myToRemove);
+        toRemove.removeAll(myToAdd);
+        Set<String> toAdd=new LinkedHashSet<String>(myToAdd);
+        toAdd.removeAll(myToRemove);
+        if (!toRemove.isEmpty()) {
+          String[] unloadList=toRemove.toArray(new String[0]);
+          myRuntimeEnvironment.unload(unloadList);
+        }
+        if (!toReload.isEmpty()) {
+          String[] reloadList=toReload.toArray(new String[0]);
+          myRuntimeEnvironment.reload(reloadList);
+        }
+        if (!toAdd.isEmpty()) {
+          for (          String moduleUID : toAdd) {
+            IModule module=MPSModuleRepository.getInstance().getModuleByUID(moduleUID);
+            Bundle b=new Bundle(module.getModuleUID(),module.getByteCodeLocator());
+            for (            String dep : module.getExplicitlyDependOnModuleUIDs()) {
+              b.addDependency(dep);
+            }
+            myRuntimeEnvironment.add(b);
+          }
         }
       }
   finally {
-        myRemoveList.clear();
+        myToRemove.clear();
+        myToAdd.clear();
       }
     }
   }
