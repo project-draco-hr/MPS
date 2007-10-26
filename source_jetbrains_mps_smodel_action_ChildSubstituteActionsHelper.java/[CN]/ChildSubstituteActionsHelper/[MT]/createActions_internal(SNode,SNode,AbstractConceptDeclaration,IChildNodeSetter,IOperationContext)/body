@@ -9,17 +9,47 @@
     LOG.error("Couldn't build actions : couldn't get declaring language for concept " + childConcept.getDebugText());
     return resultActions;
   }
-  List<NodeSubstituteActionsBuilder> primaryBuilders=getActionBuilders(parentNode,primaryLanguage,childConcept,context);
-  if (primaryBuilders.isEmpty()) {
-    resultActions=createPrimaryChildSubstituteActions(parentNode,currentChild,childConcept,childSetter,TRUE_CONDITION,context);
+  List<NodeSubstituteActionsBuilder> allBuilders=new ArrayList<NodeSubstituteActionsBuilder>();
+  List<NodeSubstituteActionsBuilder> primaryBuilders=getActionsBuilders(parentNode,primaryLanguage,childConcept,context);
+  allBuilders.addAll(primaryBuilders);
+  for (  NodeSubstituteActionsBuilder builder : primaryBuilders) {
+    resultActions.addAll(invokeActionFactory(builder,parentNode,currentChild,childConcept,childSetter,context));
   }
- else {
-    if (!containsLegacyQueries(primaryBuilders) && !containsRemoveDefaults(primaryBuilders)) {
-      resultActions.addAll(createPrimaryChildSubstituteActions(parentNode,currentChild,childConcept,childSetter,TRUE_CONDITION,context));
+  if (!containsLegacyQueries(primaryBuilders) && !containsRemoveDefaults(primaryBuilders)) {
+    List<NodeSubstituteActionsBuilder> buildersFromSubconcepts=new ArrayList<NodeSubstituteActionsBuilder>();
+    final List<AbstractConceptDeclaration> excludedConcepts=new ArrayList<AbstractConceptDeclaration>();
+    List<Language> languages=parentNode.getModel().getLanguages(scope);
+    for (    NodeSubstituteActionsBuilder actionsBuilder : getAllActionsBuilders(languages)) {
+      AbstractConceptDeclaration applicableConcept=actionsBuilder.getApplicableConcept();
+      if (applicableConcept == null)       continue;
+      if (applicableConcept == childConcept)       continue;
+      if (SModelUtil_new.isAssignableConcept(applicableConcept,childConcept)) {
+        excludedConcepts.add(applicableConcept);
+        if (satisfiesPrecondition(actionsBuilder,parentNode,applicableConcept,context)) {
+          buildersFromSubconcepts.add(actionsBuilder);
+        }
+      }
     }
-    for (    NodeSubstituteActionsBuilder builder : primaryBuilders) {
-      resultActions.addAll(invokeActionFactory(builder,parentNode,currentChild,childConcept,childSetter,context));
+    allBuilders.addAll(buildersFromSubconcepts);
+    for (    NodeSubstituteActionsBuilder builder : buildersFromSubconcepts) {
+      List<INodeSubstituteAction> actions=invokeActionFactory(builder,parentNode,currentChild,builder.getApplicableConcept(),childSetter,context);
+      resultActions.addAll(actions);
     }
+    Condition<SNode> filter=TRUE_CONDITION;
+    if (excludedConcepts.size() > 0) {
+      filter=new Condition<SNode>(){
+        public boolean met(        SNode node){
+          for (          AbstractConceptDeclaration excluded : excludedConcepts) {
+            if (SModelUtil_new.isAssignableConcept((AbstractConceptDeclaration)BaseAdapter.fromNode(node),excluded)) {
+              return false;
+            }
+          }
+          return true;
+        }
+      }
+;
+    }
+    resultActions.addAll(createPrimaryChildSubstituteActions(parentNode,currentChild,childConcept,childSetter,filter,context));
   }
   List<NodeSubstituteActionsBuilder> extendedBuilders=new ArrayList<NodeSubstituteActionsBuilder>();
   List<Language> languages=parentNode.getModel().getLanguages(scope);
@@ -27,14 +57,14 @@
     if (language == primaryLanguage) {
       continue;
     }
-    extendedBuilders.addAll(getActionBuilders(parentNode,language,childConcept,context));
+    extendedBuilders.addAll(getActionsBuilders(parentNode,language,childConcept,context));
   }
+  allBuilders.addAll(extendedBuilders);
   for (  NodeSubstituteActionsBuilder builder : extendedBuilders) {
     List<INodeSubstituteAction> addActions=invokeActionFactory(builder,parentNode,currentChild,childConcept,childSetter,context);
     resultActions.addAll(addActions);
   }
-  primaryBuilders.addAll(extendedBuilders);
-  for (  NodeSubstituteActionsBuilder builder : primaryBuilders) {
+  for (  NodeSubstituteActionsBuilder builder : allBuilders) {
     resultActions=applyActionFilter(builder,resultActions,parentNode,currentChild,childConcept.getNode(),context);
   }
   return resultActions;
