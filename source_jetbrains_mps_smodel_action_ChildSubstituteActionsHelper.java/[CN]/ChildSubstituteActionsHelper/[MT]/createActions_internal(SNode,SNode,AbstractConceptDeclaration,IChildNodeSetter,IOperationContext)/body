@@ -3,6 +3,12 @@
   if (childConcept == null) {
     return resultActions;
   }
+  if (childConcept == SModelUtil_new.getBaseConcept()) {
+    if ((currentChild == null || currentChild.getConceptFqName().equals(BaseConcept.concept))) {
+      return createPrimaryChildSubstituteActions(parentNode,currentChild,childConcept,childSetter,TRUE_CONDITION,context);
+    }
+    childConcept=currentChild.getConceptDeclarationAdapter();
+  }
   IScope scope=context.getScope();
   Language primaryLanguage=SModelUtil_new.getDeclaringLanguage(childConcept,scope);
   if (primaryLanguage == null) {
@@ -17,14 +23,12 @@
   }
   if (!containsLegacyQueries(primaryBuilders) && !containsRemoveDefaults(primaryBuilders)) {
     List<NodeSubstituteActionsBuilder> buildersFromSubconcepts=new ArrayList<NodeSubstituteActionsBuilder>();
-    final List<AbstractConceptDeclaration> excludedConcepts=new ArrayList<AbstractConceptDeclaration>();
     List<Language> languages=parentNode.getModel().getLanguages(scope);
     for (    NodeSubstituteActionsBuilder actionsBuilder : getAllActionsBuilders(languages)) {
       AbstractConceptDeclaration applicableConcept=actionsBuilder.getApplicableConcept();
       if (applicableConcept == null)       continue;
       if (applicableConcept == childConcept)       continue;
       if (SModelUtil_new.isAssignableConcept(applicableConcept,childConcept)) {
-        excludedConcepts.add(applicableConcept);
         if (satisfiesPrecondition(actionsBuilder,parentNode,applicableConcept,context)) {
           buildersFromSubconcepts.add(actionsBuilder);
         }
@@ -36,19 +40,6 @@
       resultActions.addAll(actions);
     }
     Condition<SNode> filter=TRUE_CONDITION;
-    if (excludedConcepts.size() > 0) {
-      filter=new Condition<SNode>(){
-        public boolean met(        SNode node){
-          for (          AbstractConceptDeclaration excluded : excludedConcepts) {
-            if (SModelUtil_new.isAssignableConcept((AbstractConceptDeclaration)BaseAdapter.fromNode(node),excluded)) {
-              return false;
-            }
-          }
-          return true;
-        }
-      }
-;
-    }
     resultActions.addAll(createPrimaryChildSubstituteActions(parentNode,currentChild,childConcept,childSetter,filter,context));
   }
   List<NodeSubstituteActionsBuilder> extendedBuilders=new ArrayList<NodeSubstituteActionsBuilder>();
@@ -65,7 +56,10 @@
     resultActions.addAll(addActions);
   }
   for (  NodeSubstituteActionsBuilder builder : allBuilders) {
-    resultActions=applyActionFilter(builder,resultActions,parentNode,currentChild,childConcept.getNode(),context);
+    AbstractConceptDeclaration applicableConcept=builder.getApplicableConcept();
+    if (SModelUtil_new.isAssignableConcept(childConcept,applicableConcept)) {
+      resultActions=applyActionFilter(builder,resultActions,parentNode,currentChild,childConcept.getNode(),context);
+    }
   }
   return resultActions;
 }
