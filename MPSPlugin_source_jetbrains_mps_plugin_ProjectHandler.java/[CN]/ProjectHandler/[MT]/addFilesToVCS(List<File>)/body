@@ -1,0 +1,28 @@
+{
+  ApplicationManager.getApplication().invokeLater(new Runnable(){
+    public void run(){
+      ApplicationManager.getApplication().runWriteAction(new Runnable(){
+        public void run(){
+          LocalFileSystem lfs=LocalFileSystem.getInstance();
+          for (          File f : files) {
+            VirtualFile vf=lfs.refreshAndFindFileByIoFile(f);
+            ProjectLevelVcsManager vcsManager=ProjectLevelVcsManager.getInstance(myProject);
+            FilePath fp=PeerFactory.getInstance().getVcsContextFactory().createFilePathOn(vf);
+            AbstractVcs vcs=vcsManager.getVcsFor(vf);
+            if (vcs != null) {
+              CheckinEnvironment ci=vcs.getCheckinEnvironment();
+              if (ci != null && !vcs.fileIsUnderVcs(fp)) {
+                List<VirtualFile> vfs=new ArrayList<VirtualFile>();
+                vfs.add(vf);
+                List<VcsException> result=ci.scheduleUnversionedFilesForAddition(vfs);
+                VcsDirtyScopeManager.getInstance(myProject).fileDirty(vf);
+              }
+            }
+          }
+        }
+      }
+);
+    }
+  }
+);
+}
