@@ -1,0 +1,26 @@
+{
+  if (bundles.length == 0) {
+    return;
+  }
+  final Lock lock=new ReentrantLock();
+  final Condition refreshCompleted=lock.newCondition();
+  lock.lock();
+  try {
+    myPackageAdmin.refreshPackages(bundles);
+    invokeOnRefresh(new Runnable(){
+      public void run(){
+        lock.lock();
+        refreshCompleted.signal();
+        lock.unlock();
+      }
+    }
+);
+    refreshCompleted.await();
+  }
+ catch (  InterruptedException e) {
+    e.printStackTrace();
+  }
+ finally {
+    lock.unlock();
+  }
+}
