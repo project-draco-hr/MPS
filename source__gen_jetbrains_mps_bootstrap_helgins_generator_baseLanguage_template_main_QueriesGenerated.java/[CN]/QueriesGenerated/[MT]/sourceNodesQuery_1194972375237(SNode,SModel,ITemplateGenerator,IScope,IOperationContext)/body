@@ -1,0 +1,23 @@
+{
+  DependenciesCollector dependenciesCollector=new DependenciesCollector();
+  Map<SNode,Pair<SNode,SNode>> dependencies=new HashMap<SNode,Pair<SNode,SNode>>();
+  Set<SNode> leaves=new HashSet<SNode>();
+  for (  SNode inferenceRule : SModelOperations.getRoots(sourceModel,"jetbrains.mps.bootstrap.helgins.structure.InferenceRule")) {
+    dependenciesCollector.collectDependencies(inferenceRule,dependencies,leaves);
+  }
+  List<SNode> result=new ArrayList<SNode>();
+  SModel targetModel=generator.getTargetModel();
+  for (  SNode leaf : leaves) {
+    SNode composite=SModelOperations.createNewNode(targetModel,"jetbrains.mps.core.structure.BaseConcept",null);
+    composite.setReferent("leaf",leaf);
+    SNode current=leaf;
+    while (dependencies.get(current) != null) {
+      Pair<SNode,SNode> pair=dependencies.get(current);
+      current=pair.o1;
+      SNode method=pair.o2;
+      composite.addChild("method",method);
+    }
+    result.add(composite);
+  }
+  return result;
+}
