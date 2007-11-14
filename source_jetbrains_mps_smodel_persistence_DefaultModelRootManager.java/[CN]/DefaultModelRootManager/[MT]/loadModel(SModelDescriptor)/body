@@ -1,26 +1,28 @@
 {
-  final File file=FileSystem.toFile(modelDescriptor.getModelFile());
-  File mineFile=new File(file.getPath() + ".mine");
-  if (mineFile.exists()) {
-    FileUtil.copyFile(mineFile,file);
-    ThreadUtils.runInUIThreadNoWait(new Runnable(){
-      public void run(){
-        NodeReadAccessCaster.blockEvents();
-        try {
-          Merger.merge(file);
-        }
+  if (!modelDescriptor.getModelFile().isReadOnly()) {
+    final File file=FileSystem.toFile(modelDescriptor.getModelFile());
+    File mineFile=new File(file.getPath() + ".mine");
+    if (mineFile.exists()) {
+      FileUtil.copyFile(mineFile,file);
+      ThreadUtils.runInUIThreadNoWait(new Runnable(){
+        public void run(){
+          NodeReadAccessCaster.blockEvents();
+          try {
+            Merger.merge(file);
+          }
   finally {
-          NodeReadAccessCaster.unblockEvents();
+            NodeReadAccessCaster.unblockEvents();
+          }
+          modelDescriptor.reloadFromDisk();
         }
-        modelDescriptor.reloadFromDisk();
       }
-    }
 );
+    }
+    if (!file.exists()) {
+      return new SModel(modelDescriptor.getModelUID());
+    }
   }
-  if (!file.exists()) {
-    return new SModel(modelDescriptor.getModelUID());
-  }
-  SModel model=ModelPersistence.readModel(FileSystem.getFile(file));
-  LOG.assertLog(model.getUID().equals(modelDescriptor.getModelUID()),"\nError loading model from file: \"" + file + "\"\n"+ "expected model UID     : \""+ modelDescriptor.getModelUID()+ "\"\n"+ "but was UID            : \""+ model.getUID()+ "\"\n"+ "the model will not be available.\n"+ "Make sure that all project's roots and/or the model namespace is correct");
+  SModel model=ModelPersistence.readModel(modelDescriptor.getModelFile());
+  LOG.assertLog(model.getUID().equals(modelDescriptor.getModelUID()),"\nError loading model from file: \"" + modelDescriptor.getModelFile() + "\"\n"+ "expected model UID     : \""+ modelDescriptor.getModelUID()+ "\"\n"+ "but was UID            : \""+ model.getUID()+ "\"\n"+ "the model will not be available.\n"+ "Make sure that all project's roots and/or the model namespace is correct");
   return model;
 }
