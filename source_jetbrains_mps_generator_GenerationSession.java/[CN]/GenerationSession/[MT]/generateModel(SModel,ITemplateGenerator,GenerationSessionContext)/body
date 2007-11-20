@@ -1,12 +1,32 @@
 {
   IModule module=generationContext.getModule();
+  String modelsLongName=inputModel.getLongName();
   SModelDescriptor currentInputModel=inputModel.getModelDescriptor();
-  SModelDescriptor currentOutputModel=createTransientModel(inputModel,module);
   List<MappingScript> preMappingScripts=generationContext.getPreMappingScripts();
   for (  MappingScript preMappingScript : preMappingScripts) {
-    addMessage(MessageKind.INFORMATION,"pre-process '" + preMappingScript + "' ("+ preMappingScript.getModel().getLongName()+ ")");
+    if (preMappingScript.getScriptKind() == MappingScriptKind.pre_process_input_model) {
+      if (preMappingScript.getModifiesModel()) {
+        SModelDescriptor currentInputModel_clone=createTransientModel(modelsLongName,module);
+        addMessage(MessageKind.INFORMATION,"clone model '" + currentInputModel.getModelUID() + "' --> '"+ currentInputModel_clone.getModelUID()+ "'");
+        CloneUtil.cloneModel(currentInputModel.getSModel(),currentInputModel_clone.getSModel(),generator.getScope());
+        if (myDiscardTransients && currentInputModel.isTransient() && !myCurrentContext.isTransientModelToKeep(currentInputModel.getSModel())) {
+          addMessage(MessageKind.INFORMATION,"remove model (0) '" + currentInputModel.getModelUID() + "'");
+          SModelRepository.getInstance().removeModelDescriptor(currentInputModel);
+        }
+        currentInputModel=currentInputModel_clone;
+        break;
+      }
+    }
+  }
+  for (  MappingScript preMappingScript : preMappingScripts) {
+    if (preMappingScript.getScriptKind() != MappingScriptKind.pre_process_input_model) {
+      addMessage(MessageKind.WARNING,"skip script '" + preMappingScript + "' ("+ preMappingScript.getModel().getUID()+ ") - wrong script kind");
+      continue;
+    }
+    addMessage(MessageKind.INFORMATION,"pre-process '" + preMappingScript + "' ("+ preMappingScript.getModel().getUID()+ ")");
     TemplateGenUtil.executeMappingScript(preMappingScript,currentInputModel.getSModel(),generator);
   }
+  SModelDescriptor currentOutputModel=createTransientModel(modelsLongName,module);
   boolean somethingHasBeenGenerated=generator.doPrimaryMapping(currentInputModel.getSModel(),currentOutputModel.getSModel());
   if (!somethingHasBeenGenerated) {
     SModel model=currentOutputModel.getSModel();
@@ -16,16 +36,16 @@
   int secondaryMappingRepeatCount=1;
   while (true) {
     currentOutputModel.getSModel().validateLanguagesAndImports();
-    addMessage(MessageKind.INFORMATION,"generating model \"" + currentOutputModel.getModelUID() + "\"");
+    addMessage(MessageKind.INFORMATION,"generating model '" + currentOutputModel.getModelUID() + "'");
     generationContext.replaceInputModel(currentOutputModel);
-    SModelDescriptor transientModel=createTransientModel(currentInputModel.getSModel(),module);
+    SModelDescriptor transientModel=createTransientModel(modelsLongName,module);
     if (myDiscardTransients && currentInputModel.isTransient() && !myCurrentContext.isTransientModelToKeep(currentInputModel.getSModel())) {
-      addMessage(MessageKind.INFORMATION,"remove model (1) \"" + currentInputModel.getModelUID() + "\"");
+      addMessage(MessageKind.INFORMATION,"remove model (1) '" + currentInputModel.getModelUID() + "'");
       SModelRepository.getInstance().removeModelDescriptor(currentInputModel);
     }
     currentInputModel=currentOutputModel;
     if (!generator.doSecondaryMapping(currentInputModel.getSModel(),transientModel.getSModel())) {
-      addMessage(MessageKind.INFORMATION,"remove model (2) \"" + transientModel.getModelUID() + "\"");
+      addMessage(MessageKind.INFORMATION,"remove model (2) '" + transientModel.getModelUID() + "'");
       SModelRepository.getInstance().removeModelDescriptor(transientModel);
       myTransientModelsCount--;
       break;
@@ -38,6 +58,10 @@
   }
   List<MappingScript> postMappingScripts=generationContext.getPostMappingScripts();
   for (  MappingScript postMappingScript : postMappingScripts) {
+    if (postMappingScript.getScriptKind() != MappingScriptKind.post_process_output_model) {
+      addMessage(MessageKind.WARNING,"skip script '" + postMappingScript + "' ("+ postMappingScript.getModel().getUID()+ ") - wrong script kind");
+      continue;
+    }
     addMessage(MessageKind.INFORMATION,"post-process '" + postMappingScript + "' ("+ postMappingScript.getModel().getLongName()+ ")");
     TemplateGenUtil.executeMappingScript(postMappingScript,currentOutputModel.getSModel(),generator);
   }
