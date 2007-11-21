@@ -1,0 +1,57 @@
+{
+  myInvocationCount++;
+  myTransientModelsCount=0;
+  addProgressMessage(MessageKind.INFORMATION,"generating model \"" + inputModel.getUID() + "\"");
+  GenerationSessionContext context=new GenerationSessionContext(targetLanguage,inputModel,myInvocationContext,mappings,generationStepController,myCurrentContext);
+  if (generationStepController != null) {
+    if (!checkGenerationStep(generationStepController)) {
+      throw new GenerationCanceledException();
+    }
+    if (generationStepController.getCurrentMappings().isEmpty()) {
+      addProgressMessage(MessageKind.WARNING,"skip model \"" + inputModel.getUID() + "\" : no generator avalable");
+      return new GenerationStatus(inputModel,null,null,false,false,false);
+    }
+    printGenerationStepData(generationStepController,inputModel);
+  }
+ else {
+    List<Generator> generators=context.getGeneratorModules();
+    if (generators.isEmpty()) {
+      addProgressMessage(MessageKind.WARNING,"skip model \"" + inputModel.getUID() + "\" : no generator avalable");
+      return new GenerationStatus(inputModel,null,null,false,false,false);
+    }
+  }
+  setGenerationSessionContext(context);
+  ITemplateGenerator generator=new TemplateModelGenerator_New(context,myProgressMonitor,myMessagesHandler);
+  GenerationStatus status;
+  try {
+    SModel outputModel=generateModel(inputModel,generator);
+    boolean wasErrors=generator.getErrorCount() > 0;
+    boolean wasWarnigns=generator.getWarningCount() > 0;
+    status=new GenerationStatus(inputModel,outputModel,context.getTraceMap(),wasErrors,wasWarnigns,false);
+    addMessage(status.isError() ? MessageKind.WARNING : MessageKind.INFORMATION,"model \"" + inputModel.getUID() + "\" has been generated "+ (status.isError() ? "with errors" : "successfully"));
+    generator.clearErrorsAndWarnings();
+    generator.reset();
+  }
+ catch (  GenerationCanceledException gce) {
+    throw gce;
+  }
+catch (  GenerationFailedException gfe) {
+    LOG.error(gfe);
+    myProgressMonitor.addText(gfe.toString());
+    GenerationFailueInfo failueInfo=gfe.getFailueInfo();
+    if (failueInfo != null) {
+      for (      Message message : failueInfo.createMessages()) {
+        addMessage(message);
+      }
+    }
+    addMessage(MessageKind.ERROR,"model \"" + inputModel.getUID() + "\" generation failed : "+ gfe);
+    status=new GenerationStatus.ERROR(inputModel);
+  }
+catch (  Throwable e) {
+    LOG.error(e);
+    myProgressMonitor.addText(e.toString());
+    addMessage(MessageKind.ERROR,"model \"" + inputModel.getUID() + "\" generation failed : "+ e);
+    status=new GenerationStatus.ERROR(inputModel);
+  }
+  return status;
+}
