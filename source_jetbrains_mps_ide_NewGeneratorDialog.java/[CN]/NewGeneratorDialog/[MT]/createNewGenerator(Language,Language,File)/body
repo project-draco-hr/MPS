@@ -1,2 +1,43 @@
 {
+  LanguageDescriptor languageDescriptor=sourceLanguage.getLanguageDescriptor();
+  SModel model=languageDescriptor.getModel();
+  model.setLoading(true);
+  GeneratorDescriptor generatorDescriptor=GeneratorDescriptor.newInstance(model);
+  generatorDescriptor.setGeneratorUID(Generator.generateGeneratorUID(sourceLanguage));
+  jetbrains.mps.projectLanguage.structure.Language _targetLanguage=jetbrains.mps.projectLanguage.structure.Language.newInstance(model);
+  _targetLanguage.setName(targetLanguage.getNamespace());
+  generatorDescriptor.setTargetLanguage(_targetLanguage);
+  String templateModelNamePrefix=sourceLanguage.getNamespace() + ".generator." + NameUtil.shortNameFromLongName(targetLanguage.getNamespace())+ ".template";
+  ModelRoot templateModelsRoot=ModelRoot.newInstance(model);
+  templateModelsRoot.setPrefix(templateModelNamePrefix);
+  templateModelsRoot.setPath(templateModelsDir.getAbsolutePath());
+  generatorDescriptor.addModelRoot(templateModelsRoot);
+  ModuleReference ref=ModuleReference.newInstance(model);
+  ref.setName(targetLanguage.getModuleUID());
+  generatorDescriptor.addDependency(ref);
+  languageDescriptor.addGenerator(generatorDescriptor);
+  sourceLanguage.setLanguageDescriptor(languageDescriptor);
+  sourceLanguage.save();
+  List<Generator> generators=sourceLanguage.getGenerators();
+  Generator newGenerator=generators.get(generators.size() - 1);
+  boolean alreadyOwnsTemplateModel=false;
+  for (  SModelDescriptor modelDescriptor : newGenerator.getOwnModelDescriptors()) {
+    if (TemplateLanguageUtil.isTemplatesModel(modelDescriptor)) {
+      alreadyOwnsTemplateModel=true;
+      break;
+    }
+  }
+  if (!alreadyOwnsTemplateModel) {
+    SModelDescriptor templateModelDescriptor=newGenerator.createModel(new SModelUID(templateModelNamePrefix,"main",SModelStereotype.TEMPLATES),templateModelsRoot);
+    SModel templateModel=templateModelDescriptor.getSModel();
+    templateModel.addNewlyImportedLanguage(BootstrapLanguages.getInstance().getTLBase());
+    templateModel.addNewlyImportedLanguage(targetLanguage);
+    templateModel.addNewlyImportedLanguage("jetbrains.mps.bootstrap.smodelLanguage");
+    templateModel.addImportedModel(sourceLanguage.getStructureModelDescriptor().getModelUID());
+    templateModel.addImportedModel(SModelUID.fromString("java.lang@java_stub"));
+    MappingConfiguration mappingConfiguration=MappingConfiguration.newInstance(templateModel);
+    mappingConfiguration.setName("main");
+    templateModel.addRoot(mappingConfiguration);
+    templateModelDescriptor.save();
+  }
 }
