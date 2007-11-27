@@ -5,8 +5,32 @@
     for (    String sp : m.getSourcePaths()) {
       addSource(compiler,new File(sp),"",m);
     }
+    FileUtil.delete(m.getClassesGen());
   }
   compiler.compile();
   for (  CompilationResult cr : compiler.getCompilationResults()) {
+    for (    ClassFile cf : cr.getClassFiles()) {
+      String name=getName(cf.getCompoundName());
+      if (myContainingModules.containsKey(name)) {
+        IModule m=myContainingModules.get(name);
+        File classesGen=m.getClassesGen();
+        String packageName=NameUtil.namespaceFromLongName(name);
+        File outputDir=new File(classesGen + File.separator + packageName.replace('.',File.separatorChar));
+        outputDir.mkdirs();
+        String className=NameUtil.shortNameFromLongName(name);
+        File output=new File(outputDir,className + ".class");
+        try {
+          FileOutputStream os=new FileOutputStream(output);
+          os.write(cf.getBytes());
+          os.close();
+        }
+ catch (        IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+ else {
+        LOG.error("I don't know in which module's output path I should place class file for " + name);
+      }
+    }
   }
 }
