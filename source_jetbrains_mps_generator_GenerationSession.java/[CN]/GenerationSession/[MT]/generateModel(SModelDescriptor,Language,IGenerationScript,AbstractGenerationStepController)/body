@@ -1,0 +1,49 @@
+{
+  Statistics.clearAll();
+  GenerationStatus status=script.doGenerate(new IGenerationScriptContext(){
+    public GenerationStatus doGenerate(    @NotNull SModelDescriptor inputModel,    Language targetLanguage,    Set<MappingConfiguration> confs) throws Exception {
+      if (targetLanguage != null) {
+        return generateModel_internal(inputModel.getSModel(),targetLanguage,confs,null);
+      }
+      SModelDescriptor inputModel1=inputModel;
+      GenerationStatus status1;
+      boolean wasErrors=false;
+      boolean wasWarnings=false;
+      int stepCount=1;
+      while (true) {
+        addMessage(new Message(MessageKind.INFORMATION,"execute step " + (stepCount++)));
+        status1=generateModel_internal(inputModel1.getSModel(),targetLanguage,confs,generationStepController);
+        wasErrors|=status1.isError();
+        wasWarnings|=status1.hasWarnings();
+        if (status1.isCanceled()) {
+          break;
+        }
+        if (!generationStepController.advanceStep()) {
+          break;
+        }
+        if (generationStepController.getCurrentMappings().isEmpty()) {
+          break;
+        }
+        if (status1.getOutputModel() == null) {
+          break;
+        }
+        inputModel1=status1.getOutputModel().getModelDescriptor();
+      }
+      return new GenerationStatus(status1.getSourceModel(),status1.getOutputModel(),status1.getTraceMap(),wasErrors,wasWarnings,status1.isCanceled());
+    }
+    public SModelDescriptor getSourceModelDescriptor(){
+      return inputModel;
+    }
+    public Language getTargetLanguage(){
+      return targetLanguage;
+    }
+    public IOperationContext getOperationContext(){
+      return myInvocationContext;
+    }
+    public IMessageHandler getHandler(){
+      return myMessagesHandler;
+    }
+  }
+);
+  return status;
+}
