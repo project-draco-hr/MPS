@@ -1,0 +1,45 @@
+{
+  List<SReference> toDelete=new ArrayList<SReference>();
+  if (myReferences != null) {
+    for (    SReference reference : myReferences) {
+      if (reference.getRole().equals(role)) {
+        toDelete.add(reference);
+      }
+    }
+  }
+  SNode oldReferent=null;
+  if (!toDelete.isEmpty()) {
+    oldReferent=toDelete.get(0).getTargetNode();
+  }
+  if (toDelete.size() > 1) {
+    LOG.errorWithTrace("ERROR! " + toDelete.size() + " references found for role: "+ role+ " node: "+ this.getDebugText());
+  }
+  for (  SReference reference : toDelete) {
+    int index=myReferences.indexOf(reference);
+    removeReferenceAt(index);
+  }
+  SReference resultReference=null;
+  if (newReferent != null) {
+    resultReference=SReference.create(role,this,newReferent);
+    insertReferenceAt(myReferences == null ? 0 : myReferences.size(),resultReference);
+  }
+  if (useHandler && !getModel().isLoading()) {
+    if (mySetReferentEventHandlersInProgress == null || !mySetReferentEventHandlersInProgress.contains(role)) {
+      INodeReferentSetEventHandler handler=ModelConstraintsManager.getInstance().getNodeReferentSetEventHandler(this,role);
+      if (handler != null) {
+        if (mySetReferentEventHandlersInProgress == null)         mySetReferentEventHandlersInProgress=new HashSet<String>(1);
+        mySetReferentEventHandlersInProgress.add(role);
+        try {
+          handler.processReferentSetEvent(this,oldReferent,newReferent,GlobalScope.getInstance());
+        }
+  finally {
+          mySetReferentEventHandlersInProgress.remove(role);
+          if (mySetReferentEventHandlersInProgress.isEmpty()) {
+            mySetReferentEventHandlersInProgress=null;
+          }
+        }
+      }
+    }
+  }
+  return resultReference;
+}
