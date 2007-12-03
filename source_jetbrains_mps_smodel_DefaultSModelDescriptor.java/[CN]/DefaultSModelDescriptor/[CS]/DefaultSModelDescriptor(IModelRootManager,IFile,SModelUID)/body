@@ -3,4 +3,47 @@
   myModelRootManager=manager;
   myModelFile=modelFile;
   checkModelDuplication();
+  addPostLoadRunnable(new IPostLoadRunnable(){
+    public void doPostLoadStuff(    final SModelDescriptor descriptor){
+      if (descriptor.getSModel().hasLanguage("jetbrains.mps.bootstrap.helgins")) {
+        boolean needsRefactoring=false;
+        for (        SNode node : descriptor.getSModel().allNodes()) {
+          String conceptFqName=node.getConceptFqName();
+          if (conceptFqName.equals("jetbrains.mps.bootstrap.helgins.structure.Quotation") || conceptFqName.equals("jetbrains.mps.bootstrap.helgins.structure.Antiquotation") || conceptFqName.equals("jetbrains.mps.bootstrap.helgins.structure.ListAntiquotation")|| conceptFqName.equals("jetbrains.mps.bootstrap.helgins.structure.ReferenceAntiquotation")) {
+            needsRefactoring=true;
+            break;
+          }
+        }
+        final IOperationContext operationContext=findOperationContext();
+        if (operationContext == null) {
+          LOG.warning("no op.context found for conversion");
+          return;
+        }
+        if (needsRefactoring) {
+          Runnable command=new Runnable(){
+            public void run(){
+              int answer=JOptionPane.showConfirmDialog(null,"Quotations in model " + descriptor + " are legacy.\nDo you want to convert "+ "the model?");
+              if (answer == JOptionPane.YES_OPTION) {
+                ConvertQuotationsAction.doConvertQuotations(descriptor,operationContext);
+                save();
+              }
+            }
+          }
+;
+          if (CommandProcessor.instance().isInsideUndoableCommand()) {
+            command.run();
+          }
+ else {
+            if (CommandProcessor.instance().isInsideCommand()) {
+              LOG.error("error: can't execute undoable command inside a lightweight command");
+            }
+ else {
+              CommandProcessor.instance().executeCommand(command);
+            }
+          }
+        }
+      }
+    }
+  }
+);
 }
