@@ -1,10 +1,27 @@
 {
   List<INodeSubstituteAction> resultActions=new LinkedList<INodeSubstituteAction>();
   List<RTransformHintSubstituteActionsBuilder> actionsBuilders=getActionBuilders(sourceNode,transformTag,context);
+  Set<SNode> conceptsToRemove=new HashSet<SNode>();
   for (  RTransformHintSubstituteActionsBuilder builder : actionsBuilders) {
+    for (    RemovePart rp : builder.getSubnodes(RemovePart.class)) {
+      conceptsToRemove.add(rp.getConceptToRemove().getNode());
+    }
     List<INodeSubstituteAction> addActions=invokeActionFactory(builder,sourceNode,context);
-    addActions=applyActionFilters(addActions,actionsBuilders,builder,context);
     resultActions.addAll(addActions);
+  }
+  for (Iterator<INodeSubstituteAction> it=resultActions.iterator(); it.hasNext(); ) {
+    INodeSubstituteAction action=it.next();
+    Object parameterObject=action.getParameterObject();
+    if (parameterObject instanceof SNode && ((SNode)parameterObject).getAdapter() instanceof AbstractConceptDeclaration) {
+      if (conceptsToRemove.contains(((SNode)parameterObject))) {
+        it.remove();
+      }
+    }
+ else     if (parameterObject instanceof AbstractConceptDeclaration) {
+      if (conceptsToRemove.contains(((AbstractConceptDeclaration)parameterObject).getNode())) {
+        it.remove();
+      }
+    }
   }
   return resultActions;
 }
