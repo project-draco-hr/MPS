@@ -1,0 +1,41 @@
+{
+  IResultProvider provider=options.getOption(FindersOptions.class).getResultProvider();
+  SearchQuery query=options.getOption(QueryOptions.class).getSearchQuery();
+  boolean showOne=options.getOption(ViewOptions.class).myShowOneResult;
+  final SearchResults searchResults=provider.getResults(query,myProjectFrame.createAdaptiveProgressMonitor());
+  int resCount=searchResults.getSearchResults().size();
+  if (resCount == 0) {
+    SwingUtilities.invokeLater(new Runnable(){
+      public void run(){
+        new HintDialog(myProjectFrame.getMainFrame(),"Not found","No usages for that node").showDialog();
+      }
+    }
+);
+  }
+ else   if (resCount == 1 && !showOne) {
+    SwingUtilities.invokeLater(new Runnable(){
+      public void run(){
+        SNode node=searchResults.getSearchResults().get(0).getNodePointer().getNode();
+        if (node != null) {
+          NavigationActionProcessor.executeNavigationAction(new EditorNavigationCommand(node,myProjectFrame.getEditorsPane().getCurrentEditor(),myProjectFrame.getEditorsPane()),myProjectFrame.getProject(),true);
+        }
+      }
+    }
+);
+  }
+ else {
+    if (!options.getOption(ViewOptions.class).myNewTab) {
+      if (currentTabIndex() != -1) {
+        closeTab(currentTabIndex());
+      }
+    }
+    UsageViewData usageViewData=new UsageViewData();
+    usageViewData.createUsageView();
+    usageViewData.myOptions=options;
+    myUsageViewsData.add(usageViewData);
+    myTabbedPane.addTab("<null>",usageViewData.myUsageView.getComponent());
+    myTabbedPane.setSelectedIndex(myTabbedPane.getTabCount() - 1);
+    usageViewData.myUsageView.setRunOptions(provider,query,searchResults);
+    showTool();
+  }
+}
