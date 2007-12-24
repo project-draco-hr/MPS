@@ -3,9 +3,47 @@
     List<SNode> nodes=(List<SNode>)actionContext.getNodes();
     SModel model=actionContext.getNode().getModel();
     refactoringContext.setParameter("sourceModel",model);
+    Language sourceLanguage=Language.getLanguageFor(((SModel)refactoringContext.getParameter("sourceModel")).getModelDescriptor());
+    Language targetLanguage=Language.getLanguageFor(((SModel)refactoringContext.getParameter("targetModel")).getModelDescriptor());
     refactoringContext.moveNodesToModel(nodes,((SModel)refactoringContext.getParameter("targetModel")));
     for (    SNode node : nodes) {
       refactoringContext.changeFeatureName(node,((SModel)refactoringContext.getParameter("targetModel")) + "." + SPropertyOperations.getString(node,"name"),SPropertyOperations.getString(node,"name"));
+    }
+    SModelDescriptor editorModelDescriptor=sourceLanguage.getEditorModelDescriptor();
+    if (editorModelDescriptor != null) {
+      List<SNode> editors=new ArrayList<SNode>();
+      for (      SNode node : nodes) {
+        if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.bootstrap.structureLanguage.structure.ConceptDeclaration")) {
+          SNode editor=(SNode)SModelUtil_new.findEditorDeclaration(editorModelDescriptor.getSModel(),((ConceptDeclaration)SNodeOperations.getAdapter(node))).getNode();
+          if ((editor != null)) {
+            ListOperations.addElement(editors,editor);
+          }
+        }
+      }
+      if (!(SequenceOperations.isEmpty(editors))) {
+        SModelDescriptor targetEditorModelDescriptor=targetLanguage.getEditorModelDescriptor();
+        if (targetEditorModelDescriptor == null) {
+          targetEditorModelDescriptor=targetLanguage.createLanguageEditorModel();
+        }
+        refactoringContext.moveNodesToModel(editors,targetEditorModelDescriptor.getSModel());
+      }
+    }
+    SModelDescriptor constraintsModelDescriptor=sourceLanguage.getConstraintsModelDescriptor();
+    if (constraintsModelDescriptor != null) {
+      List<SNode> behaviors=new ArrayList<SNode>();
+      for (      SNode node : nodes) {
+        SNode behavior=(SNode)SModelUtil_new.findBehaviorDeclaration(constraintsModelDescriptor.getSModel(),((AbstractConceptDeclaration)SNodeOperations.getAdapter(node))).getNode();
+        if ((behavior != null)) {
+          ListOperations.addElement(behaviors,behavior);
+        }
+      }
+      if (!(SequenceOperations.isEmpty(behaviors))) {
+        SModelDescriptor targetConstraintsModelDescriptor=targetLanguage.getConstraintsModelDescriptor();
+        if (targetConstraintsModelDescriptor == null) {
+          targetConstraintsModelDescriptor=targetLanguage.createLanguageBehaviorModel();
+        }
+        refactoringContext.moveNodesToModel(behaviors,targetConstraintsModelDescriptor.getSModel());
+      }
     }
   }
 }
