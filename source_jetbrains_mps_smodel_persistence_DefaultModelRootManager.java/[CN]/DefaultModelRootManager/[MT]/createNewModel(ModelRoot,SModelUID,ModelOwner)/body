@@ -1,4 +1,20 @@
 {
   IFile modelFile=createFileForModelUID(root,uid);
-  return DefaultModelRootManager.createModel(this,root,modelFile.getCanonicalPath(),uid,owner);
+  SModelDescriptor result=DefaultModelRootManager.createModel(this,root,modelFile.getCanonicalPath(),uid,owner);
+  IOperationContext operationContext=result.getOperationContext();
+  if (operationContext != null) {
+    IProjectHandler projectHandler=operationContext.getProject().getProjectHandler();
+    if (projectHandler != null) {
+      try {
+        projectHandler.addFilesToVCS(CollectionUtil.asList(modelFile.toFile()));
+      }
+ catch (      RemoteException e) {
+        LOG.error(e);
+      }
+    }
+  }
+ else {
+    LOG.warning("can't find an operation context for a model " + result);
+  }
+  return result;
 }
