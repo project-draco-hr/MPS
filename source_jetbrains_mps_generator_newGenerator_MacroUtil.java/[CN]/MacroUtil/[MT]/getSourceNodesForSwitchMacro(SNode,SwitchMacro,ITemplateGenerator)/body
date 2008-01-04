@@ -1,0 +1,31 @@
+{
+  List<SNode> sourceNodes=new ArrayList<SNode>(1);
+  String sourceQueryAspectMethodName=macro.getSourceQueryAspectMethodName();
+  SourceSubstituteMacro_SourceNodeQuery query=macro.getSourceNodeQuery();
+  if (query == null && sourceQueryAspectMethodName == null) {
+    sourceNodes.add(currentInputNode);
+    return sourceNodes;
+  }
+  if (query != null) {
+    SNode resultNode=evaluateSourceNodeQuery(currentInputNode,query,generator);
+    if (resultNode != null) {
+      sourceNodes.add(resultNode);
+      return sourceNodes;
+    }
+  }
+  String methodName="templateSourceQuery_" + sourceQueryAspectMethodName;
+  Object[] args=new Object[]{currentInputNode,generator};
+  long startTime=System.currentTimeMillis();
+  try {
+    sourceNodes=(List<SNode>)QueryMethod.invoke(methodName,args,macro.getModel());
+    return sourceNodes;
+  }
+ catch (  Exception e) {
+    generator.showErrorMessage(currentInputNode,null,BaseAdapter.fromAdapter(macro),"couldn't evaluate macro query: " + NameUtil.shortNameFromLongName(e.getClass().getName()) + " : "+ e.getMessage());
+    LOG.error(e);
+    return new LinkedList<SNode>();
+  }
+ finally {
+    Statistics.getStatistic(Statistics.TPL).add(macro.getModel(),methodName,startTime);
+  }
+}
