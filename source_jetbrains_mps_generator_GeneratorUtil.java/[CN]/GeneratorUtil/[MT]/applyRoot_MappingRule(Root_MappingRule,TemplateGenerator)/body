@@ -1,0 +1,33 @@
+{
+  AbstractConceptDeclaration applicableConcept=rule.getApplicableConcept();
+  if (applicableConcept == null) {
+    generator.showErrorMessage(null,null,BaseAdapter.fromAdapter(rule),"rule has no applicable concept defined");
+    return;
+  }
+  boolean includeInheritors=rule.getApplyToConceptInheritors();
+  List<SNode> inputNodes=generator.getInputModel().getModelDescriptor().getFastNodeFinder().getNodes(applicableConcept,includeInheritors);
+  for (  SNode inputNode : inputNodes) {
+    if (generator.getGeneratorSessionContext().isCopiedRoot(inputNode)) {
+      continue;
+    }
+    if (checkCondition(rule.getConditionFunction(),false,inputNode,rule.getNode(),generator)) {
+      boolean wasChanged=generator.isChanged();
+      try {
+        generator.setChanged(true);
+        SNode templateNode=BaseAdapter.fromAdapter(rule.getTemplate());
+        if (templateNode != null) {
+          createRootNodeFromTemplate(rule.getName(),templateNode,inputNode,generator);
+        }
+ else {
+          generator.showErrorMessage(BaseAdapter.fromAdapter(rule),"no template is defined for the rule");
+        }
+        if (inputNode.isRoot() && rule.getKeepSourceRoot() == Options_DefaultTrue.default_) {
+          generator.addRootNotToCopy(inputNode);
+        }
+      }
+ catch (      DismissTopMappingRuleException e) {
+        generator.setChanged(wasChanged);
+      }
+    }
+  }
+}
