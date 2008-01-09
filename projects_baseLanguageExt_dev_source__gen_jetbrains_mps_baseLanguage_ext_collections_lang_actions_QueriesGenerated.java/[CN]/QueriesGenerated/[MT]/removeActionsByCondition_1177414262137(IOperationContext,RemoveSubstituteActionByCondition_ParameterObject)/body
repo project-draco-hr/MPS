@@ -1,0 +1,37 @@
+{
+  Iterator<INodeSubstituteAction> actions=_parameterObject.getActions();
+  while (actions.hasNext()) {
+    INodeSubstituteAction current=actions.next();
+    if (!(current.getParameterObject() instanceof SNode)) {
+      continue;
+    }
+    final SNode concept=(SNode)current.getParameterObject();
+    Condition cond=new Condition(){
+      public boolean met(      Object object){
+        boolean applicableToSequence=false;
+        boolean applicableToList=false;
+        if (SNodeOperations.isInstanceOf(_parameterObject.getParentNode(),"jetbrains.mps.baseLanguage.ext.collections.lang.structure.SequenceOperationExpression")) {
+          SNode leftExpression=SLinkOperations.getTarget(_parameterObject.getParentNode(),"leftExpression",true);
+          SNode leftType=TypeChecker.getInstance().getTypeOf(leftExpression);
+          if (TypeChecker.getInstance().getRuntimeSupport().coerce(leftType,HUtil.createMatchingPatternByConceptFQName("jetbrains.mps.baseLanguage.ext.collections.lang.structure.SequenceType"),false) != null) {
+            applicableToSequence=true;
+          }
+          if (TypeChecker.getInstance().getRuntimeSupport().coerce(leftType,HUtil.createMatchingPatternByConceptFQName("jetbrains.mps.baseLanguage.ext.collections.lang.structure.ListType"),false) != null) {
+            applicableToList=true;
+          }
+        }
+        if (!(applicableToSequence)) {
+          return true;
+        }
+        if (applicableToList) {
+          return false;
+        }
+        return SConceptOperations.isSubConceptOf(concept,"jetbrains.mps.baseLanguage.ext.collections.lang.structure.AbstractListOperation");
+      }
+    }
+;
+    if (cond.met(null)) {
+      actions.remove();
+    }
+  }
+}
