@@ -1,48 +1,34 @@
 {
-  if (!substituteActionsBuilder.getUseNewActions()) {
-    String filterQueryMethodId=substituteActionsBuilder.getActionsFilterAspectId();
-    if (filterQueryMethodId == null) {
-      return actions;
-    }
-    Object[] args1=new Object[]{actions,context};
-    Object[] args2=new Object[]{actions,context.getScope()};
-    String methodName="nodeSubstituteActionsBuilder_ActionsFilter_" + filterQueryMethodId;
-    LOG.warning("You are using old actions language here which is now obsolete. Please, rewrite your code.",substituteActionsBuilder);
-    SModel model=substituteActionsBuilder.getModel();
-    return (List<INodeSubstituteAction>)QueryMethod.invoke_alternativeArguments(methodName,args1,args2,model);
+  Set<SNode> conceptsToRemove=new HashSet<SNode>();
+  for (  RemovePart rp : substituteActionsBuilder.getSubnodes(RemovePart.class)) {
+    conceptsToRemove.add(rp.getConceptToRemove().getNode());
   }
- else {
-    Set<SNode> conceptsToRemove=new HashSet<SNode>();
-    for (    RemovePart rp : substituteActionsBuilder.getSubnodes(RemovePart.class)) {
-      conceptsToRemove.add(rp.getConceptToRemove().getNode());
-    }
-    if (!conceptsToRemove.isEmpty()) {
-      Iterator<INodeSubstituteAction> it=actions.iterator();
-      while (it.hasNext()) {
-        INodeSubstituteAction action=it.next();
-        Object parameterObject=action.getParameterObject();
-        if (parameterObject instanceof SNode && ((SNode)parameterObject).getAdapter() instanceof AbstractConceptDeclaration) {
-          if (conceptsToRemove.contains(((SNode)parameterObject))) {
-            it.remove();
-          }
+  if (!conceptsToRemove.isEmpty()) {
+    Iterator<INodeSubstituteAction> it=actions.iterator();
+    while (it.hasNext()) {
+      INodeSubstituteAction action=it.next();
+      Object parameterObject=action.getParameterObject();
+      if (parameterObject instanceof SNode && ((SNode)parameterObject).getAdapter() instanceof AbstractConceptDeclaration) {
+        if (conceptsToRemove.contains(((SNode)parameterObject))) {
+          it.remove();
         }
- else         if (parameterObject instanceof AbstractConceptDeclaration) {
-          if (conceptsToRemove.contains(((AbstractConceptDeclaration)parameterObject).getNode())) {
-            it.remove();
-          }
+      }
+ else       if (parameterObject instanceof AbstractConceptDeclaration) {
+        if (conceptsToRemove.contains(((AbstractConceptDeclaration)parameterObject).getNode())) {
+          it.remove();
         }
       }
     }
-    List<RemoveByConditionPart> removesByCondition=substituteActionsBuilder.getSubnodes(RemoveByConditionPart.class);
-    for (    RemoveByConditionPart part : removesByCondition) {
-      String methodName="removeActionsByCondition_" + part.getId();
-      try {
-        QueryMethodGenerated.invoke(methodName,context,new RemoveSubstituteActionByCondition_ParameterObject(actions.iterator(),parentNode,currentChild,childConcept),substituteActionsBuilder.getModel());
-      }
- catch (      Throwable t) {
-        LOG.error(t);
-      }
-    }
-    return actions;
   }
+  List<RemoveByConditionPart> removesByCondition=substituteActionsBuilder.getSubnodes(RemoveByConditionPart.class);
+  for (  RemoveByConditionPart part : removesByCondition) {
+    String methodName="removeActionsByCondition_" + part.getId();
+    try {
+      QueryMethodGenerated.invoke(methodName,context,new RemoveSubstituteActionByCondition_ParameterObject(actions.iterator(),parentNode,currentChild,childConcept),substituteActionsBuilder.getModel());
+    }
+ catch (    Throwable t) {
+      LOG.error(t);
+    }
+  }
+  return actions;
 }
