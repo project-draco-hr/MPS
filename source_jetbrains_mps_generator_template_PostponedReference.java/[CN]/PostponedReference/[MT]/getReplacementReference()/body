@@ -8,20 +8,26 @@
   String role=myReferenceInfo.getReferenceRole();
   SNode outputSourceNode=myReferenceInfo.getOutputSourceNode();
   SModelUID targetModelUID=myGenerator.getOutputModel().getUID();
-  SNode targetNode=myReferenceInfo.doResolve_Straightforward(myGenerator);
-  if (targetNode != null) {
-    myReplacementReference=new StaticReference(role,outputSourceNode,targetNode);
+  SNode outputTargetNode=myReferenceInfo.doResolve_Straightforward(myGenerator);
+  if (outputTargetNode != null) {
+    myReplacementReference=new StaticReference(role,outputSourceNode,outputTargetNode);
   }
  else   if (SReferenceUtil.isDynamicResolve(role,outputSourceNode)) {
     myReplacementReference=new DynamicReference(role,outputSourceNode,targetModelUID,myReferenceInfo.getResolveInfoForDynamicResolve());
   }
  else {
-    targetNode=myReferenceInfo.doResolve_WithCustomReferenceResolver();
-    if (targetNode == null) {
-      targetNode=myReferenceInfo.doResolve_Tricky(myGenerator);
+    outputTargetNode=myReferenceInfo.doResolve_WithCustomReferenceResolver();
+    if (outputTargetNode == null) {
+      outputTargetNode=myReferenceInfo.doResolve_Tricky(myGenerator);
     }
-    if (targetNode != null) {
-      myReplacementReference=new StaticReference(role,outputSourceNode,targetNode);
+    if (outputTargetNode != null) {
+      if (!checkResolvedTarget(outputSourceNode,role,outputTargetNode)) {
+        myReferenceInfo.showErrorMessage(myGenerator);
+        myReplacementReference=new StaticReference(role,outputSourceNode,targetModelUID,null,myReferenceInfo.getResolveInfoForNothing());
+      }
+ else {
+        myReplacementReference=new StaticReference(role,outputSourceNode,outputTargetNode);
+      }
     }
  else     if (myReferenceInfo.isRequired()) {
       myReferenceInfo.showErrorMessage(myGenerator);
