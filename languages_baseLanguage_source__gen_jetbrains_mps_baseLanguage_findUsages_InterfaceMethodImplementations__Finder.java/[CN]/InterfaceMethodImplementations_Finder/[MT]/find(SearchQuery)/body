@@ -1,0 +1,69 @@
+{
+  SearchResults global_results=new SearchResults();
+{
+    SNode searchedNode=(SNode)searchQuery.getNodePointer().getNode();
+    global_results.getSearchedNodePointers().add(new SNodePointer(searchedNode));
+    List<SearchResult> implementors=new ArrayList<SearchResult>();
+    try {
+      BaseFinder finder_9=(BaseFinder)Class.forName("jetbrains.mps.baseLanguage.findUsages.ImplementingClasses_Finder").newInstance();
+      boolean rightConcept=finder_9.getConcept().equals(SNodeOperations.getParent(searchedNode,null,false,false).getConceptFqName());
+      if (!(rightConcept)) {
+        InterfaceMethodImplementations_Finder.LOG.error("Trying to use finder that is not applicable to the concept. Returning empty results." + "[finder: \"" + finder_9.getDescription() + "\" ; concept: "+ searchQuery.getNodePointer().getNode().getConceptFqName());
+      }
+ else {
+        boolean isApplicable=finder_9.isApplicable(SNodeOperations.getParent(searchedNode,null,false,false));
+        if (!(isApplicable)) {
+          InterfaceMethodImplementations_Finder.LOG.error("Trying to use finder that is not applicable to the node. Returning empty results." + "[finder: \"" + finder_9.getDescription() + "\" ; node: "+ searchQuery.getNodePointer().getNode().toString());
+        }
+ else {
+          SearchResults results_9=finder_9.find(new SearchQuery(SNodeOperations.getParent(searchedNode,null,false,false),searchQuery.getScope()));
+          for (          SearchResult result : results_9.getSearchResults()) {
+            implementors.add(result);
+          }
+        }
+      }
+    }
+ catch (    Throwable t) {
+      InterfaceMethodImplementations_Finder.LOG.error("Error instantiating finder \"" + "jetbrains.mps.baseLanguage.findUsages.ImplementingClasses_Finder" + "\"  Message:"+ t.getMessage());
+    }
+{
+      ICursor<SearchResult> _zCursor4=CursorFactory.createCursor(implementors);
+      try {
+        while (_zCursor4.moveToNext()) {
+          SearchResult result=_zCursor4.getCurrent();
+{
+            SNode classNode=(SNode)result.getNodePointer().getNode();
+{
+              ICursor<SNode> _zCursor5=CursorFactory.createCursor(SLinkOperations.getTargets(classNode,"method",true));
+              try {
+                while (_zCursor5.moveToNext()) {
+                  SNode sMethod=_zCursor5.getCurrent();
+                  if (SPropertyOperations.getString(sMethod,"name").equals(SPropertyOperations.getString(searchedNode,"name")) && SLinkOperations.getCount(sMethod,"parameter") == SLinkOperations.getCount(searchedNode,"parameter")) {
+                    boolean same=true;
+                    for (int i=0; i < SLinkOperations.getCount(sMethod,"parameter"); i=i + 1) {
+                      String searchedParamType=Type_Behavior.call_getErasureSignature_1199318924019(SLinkOperations.getTarget(ListOperations.getElement(SLinkOperations.getTargets(searchedNode,"parameter",true),i),"type",true));
+                      String foundParamType=Type_Behavior.call_getErasureSignature_1199318924019(SLinkOperations.getTarget(ListOperations.getElement(SLinkOperations.getTargets(sMethod,"parameter",true),i),"type",true));
+                      if (!(foundParamType.equals(searchedParamType))) {
+                        same=false;
+                      }
+                    }
+                    if (same) {
+                      global_results.getSearchResults().add(new SearchResult(new SNodePointer(sMethod),"Method Implementation"));
+                    }
+                  }
+                }
+              }
+  finally {
+                _zCursor5.release();
+              }
+            }
+          }
+        }
+      }
+  finally {
+        _zCursor4.release();
+      }
+    }
+  }
+  return global_results;
+}
