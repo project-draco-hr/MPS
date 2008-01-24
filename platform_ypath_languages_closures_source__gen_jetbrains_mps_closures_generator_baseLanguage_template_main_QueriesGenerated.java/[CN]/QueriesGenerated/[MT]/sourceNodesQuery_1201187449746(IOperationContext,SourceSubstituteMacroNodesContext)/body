@@ -1,0 +1,55 @@
+{
+  Integer[] labels=(Integer[])PrepStatementUtil.getPrepData(_context.getNode(),_context.getGenerator());
+  int BEGIN=labels[0];
+  int END=labels[1];
+  List<SNode> results=new ArrayList<SNode>();
+  List<SNode> stmts=StatementListUtil.selectStatementsUntilControlStatement(_context.getNode());
+  do {
+    int beginLabel=BEGIN;
+    int endLabel=END;
+    SNode lastStmt=null;
+    SNode slist=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StatementList",null);
+    for (    SNode stmt : stmts) {
+      SNode tmp=SNodeOperations.copyNode(stmt);
+      SLinkOperations.addChild(slist,"statement",tmp);
+      PrepStatementUtil.putPrepData(tmp,PrepStatementUtil.getPrepData(stmt,_context.getGenerator()),_context.getGenerator());
+      if (SNodeOperations.isInstanceOf(tmp,"jetbrains.mps.baseLanguage.structure.LocalVariableDeclarationStatement")) {
+        SNode lvd=SLinkOperations.getTarget(tmp,"localVariableDeclaration",true);
+        PrepStatementUtil.putPrepData(lvd,PrepStatementUtil.getPrepData(SLinkOperations.getTarget(stmt,"localVariableDeclaration",true),_context.getGenerator()),_context.getGenerator());
+      }
+      lastStmt=stmt;
+    }
+    SNode cstmt=null;
+    if ((lastStmt != null)) {
+      cstmt=SNodeOperations.getNextSibling(lastStmt);
+    }
+ else {
+      List<SNode> allstmts=(List<SNode>)SLinkOperations.getTargets(_context.getNode(),"statement",true);
+      cstmt=(allstmts.size() > 0 ? allstmts.get(0) : null);
+    }
+    if ((cstmt != null)) {
+      labels=(Integer[])PrepStatementUtil.getPrepData(cstmt,_context.getGenerator());
+      endLabel=(labels != null ? labels[0] : -1);
+      lastStmt=SNodeOperations.getNextSibling(cstmt);
+      while ((lastStmt != null)) {
+        stmts=StatementListUtil.selectStatementsUntilControlStatement(_context.getNode(),lastStmt);
+        if (stmts.size() == 0) {
+          cstmt=lastStmt;
+          lastStmt=SNodeOperations.getNextSibling(lastStmt);
+        }
+ else {
+          labels=(Integer[])PrepStatementUtil.getPrepData(cstmt,_context.getGenerator());
+          BEGIN=(labels != null ? labels[labels.length - 1] : -1);
+          break;
+        }
+      }
+    }
+ else {
+      stmts=null;
+    }
+    results.add(slist);
+    PrepStatementUtil.putPrepData(slist,new Integer[]{beginLabel,endLabel},_context.getGenerator());
+  }
+ while (stmts != null && stmts.size() > 0);
+  return results;
+}
