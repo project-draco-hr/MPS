@@ -12,7 +12,6 @@
     mappingName=nodeAndMappingName.o2;
   }
  else {
-    generator.getGeneratorSessionContext().getGenerationTracer().pushRule(rule.getNode());
     TemplateDeclaration template=rule.getTemplate();
     if (template == null) {
       generator.showErrorMessage(inputNode,null,rule.getNode(),"error processing reduction rule: no template");
@@ -36,5 +35,18 @@
   if (mappingName == null) {
     mappingName=rule.getName();
   }
-  return applyReductionRuleTemplateFragment(mappingName,reductionTemplateNode,inputNode,rule,generator);
+  try {
+    return TemplateProcessor.createOutputNodesForTemplateNode(mappingName,reductionTemplateNode,inputNode,generator);
+  }
+ catch (  DismissTopMappingRuleException e) {
+    throw e;
+  }
+catch (  TemplateProcessingFailureException e) {
+    generator.showErrorMessage(inputNode,reductionTemplateNode,rule.getNode(),"error processing reduction rule");
+  }
+catch (  Throwable t) {
+    LOG.error(t,BaseAdapter.fromNode(reductionTemplateNode));
+    generator.showErrorMessage(inputNode,reductionTemplateNode,rule.getNode(),"error processing reduction rule");
+  }
+  return new ArrayList<SNode>(1);
 }

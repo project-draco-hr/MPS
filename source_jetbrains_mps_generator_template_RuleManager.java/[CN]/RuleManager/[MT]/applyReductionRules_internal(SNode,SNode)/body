@@ -1,0 +1,24 @@
+{
+  boolean wasChanged=myGenerator.isChanged();
+  try {
+    Reduction_MappingRule reductionRule=findReductionRule(inputNode);
+    if (reductionRule != null) {
+      myGenerator.setChanged(true);
+      List<SNode> outputNodes=GeneratorUtil.applyReductionRule(inputNode,reductionRule,myGenerator);
+      if (outputNodes.size() == 1) {
+        myGenerator.addCopiedOutputNodeForInputNode(inputNode,outputNodes.get(0));
+      }
+      clonedOutputNode.getParent().replaceChild(clonedOutputNode,outputNodes);
+      return;
+    }
+  }
+ catch (  DismissTopMappingRuleException ex) {
+    myGenerator.setChanged(wasChanged);
+  }
+  myGenerator.getGeneratorSessionContext().getGenerationTracer().pushCopyOperation();
+  myGenerator.getGeneratorSessionContext().getGenerationTracer().pushOutputNode(clonedOutputNode);
+  for (  SNode childOutputNode : clonedOutputNode.getChildren()) {
+    SNode childInputNode=myGenerator.findInputNodeById(childOutputNode.getSNodeId());
+    applyReductionRules(childInputNode,childOutputNode);
+  }
+}
