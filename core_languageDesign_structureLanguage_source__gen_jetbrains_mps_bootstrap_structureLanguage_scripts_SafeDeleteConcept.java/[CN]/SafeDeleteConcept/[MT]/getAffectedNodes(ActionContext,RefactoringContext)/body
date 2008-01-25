@@ -5,7 +5,21 @@
     IResultProvider resultProvider=TreeBuilder.forFinders(new ConceptInstances_Finder(),new NodeAndDescendantsUsages_Finder());
     IDEProjectFrame projectFrame=(IDEProjectFrame)actionContext.get(IDEProjectFrame.class);
     SearchResults searchResults=resultProvider.getResults(searchQuery,projectFrame.createAdaptiveProgressMonitor());
-    if (!(searchResults.getAliveResults().isEmpty())) {
+    refactoringContext.setParameter("sourceLanguage",Language.getLanguageFor(SNodeOperations.getModel(node).getModelDescriptor()));
+    if (((Language)refactoringContext.getParameter("sourceLanguage")) != null) {
+      SModelDescriptor editorModelDescriptor=((Language)refactoringContext.getParameter("sourceLanguage")).getEditorModelDescriptor();
+      if (editorModelDescriptor != null) {
+        refactoringContext.setParameter("conceptEditorDeclaration",SModelUtil_new.findEditorDeclaration(editorModelDescriptor.getSModel(),((ConceptDeclaration)SNodeOperations.getAdapter(node))));
+        searchResults.remove(((ConceptEditorDeclaration)refactoringContext.getParameter("conceptEditorDeclaration")).getNode());
+      }
+      SModelDescriptor constraintsModelDescriptor=((Language)refactoringContext.getParameter("sourceLanguage")).getConstraintsModelDescriptor();
+      if (constraintsModelDescriptor != null) {
+        refactoringContext.setParameter("conceptBehavior",SModelUtil_new.findBehaviorDeclaration(constraintsModelDescriptor.getSModel(),((ConceptDeclaration)SNodeOperations.getAdapter(node))));
+        searchResults.remove(((ConceptBehavior)refactoringContext.getParameter("conceptBehavior")).getNode());
+      }
+    }
+    List<SearchResult> aliveResults=searchResults.getAliveResults();
+    if (!(aliveResults.isEmpty())) {
       return searchResults;
     }
     return null;
