@@ -1,16 +1,34 @@
 {
-  RefactoringContext refactoringContext=new RefactoringContext();
+  final RefactoringContext refactoringContext=new RefactoringContext();
   boolean success=myRefactoring.askForInfo(context,refactoringContext);
   if (!success)   return;
   if (myRefactoring.showsAffectedNodes()) {
-    SearchResults usages=myRefactoring.getAffectedNodes(context,refactoringContext);
-    if (usages != null) {
-      refactoringContext.setUsages(usages);
-      NewRefactoringView.showRefactoringView(this,context,refactoringContext);
-    }
+    final SearchResults[] usagesContainer=new SearchResults[]{null};
+    Thread thread=new Thread(){
+      public void run(){
+        CommandProcessor.instance().executeLightweightCommand(new Runnable(){
+          public void run(){
+            usagesContainer[0]=myRefactoring.getAffectedNodes(context,refactoringContext);
+          }
+        }
+);
+        ThreadUtils.runInUIThreadAndWait(new Runnable(){
+          public void run(){
+            SearchResults usages=usagesContainer[0];
+            if (usages != null) {
+              refactoringContext.setUsages(usages);
+              NewRefactoringView.showRefactoringView(GenericRefactoring.this,context,refactoringContext);
+            }
  else {
-      doExecute(context,refactoringContext);
+              doExecute(context,refactoringContext);
+            }
+          }
+        }
+);
+      }
     }
+;
+    thread.start();
   }
  else {
     doExecute(context,refactoringContext);
