@@ -1,0 +1,25 @@
+{
+  int beginLabel=label;
+  int nextLabel=this.calcNextLabel(sstmt);
+  PrepStatementUtil.putPrepData(sstmt,new Integer[]{beginLabel,nextLabel},this.generator);
+  int nextCaseLabel=this.ctx.incrementLabel();
+  for (  SNode scase : SLinkOperations.getTargets(sstmt,"case",true)) {
+    int caseLabel=nextCaseLabel;
+    nextCaseLabel=this.ctx.incrementLabel();
+    if ((SLinkOperations.getTarget(scase,"body",true) != null)) {
+      List<SNode> stmts=SLinkOperations.getTargets(SLinkOperations.getTarget(scase,"body",true),"statement",true);
+      int endCaseLabel=nextCaseLabel;
+      if (stmts.size() > 0 && SNodeOperations.isInstanceOf(stmts.get(stmts.size() - 1),"jetbrains.mps.baseLanguage.structure.BreakStatement")) {
+        endCaseLabel=nextLabel;
+      }
+      PrepStatementUtil.putPrepData(SLinkOperations.getTarget(scase,"body",true),new Integer[]{caseLabel,endCaseLabel},this.generator);
+      this.prepStatementList(SLinkOperations.getTarget(scase,"body",true));
+    }
+  }
+  if ((SLinkOperations.getTarget(sstmt,"defaultBlock",true) != null)) {
+    int defLabel=this.ctx.incrementLabel();
+    PrepStatementUtil.putPrepData(SLinkOperations.getTarget(sstmt,"defaultBlock",true),new Integer[]{defLabel,nextLabel},this.generator);
+    this.prepStatementList(SLinkOperations.getTarget(sstmt,"defaultBlock",true));
+  }
+  return nextLabel;
+}
