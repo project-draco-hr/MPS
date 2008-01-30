@@ -1,17 +1,22 @@
 {
-  List<SModelDescriptor> modelDescriptors=myProject.getScope().getModelDescriptors(namespace);
-  final List<SModel> applicableModelDescriptors=new ArrayList<SModel>();
-  for (  final SModelDescriptor descriptor : modelDescriptors) {
-    if (!descriptor.getStereotype().equals(SModelStereotype.JAVA_STUB)) {
-      applicableModelDescriptors.add(descriptor.getSModel());
-    }
-  }
-  new Thread(){
+  CommandProcessor.instance().executeLightweightCommand(new Runnable(){
     public void run(){
-      SearchQuery searchQuery=new SearchQuery(new SNodePointer((SNode)null),myProject.getScope());
-      IResultProvider resultProvider=TreeBuilder.forFinder(new AspectMethodsFinder(applicableModelDescriptors,name));
-      getProjectWindow().getUsagesView().findUsages(resultProvider,searchQuery,false,true,true);
+      List<SModelDescriptor> modelDescriptors=GlobalScope.getInstance().getModelDescriptors(namespace);
+      final List<SModel> applicableModelDescriptors=new ArrayList<SModel>();
+      for (      final SModelDescriptor descriptor : modelDescriptors) {
+        if (!descriptor.getStereotype().equals(SModelStereotype.JAVA_STUB)) {
+          applicableModelDescriptors.add(descriptor.getSModel());
+        }
+      }
+      new Thread(){
+        public void run(){
+          SearchQuery searchQuery=new SearchQuery(new SNodePointer((SNode)null),GlobalScope.getInstance());
+          IResultProvider resultProvider=TreeBuilder.forFinder(new AspectMethodsFinder(applicableModelDescriptors,name));
+          getProjectWindow().getUsagesView().findUsages(resultProvider,searchQuery,false,true,true);
+        }
+      }
+.start();
     }
   }
-.start();
+);
 }
