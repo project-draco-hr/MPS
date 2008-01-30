@@ -1,0 +1,43 @@
+{
+  List<TracerNode> tracerNodes=findAllTopmostTracerNodes(Kind.INPUT,node);
+  if (!tracerNodes.isEmpty()) {
+    TracerNode resultTracerNode=new TracerNode(tracerNodes.get(0).getKind(),tracerNodes.get(0).getNodePointer());
+    for (    TracerNode tracerNode : tracerNodes) {
+      List<TracerNode> childrensCopy=tracerNode.getChildrenCopy();
+      for (      TracerNode childCopy : childrensCopy) {
+        resultTracerNode.addChild(childCopy);
+      }
+    }
+    return resultTracerNode;
+  }
+  List<MappingScript> mappingScripts=myModelsProcessedByScripts.getScriptsForInput(node.getModel());
+  if (mappingScripts == null)   return null;
+  SModelUID uid=myModelsProcessedByScripts.getOutputForInput(node.getModel());
+  if (uid == null)   return null;
+  SModelDescriptor descriptor=SModelRepository.getInstance().getModelDescriptor(uid);
+  if (descriptor == null)   return null;
+  SModel outputModel=descriptor.getSModel();
+  SNode inputNode=node;
+  SNode outputNode=null;
+  while (inputNode != null) {
+    outputNode=outputModel.getNodeById(inputNode.getId());
+    if (outputNode != null)     break;
+    inputNode=inputNode.getParent();
+  }
+  TracerNode inputTracerNode=new TracerNode(Kind.INPUT,new SNodePointer(node));
+  TracerNode tracerNode=inputTracerNode;
+  for (  MappingScript mappingScript : mappingScripts) {
+    TracerNode childTracerNode=new TracerNode(Kind.MAPPING_SCRIPT,new SNodePointer(mappingScript.getNode()));
+    tracerNode.addChild(childTracerNode);
+    tracerNode=childTracerNode;
+  }
+  if (outputNode != null) {
+    if (inputNode == node) {
+      tracerNode.addChild(new TracerNode(Kind.OUTPUT,new SNodePointer(outputNode)));
+    }
+ else {
+      tracerNode.addChild(new TracerNode(Kind.APPROXIMATE_OUTPUT,new SNodePointer(outputNode)));
+    }
+  }
+  return inputTracerNode;
+}
