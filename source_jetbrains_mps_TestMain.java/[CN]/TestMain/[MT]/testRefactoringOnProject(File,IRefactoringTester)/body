@@ -1,0 +1,62 @@
+{
+  IdeMain.setTestMode(true);
+  TestMain.configureMPS();
+  final boolean[] b=new boolean[]{true};
+  final File destination=new File(PathManager.getHomePath(),"TEST_REFACTORING");
+  if (destination.exists()) {
+    FileUtil.delete(destination);
+  }
+  FileUtil.copyDir(projectDirectory,destination);
+  final MPSProject[] projectArray=new MPSProject[]{null};
+  try {
+    CommandProcessor.instance().executeCommand(new Runnable(){
+      public void run(){
+        File projectFile=new File(destination,"testRefactoring.mpr");
+        projectArray[0]=loadProject(projectFile);
+      }
+    }
+);
+  }
+ catch (  Throwable t) {
+    t.printStackTrace();
+    return false;
+  }
+  final MPSProject project=projectArray[0];
+  CommandProcessor.instance().executeCommand(new Runnable(){
+    public void run(){
+      try {
+        SModelDescriptor sandbox1=getSandbox1(project);
+        SModelDescriptor sandbox2=getSandbox2(project);
+        Language testRefactoringLanguage=getTestRefactoringLanguage(project);
+        Language testRefactoringTargetLanguage=getTestRefactoringTargetLanguage(project);
+{
+          LanguageDescriptor testRefactoringDescriptor=testRefactoringLanguage.getLanguageDescriptor();
+          LanguageDescriptor testRefactoringTargetDescriptor=testRefactoringTargetLanguage.getLanguageDescriptor();
+          ClassPathEntry cpEntry1=ClassPathEntry.newInstance(testRefactoringDescriptor.getModel());
+          ClassPathEntry cpEntry2=ClassPathEntry.newInstance(testRefactoringTargetDescriptor.getModel());
+          String classPath=destination.getAbsolutePath() + "/classes";
+          cpEntry1.setPath(classPath);
+          cpEntry2.setPath(classPath);
+          testRefactoringDescriptor.replaceChild(testRefactoringDescriptor.getRuntimeClassPathEntrys().get(0),cpEntry1);
+          testRefactoringTargetDescriptor.replaceChild(testRefactoringTargetDescriptor.getRuntimeClassPathEntrys().get(0),cpEntry2);
+          testRefactoringLanguage.setLanguageDescriptor(testRefactoringDescriptor);
+          testRefactoringTargetLanguage.setLanguageDescriptor(testRefactoringTargetDescriptor);
+        }
+        b[0]=refactoringTester.testRefactoring(project,sandbox1,sandbox2,testRefactoringLanguage,testRefactoringTargetLanguage);
+      }
+ catch (      Throwable t) {
+        t.printStackTrace();
+        b[0]=false;
+        return;
+      }
+ finally {
+        if (project != null) {
+          project.dispose();
+        }
+        FileUtil.delete(destination);
+      }
+    }
+  }
+);
+  return b[0];
+}
