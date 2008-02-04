@@ -1,11 +1,11 @@
 {
   if (template == null) {
-    generator.showErrorMessage(inputNode,BaseAdapter.fromAdapter(template),ruleNode,"couldn't evaluate weaving rule: no template");
+    generator.showErrorMessage(inputNode,null,rule.getNode(),"couldn't evaluate weaving rule: no template");
     return;
   }
   List<TemplateFragment> templateFragments=getTemplateFragments(template);
   if (templateFragments.isEmpty()) {
-    generator.showErrorMessage(inputNode,template.getNode(),ruleNode,"nothing to weave: no template fragments found in template");
+    generator.showErrorMessage(inputNode,template.getNode(),rule.getNode(),"nothing to weave: no template fragments found in template");
     return;
   }
   boolean allFragmentsWhichUseDefaultContextHaveSameParent=true;
@@ -29,7 +29,7 @@
       }
     }
   }
-  String ruleMappingName=ruleNode.getName();
+  String ruleMappingName=getMappingName(rule,null);
   for (  TemplateFragment templateFragment : templateFragments) {
     SNode templateFragmentNode=BaseAdapter.fromAdapter(templateFragment.getParent());
     SNode contextParentNode=null;
@@ -40,33 +40,23 @@
       LOG.error(e);
     }
     if (contextParentNode != null) {
-      String mappingName=null;
-      if (templateFragment.getLabelDeclaration() != null) {
-        mappingName=templateFragment.getLabelDeclaration().getName();
-      }
- else       if (templateFragment.getName() != null) {
-        mappingName=templateFragment.getName();
-      }
- else {
-        mappingName=ruleMappingName;
-      }
       try {
-        List<SNode> outputNodesToWeave=TemplateProcessor.createOutputNodesForTemplateNode(mappingName,templateFragmentNode,inputNode,generator);
+        List<SNode> outputNodesToWeave=TemplateProcessor.createOutputNodesForTemplateNode(getMappingName(templateFragment,ruleMappingName),templateFragmentNode,inputNode,generator);
         String childRole=templateFragmentNode.getRole_();
         for (        SNode outputNodeToWeave : outputNodesToWeave) {
           contextParentNode.addChild(childRole,outputNodeToWeave);
         }
       }
  catch (      DismissTopMappingRuleException e) {
-        generator.showErrorMessage(inputNode,templateFragment.getNode(),ruleNode,"dismission of weaving rule is not supported");
+        generator.showErrorMessage(inputNode,templateFragment.getNode(),rule.getNode(),"dismission of weaving rule is not supported");
       }
 catch (      TemplateProcessingFailureException e) {
-        generator.showErrorMessage(inputNode,templateFragment.getNode(),ruleNode,"error pocessing template fragment");
+        generator.showErrorMessage(inputNode,templateFragment.getNode(),rule.getNode(),"error pocessing template fragment");
         generator.showInformationMessage(contextParentNode," -- was output context node:");
       }
     }
  else {
-      generator.showErrorMessage(inputNode,templateFragment.getNode(),ruleNode,"couldn't define 'context' for template fragment");
+      generator.showErrorMessage(inputNode,templateFragment.getNode(),rule.getNode(),"couldn't define 'context' for template fragment");
     }
   }
 }
