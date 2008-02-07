@@ -1,0 +1,39 @@
+{
+  final Map<IWrapper,Map<IWrapper,ErrorInfo>> supertypesToSubtypesMap;
+  final Map<IWrapper,Map<IWrapper,ErrorInfo>> subtypesToSupertypesMap;
+  if (isWeak) {
+    supertypesToSubtypesMap=mySupertypesToSubtypesMap;
+    subtypesToSupertypesMap=mySubtypesToSupertypesMap;
+  }
+ else {
+    supertypesToSubtypesMap=mySupertypesToSubtypesMapStrong;
+    subtypesToSupertypesMap=mySubtypesToSupertypesMapStrong;
+  }
+  Map<IWrapper,ErrorInfo> subtypes=supertypesToSubtypesMap.get(thisType);
+  if (subtypes == null) {
+    return;
+  }
+  if (subtypes.isEmpty()) {
+    supertypesToSubtypesMap.remove(thisType);
+    return;
+  }
+  Set<IWrapper> concreteSubtypes=new HashSet<IWrapper>();
+  for (  IWrapper subtypeNode : subtypes.keySet()) {
+    if (subtypeNode == null)     continue;
+    if (subtypeNode.isConcrete()) {
+      concreteSubtypes.add(subtypeNode);
+    }
+  }
+  if (concreteSubtypes.isEmpty())   return;
+  Map<IWrapper,ErrorInfo> errorInfoMap=new HashMap<IWrapper,ErrorInfo>();
+  for (  IWrapper concreteSubtype : concreteSubtypes) {
+    ErrorInfo errorInfo=subtypesToSupertypesMap.get(concreteSubtype).get(thisType);
+    errorInfoMap.put(concreteSubtype,errorInfo);
+  }
+  ErrorInfo errorInfo=subtypesToSupertypesMap.get(concreteSubtypes.iterator().next()).get(thisType);
+  for (  IWrapper subtypeNode : concreteSubtypes) {
+    supertypesToSubtypesMap.get(thisType).remove(subtypeNode);
+    subtypesToSupertypesMap.get(subtypeNode).remove(thisType);
+  }
+  action.performAction(thisType,concreteSubtypes,errorInfoMap,isWeak,errorInfo);
+}
