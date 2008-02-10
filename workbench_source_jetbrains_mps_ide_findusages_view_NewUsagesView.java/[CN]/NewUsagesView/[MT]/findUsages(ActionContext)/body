@@ -1,17 +1,29 @@
 {
+  final SNode[] semanticNode=new SNode[1];
+  final SNode[] operationNode=new SNode[1];
   CommandProcessor.instance().executeLightweightCommand(new Runnable(){
     public void run(){
-      SNode semanticNode=context.getNode();
-      SNode operationNode=EditorUtil.getOperationNodeWRTReference(context,semanticNode);
-      FindUsagesDialog findUsagesDialog=new FindUsagesDialog(myDefaultOptions,operationNode,context);
+      semanticNode[0]=context.getNode();
+      operationNode[0]=EditorUtil.getOperationNodeWRTReference(context,semanticNode[0]);
+    }
+  }
+);
+  ThreadUtils.runInUIThreadNoWait(new Runnable(){
+    public void run(){
+      final FindUsagesDialog findUsagesDialog=new FindUsagesDialog(myDefaultOptions,operationNode[0],context);
       findUsagesDialog.showDialog();
       if (!findUsagesDialog.isCancelled()) {
-        FindUsagesOptions options=findUsagesDialog.getResult();
-        myDefaultOptions=options;
-        IResultProvider provider=options.getOption(FindersOptions.class).getResult(operationNode,context);
-        SearchQuery query=options.getOption(QueryOptions.class).getResult(operationNode,context);
-        ViewOptions viewOptions=options.getOption(ViewOptions.class);
-        findUsages(provider,query,true,viewOptions.myShowOneResult,viewOptions.myNewTab);
+        CommandProcessor.instance().executeLightweightCommand(new Runnable(){
+          public void run(){
+            FindUsagesOptions options=findUsagesDialog.getResult();
+            myDefaultOptions=options;
+            IResultProvider provider=options.getOption(FindersOptions.class).getResult(operationNode[0],context);
+            SearchQuery query=options.getOption(QueryOptions.class).getResult(operationNode[0],context);
+            ViewOptions viewOptions=options.getOption(ViewOptions.class);
+            findUsages(provider,query,true,viewOptions.myShowOneResult,viewOptions.myNewTab);
+          }
+        }
+);
       }
     }
   }
