@@ -5,18 +5,21 @@
     List<SNode> pdecls=SLinkOperations.getTargets(SLinkOperations.getTarget(bmc,"baseMethodDeclaration",false),"parameter",true);
     int idx=0;
     for (    SNode pdecl : pdecls) {
-      if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(pdecl,"type",true),"jetbrains.mps.closures.structure.FunctionType")) {
+      SNode pdtype=SLinkOperations.getTarget(pdecl,"type",true);
+      SNode pdFType=(SNodeOperations.isInstanceOf(pdtype,"jetbrains.mps.closures.structure.FunctionType") ? pdtype : null);
+      SNode pdCType=(SNodeOperations.isInstanceOf(pdtype,"jetbrains.mps.baseLanguage.structure.ClassifierType") ? pdtype : null);
+      if ((pdFType != null) || (pdCType != null)) {
         SNode arg=args.get(idx);
-{
-          IMatchingPattern pattern_1202201585043=HUtil.createMatchingPatternByConceptFQName("jetbrains.mps.closures.structure.FunctionType");
-          SNode coercedNode_1202201585042=TypeChecker.getInstance().getRuntimeSupport().coerce(TypeChecker.getInstance().getTypeOf(arg),pattern_1202201585043);
-          if (coercedNode_1202201585042 != null) {
-            SNode ptype=SLinkOperations.getTarget(pdecl,"type",true);
-            if (SNodeOperations.isInstanceOf(ptype,"jetbrains.mps.closures.structure.FunctionType") && !(FunctionType_Behavior.call_getSignature_1199633062014(coercedNode_1202201585042).equals(FunctionType_Behavior.call_getSignature_1199633062014(ptype)))) {
-              FunctionTypeUtil.addAdaptableFunctionTypeTarget(coercedNode_1202201585042,ptype,_context.getGenerator());
-              FunctionTypeUtil.putPrepData(args.get(idx),FunctionType_Behavior.call_getSignature_1199633062014(ptype),_context.getGenerator());
-            }
-          }
+        SNode argtype=TypeChecker.getInstance().getTypeOf(arg);
+        SNode argFType=(SNodeOperations.isInstanceOf(argtype,"jetbrains.mps.closures.structure.FunctionType") ? argtype : null);
+        SNode argCType=(SNodeOperations.isInstanceOf(argtype,"jetbrains.mps.baseLanguage.structure.ClassifierType") ? argtype : null);
+        if ((pdCType != null) && (argFType != null)) {
+          FunctionTypeUtil.addAdaptableClassifierTypeTarget(ClassifierTypeUtil.getClassifierType(argFType),pdCType,_context.getGenerator());
+          FunctionTypeUtil.putPrepData(arg,INamedConcept_Behavior.call_getFqName_1184686272576(SLinkOperations.getTarget(pdCType,"classifier",false)),_context.getGenerator());
+        }
+ else         if ((pdFType != null) && (argCType != null)) {
+          FunctionTypeUtil.addAdaptableClassifierTypeTarget(argCType,ClassifierTypeUtil.getClassifierType(pdFType),_context.getGenerator());
+          FunctionTypeUtil.putPrepData(arg,INamedConcept_Behavior.call_getFqName_1184686272576(SLinkOperations.getTarget(ClassifierTypeUtil.getClassifierType(pdFType),"classifier",false)),_context.getGenerator());
         }
       }
       idx=idx + 1;
