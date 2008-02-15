@@ -1,33 +1,8 @@
 {
-  final AdaptiveProgressMonitor progress=new AdaptiveProgressMonitor(invocationContext.getComponent(IDEProjectFrame.class),closeOnExit);
-  final DefaultMessageHandler messages=new DefaultMessageHandler(invocationContext.getProject());
-  final boolean saveTransientModels;
-  if (isSaveTransientModels()) {
-    Object[] options={"Yes","Not this time","No, and cancel saving"};
-    int option=JOptionPane.showOptionDialog(invocationContext.getMainFrame(),"Would you like to save transient models?","",JOptionPane.YES_NO_CANCEL_OPTION,JOptionPane.QUESTION_MESSAGE,null,options,options[0]);
-    if (option == JOptionPane.YES_OPTION) {
-      saveTransientModels=true;
-    }
- else {
-      saveTransientModels=false;
-      if (option == JOptionPane.CANCEL_OPTION) {
-        setSaveTransientModels(false);
-      }
+  return generateModelsWithProgressWindow(CollectionUtil.map(sourceModels,new Mapper<SModel,Pair<SModel,IOperationContext>>(){
+    public Pair<SModel,IOperationContext> map(    SModel sModel){
+      return new Pair<SModel,IOperationContext>(sModel,invocationContext);
     }
   }
- else {
-    saveTransientModels=false;
-  }
-  return myExecutorService.submit(new Callable<Boolean>(){
-    public Boolean call() throws Exception {
-      if (saveTransientModels) {
-        invocationContext.getProject().getComponentSafe(GenerationTracer.class).startTracing();
-      }
-      boolean result=generateModels(sourceModels,targetLanguage,invocationContext,generationType,script,progress,messages,saveTransientModels);
-      invocationContext.getProject().getComponentSafe(GenerationTracer.class).finishTracing();
-      progress.finishAnyway();
-      return result;
-    }
-  }
-);
+),targetLanguage,generationType,script,closeOnExit);
 }

@@ -1,23 +1,17 @@
 {
   new Thread(){
     public void run(){
+      AbstractProjectFrame projectFrame=operationContext.getComponent(AbstractProjectFrame.class);
       try {
         GeneratorManager generatorManager=operationContext.getComponent(GeneratorManager.class);
         List<SModel> models=toModels(modelDescriptors);
-        for (int i=0; i < models.size(); i++) {
-          SModel model=models.get(i);
-          final boolean last=i == models.size() - 1;
-          Future<Boolean> f=generatorManager.generateModelsWithProgressWindow(CollectionUtil.asList(model),BootstrapLanguagesManager.getInstance().getBaseLanguage(),ModuleContext.create(model,operationContext.getComponent(AbstractProjectFrame.class),false),new GenerationTypeWrapper(generationType){
-            public boolean requiresCompilationInIDEAfterGeneration(){
-              return super.requiresCompilationInIDEAfterGeneration() && last;
-            }
-          }
-,IGenerationScript.DEFAULT,false);
-          Boolean result=f.get();
-          if (!result) {
-            return;
-          }
+        List<Pair<SModel,IOperationContext>> modelsWithContext=new ArrayList<Pair<SModel,IOperationContext>>();
+        for (        SModel model : models) {
+          ModuleContext moduleContext=ModuleContext.create(model,projectFrame,false);
+          modelsWithContext.add(new Pair<SModel,IOperationContext>(model,moduleContext));
         }
+        Future<Boolean> f=generatorManager.generateModelsWithProgressWindow(modelsWithContext,BootstrapLanguagesManager.getInstance().getBaseLanguage(),generationType,IGenerationScript.DEFAULT,false);
+        f.get();
       }
  catch (      InterruptedException e) {
         LOG.error(e);
