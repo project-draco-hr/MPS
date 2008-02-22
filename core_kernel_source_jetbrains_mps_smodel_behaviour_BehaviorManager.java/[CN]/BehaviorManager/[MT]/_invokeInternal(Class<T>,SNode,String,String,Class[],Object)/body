@@ -1,2 +1,43 @@
 {
+  if (node == null) {
+    if (returnType.isPrimitive()) {
+      return (T)ourDefaultValue.get(returnType);
+    }
+ else {
+      return null;
+    }
+  }
+  List<AbstractConceptDeclaration> superConcepts;
+  if (callerConceptFqName == null) {
+    AbstractConceptDeclaration concept=node.getConceptDeclarationAdapter();
+    superConcepts=SModelUtil_new.getConceptAndSuperConcepts(concept);
+  }
+ else {
+    AbstractConceptDeclaration callerConcept=SModelUtil_new.findConceptDeclaration(callerConceptFqName,GlobalScope.getInstance());
+    superConcepts=SModelUtil_new.getConceptAndSuperConcepts(callerConcept);
+    superConcepts.remove(callerConcept);
+  }
+  Method method=null;
+  Class[] parameterTypeArray=parametersTypes;
+  for (  AbstractConceptDeclaration conceptDeclaration : superConcepts) {
+    method=getMethod(conceptDeclaration,methodName,parameterTypeArray);
+    if (method != null) {
+      break;
+    }
+  }
+  if (method != null) {
+    Object[] params=new Object[parameters.length + 1];
+    params[0]=node;
+    System.arraycopy(parameters,0,params,1,parameters.length);
+    try {
+      return (T)method.invoke(null,params);
+    }
+ catch (    IllegalAccessException e) {
+      throw new RuntimeException(e);
+    }
+catch (    InvocationTargetException e) {
+      throw new RuntimeException(e);
+    }
+  }
+  throw new RuntimeException("Can't find a method " + methodName + " in a concept "+ node.getConceptFqName());
 }
