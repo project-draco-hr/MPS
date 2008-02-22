@@ -1,10 +1,14 @@
 {
   Map<String,SNode> map=null;
   List<SNode> imds=SLinkOperations.getTargets(SLinkOperations.getTarget(ctNoParams,"classifier",false),"method",true);
+  SNode absRetCT=null;
   if (imds.size() > 0) {
     SNode method=imds.get(0);
     if ((SLinkOperations.getTarget(method,"returnType",true) != null) && !(SNodeOperations.isInstanceOf(SLinkOperations.getTarget(method,"returnType",true),"jetbrains.mps.baseLanguage.structure.VoidType"))) {
-      map=ClosureLiteralUtil.matchType(SLinkOperations.getTarget(method,"returnType",true),FunctionType_Behavior.call_getNormalizedReturnType_1201526153722(ft),map);
+      map=ClosureLiteralUtil.matchReturnType(SLinkOperations.getTarget(method,"returnType",true),FunctionType_Behavior.call_getNormalizedReturnType_1201526153722(ft),map);
+      if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(method,"returnType",true),"jetbrains.mps.baseLanguage.structure.ClassifierType")) {
+        absRetCT=SNodeOperations.copyNode(SLinkOperations.getTarget(method,"returnType",true));
+      }
     }
     List<SNode> ptypes=FunctionType_Behavior.call_getNormalizedParameterTypes_1201526194584(ft);
     int idx=0;
@@ -14,6 +18,19 @@
     }
   }
   ((SNode)ctNoParams).putUserObject("typeMap",map);
+  if ((absRetCT != null)) {
+    SNodeOperations.getModel(SLinkOperations.getTarget(absRetCT,"classifier",false));
+    SNode ftResCT=FunctionType_Behavior.call_getNormalizedReturnType_1201526153722(ft);
+    String adapterName=JavaNameUtil.shortName(SPropertyOperations.getString(SLinkOperations.getTarget(absRetCT,"classifier",false),"name")) + JavaNameUtil.shortName(SPropertyOperations.getString(SLinkOperations.getTarget(ftResCT,"classifier",false),"name")) + "Adapter";
+    for (    SNode cls : SModelOperations.getNodes(SNodeOperations.getModel(SLinkOperations.getTarget(absRetCT,"classifier",false)),"jetbrains.mps.baseLanguage.structure.Classifier")) {
+      if (adapterName.equals(JavaNameUtil.shortName(SPropertyOperations.getString(cls,"name")))) {
+        SNode newRetCT=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ClassifierType",null);
+        SLinkOperations.setTarget(newRetCT,"classifier",cls,false);
+        ((SNode)ctNoParams).putUserObject("returnType",newRetCT);
+        break;
+      }
+    }
+  }
   for (  SNode tvar : SLinkOperations.getTargets(SLinkOperations.getTarget(ctNoParams,"classifier",false),"typeVariableDeclaration",true)) {
     SLinkOperations.addChild(ctNoParams,"parameter",map.get(SPropertyOperations.getString(tvar,"name")));
   }
