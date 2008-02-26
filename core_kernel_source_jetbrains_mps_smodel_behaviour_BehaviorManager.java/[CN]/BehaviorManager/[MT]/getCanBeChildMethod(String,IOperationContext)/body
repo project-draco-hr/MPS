@@ -1,0 +1,36 @@
+{
+  if (myCanBeChildMethods.containsKey(conceptFqName)) {
+    return myCanBeChildMethods.get(conceptFqName);
+  }
+  IScope scope=context.getScope();
+  AbstractConceptDeclaration topConcept=SModelUtil_new.findConceptDeclaration(conceptFqName,scope);
+  if (topConcept == null) {
+    LOG.error("Can't find a concept " + conceptFqName);
+    myCanBeChildMethods.put(conceptFqName,null);
+    return null;
+  }
+  List<AbstractConceptDeclaration> conceptAndSuperConcepts=SModelUtil_new.getConceptAndSuperConcepts(topConcept);
+  for (  AbstractConceptDeclaration concept : conceptAndSuperConcepts) {
+    String fqName=NameUtil.nodeFQName(concept);
+    String namespace=NameUtil.namespaceFromConcept(concept);
+    Language language=scope.getLanguage(namespace);
+    if (language == null) {
+      LOG.error("Can't find a language " + namespace);
+      continue;
+    }
+    String behaviorClassName=behaviorClassByConceptFqName(fqName);
+    Class behaviorClass=language.getClass(behaviorClassName);
+    if (behaviorClass == null) {
+      continue;
+    }
+    try {
+      Method method=behaviorClass.getMethod(BehaviorConstants.CAN_BE_A_CHILD_METHOD_NAME,IOperationContext.class,CanBeAChildContext.class);
+      myCanBeChildMethods.put(conceptFqName,method);
+      return method;
+    }
+ catch (    NoSuchMethodException e) {
+    }
+  }
+  myCanBeChildMethods.put(conceptFqName,null);
+  return null;
+}
