@@ -1,0 +1,48 @@
+{
+  myTabbedEditor=tabbedEditor;
+  myBaseNode=new SNodePointer(baseNode);
+  myClass=adapterClass;
+  myListener=new SModelAdapter(){
+    public void rootRemoved(    SModelRootEvent event){
+      if (getLoadableNodes().contains(event.getRoot()) || getLoadableNodes().isEmpty()) {
+        myTabbedEditor.getTabbedPane().getInitializedTabs().remove(BaseMultitabbedTab.this);
+        myInnerTabbedPane=null;
+        myComponent=null;
+        myLoadableNodes.clear();
+        myLoadableNodesList.clear();
+        myEditors.clear();
+        CommandProcessor.instance().invokeLater(new Runnable(){
+          public void run(){
+            myTabbedEditor.getTabbedPane().initTab(BaseMultitabbedTab.this);
+          }
+        }
+);
+      }
+    }
+    public void referenceAdded(    SModelReferenceEvent event){
+      SReference reference=event.getReference();
+      INodeAdapter sourceNode=BaseAdapter.fromNode(reference.getSourceNode());
+      if (myClass.isInstance(sourceNode.getContainingRoot()) && reference.getTargetNode() == getBaseNode()) {
+        myTabbedEditor.getTabbedPane().getInitializedTabs().remove(BaseMultitabbedTab.this);
+        myInnerTabbedPane=null;
+        myComponent=null;
+        myLoadableNodes.clear();
+        myLoadableNodesList.clear();
+        myEditors.clear();
+        CommandProcessor.instance().invokeLater(new Runnable(){
+          public void run(){
+            myTabbedEditor.getTabbedPane().initTab(BaseMultitabbedTab.this);
+          }
+        }
+);
+      }
+    }
+    public void propertyChanged(    SModelPropertyEvent event){
+      SNodePointer pointer=new SNodePointer(event.getNode());
+      if (event.getPropertyName().equals(INamedConcept.NAME) && myLoadableNodes.contains(pointer)) {
+        myInnerTabbedPane.setTitleAt(myLoadableNodesList.indexOf(pointer),event.getNewPropertyValue());
+      }
+    }
+  }
+;
+}
