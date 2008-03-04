@@ -1,0 +1,39 @@
+{
+  System.out.println(">>> searching DotExpression in " + ((SModel)_context.getModel()).getUID());
+  for (  SNode de : SModelOperations.getNodes(_context.getModel(),"jetbrains.mps.baseLanguage.structure.DotExpression")) {
+    if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(de,"operation",true),"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation")) {
+      SNode imco=SLinkOperations.getTarget(de,"operation",true);
+      List<SNode> args=SLinkOperations.getTargets(imco,"actualArgument",true);
+      List<SNode> pdecls=SLinkOperations.getTargets(SLinkOperations.getTarget(imco,"baseMethodDeclaration",false),"parameter",true);
+      if ((SLinkOperations.getTarget(imco,"baseMethodDeclaration",false) != null) && args.size() != pdecls.size()) {
+        _context.getGenerator().showInformationMessage(imco,"Actual arguments count != parameter declarations count");
+      }
+      int idx=0;
+      for (      SNode pdecl : pdecls) {
+        SNode pdtype=SLinkOperations.getTarget(pdecl,"type",true);
+        SNode pdFType=(SNodeOperations.isInstanceOf(pdtype,"jetbrains.mps.closures.structure.FunctionType") ? pdtype : null);
+        SNode pdCType=(SNodeOperations.isInstanceOf(pdtype,"jetbrains.mps.baseLanguage.structure.ClassifierType") ? pdtype : null);
+        if (((pdFType != null) || (pdCType != null)) && idx < args.size()) {
+          SNode arg=args.get(idx);
+          SNode argtype=TypeChecker.getInstance().getTypeOf(arg);
+          SNode argFType=(SNodeOperations.isInstanceOf(argtype,"jetbrains.mps.closures.structure.FunctionType") ? argtype : null);
+          SNode argCType=(SNodeOperations.isInstanceOf(argtype,"jetbrains.mps.baseLanguage.structure.ClassifierType") ? argtype : null);
+          if ((pdCType != null) && (argFType != null)) {
+            if (SNodeOperations.isInstanceOf(arg,"jetbrains.mps.closures.structure.ClosureLiteral")) {
+              ClosureLiteralUtil.addAdaptableClosureLiteralTarget(arg,pdCType,_context.getGenerator());
+            }
+ else {
+              FunctionTypeUtil.addAdaptableClassifierTypeTarget(ClassifierTypeUtil.getClassifierType(argFType),pdCType,_context.getGenerator());
+              FunctionTypeUtil.putPrepData(arg,INamedConcept_Behavior.call_getFqName_1184686272576(SLinkOperations.getTarget(pdCType,"classifier",false)),_context.getGenerator());
+            }
+          }
+ else           if ((pdFType != null) && (argCType != null)) {
+            FunctionTypeUtil.addAdaptableClassifierTypeTarget(argCType,ClassifierTypeUtil.getClassifierType(pdFType),_context.getGenerator());
+            FunctionTypeUtil.putPrepData(arg,INamedConcept_Behavior.call_getFqName_1184686272576(SLinkOperations.getTarget(ClassifierTypeUtil.getClassifierType(pdFType),"classifier",false)),_context.getGenerator());
+          }
+        }
+        idx=idx + 1;
+      }
+    }
+  }
+}
