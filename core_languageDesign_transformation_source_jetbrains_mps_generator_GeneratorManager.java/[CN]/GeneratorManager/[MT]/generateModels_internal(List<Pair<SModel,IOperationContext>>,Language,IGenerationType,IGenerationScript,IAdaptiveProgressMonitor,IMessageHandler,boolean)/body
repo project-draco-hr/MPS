@@ -92,9 +92,14 @@
           if (isDumpStatistics()) {
             Statistics.dumpAll();
           }
+          progress.addText("Handling output...");
           checkMonitorCanceled(progress);
           if (status.getOutputModel() != null) {
-            generationType.handleOutput(status,outputFolder,invocationContext,progress,messages);
+            boolean result=generationType.handleOutput(status,outputFolder,invocationContext,progress,messages);
+            if (!result) {
+              progress.addText("There were errors. See output for details.");
+              generationOK=false;
+            }
           }
  else           if (!(status.isCanceled() || status.isError())) {
             generationType.handleEmptyOutput(status,outputFolder,invocationContext,progress,messages);
@@ -165,8 +170,14 @@
           ReloadUtils.rebuildProjectPanes();
         }
       }
-      progress.addText("generation completed successfully");
-      messages.handle(new Message(MessageKind.INFORMATION,"generation completed successfully"));
+      if (generationOK) {
+        progress.addText("generation completed successfully");
+        messages.handle(new Message(MessageKind.INFORMATION,"generation completed successfully"));
+      }
+ else {
+        progress.addText("generation completed with errors");
+        messages.handle(new Message(MessageKind.INFORMATION,"generation completed with errors"));
+      }
     }
  else     if (generationERROR) {
       progress.addText("generation finished with errors");
