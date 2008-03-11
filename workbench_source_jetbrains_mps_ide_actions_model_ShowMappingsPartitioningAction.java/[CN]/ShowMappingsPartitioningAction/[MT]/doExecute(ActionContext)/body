@@ -1,0 +1,44 @@
+{
+  IOperationContext operationContext=context.getSafe(IOperationContext.class);
+  List<SModelDescriptor> selectedModels=GenerateGroup_autoplan.getModelsToGenerate(context);
+  SModel inputModel=selectedModels.get(0).getSModel();
+  List<Generator> generators=GenerationPartitioningUtil.getAllPossiblyEngagedGenerators(inputModel,operationContext.getScope());
+  GenerationPartitioner partitioner=new GenerationPartitioner();
+  List<List<MappingConfiguration>> mappingSets=partitioner.createMappingSets(generators);
+  MessageView messageView=operationContext.getComponent(MessageView.class);
+  messageView.add(new Message(MessageKind.INFORMATION,"================================="));
+  for (  Generator generator : generators) {
+    List<MappingPriorityRule> rules=((GeneratorDescriptor)generator.getModuleDescriptor()).getPriorityRules();
+    List<String> strings=GenerationPartitioningUtil.toStrings(rules,true);
+    for (    String string : strings) {
+      messageView.add(new Message(MessageKind.INFORMATION," " + string));
+    }
+  }
+  messageView.add(new Message(MessageKind.INFORMATION,"================================="));
+  if (partitioner.hasConflictingPriorityRules()) {
+    messageView.show(true);
+    List<String> messagesFull=GenerationPartitioningUtil.toStrings(partitioner.getConflictingPriorityRules(),true);
+    for (    String message : messagesFull) {
+      messageView.add(new Message(MessageKind.ERROR,"conflicting rule: " + message));
+    }
+    messageView.add(new Message(MessageKind.INFORMATION,"================================="));
+    IDEProjectFrame frame=context.get(IDEProjectFrame.class);
+    JOptionPane.showMessageDialog(frame.getMainFrame(),"Conflicting mapping priority rules encountered","Generation plan error",JOptionPane.WARNING_MESSAGE);
+  }
+  String text="";
+  int count=0;
+  for (  List<MappingConfiguration> mappingSet : mappingSets) {
+    text=text + " [ " + (count++)+ " ]\n";
+    List<String> strings=GenerationPartitioningUtil.toStrings(mappingSet);
+    for (    String string : strings) {
+      text=text + " " + string+ "\n";
+    }
+    text+="\n";
+  }
+  OutputView view=operationContext.getComponent(OutputView.class);
+  view.clear();
+  view.append("---------------------  mappings partitioning  -----------------------------------\n\n");
+  view.append(text);
+  view.append("---------------------------------------------------------------------------------\n");
+  view.activate();
+}
