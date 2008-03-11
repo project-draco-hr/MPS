@@ -1,0 +1,40 @@
+{
+  final IOperationContext operationContext=context.get(IOperationContext.class);
+  final IModule module=operationContext.getModule();
+  GenParameters params=CommandProcessor.instance().executeLightweightCommand(new Calculable<GenParameters>(){
+    public GenParameters calculate(){
+      SModel tmp=new SModel();
+      tmp.setLoading(true);
+      BaseGeneratorConfiguration conf=null;
+      if (module instanceof Solution) {
+        SolutionGeneratorConfiguration solutionConfig=SolutionGeneratorConfiguration.newInstance(tmp);
+        solutionConfig.setSolutionModuleUID(module.getModuleUID());
+        solutionConfig.setName("tmp");
+        conf=solutionConfig;
+      }
+      if (module instanceof Language) {
+        LanguageGeneratorConfiguration languageConfig=LanguageGeneratorConfiguration.newInstance(tmp);
+        languageConfig.setLanguageNamespace(module.getModuleUID());
+        languageConfig.setName("tmp");
+        conf=languageConfig;
+      }
+      if (conf == null) {
+        throw new RuntimeException();
+      }
+      try {
+        return GeneratorConfigUtil.calculate(operationContext.getProject(),conf,myRegenerate);
+      }
+ catch (      GeneratorConfigUtil.GeneratorConfigurationException e) {
+        JOptionPane.showMessageDialog(context.getFrame(),e.getMessage());
+        return null;
+      }
+    }
+  }
+);
+  if (params == null) {
+    return;
+  }
+  GeneratorManager generatorManager=operationContext.getComponent(GeneratorManager.class);
+  IGenerationType generationType=generatorManager.getDefaultModuleGenerationType();
+  generatorManager.generateModelsWithProgressWindow(params.getModels(),params.getTarget(),operationContext,generationType,params.getScript(),false);
+}
