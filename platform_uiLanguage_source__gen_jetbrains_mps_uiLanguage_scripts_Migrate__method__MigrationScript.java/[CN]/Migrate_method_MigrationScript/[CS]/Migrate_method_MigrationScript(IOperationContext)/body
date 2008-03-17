@@ -1,0 +1,31 @@
+{
+  super("migrate methods");
+  this.addRefactoring(new AbstractMigrationRefactoring(operationContext){
+    public String getName(){
+      return "migrate methods";
+    }
+    public String getAdditionalInfo(){
+      return "migrate methods";
+    }
+    public String getFqNameOfConceptToSearchInstances(){
+      return "jetbrains.mps.uiLanguage.structure.ComponentMethodDeclaration";
+    }
+    public boolean isApplicableInstanceNode(    SNode node){
+      return true;
+    }
+    public void doUpdateInstanceNode(    SNode node){
+      SNode replacement=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.classifiers.structure.DefaultClassifierMethodDeclaration",null);
+      SPropertyOperations.set(replacement,"name",SPropertyOperations.getString(node,"name"));
+      SNode body=SLinkOperations.getTarget(node,"body",true);
+      SLinkOperations.setTarget(node,"body",null,true);
+      SLinkOperations.setTarget(replacement,"body",body,true);
+      SLinkOperations.setTarget(replacement,"returnType",SLinkOperations.getTarget(node,"returnType",true),true);
+      for (      SNode param : SLinkOperations.getTargets(node,"parameter",true)) {
+        ListOperations.removeElement(SLinkOperations.getTargets(node,"parameter",true),param);
+        ListOperations.addElement(SLinkOperations.getTargets(replacement,"parameter",true),param);
+      }
+      SNodeOperations.replaceWithAnother(node,replacement);
+    }
+  }
+);
+}
