@@ -1,18 +1,38 @@
 {
-  if (key instanceof ConceptDeclaration) {
-    ConceptDeclaration conceptDeclaration=(ConceptDeclaration)key;
-    while (conceptDeclaration != null) {
-      Set<T> rules=myRules.get(conceptDeclaration);
+  Set<T> result=new HashSet<T>();
+  Set<AbstractConceptDeclaration> frontier=new HashSet<AbstractConceptDeclaration>();
+  Set<AbstractConceptDeclaration> newFrontier=new HashSet<AbstractConceptDeclaration>();
+  frontier.add(key);
+  while (!frontier.isEmpty()) {
+    for (    AbstractConceptDeclaration abstractConcept : frontier) {
+      Set<T> rules=myRules.get(abstractConcept);
       if (rules != null) {
-        if (conceptDeclaration != key) {
-          myRules.put(key,rules);
-        }
-        return rules;
+        result.addAll(rules);
       }
-      conceptDeclaration=conceptDeclaration.getExtends();
+ else {
+        if (abstractConcept instanceof ConceptDeclaration) {
+          ConceptDeclaration conceptDeclaration=(ConceptDeclaration)abstractConcept;
+          newFrontier.add(conceptDeclaration.getExtends());
+          for (          InterfaceConceptReference interfaceConceptReference : conceptDeclaration.getImplementses()) {
+            newFrontier.add(interfaceConceptReference.getIntfc());
+          }
+        }
+        if (abstractConcept instanceof InterfaceConceptDeclaration) {
+          InterfaceConceptDeclaration interfaceConcept=(InterfaceConceptDeclaration)abstractConcept;
+          for (          InterfaceConceptReference interfaceConceptReference : interfaceConcept.getExtendses()) {
+            newFrontier.add(interfaceConceptReference.getIntfc());
+          }
+        }
+      }
     }
+    frontier=newFrontier;
+    newFrontier=new HashSet<AbstractConceptDeclaration>();
   }
-  HashSet<T> hashSet=new HashSet<T>(2);
-  myRules.put(key,hashSet);
-  return hashSet;
+  Set<T> rulesForKey=myRules.get(key);
+  if (rulesForKey == null) {
+    rulesForKey=new HashSet<T>();
+    myRules.put(key,rulesForKey);
+  }
+  rulesForKey.addAll(result);
+  return result;
 }
