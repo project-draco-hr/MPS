@@ -130,11 +130,15 @@
       progress.finishTask("generating in module " + currentModule);
     }
     if (generationOK) {
-      boolean needReload=true;
+      boolean generatedAndCompiledSuccessfully=true;
+      boolean needToReload=false;
       for (      Pair<IModule,List<SModelDescriptor>> moduleListPair : moduleSequence) {
         IModule module=moduleListPair.o1;
+        if (module != null && module.reloadClassesAfterGeneration()) {
+          needToReload=true;
+        }
         if (module != null && (!ideaPresent && !module.isCompileInMPS()) || !generationType.requiresCompilationInIDEAfterGeneration()) {
-          needReload=false;
+          generatedAndCompiledSuccessfully=false;
         }
  else {
           checkMonitorCanceled(progress);
@@ -156,14 +160,14 @@
             progress.finishTask(ModelsProgressUtil.TASK_NAME_COMPILE_IN_MPS);
           }
           if (compilationResult.getErrors() > 0) {
-            needReload=false;
+            generatedAndCompiledSuccessfully=false;
           }
           progress.addText("" + compilationResult);
           progress.finishTask(ModelsProgressUtil.TASK_NAME_COMPILE_ON_GENERATION);
           checkMonitorCanceled(progress);
         }
       }
-      if (needReload) {
+      if (generatedAndCompiledSuccessfully && needToReload) {
         progress.addText("");
         progress.addText("reloading MPS classes...");
         progress.startLeafTask(ModelsProgressUtil.TASK_NAME_RELOAD_ALL);
