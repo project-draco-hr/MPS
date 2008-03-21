@@ -1,0 +1,26 @@
+{
+  List<MigrationScript> migrationScripts=new ArrayList<MigrationScript>();
+  for (  Language language : languages) {
+    SModelDescriptor scriptsModel=language.getScriptsModelDescriptor();
+    if (scriptsModel == null)     continue;
+    migrationScripts.addAll(scriptsModel.getSModel().getRootsAdapters(MigrationScript.class));
+  }
+  Map<String,List<MigrationScript>> byBuild=new HashMap<String,List<MigrationScript>>();
+  for (  MigrationScript migrationScript : migrationScripts) {
+    String build=migrationScript.getMigrationFromBuild();
+    if (build == null) {
+      build="<unspecified>";
+    }
+    if (!byBuild.containsKey(build)) {
+      byBuild.put(build,new ArrayList<MigrationScript>());
+    }
+    byBuild.get(build).add(migrationScript);
+  }
+  for (  String build : byBuild.keySet()) {
+    ActionGroup categoryGroup=new ActionGroup("migrate from b." + build);
+    for (    MigrationScript script : byBuild.get(build)) {
+      categoryGroup.add(new RunMigrationScriptAction(script,makeScriptActionName(script.getCategory(),script.getTitle(),null)));
+    }
+    ownerGroup.add(categoryGroup);
+  }
+}
