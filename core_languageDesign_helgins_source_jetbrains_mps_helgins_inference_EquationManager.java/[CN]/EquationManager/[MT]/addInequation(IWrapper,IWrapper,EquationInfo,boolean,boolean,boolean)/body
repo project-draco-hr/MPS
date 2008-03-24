@@ -1,0 +1,62 @@
+{
+  IWrapper subtypeRepresentator=getRepresentatorWrapper(subType);
+  IWrapper supertypeRepresentator=getRepresentatorWrapper(supertype);
+  if (NodeWrapper.fromWrapper(subtypeRepresentator) == NodeWrapper.fromWrapper(supertypeRepresentator))   return;
+  RuntimeTypeVariable varSubtype=subtypeRepresentator == null ? null : subtypeRepresentator.getVariable();
+  RuntimeTypeVariable varSupertype=supertypeRepresentator == null ? null : supertypeRepresentator.getVariable();
+  Set<SNodePointer> subtypeVars=myNonConcreteVars.get(subtypeRepresentator);
+  Set<SNodePointer> supertypeVars=myNonConcreteVars.get(subtypeRepresentator);
+  boolean subtypeHasNonConcreteVars=varSubtype != null || subtypeVars != null && !subtypeVars.isEmpty();
+  boolean supertypeHasNonConcreteVars=varSupertype != null || supertypeVars != null && !supertypeVars.isEmpty();
+  if (checkOnly) {
+    if (subtypeHasNonConcreteVars || supertypeHasNonConcreteVars) {
+      if (isWeak) {
+        addSubtyping(subtypeRepresentator,supertypeRepresentator,equationInfo,true);
+      }
+ else {
+        addStrongSubtyping(subtypeRepresentator,supertypeRepresentator,equationInfo,true);
+      }
+      return;
+    }
+  }
+  if (subtypeRepresentator instanceof NodeWrapper && supertypeRepresentator instanceof NodeWrapper) {
+    SNode node1=subtypeRepresentator.getNode();
+    SNode node2=supertypeRepresentator.getNode();
+    Set<InequationReplacementRule_Runtime> inequationReplacementRules=myTypeChecker.getRulesManager().getReplacementRules(node1,node2);
+    for (    InequationReplacementRule_Runtime inequationReplacementRule : inequationReplacementRules) {
+      inequationReplacementRule.processInequation(node1,node2,equationInfo);
+      return;
+    }
+  }
+  if (subtypeHasNonConcreteVars && solveOnlyConcrete || varSupertype != null) {
+    if (isWeak) {
+      addSubtyping(subtypeRepresentator,supertypeRepresentator,equationInfo,false);
+    }
+ else {
+      addStrongSubtyping(subtypeRepresentator,supertypeRepresentator,equationInfo,false);
+    }
+    return;
+  }
+  if (subtypeRepresentator instanceof NodeWrapper) {
+    NodeWrapper subtypeNodeWrapper=(NodeWrapper)subtypeRepresentator;
+    SModel typesModel=myTypeChecker.getRuntimeTypesModel();
+    NodeWrapper representatorCopy=NodeWrapper.fromNode(CopyUtil.copy(subtypeNodeWrapper.getNode(),typesModel),this);
+    subtypeRepresentator=expandWrapper(null,representatorCopy,typesModel);
+  }
+  if (supertypeRepresentator instanceof NodeWrapper) {
+    NodeWrapper supertypeNodeWrapper=(NodeWrapper)supertypeRepresentator;
+    SModel typesModel=myTypeChecker.getRuntimeTypesModel();
+    NodeWrapper representatorCopy=NodeWrapper.fromNode(CopyUtil.copy(supertypeNodeWrapper.getNode(),typesModel),this);
+    supertypeRepresentator=expandWrapper(null,representatorCopy,typesModel);
+  }
+  if (myTypeChecker.getSubtypingManager().isSubtype(subtypeRepresentator,supertypeRepresentator,this,equationInfo,isWeak)) {
+    return;
+  }
+  if (equationInfo.getErrorString() != null) {
+    myTypeChecker.reportTypeError(equationInfo.getNodeWithError(),equationInfo.getErrorString());
+    return;
+  }
+  String strongString=isWeak ? "" : " strong";
+  IErrorReporter errorReporter=new EquationErrorReporter(this,"type ",subtypeRepresentator," is not a" + strongString + " subtype of ",supertypeRepresentator,"",equationInfo.getRuleModel(),equationInfo.getRuleId());
+  myTypeChecker.reportTypeError(equationInfo.getNodeWithError(),errorReporter);
+}
