@@ -1,11 +1,22 @@
 {
-  IFile result;
+  IFile result=null;
   if (path.startsWith("${mps_home}")) {
     String relativePath=removePrefix(path,"${mps_home}");
     result=FileSystem.getFile(PathManager.getHomePath()).child(relativePath);
   }
  else {
-    result=FileSystem.getFile(path);
+    Map<String,String> pathMacros=PathVariableManager.getInstance().getPathVariables();
+    for (    String macro : pathMacros.keySet()) {
+      String prefix="${" + macro + "}";
+      if (path.startsWith(prefix)) {
+        String relativePath=removePrefix(path,prefix);
+        result=FileSystem.getFile(pathMacros.get(macro)).child(relativePath);
+        break;
+      }
+    }
+    if (result == null) {
+      result=FileSystem.getFile(path);
+    }
   }
   return result.getCanonicalPath();
 }
