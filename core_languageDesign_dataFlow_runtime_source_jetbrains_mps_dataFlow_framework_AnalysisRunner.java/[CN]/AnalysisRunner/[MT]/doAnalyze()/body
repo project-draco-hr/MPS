@@ -1,0 +1,30 @@
+{
+  final Map<ProgramState,E> stateValues=new HashMap<ProgramState,E>();
+  for (  Instruction i : myProgram.getInstructions()) {
+    stateValues.put(new ProgramState(i,false),myAnalyzer.initial());
+  }
+  Stack<ProgramState> workList=new Stack<ProgramState>();
+  for (  Instruction i : myProgram.getInstructions()) {
+    workList.push(new ProgramState(i,false));
+  }
+  AnalysisDirection direction=myAnalyzer.getDirection();
+  while (!workList.isEmpty()) {
+    ProgramState current=workList.pop();
+    Set<E> input=new HashSet<E>();
+    for (    ProgramState s : direction.dependencies(current)) {
+      if (stateValues.containsKey(s)) {
+        input.add(stateValues.get(s));
+      }
+    }
+    E oldValue=stateValues.get(current);
+    E mergedValue=myAnalyzer.merge(input);
+    E newValue=myAnalyzer.fun(current.instruction(),mergedValue);
+    if (!newValue.equals(oldValue)) {
+      stateValues.put(current,newValue);
+      for (      ProgramState s : direction.dependents(current)) {
+        workList.add(s);
+      }
+    }
+  }
+  return stateValues;
+}
