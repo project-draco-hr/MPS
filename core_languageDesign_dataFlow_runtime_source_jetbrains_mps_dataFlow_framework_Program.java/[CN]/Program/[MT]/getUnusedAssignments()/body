@@ -1,10 +1,14 @@
 {
   AnalysisResult<Set<Object>> analysisResult=analyze(new LivenessAnalyzer());
   Set<WriteInstruction> result=new HashSet<WriteInstruction>();
-  for (  Instruction i : myInstructions) {
-    if (i instanceof WriteInstruction) {
-      WriteInstruction write=(WriteInstruction)i;
-      if (!analysisResult.getInstructionMap().get(write).contains(write.getVariable())) {
+  for (  ProgramState s : analysisResult.getStates()) {
+    if (s.instruction() instanceof WriteInstruction) {
+      WriteInstruction write=(WriteInstruction)s.instruction();
+      Set<Object> liveAfter=new HashSet<Object>();
+      for (      ProgramState succ : s.succ()) {
+        liveAfter.addAll(analysisResult.get(succ));
+      }
+      if (!liveAfter.contains(write.getVariable())) {
         result.add(write);
       }
     }
