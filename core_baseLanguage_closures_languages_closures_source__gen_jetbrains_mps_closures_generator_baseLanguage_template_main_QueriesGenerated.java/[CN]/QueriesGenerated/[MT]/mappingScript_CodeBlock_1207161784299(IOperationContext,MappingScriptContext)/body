@@ -1,10 +1,7 @@
 {
-  if (true) {
-    return;
-  }
   List<SNode> telist=new ArrayList(SModelOperations.getNodes(_context.getModel(),"jetbrains.mps.baseLanguage.structure.ThisExpression"));
   for (  SNode te : telist) {
-    if (SNodeOperations.isInstanceOf(SNodeOperations.getParent(te,null,false,false),"jetbrains.mps.baseLanguage.structure.FieldReference") && (SLinkOperations.getTarget(te,"classConcept",false) == null)) {
+    if ((SLinkOperations.getTarget(te,"classConcept",false) == null)) {
       SNode cl=SNodeOperations.getAncestor(te,"jetbrains.mps.closures.structure.ClosureLiteral",false,false);
       SNode thisCC=SNodeOperations.getAncestor(te,"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false);
       if ((cl != null)) {
@@ -12,7 +9,20 @@
         for (        SNode cc : SNodeOperations.getAncestors(cl,"jetbrains.mps.baseLanguage.structure.ClassConcept",false)) {
           if (cc == thisCC) {
             if (SNodeOperations.isInstanceOf(thisCC,"jetbrains.mps.baseLanguage.structure.AnonymousClass")) {
-              SNodeOperations.replaceWithNewChild(te,"jetbrains.mps.baseLanguageInternal.structure.InternalThisExpression");
+              SNode parent=SNodeOperations.getParent(te,null,false,false);
+              if (SNodeOperations.isInstanceOf(parent,"jetbrains.mps.baseLanguage.structure.FieldReference")) {
+                SNode ifr=SNodeOperations.replaceWithNewChild(parent,"jetbrains.mps.baseLanguageInternal.structure.InternalPartialFieldReference");
+                SLinkOperations.setNewChild(ifr,"instance","jetbrains.mps.baseLanguageInternal.structure.InternalThisExpression");
+                SPropertyOperations.set(ifr,"fieldName",SPropertyOperations.getString(SLinkOperations.getTarget(parent,"variableDeclaration",false),"name"));
+              }
+ else               if (SNodeOperations.isInstanceOf(parent,"jetbrains.mps.baseLanguage.structure.InstanceMethodCall")) {
+                SNode imc=SNodeOperations.replaceWithNewChild(parent,"jetbrains.mps.baseLanguageInternal.structure.InternalPartialInstanceMethodCall");
+                SLinkOperations.setNewChild(imc,"instance","jetbrains.mps.baseLanguageInternal.structure.InternalThisExpression");
+                SPropertyOperations.set(imc,"methodName","" + (SLinkOperations.getTarget(parent,"baseMethodDeclaration",false)));
+              }
+ else               if (SNodeOperations.isInstanceOf(parent,"jetbrains.mps.baseLanguage.structure.DotExpression") && SNodeOperations.isInstanceOf(SLinkOperations.getTarget(parent,"operation",true),"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation")) {
+                _context.getGenerator().showErrorMessage(te,"'this' expression coulnd't be removed");
+              }
             }
  else {
               SLinkOperations.setTarget(te,"classConcept",thisCC,false);
