@@ -1,2 +1,43 @@
 {
+  IScope scope;
+  IOperationContext operationContext=context.getOperationContext();
+  if (myScopeType.equals(GLOBAL_SCOPE)) {
+    scope=GlobalScope.getInstance();
+  }
+ else   if (myScopeType.equals(PROJECT_SCOPE)) {
+    scope=operationContext.getProject().getScope();
+  }
+ else   if (myScopeType.equals(MODULE_SCOPE)) {
+    if (myModule.equals(DEFAULT_VALUE)) {
+      scope=operationContext.getModule().getScope();
+    }
+ else {
+      IModule module=MPSModuleRepository.getInstance().getModuleByUID(myModule);
+      if (module == null) {
+        myModule=operationContext.getModule().getModuleUID();
+        module=MPSModuleRepository.getInstance().getModuleByUID(myModule);
+        LOG.error("Module is not found for " + myModule + ". Using current module.");
+      }
+      scope=module.getScope();
+    }
+  }
+ else   if (myScopeType.equals(MODEL_SCOPE)) {
+    if (myModel.equals(DEFAULT_VALUE)) {
+      scope=new ModelScope(operationContext.getModule().getScope(),context.getModel());
+    }
+ else {
+      List<SModelDescriptor> models=SModelRepository.getInstance().getModelDescriptorsByModelName(myModel);
+      if (models.isEmpty()) {
+        myModel=context.getModel().getModelUID().toString();
+        models=SModelRepository.getInstance().getModelDescriptorsByModelName(myModel);
+        LOG.error("Model is not found for " + myModel + ". Using current model.");
+      }
+      SModelDescriptor modelDescriptor=models.get(0);
+      scope=new ModelScope(modelDescriptor.getModule().getScope(),modelDescriptor);
+    }
+  }
+ else {
+    throw new IllegalArgumentException();
+  }
+  return new SearchQuery(new SNodePointer(node),scope);
 }
