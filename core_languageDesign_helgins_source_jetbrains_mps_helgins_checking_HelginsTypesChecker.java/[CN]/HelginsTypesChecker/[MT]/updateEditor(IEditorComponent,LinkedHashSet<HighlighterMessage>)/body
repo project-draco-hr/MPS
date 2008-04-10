@@ -1,0 +1,31 @@
+{
+  if (editor == null || editor.getRootCell() == null) {
+    return false;
+  }
+  SNode node=editor.getEditedNode();
+  if (node == null)   return false;
+  if (!TypeChecker.getInstance().isCheckedRoot(node.getContainingRoot())) {
+    try {
+      TypeChecker.getInstance().checkRoot(node.getContainingRoot());
+    }
+ catch (    Throwable t) {
+      LOG.error(t);
+      TypeChecker.getInstance().markAsChecked(node.getContainingRoot());
+      return true;
+    }
+  }
+  NodeHighlightManager highlightManager=editor.getHighlightManager();
+  NodeTypesComponent typesComponent=NodeTypesComponentsRepository.getInstance().createNodeTypesComponent(node.getContainingRoot());
+  highlightManager.clearForOwner(typesComponent);
+  for (  Pair<SNode,IErrorReporter> errorNode : typesComponent.getNodesWithErrorStrings()) {
+    MessageStatus status=MessageStatus.ERROR;
+    Color color=Color.red;
+    if (errorNode.o2.isWarning()) {
+      status=MessageStatus.WARNING;
+      color=Color.YELLOW;
+    }
+    DefaultEditorMessage message=new HighlighterMessage(errorNode.o1,status,color,"TYPE ERROR: " + errorNode.o2.reportError(),editor,typesComponent);
+    highlightManager.mark(message);
+  }
+  return true;
+}
