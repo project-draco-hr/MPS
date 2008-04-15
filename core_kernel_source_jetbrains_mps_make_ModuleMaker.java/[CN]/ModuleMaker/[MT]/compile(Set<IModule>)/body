@@ -24,24 +24,13 @@
       LOG.warning("Module which compiled in IDEA depend on module which has to be compiled in MPS:" + m.getModuleUID(),m);
       continue;
     }
-    if (INCREMENTAL_MODE) {
-      ModuleSources sources=new ModuleSources(m);
-      for (      IFile f : sources.getFilesToDelete()) {
-        f.delete();
-      }
-      for (      JavaFile f : sources.getFilesToCompile()) {
-        compiler.addSource(f.getContents(),f.getClassName());
-        myContainingModules.put(f.getClassName(),m);
-      }
-      System.out.println("");
+    ModuleSources sources=getModuleSources(m);
+    for (    IFile f : sources.getFilesToDelete()) {
+      f.delete();
     }
- else {
-      for (      String sp : m.getSourcePaths()) {
-        if (new File(sp).exists()) {
-          addSource(compiler,new File(sp),"",m);
-        }
-      }
-      FileUtil.delete(m.getClassesGen().toFile());
+    for (    JavaFile f : sources.getFilesToCompile()) {
+      compiler.addSource(f.getContents(),f.getClassName());
+      myContainingModules.put(f.getClassName(),m);
     }
   }
   compiler.compile();
@@ -89,7 +78,14 @@
     }
   }
   for (  IModule module : modules) {
-    copyResources(module,JAVA_SUFFIX);
+    ModuleSources sources=getModuleSources(module);
+    for (    ResourceFile toCopy : sources.getResourcesToCopy()) {
+      String fqName=toCopy.getFqName();
+      fqName=fqName.substring(0,fqName.length() - toCopy.getFile().getName().length());
+      String path=fqName.replace('.',File.separatorChar) + toCopy.getFile().getName();
+      System.out.println("copy to " + path);
+      FileUtil.copyFile(toCopy.getFile().toFile(),module.getClassesGen().child(path).toFile());
+    }
   }
   for (  IModule module : modules) {
     module.reloadStubs();
