@@ -2,18 +2,28 @@
   for (  Element optionXML : (List<Element>)element.getChildren(OPTION)) {
     String className=optionXML.getAttribute(CLASS_NAME).getValue();
     try {
-      Object o=Class.forName(className).newInstance();
-      ((BaseOptions)o).read(optionXML,project);
+      Object o=Class.forName(className).getConstructor(Element.class,MPSProject.class).newInstance(optionXML,project);
       myOptions.put(o.getClass(),(BaseOptions)o);
     }
- catch (    ClassNotFoundException e) {
-      LOG.error("Couldn't instantiate option with class name " + className,e);
+ catch (    InvocationTargetException e) {
+      if (e.getCause() instanceof CantLoadSomethingException) {
+        throw (CantLoadSomethingException)e.getCause();
+      }
+ else {
+        throwLoadException(e,className);
+      }
+    }
+catch (    ClassNotFoundException e) {
+      throwLoadException(e,className);
     }
 catch (    IllegalAccessException e) {
-      e.printStackTrace();
+      throwLoadException(e,className);
     }
 catch (    InstantiationException e) {
-      e.printStackTrace();
+      throwLoadException(e,className);
+    }
+catch (    NoSuchMethodException e) {
+      throwLoadException(e,className);
     }
   }
 }

@@ -2,13 +2,29 @@
   Element dataXML=element.getChild(DATA);
   String dataClass=dataXML.getAttributeValue(DATA_CLASS);
   try {
-    myData=(BaseNodeData)Class.forName(dataClass).newInstance();
+    Class<?> cls=Class.forName(dataClass);
+    myData=(BaseNodeData)cls.getConstructor(Element.class,MPSProject.class).newInstance(dataXML,project);
   }
- catch (  Throwable t) {
-    LOG.warning("can't instantiate node",t);
-    throw new CantLoadSomethingException("can't instantiate node",t);
+ catch (  InvocationTargetException e) {
+    if (e.getCause() instanceof CantLoadSomethingException) {
+      throw (CantLoadSomethingException)e.getCause();
+    }
+ else {
+      throwLoadException(e);
+    }
   }
-  myData.read(dataXML,project);
+catch (  ClassNotFoundException e) {
+    throwLoadException(e);
+  }
+catch (  NoSuchMethodException e) {
+    throwLoadException(e);
+  }
+catch (  IllegalAccessException e) {
+    throwLoadException(e);
+  }
+catch (  InstantiationException e) {
+    throwLoadException(e);
+  }
   myData.addChangeListener(this);
   myChildren.clear();
   Element childrenXML=element.getChild(CHILDREN);
