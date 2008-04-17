@@ -1,0 +1,27 @@
+{
+  MPSProject project=frame.getProject();
+  Set<IModule> owningModules=SModelRepository.getInstance().getOwners(model,IModule.class);
+  if (owningModules.isEmpty()) {
+    LOG.error("Couldn't create module context for node:" + "\nCouldn't find owner module for model \"" + model.getModelUID() + "\"");
+    return null;
+  }
+  if (owningModules.size() > 1) {
+    Iterator<IModule> it=owningModules.iterator();
+    while (it.hasNext()) {
+      IModule m=it.next();
+      if (m instanceof Solution && "outputModels".equals(((Solution)m).getSolutionDescriptor().getName())) {
+        it.remove();
+      }
+    }
+  }
+  IModule module;
+  if (owningModules.size() == 1 || !askIfMany) {
+    module=owningModules.iterator().next();
+  }
+ else {
+    ChooseModuleDialog md=new ChooseModuleDialog(frame.getMainFrame(),owningModules);
+    md.showDialog();
+    module=md.getResult();
+  }
+  return new ModuleContext(module,project);
+}
