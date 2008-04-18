@@ -5,59 +5,26 @@
   getProject().saveModels();
   clearMessageVew();
   myMesssages.handle(new Message(MessageKind.INFORMATION,myGenerationType.getStartText()));
-  boolean ideaPresent=getProjectHandler() != null;
   try {
     boolean generationOK=true;
     for (    Pair<IModule,List<SModelDescriptor>> moduleAndDescriptors : myModuleSequence) {
-      generationOK=generationOK && generateModulesInModule(moduleAndDescriptors.o1,moduleAndDescriptors.o2);
+      generationOK=generationOK && generateModelsInModule(moduleAndDescriptors.o1,moduleAndDescriptors.o2);
     }
     if (generationOK) {
-      boolean generatedAndCompiledSuccessfully=true;
+      boolean compiledSuccessfully=true;
       boolean needToReload=false;
       for (      Pair<IModule,List<SModelDescriptor>> moduleListPair : myModuleSequence) {
         IModule module=moduleListPair.o1;
         if (module != null && module.reloadClassesAfterGeneration()) {
           needToReload=true;
         }
-        if (module != null && (!ideaPresent && !module.isCompileInMPS()) || !myGenerationType.requiresCompilationInIDEAfterGeneration()) {
-          generatedAndCompiledSuccessfully=false;
-        }
- else {
-          checkMonitorCanceled(myProgress);
-          myProgress.startTask(ModelsProgressUtil.TASK_NAME_COMPILE_ON_GENERATION);
-          CompilationResult compilationResult;
-          if (!module.isCompileInMPS()) {
-            myProgress.startLeafTask(ModelsProgressUtil.TASK_NAME_REFRESH_FS);
-            getProjectHandler().refreshFS();
-            myProgress.finishTask(ModelsProgressUtil.TASK_NAME_REFRESH_FS);
-            myProgress.addText("compiling in IntelliJ IDEA...");
-            myProgress.startLeafTask(ModelsProgressUtil.TASK_NAME_COMPILE_IN_IDEA);
-            compilationResult=getProjectHandler().buildModule(module.getGeneratorOutputPath());
-            myProgress.finishTask(ModelsProgressUtil.TASK_NAME_COMPILE_IN_IDEA);
-          }
- else {
-            myProgress.startLeafTask(ModelsProgressUtil.TASK_NAME_COMPILE_IN_MPS);
-            myProgress.addText("compiling in JetBrains MPS...");
-            compilationResult=new ModuleMaker().make(CollectionUtil.asSet(module),new MessagesOnlyAdaptiveProgressMonitorWrapper(myProgress));
-            myProgress.finishTask(ModelsProgressUtil.TASK_NAME_COMPILE_IN_MPS);
-          }
-          if (compilationResult.getErrors() > 0) {
-            generatedAndCompiledSuccessfully=false;
-          }
-          myProgress.addText("" + compilationResult);
-          myProgress.finishTask(ModelsProgressUtil.TASK_NAME_COMPILE_ON_GENERATION);
-          checkMonitorCanceled(myProgress);
-        }
+        compiledSuccessfully=compiledSuccessfully && compileModule(module);
       }
       for (      SModelDescriptor sm : myModelsToContexts.keySet()) {
         ModelGenerationStatusManager.getInstance().invalidateData(sm);
       }
-      if (generatedAndCompiledSuccessfully && needToReload) {
-        myProgress.addText("");
-        myProgress.addText("reloading MPS classes...");
-        myProgress.startLeafTask(ModelsProgressUtil.TASK_NAME_RELOAD_ALL);
-        ClassLoaderManager.getInstance().reloadAll();
-        myProgress.finishTask(ModelsProgressUtil.TASK_NAME_RELOAD_ALL);
+      if (compiledSuccessfully && needToReload) {
+        reloadClasses();
       }
       if (generationOK) {
         myProgress.addText("generation completed successfully");
@@ -72,7 +39,7 @@
       myProgress.addText("generation finished with errors");
       myMesssages.handle(new Message(MessageKind.WARNING,"generation finished with errors"));
     }
-    if (myGenerationType instanceof GenerateFilesGenerationType && ideaPresent && !myGenerationType.requiresCompilationInIDEAfterGeneration()) {
+    if (myGenerationType instanceof GenerateFilesGenerationType && isIDEAPresent() && !myGenerationType.requiresCompilationInIDEAfterGeneration()) {
       getProjectHandler().refreshFS();
     }
   }
