@@ -1,32 +1,19 @@
 {
-  if (editor == null || editor.getRootCell() == null) {
-    return false;
-  }
-  SNode node=editor.getEditedNode();
-  if (node == null)   return false;
+  if (rootNode == null)   return false;
   List<SReference> yetBadReferences=new ArrayList<SReference>();
   SReference.disableLogging();
   boolean someReferencesResolved=false;
   try {
-    Set<SReference> badReferences=collectBadReferences(editor);
+    Set<SReference> badReferences=collectBadReferences(rootNode);
     if (!badReferences.isEmpty()) {
       int oldSize=badReferences.size();
-      yetBadReferences=Resolver.resolveReferences(badReferences,editor.getOperationContext());
+      yetBadReferences=Resolver.resolveReferences(badReferences,operationContext);
       int newSize=yetBadReferences.size();
       someReferencesResolved=oldSize > newSize;
     }
   }
   finally {
     SReference.enableLogging();
-  }
-  if (someReferencesResolved) {
-    CommandProcessor.instance().invokeLater(new Runnable(){
-      public void run(){
-        editor.rebuildEditorContent();
-        editor.relayout();
-      }
-    }
-);
   }
   for (  SReference ref : yetBadReferences) {
     DefaultEditorMessage message=new DefaultEditorMessage(ref.getSourceNode(),MessageStatus.ERROR,Color.RED,"unresolved reference",this);
