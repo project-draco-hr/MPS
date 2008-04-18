@@ -1,0 +1,65 @@
+{
+  boolean currentGenerationOK=false;
+  IOperationContext invocationContext=myModulesToContexts.get(module);
+  myProgress.startTask("generating in module " + module);
+  String outputFolder=module != null ? module.getGeneratorOutputPath() : null;
+  if (outputFolder != null && !new File(outputFolder).exists()) {
+    new File(outputFolder).mkdirs();
+    try {
+      getProjectHandler().addSourceRoot(outputFolder);
+    }
+ catch (    Exception e) {
+      myMesssages.handle(new Message(MessageKind.WARNING,"Can't add output folder to IDEA as sources"));
+    }
+  }
+  myMesssages.handle(new Message(MessageKind.INFORMATION,"    target root folder: \"" + outputFolder + "\""));
+  Statistics.setEnabled(Statistics.TPL,myManager.isDumpStatistics());
+  String wasLoggingThreshold=null;
+  IGenerationSession generationSession=new GenerationSession(invocationContext,mySaveTransientModels,myProgress,myMesssages);
+  try {
+    if (myManager.isShowErrorsOnly()) {
+      wasLoggingThreshold=Logger.setThreshold("ERROR");
+    }
+    Logger.addLoggingHandler(generationSession.getLoggingHandler());
+    TypeChecker.getInstance().setIncrementalMode(false);
+    TypeChecker.getInstance().setTypeCheckingMode(TypeCheckingMode.GENERATION);
+    for (    SModelDescriptor inputModel : descriptors) {
+      myProgress.addText("");
+      String taskName=ModelsProgressUtil.generationModelTaskName(inputModel);
+      myProgress.startLeafTask(taskName,ModelsProgressUtil.TASK_KIND_GENERATION);
+      GenerationStatus status=generationSession.generateModel(inputModel);
+      currentGenerationOK=status.isOk();
+      if (myManager.isDumpStatistics()) {
+        Statistics.dumpAll();
+      }
+      myProgress.addText("handling output...");
+      checkMonitorCanceled(myProgress);
+      if (status.getOutputModel() != null) {
+        boolean result=myGenerationType.handleOutput(status,outputFolder,invocationContext,myProgress,myMesssages);
+        if (!result) {
+          myProgress.addText("there were errors.");
+          currentGenerationOK=false;
+        }
+      }
+ else       if (!(status.isCanceled() || status.isError())) {
+        myGenerationType.handleEmptyOutput(status,outputFolder,invocationContext,myProgress,myMesssages);
+      }
+      generationSession.discardTransients();
+      myProgress.finishTask(taskName);
+    }
+  }
+  finally {
+    if (wasLoggingThreshold != null) {
+      Logger.setThreshold(wasLoggingThreshold);
+    }
+    generationSession.discardTransients();
+    Logger.removeLoggingHandler(generationSession.getLoggingHandler());
+    TypeChecker.getInstance().setIncrementalMode(true);
+    TypeChecker.getInstance().resetTypeCheckingMode();
+    tryToReloadModelsFromDisk();
+  }
+  checkMonitorCanceled(myProgress);
+  myProgress.addText("");
+  myProgress.finishTask("generating in module " + module);
+  return currentGenerationOK;
+}
