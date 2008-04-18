@@ -1,28 +1,7 @@
 {
-  IOperationContext firstContext=myInputModels.get(0).o2;
-  Map<SModelDescriptor,IOperationContext> modelsToContexts=new HashMap<SModelDescriptor,IOperationContext>();
-  for (  Pair<SModelDescriptor,IOperationContext> modelPair : myInputModels) {
-    modelsToContexts.put(modelPair.o1,modelPair.o2);
-  }
-  List<Pair<IModule,List<SModelDescriptor>>> moduleSequence=new ArrayList<Pair<IModule,List<SModelDescriptor>>>();
-  Map<IModule,IOperationContext> modulesToContexts=new HashMap<IModule,IOperationContext>();
-{
-    IModule current=null;
-    ArrayList<SModelDescriptor> currentList=null;
-    for (    Pair<SModelDescriptor,IOperationContext> inputModel : myInputModels) {
-      IModule newModule=inputModel.o2.getModule();
-      if (current == null || newModule != current) {
-        current=newModule;
-        currentList=new ArrayList<SModelDescriptor>();
-        moduleSequence.add(new Pair<IModule,List<SModelDescriptor>>(current,currentList));
-        modulesToContexts.put(current,inputModel.o2);
-      }
-      currentList.add(inputModel.o1);
-    }
-  }
   boolean compile=(myGenerationType.requiresCompilationInIDEAfterGeneration() || myGenerationType.requiresCompilationInIDEABeforeGeneration());
   long totalJob=0;
-  for (  Pair<IModule,List<SModelDescriptor>> pair : moduleSequence) {
+  for (  Pair<IModule,List<SModelDescriptor>> pair : myModuleSequence) {
     IModule module=pair.o1;
     if (module != null) {
       long jobTime=ModelsProgressUtil.estimateTotalGenerationJobMillis(compile,module != null && !module.isCompileInMPS(),pair.o2);
@@ -34,7 +13,7 @@
   }
   myProgress.start("generating",totalJob);
   MPSModuleRepository.getInstance().removeTransientModules();
-  MPSProject project=firstContext.getProject();
+  MPSProject project=getFirstContext().getProject();
   IProjectHandler projectHandler=project.getProjectHandler();
   showMessageView(project);
   project.saveModels();
@@ -45,9 +24,9 @@
   try {
     boolean generationOK=true;
     boolean generationERROR=false;
-    for (    Pair<IModule,List<SModelDescriptor>> moduleAndDescriptors : moduleSequence) {
+    for (    Pair<IModule,List<SModelDescriptor>> moduleAndDescriptors : myModuleSequence) {
       IModule currentModule=moduleAndDescriptors.o1;
-      IOperationContext invocationContext=modulesToContexts.get(currentModule);
+      IOperationContext invocationContext=myModulesToContexts.get(currentModule);
       myProgress.startTask("generating in module " + currentModule);
       String outputFolder=currentModule != null ? currentModule.getGeneratorOutputPath() : null;
       if (outputFolder != null && !new File(outputFolder).exists()) {
@@ -105,9 +84,7 @@
         Logger.removeLoggingHandler(generationSession.getLoggingHandler());
         TypeChecker.getInstance().setIncrementalMode(true);
         TypeChecker.getInstance().resetTypeCheckingMode();
-        if (firstContext.getMainFrame() != null) {
-          SModelRepository.getInstance().tryToReloadModelsFromDisk((JFrame)firstContext.getMainFrame());
-        }
+        tryToReloadModelsFromDisk();
       }
       checkMonitorCanceled(myProgress);
       myProgress.addText("");
@@ -116,7 +93,7 @@
     if (generationOK) {
       boolean generatedAndCompiledSuccessfully=true;
       boolean needToReload=false;
-      for (      Pair<IModule,List<SModelDescriptor>> moduleListPair : moduleSequence) {
+      for (      Pair<IModule,List<SModelDescriptor>> moduleListPair : myModuleSequence) {
         IModule module=moduleListPair.o1;
         if (module != null && module.reloadClassesAfterGeneration()) {
           needToReload=true;
@@ -156,7 +133,7 @@
           checkMonitorCanceled(myProgress);
         }
       }
-      for (      SModelDescriptor sm : modelsToContexts.keySet()) {
+      for (      SModelDescriptor sm : myModelsToContexts.keySet()) {
         ModelGenerationStatusManager.getInstance().invalidateData(sm);
       }
       if (generatedAndCompiledSuccessfully && needToReload) {
