@@ -1,61 +1,95 @@
 {
-  super.getTableCellRendererComponent(table,value,isSelected,hasFocus,row,column);
   TestStatisticsRow rowValue=(TestStatisticsRow)value;
-  String text="";
+  JComponent result=null;
+  boolean keepForeground=false;
+  JComponent adjustFont=null;
+  boolean container=rowValue instanceof TestContainerRow;
 switch (column) {
 case 0:
-    this.setText(rowValue.getText());
-  break;
-case 1:
-long time=rowValue.getElapsedTime();
-if (time >= 0) {
-text=String.format("%.3f s",time / 1000.0);
+    this.text.setText(rowValue.getText());
+  String additionalText=rowValue.getAdditionalText();
+if (additionalText != null) {
+  this.advancedText.setText(" (" + additionalText + ")");
 }
-this.setText(text);
+ else {
+  this.advancedText.setText("");
+}
+result=this.textPanel;
+adjustFont=this.text;
+break;
+case 1:
+result=this.setTime(rowValue.getElapsedTime());
+adjustFont=result;
 break;
 case 2:
-this.setMemoryUsage(rowValue.getUsageDelta());
+result=this.setMemoryUsage(rowValue.getUsageDelta());
+adjustFont=result;
 break;
 case 3:
-this.setMemoryUsage(rowValue.getUsageBefore());
+result=this.setMemoryUsage(rowValue.getUsageBefore());
+adjustFont=result;
 break;
 case 4:
-this.setMemoryUsage(rowValue.getUsageAfter());
+result=this.setMemoryUsage(rowValue.getUsageAfter());
+adjustFont=result;
 break;
 case 5:
 int s=rowValue.getSuccessful();
 int f=rowValue.getFailed();
 int e=rowValue.getErrored();
-int sum=s + f + e;
-if (sum == 0) {
+if (container) {
+this.success.setText((s > 0 ? ("P:" + s) : ""));
+this.failure.setText((f > 0 ? ("F:" + f) : ""));
+this.error.setText((e > 0 ? ("E:" + e) : ""));
+result=this.statePanel;
 }
- else if (sum == 1) {
-if (s == 1) {
-text="Passed";
+ else if ((s + f + e) >= 1) {
+if (s > 0) {
+result=this.aloneSuccess;
 }
- else if (f == 1) {
-text="Failed";
+if (f > 0) {
+result=this.aloneFailure;
 }
- else if (e == 1) {
-text="Error";
+if (e > 0) {
+result=this.aloneError;
 }
 }
  else {
-StringBuilder builder=new StringBuilder();
-if (s > 0) {
-builder.append(" P:").append(s);
+this.simpleField.setText("");
+result=this.simpleField;
 }
-if (f > 0) {
-builder.append(" F:").append(f);
-}
-if (e > 0) {
-builder.append(" E:").append(e);
-}
-text=builder.toString();
-}
-this.setText(text);
+keepForeground=true;
 break;
 default :
 }
-return this;
+result.setOpaque(true);
+if (isSelected) {
+if (!(keepForeground)) {
+result.setForeground(table.getSelectionForeground());
+}
+result.setBackground(table.getSelectionBackground());
+}
+ else {
+if (!(keepForeground)) {
+result.setForeground(table.getForeground());
+}
+result.setBackground(table.getBackground());
+}
+if (hasFocus) {
+result.setBorder(UIManager.getBorder("Table.focusCellHighlightBorder"));
+}
+ else {
+result.setBorder(BorderFactory.createEmptyBorder(1,1,1,1));
+}
+result.setEnabled(table.isEnabled());
+if (adjustFont != null) {
+if (container) {
+Font font=table.getFont();
+adjustFont.setFont(new Font(font.getName(),Font.BOLD,font.getSize()));
+}
+ else {
+adjustFont.setFont(table.getFont());
+}
+}
+return result;
 }
