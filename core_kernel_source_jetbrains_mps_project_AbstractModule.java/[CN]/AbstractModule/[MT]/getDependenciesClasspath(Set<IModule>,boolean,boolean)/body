@@ -1,31 +1,8 @@
 {
-  Set<IModule> dependOnModules=new LinkedHashSet<IModule>();
-  dependOnModules.addAll(modules);
-  for (  IModule m : modules) {
-    dependOnModules.addAll(m.getAllDependOnModules(IModule.class));
+  if (USE_OLD_DEPENDENCY_CLASSPATH_ROUTINE) {
+    return getDependenciesClasspath_old(modules,includeJDK,includeMPS);
   }
-  dependOnModules.addAll(BootstrapLanguagesManager.getInstance().getLanguagesUsedInCore());
-  CompositeClassPathItem result=new CompositeClassPathItem();
-  if (includeJDK) {
-    result.add(ClassLoaderManager.getInstance().getRTJar());
+ else {
+    return new ClasspathCollector(modules).collect(includeJDK,includeMPS);
   }
-  if (includeMPS) {
-    result.add(ClassLoaderManager.getInstance().getMPSPath());
-  }
-  for (  IModule m : dependOnModules) {
-    result.add(m.getJavaStubsClassPathItem());
-    if (m instanceof Language) {
-      result.add(m.getRuntimeClasspath());
-    }
-  }
-  Set<Language> allExtendedLanguages=new LinkedHashSet<Language>();
-  for (  IModule m : modules) {
-    if (m instanceof Language) {
-      allExtendedLanguages.addAll(((Language)m).getAllExtendedLanguages());
-    }
-  }
-  for (  Language l : allExtendedLanguages) {
-    result.add(l.getRuntimeClasspath());
-  }
-  return result.optimize();
 }
