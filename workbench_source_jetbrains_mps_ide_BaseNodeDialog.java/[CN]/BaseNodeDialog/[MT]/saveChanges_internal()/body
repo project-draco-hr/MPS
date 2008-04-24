@@ -1,17 +1,30 @@
 {
   if (!validateNode())   return true;
-  CommandProcessor.instance().executeCommand(new Runnable(){
+  new Thread(){
     public void run(){
-      myEditorComponent.dispose();
+      IAdaptiveProgressMonitor monitor=getOperationContext().getComponent(AbstractProjectFrame.class).createAdaptiveProgressMonitor();
       try {
-        saveChanges();
+        String taskname="Applying changes...";
+        monitor.start("Applying changes",TaskProgressSettings.getInstance().getEstimatedTimeMillis(taskname));
+        monitor.startLeafTask(taskname);
+        try {
+          CommandProcessor.instance().executeCommand(new Runnable(){
+            public void run(){
+              saveChanges();
+            }
+          }
+);
+        }
+ catch (        Throwable t) {
+          LOG.error(t);
+        }
       }
- catch (      Throwable t) {
-        JOptionPane.showInputDialog(BaseNodeDialog.this,"Exception during save " + t.getMessage());
-        LOG.error(t);
+  finally {
+        monitor.finishTask();
+        monitor.finish();
       }
     }
   }
-);
+.start();
   return false;
 }
