@@ -1,8 +1,7 @@
 {
-  GenerationSessionContext generationContext=generator.getGeneratorSessionContext();
   String modelsLongName=inputModel.getLongName();
   SModel currentInputModel=inputModel;
-  List<MappingScript> preMappingScripts=generationContext.getPreMappingScripts();
+  List<MappingScript> preMappingScripts=mySessionContext.getPreMappingScripts();
   if (!preMappingScripts.isEmpty()) {
     boolean needToCloneInputMode=!myDiscardTransients;
     if (!needToCloneInputMode) {
@@ -20,7 +19,7 @@
       addMessage(MessageKind.INFORMATION,"clone model '" + currentInputModel.getUID() + "' --> '"+ currentInputModel_clone.getUID()+ "'");
       CloneUtil.cloneModel(currentInputModel,currentInputModel_clone,generator.getScope());
       if (!myDiscardTransients) {
-        generationContext.getGenerationTracer().registerPreMappingScripts(currentInputModel,currentInputModel_clone,preMappingScripts);
+        mySessionContext.getGenerationTracer().registerPreMappingScripts(currentInputModel,currentInputModel_clone,preMappingScripts);
       }
       recycleWasteModel(currentInputModel);
       currentInputModel=currentInputModel_clone;
@@ -35,7 +34,7 @@
     GeneratorUtil.executeMappingScript(preMappingScript,currentInputModel,generator);
   }
   SModel currentOutputModel=createTransientModel(modelsLongName);
-  generationContext.getGenerationTracer().startTracing(currentInputModel,currentOutputModel);
+  mySessionContext.getGenerationTracer().startTracing(currentInputModel,currentOutputModel);
   currentInputModel.setLoading(false);
   boolean somethingHasBeenGenerated=generator.doPrimaryMapping(currentInputModel,currentOutputModel);
   if (!somethingHasBeenGenerated) {
@@ -47,14 +46,14 @@
   while (true) {
     currentOutputModel.validateLanguagesAndImports();
     addMessage(MessageKind.INFORMATION,"generating model '" + currentOutputModel.getUID() + "'");
-    generationContext.clearTransientObjects();
+    mySessionContext.clearTransientObjects();
     SModel transientModel=createTransientModel(modelsLongName);
     recycleWasteModel(currentInputModel);
     currentInputModel=currentOutputModel;
     currentInputModel.setLoading(false);
-    generationContext.getGenerationTracer().startTracing(currentInputModel,transientModel);
+    mySessionContext.getGenerationTracer().startTracing(currentInputModel,transientModel);
     if (!generator.doSecondaryMapping(currentInputModel,transientModel)) {
-      generationContext.getGenerationTracer().discardTracing(currentInputModel,transientModel);
+      mySessionContext.getGenerationTracer().discardTracing(currentInputModel,transientModel);
       addMessage(MessageKind.INFORMATION,"remove empty model '" + transientModel.getUID() + "'");
       SModelRepository.getInstance().removeModelDescriptor(transientModel.getModelDescriptor());
       myTransientModelsCount--;
@@ -62,9 +61,9 @@
     }
     if (++secondaryMappingRepeatCount > 10) {
       generator.showErrorMessage(null,"failed to generate output after 10 repeated mappings");
-      if (generationContext.getGenerationTracer().hasTracebackData(transientModel.getUID())) {
+      if (mySessionContext.getGenerationTracer().hasTracebackData(transientModel.getUID())) {
         generator.showErrorMessage(null,"last rules applied:");
-        List<Pair<SNode,SNode>> pairs=generationContext.getGenerationTracer().getAllAppiedRulesWithInputNodes(transientModel.getUID());
+        List<Pair<SNode,SNode>> pairs=mySessionContext.getGenerationTracer().getAllAppiedRulesWithInputNodes(transientModel.getUID());
         for (        Pair<SNode,SNode> pair : pairs) {
           generator.showErrorMessage(pair.o1,"rule: " + pair.o1.getDebugText());
           generator.showErrorMessage(pair.o2,"-- input: " + (pair.o2 != null ? pair.o2.getDebugText() : "n/a"));
@@ -78,12 +77,12 @@
     currentOutputModel=transientModel;
   }
   currentOutputModel.setLoading(true);
-  List<MappingScript> postMappingScripts=generationContext.getPostMappingScripts();
+  List<MappingScript> postMappingScripts=mySessionContext.getPostMappingScripts();
   if (!postMappingScripts.isEmpty() && !myDiscardTransients) {
     SModel currentOutputModel_clone=createTransientModel(modelsLongName);
     addMessage(MessageKind.INFORMATION,"clone model '" + currentOutputModel.getUID() + "' --> '"+ currentOutputModel_clone.getUID()+ "'");
     CloneUtil.cloneModel(currentOutputModel,currentOutputModel_clone,generator.getScope());
-    generationContext.getGenerationTracer().registerPostMappingScripts(currentOutputModel,currentOutputModel_clone,postMappingScripts);
+    mySessionContext.getGenerationTracer().registerPostMappingScripts(currentOutputModel,currentOutputModel_clone,postMappingScripts);
     currentOutputModel=currentOutputModel_clone;
   }
   for (  MappingScript postMappingScript : postMappingScripts) {
