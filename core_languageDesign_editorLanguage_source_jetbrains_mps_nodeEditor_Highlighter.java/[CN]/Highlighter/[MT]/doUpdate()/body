@@ -1,24 +1,31 @@
 {
   if (myProjects == null)   return;
   MPSProjects projects=myProjects;
+  List<SModelEvent> events=new ArrayList<SModelEvent>();
+synchronized (EVENTS_LOCK) {
+    events.addAll(myLastEvents);
+    myLastEvents.clear();
+  }
+  Set<IEditorChecker> checkers=new LinkedHashSet<IEditorChecker>();
+  Set<IEditorChecker> checkersToRemove=new LinkedHashSet<IEditorChecker>();
+synchronized (CHECKERS_LOCK) {
+    checkers.addAll(myCheckers);
+    checkersToRemove.addAll(myCheckersToRemove);
+    myCheckersToRemove.clear();
+  }
   for (  MPSProject project : projects.getProjects()) {
     IDEProjectFrame projectFrame=project.getComponent(IDEProjectFrame.class);
     if (projectFrame == null)     continue;
     EditorsPane editorsPane=project.getComponentSafe(AbstractProjectFrame.class).getEditorsPane();
     boolean isUpdated=false;
-    List<SModelEvent> events=new ArrayList<SModelEvent>();
-synchronized (EVENTS_LOCK) {
-      events.addAll(myLastEvents);
-      myLastEvents.clear();
-    }
     for (    IEditor editor : editorsPane.getEditors()) {
       AbstractEditorComponent component=editor.getCurrentEditorComponent();
       if (component != null) {
-        if (updateEditorComponent(component,events)) {
+        if (updateEditorComponent(component,events,checkers,checkersToRemove)) {
           isUpdated=true;
         }
         if (component instanceof NodeEditorComponent) {
-          updateEditorComponent(((NodeEditorComponent)component).getInspector(),events);
+          updateEditorComponent(((NodeEditorComponent)component).getInspector(),events,checkers,checkersToRemove);
         }
       }
     }
