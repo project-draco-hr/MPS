@@ -1,14 +1,21 @@
 {
   final SNode editedNode=component.getEditedNode();
   if (editedNode != null) {
+    final Set<IEditorChecker> checkers=new LinkedHashSet<IEditorChecker>();
+    Set<IEditorChecker> checkersToRemove=new LinkedHashSet<IEditorChecker>();
+synchronized (CHECKERS_LOCK) {
+      checkers.addAll(myCheckers);
+      checkersToRemove.addAll(myCheckersToRemove);
+      myCheckersToRemove.clear();
+    }
     final Set<IEditorChecker> checkersToRecheck=new LinkedHashSet<IEditorChecker>();
     if (!wasCheckedOnce(component)) {
-      checkersToRecheck.addAll(myCheckers);
+      checkersToRecheck.addAll(checkers);
     }
  else {
       CommandProcessor.instance().tryToExecuteLightweightCommand(new Runnable(){
         public void run(){
-          for (          IEditorChecker checker : myCheckers) {
+          for (          IEditorChecker checker : checkers) {
             if (checker.hasDramaticalEvent(events)) {
               checkersToRecheck.add(checker);
             }
@@ -21,7 +28,7 @@
       return false;
     }
     myCheckedOnceEditors.add(component);
-    if (updateEditor(component,checkersToRecheck)) {
+    if (updateEditor(component,checkersToRecheck,checkersToRemove)) {
       return true;
     }
   }
