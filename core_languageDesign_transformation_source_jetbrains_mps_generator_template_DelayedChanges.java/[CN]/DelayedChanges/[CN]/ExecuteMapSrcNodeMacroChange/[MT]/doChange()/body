@@ -1,19 +1,25 @@
 {
   Map<String,SNode> old=myGenerator.setPreviousInputNodesByMappingName(myInputNodesByMappingName);
   try {
-    SNode child=MacroUtil.executeMapSrcNodeMacro(myInputNode,myMapSrcMacro.getNode(),myChildToReplace.getParent(),myGenerator);
+    SNode child=MacroUtil.executeMapSrcNodeMacro(myInputNode,myMapSrcMacro,myChildToReplace.getParent(),myGenerator);
     if (child != null) {
       if (child.isRegistered()) {
         child=CopyUtil.copy(child);
       }
       validateReferences(child);
-      myChildToReplace.getParent().replaceChild(myChildToReplace,child);
+      SNode parent=myChildToReplace.getParent();
+      String childRole=parent.getRoleOf(myChildToReplace);
+      if (!GeneratorUtil.checkChild(parent,childRole,child)) {
+        LOG.warning(" -- was input: " + myInputNode.getDebugText(),myInputNode);
+        LOG.warning(" -- was template: " + myMapSrcMacro.getDebugText(),myMapSrcMacro);
+      }
+      parent.replaceChild(myChildToReplace,child);
       myGenerator.getGeneratorSessionContext().getGenerationTracer().replaceOutputNode(myChildToReplace,child);
     }
   }
  catch (  Throwable t) {
-    myGenerator.showErrorMessage(myInputNode,myMapSrcMacro.getNode(),"mapping failed: '" + t.getMessage() + "'");
-    LOG.error(t,myMapSrcMacro.getNode());
+    myGenerator.showErrorMessage(myInputNode,myMapSrcMacro,"mapping failed: '" + t.getMessage() + "'");
+    LOG.error(t,myMapSrcMacro);
   }
  finally {
     myGenerator.setPreviousInputNodesByMappingName(old);
