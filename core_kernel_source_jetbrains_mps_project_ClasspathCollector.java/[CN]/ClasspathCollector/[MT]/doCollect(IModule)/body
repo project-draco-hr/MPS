@@ -1,22 +1,30 @@
 {
-  if (myVisited.contains(current)) {
-    return;
-  }
-  myVisited.add(current);
-  myResult.add(current.getClassPathItem());
-  for (  IModule dep : current.getAllDependOnModules()) {
-    doCollect(dep);
-  }
-  for (  Language l : current.getAllUsedLanguages()) {
-    myResult.add(l.getLanguageRuntimeClasspath());
-    for (    IModule runtimeModule : l.getRuntimeDependOnModules()) {
-      doCollect(runtimeModule);
+  try {
+    myStack.push(current);
+    if (myVisited.contains(current)) {
+      return;
+    }
+    myVisited.add(current);
+    addPart(current.getClassPathItem());
+    for (    IModule dep : current.getAllDependOnModules()) {
+      doCollect(dep);
+    }
+    for (    Language l : current.getAllUsedLanguages()) {
+      myStack.push(l);
+      addPart(l.getLanguageRuntimeClasspath());
+      for (      IModule runtimeModule : l.getRuntimeDependOnModules()) {
+        doCollect(runtimeModule);
+      }
+      myStack.pop();
+    }
+    if (current instanceof Language) {
+      Language l=(Language)current;
+      for (      Language extended : l.getExtendedLanguages()) {
+        doCollect(extended);
+      }
     }
   }
-  if (current instanceof Language) {
-    Language l=(Language)current;
-    for (    Language extended : l.getExtendedLanguages()) {
-      doCollect(extended);
-    }
+  finally {
+    myStack.pop();
   }
 }
