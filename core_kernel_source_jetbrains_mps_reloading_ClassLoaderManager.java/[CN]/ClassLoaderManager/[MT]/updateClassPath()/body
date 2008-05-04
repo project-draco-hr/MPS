@@ -1,5 +1,23 @@
 {
   LOG.debug("Updating class path");
+  for (  IModule m : MPSModuleRepository.getInstance().getAllModules()) {
+    if (!myOSGIBundles.containsKey(m.getModuleUID())) {
+      addModule(m.getModuleUID());
+    }
+  }
+  Set<String> removed=new HashSet<String>();
+  for (  String uid : myOSGIBundles.keySet()) {
+    if (MPSModuleRepository.getInstance().getModuleByUID(uid) == null) {
+      try {
+        myOSGIBundles.get(uid).uninstall();
+        removed.add(uid);
+      }
+ catch (      Throwable t) {
+        LOG.error(t);
+      }
+    }
+  }
+  myOSGIBundles.keySet().removeAll(removed);
   refreshBundles(myOSGIBundles.values().toArray(new Bundle[myOSGIBundles.size()]),true);
   for (  IModule m : myModuleRepository.getAllModules()) {
     m.updateClassPath();
