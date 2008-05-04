@@ -7,11 +7,26 @@
     SNode concept=SNodeOperations.getConceptDeclaration(targetNode);
     ConceptAndSuperConceptsScope superConceptsScope=new ConceptAndSuperConceptsScope(((AbstractConceptDeclaration)SNodeOperations.getAdapter(concept)));
     List<LinkDeclaration> linkDeclarations=superConceptsScope.getLinkDeclarationsExcludingOverridden();
-    Iterable<SNode> childLinkDeclarations=SequenceOperations.select(SequenceOperations.where(linkDeclarations,new zPredicate(MoveNodes.this,null)),new zSelector(MoveNodes.this,null));
-    Iterable<String> childLinksRoles=SequenceOperations.select(childLinkDeclarations,new zSelector1(MoveNodes.this,null));
+    Iterable<SNode> childLinkDeclarations=ListSequence.fromList(linkDeclarations).where(new IWhereFilter<LinkDeclaration>(){
+      public boolean accept(      LinkDeclaration it){
+        return SPropertyOperations.hasValue(((SNode)it.getNode()),"metaClass","aggregation",null);
+      }
+    }
+).select(new ISelector<LinkDeclaration,SNode>(){
+      public SNode select(      LinkDeclaration it){
+        return (SNode)it.getNode();
+      }
+    }
+);
+    Iterable<String> childLinksRoles=Sequence.fromIterable(childLinkDeclarations).select(new ISelector<SNode,String>(){
+      public String select(      SNode it){
+        return SModelUtil_new.getGenuineLinkRole(((LinkDeclaration)SNodeOperations.getAdapter(it)));
+      }
+    }
+);
     for (    SNode node : actionContext.getNodes()) {
       String childRole=node.getRole_();
-      if (!(SequenceOperations.contains(childLinksRoles,childRole))) {
+      if (!(Sequence.fromIterable(childLinksRoles).contains(childRole))) {
         return false;
       }
       for (      SNode linkDeclaration : childLinkDeclarations) {
