@@ -1,0 +1,29 @@
+{
+  LOG.assertInCommand();
+  Set<SNode> result=new HashSet<SNode>();
+  try {
+    if (progress == null)     progress=IAdaptiveProgressMonitor.NULL_PROGRESS_MONITOR;
+    List<SModelDescriptor> models=scope.getModelDescriptors();
+    if (manageTasks) {
+      long estimatedTime=ModelsProgressUtil.estimateFindInstancesTimeMillis(models);
+      progress.startTaskAnyway(ModelsProgressUtil.TASK_KIND_FIND_INSTANCES,null,estimatedTime);
+      progress.addText("Finding Instances...");
+    }
+    for (    SModelDescriptor model : models) {
+      String taskName=ModelsProgressUtil.findInstancesModelTaskName(model);
+      if (manageTasks)       progress.startLeafTask(taskName,ModelsProgressUtil.TASK_KIND_FIND_INSTANCES);
+      result.addAll(model.findInstances(concept,scope));
+      if (progress.isCanceled()) {
+        if (manageTasks)         progress.finishAnyway();
+        return result;
+      }
+ else {
+        if (manageTasks)         progress.finishTask(taskName);
+      }
+    }
+    if (manageTasks)     progress.finishTask(ModelsProgressUtil.TASK_KIND_FIND_INSTANCES);
+    return result;
+  }
+  finally {
+  }
+}
