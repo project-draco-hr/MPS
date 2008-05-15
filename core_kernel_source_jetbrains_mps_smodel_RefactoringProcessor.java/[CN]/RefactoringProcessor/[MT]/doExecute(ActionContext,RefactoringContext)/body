@@ -18,7 +18,7 @@
   try {
     monitor.start("refactoring",estimatedTime);
     monitor.startLeafTask(refactoringTaskName,"refactoring",estimatedTime);
-    Map<IModule,List<SModel>> calculatedSourceModels=CommandProcessor.instance().executeCommand(new Calculable<Map<IModule,List<SModel>>>(){
+    Map<IModule,List<SModel>> moduleToModelsMap=CommandProcessor.instance().executeCommand(new Calculable<Map<IModule,List<SModel>>>(){
       public Map<IModule,List<SModel>> calculate(){
         SModelDescriptor modelDescriptor=context.getModel();
         SModelUID initialModelUID=modelDescriptor.getModelUID();
@@ -26,8 +26,8 @@
         SModel model=modelDescriptor.getSModel();
         refactoringContext.computeCaches();
         SearchResults usages=refactoringContext.getUsages();
-        Map<IModule,List<SModel>> sourceModels=refactoring.getModelsToGenerate(context,refactoringContext);
-        if (!refactoringContext.isLocal() || usages == null) {
+        Map<IModule,List<SModel>> moduleToModelsMap=refactoring.getModelsToGenerate(context,refactoringContext);
+        if (!refactoringContext.isLocal()) {
           if (refactoring.doesUpdateModel()) {
             writeIntoLog(model,refactoringContext);
             for (            SModelDescriptor anotherDescriptor : SModelRepository.getInstance().getAllModelDescriptors()) {
@@ -37,9 +37,6 @@
               }
               if (!anotherDescriptor.isInitialized())               continue;
               SModel anotherModel=anotherDescriptor.getSModel();
-              if ("importsRenamedModel".equals(anotherModel.getShortName())) {
-                System.err.println("oy vey!");
-              }
               Set<SModelUID> dependenciesModels=anotherModel.getDependenciesModelUIDs();
               if (model != anotherModel && !dependenciesModels.contains(initialModelUID))               continue;
               processModel(anotherModel,model,refactoringContext);
@@ -47,9 +44,9 @@
           }
         }
  else {
-          if (refactoring.doesUpdateModel()) {
+          if (refactoring.doesUpdateModel() && usages != null) {
             Set<SModel> modelsToProcess=usages.getModelsWithResults();
-            for (            List<SModel> sModels : sourceModels.values()) {
+            for (            List<SModel> sModels : moduleToModelsMap.values()) {
               modelsToProcess.addAll(sModels);
             }
             for (            SModel anotherModel : modelsToProcess) {
@@ -57,12 +54,12 @@
             }
           }
         }
-        return sourceModels;
+        return moduleToModelsMap;
       }
     }
 );
-    if (calculatedSourceModels != null && !calculatedSourceModels.isEmpty()) {
-      generateModels(context,calculatedSourceModels,refactoringContext);
+    if (moduleToModelsMap != null && !moduleToModelsMap.isEmpty()) {
+      generateModels(context,moduleToModelsMap,refactoringContext);
     }
   }
   finally {

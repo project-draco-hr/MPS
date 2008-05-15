@@ -5,14 +5,13 @@
   if (refactoring.showsAffectedNodes()) {
     Thread thread=new Thread(){
       public void run(){
-        final SearchResults[] usagesContainer=new SearchResults[]{null};
         final boolean toReturn[]=new boolean[]{false};
         CommandProcessor.instance().executeLightweightCommand(new Runnable(){
           public void run(){
             try {
               ActionContext newContext=new ActionContext(context);
               newContext.put(IOperationContext.class,new ProjectOperationContext(context.getOperationContext().getProject()));
-              usagesContainer[0]=refactoring.getAffectedNodes(newContext,refactoringContext);
+              refactoringContext.setUsages(refactoring.getAffectedNodes(newContext,refactoringContext));
             }
  catch (            Throwable t) {
               LOG.error(t);
@@ -28,7 +27,7 @@
         }
 );
         if (toReturn[0])         return;
-        if (usagesContainer[0] == null) {
+        if (refactoringContext.getUsages() == null) {
           doExecuteInThread(context,refactoringContext);
         }
  else {
@@ -36,8 +35,6 @@
             public void run(){
               CommandProcessor.instance().executeLightweightCommand(new Runnable(){
                 public void run(){
-                  SearchResults usages=usagesContainer[0];
-                  refactoringContext.setUsages(usages);
                   NewRefactoringView.showRefactoringView(context,refactoringContext);
                 }
               }
