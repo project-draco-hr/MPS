@@ -5,7 +5,6 @@
     }
   }
 );
-  refactoringContext.setRefactoring(myRefactoring);
   AbstractProjectFrame projectFrame=context.get(AbstractProjectFrame.class);
   IAdaptiveProgressMonitor monitor_=new NullAdaptiveProgressMonitor();
   boolean hasMonitor=projectFrame != null;
@@ -13,7 +12,8 @@
     monitor_=projectFrame.createAdaptiveProgressMonitor();
   }
   final IAdaptiveProgressMonitor monitor=monitor_;
-  final String refactoringTaskName="refactoring_" + myRefactoring.getClass().getName();
+  final ILoggableRefactoring refactoring=refactoringContext.getRefactoring();
+  final String refactoringTaskName="refactoring_" + refactoring.getClass().getName();
   final long estimatedTime=monitor.getEstimatedTime(refactoringTaskName);
   try {
     monitor.start("refactoring",estimatedTime);
@@ -22,13 +22,13 @@
       public Map<IModule,List<SModel>> calculate(){
         SModelDescriptor modelDescriptor=context.getModel();
         SModelUID initialModelUID=modelDescriptor.getModelUID();
-        myRefactoring.doRefactor(context,refactoringContext);
+        refactoring.doRefactor(context,refactoringContext);
         SModel model=modelDescriptor.getSModel();
         refactoringContext.computeCaches();
         SearchResults usages=refactoringContext.getUsages();
-        Map<IModule,List<SModel>> sourceModels=myRefactoring.getModelsToGenerate(context,refactoringContext);
+        Map<IModule,List<SModel>> sourceModels=refactoring.getModelsToGenerate(context,refactoringContext);
         if (!refactoringContext.isLocal() || usages == null) {
-          if (myRefactoring.doesUpdateModel()) {
+          if (refactoring.doesUpdateModel()) {
             writeIntoLog(model,refactoringContext);
             for (            SModelDescriptor anotherDescriptor : SModelRepository.getInstance().getAllModelDescriptors()) {
               String stereotype=anotherDescriptor.getStereotype();
@@ -47,7 +47,7 @@
           }
         }
  else {
-          if (myRefactoring.doesUpdateModel()) {
+          if (refactoring.doesUpdateModel()) {
             Set<SModel> modelsToProcess=usages.getModelsWithResults();
             for (            List<SModel> sModels : sourceModels.values()) {
               modelsToProcess.addAll(sModels);
