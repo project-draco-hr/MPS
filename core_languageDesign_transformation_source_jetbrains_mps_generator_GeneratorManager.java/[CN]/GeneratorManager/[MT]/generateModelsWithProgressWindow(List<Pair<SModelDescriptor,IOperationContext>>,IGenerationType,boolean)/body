@@ -1,14 +1,8 @@
 {
   if (inputModels.isEmpty()) {
-    return myExecutorService.submit(new Callable<Boolean>(){
-      public Boolean call() throws Exception {
-        return true;
-      }
-    }
-);
+    return true;
   }
   final IOperationContext invocationContext=inputModels.get(0).o2;
-  final IAdaptiveProgressMonitor progress=createAdaptriveProgressMonitor(closeOnExit,invocationContext);
   final DefaultMessageHandler messages=new DefaultMessageHandler(invocationContext.getProject());
   final boolean saveTransientModels;
   if (isSaveTransientModels()) {
@@ -27,10 +21,12 @@
  else {
     saveTransientModels=false;
   }
-  return myExecutorService.submit(new Callable<Boolean>(){
-    public Boolean call() throws Exception {
-      return generateModels(inputModels,generationType,progress,messages,saveTransientModels);
+  final boolean[] result=new boolean[]{false};
+  ProgressManager.getInstance().run(new Modal(invocationContext.getComponent(Project.class),"Generation",true){
+    public void run(    @NotNull ProgressIndicator progress){
+      result[0]=generateModels(inputModels,generationType,progress,messages,saveTransientModels);
     }
   }
 );
+  return result[0];
 }
