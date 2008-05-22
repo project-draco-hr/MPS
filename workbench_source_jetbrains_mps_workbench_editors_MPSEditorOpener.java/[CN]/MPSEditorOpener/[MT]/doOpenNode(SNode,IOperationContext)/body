@@ -1,0 +1,40 @@
+{
+  SNode containingRoot=node.getContainingRoot();
+  SNode baseNode=getBaseNode(context,containingRoot);
+  if (baseNode == null) {
+    baseNode=containingRoot;
+  }
+  MPSNodeVirtualFile file=MPSNodesVirtualFileSystem.getInstance().getFileFor(baseNode);
+  FileEditorManager editorManager=FileEditorManager.getInstance(myProject);
+  FileEditor[] result=editorManager.openFile(file,true);
+  MPSFileNodeEditor fileNodeEditor=(MPSFileNodeEditor)result[0];
+  IEditor nodeEditor=fileNodeEditor.getNodeEditor();
+  if (nodeEditor instanceof TabbedEditor) {
+    ((TabbedEditor)nodeEditor).selectLinkedEditor(containingRoot);
+  }
+  if (!node.isRoot()) {
+    nodeEditor.selectNode(node);
+    if (nodeEditor.getCurrentEditorComponent() instanceof NodeEditorComponent) {
+      final NodeEditorComponent nec=(NodeEditorComponent)nodeEditor.getCurrentEditorComponent();
+      final InspectorEditorComponent inspector=nec.getInspector();
+      EditorCell cellInInspector=null;
+      SNode currentTargetNode=node;
+      while (cellInInspector == null && currentTargetNode != null) {
+        cellInInspector=inspector.findNodeCell(currentTargetNode);
+        currentTargetNode=currentTargetNode.getParent();
+      }
+      if (cellInInspector != null) {
+        final EditorCell cellToSelect=cellInInspector;
+        SwingUtilities.invokeLater(new Runnable(){
+          public void run(){
+            nec.showInspector();
+            inspector.changeSelection(cellToSelect);
+            inspector.requestFocus();
+          }
+        }
+);
+      }
+    }
+  }
+  return nodeEditor;
+}
