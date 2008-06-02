@@ -1,8 +1,13 @@
 {
-  if (myProjects == null)   return;
+  if (myProjects == null) {
+    return;
+  }
   MPSProjects projects=myProjects;
   List<SModelEvent> events=new ArrayList<SModelEvent>();
 synchronized (EVENTS_LOCK) {
+    if (!myLastEvents.isEmpty()) {
+      System.err.println("oy");
+    }
     events.addAll(myLastEvents);
     myLastEvents.clear();
   }
@@ -13,28 +18,26 @@ synchronized (CHECKERS_LOCK) {
     checkersToRemove.addAll(myCheckersToRemove);
     myCheckersToRemove.clear();
   }
-  for (  MPSProject project : projects.getProjects()) {
-    boolean isUpdated=false;
-    List<IEditor> allEditors=getAllEditors(project);
-    for (    IEditor editor : allEditors) {
-      AbstractEditorComponent component=editor.getCurrentEditorComponent();
-      if (component != null) {
-        if (updateEditorComponent(component,events,checkers,checkersToRemove)) {
-          isUpdated=true;
-        }
-        if (component instanceof NodeEditorComponent) {
-          updateEditorComponent(((NodeEditorComponent)component).getInspector(),events,checkers,checkersToRemove);
-        }
+  boolean isUpdated=false;
+  List<IEditor> allEditors=getAllEditors();
+  for (  IEditor editor : allEditors) {
+    AbstractEditorComponent component=editor.getCurrentEditorComponent();
+    if (component != null) {
+      if (updateEditorComponent(component,events,checkers,checkersToRemove)) {
+        isUpdated=true;
+      }
+      if (component instanceof NodeEditorComponent) {
+        updateEditorComponent(((NodeEditorComponent)component).getInspector(),events,checkers,checkersToRemove);
       }
     }
-    if (isUpdated) {
-      IEditor currentEditor=getCurrentEditor(project);
-      if (currentEditor != null) {
-        currentEditor.repaint();
-        AbstractEditorComponent component=currentEditor.getCurrentEditorComponent();
-        if (component != null) {
-          component.getMessagesGutter().repaint();
-        }
+  }
+  if (isUpdated) {
+    IEditor currentEditor=getCurrentEditor();
+    if (currentEditor != null) {
+      currentEditor.repaint();
+      AbstractEditorComponent component=currentEditor.getCurrentEditorComponent();
+      if (component != null) {
+        component.getMessagesGutter().repaint();
       }
     }
   }
