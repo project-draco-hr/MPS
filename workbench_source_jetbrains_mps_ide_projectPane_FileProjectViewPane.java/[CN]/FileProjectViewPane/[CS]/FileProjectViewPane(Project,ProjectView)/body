@@ -1,0 +1,33 @@
+{
+  super(project);
+  myProject=project;
+  myProjectView=projectView;
+  myMPSTree=new MPSTree(){
+    public IWorkspaceListener myListener=new IWorkspaceListener(){
+      public void workingCopyChanged(){
+        ModelAccess.instance().runReadInEDT(new Runnable(){
+          public void run(){
+            myMPSTree.rebuildLater();
+          }
+        }
+);
+      }
+    }
+;
+    protected MPSTreeNode rebuild(){
+      if (myProject != null) {
+        ProjectVCSManager projectVCSManager=myProject.getComponent(ProjectVCSManager.class);
+        IFileController provider=projectVCSManager == null ? new DummyFileStatusProvider() : projectVCSManager.getController();
+        provider.addListener(myListener);
+        final IFile root=VFileSystem.toIFile(myProject.getBaseDir());
+        System.out.println(root);
+        return new FolderTreeNode(new ProjectOperationContext(getProject()),provider,root);
+      }
+ else {
+        return new TextTreeNode("No Project");
+      }
+    }
+  }
+;
+  myTree=myMPSTree;
+}
