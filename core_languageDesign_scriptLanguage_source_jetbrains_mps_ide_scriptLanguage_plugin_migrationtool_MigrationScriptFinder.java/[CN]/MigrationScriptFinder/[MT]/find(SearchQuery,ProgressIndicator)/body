@@ -1,27 +1,24 @@
 {
   SearchResults<SNode> results=new SearchResults<SNode>();
   IScope queryScope=query.getScope();
-  List<AbstractMigrationRefactoring> migrationRefactorings=new ArrayList<AbstractMigrationRefactoring>();
   List<BaseMigrationScript> scriptInstances=MigrationScriptUtil.getScriptInstances(myScripts,myContext);
+  indicator.setText("Searching applicable nodes");
+  int count=0;
   for (  BaseMigrationScript scriptInstance : scriptInstances) {
+    if (indicator.isCanceled())     break;
     List<IRefactoring> refactorings=scriptInstance.getRefactorings();
     for (    IRefactoring refactoring : refactorings) {
-      migrationRefactorings.add((AbstractMigrationRefactoring)refactoring);
-    }
-  }
-  indicator.setText("Searching applicable nodes");
-  for (  AbstractMigrationRefactoring migrationRefactoring : migrationRefactorings) {
-    if (indicator.isCanceled()) {
-      break;
-    }
-    indicator.setText2(migrationRefactoring.getName());
-    Set<SNode> instances=FindUsagesManager.getInstance().findInstances(MigrationScriptUtil.getApplicableConcept(migrationRefactoring),queryScope,null,false);
-    for (    SNode instance : instances) {
-      if (MigrationScriptUtil.isApplicableRefactoring(instance,migrationRefactoring)) {
-        String category=migrationRefactoring.getAdditionalInfo();
-        SearchResult<SNode> result=new SearchResult<SNode>(instance,category);
-        myMigrationBySearchResult.put(result,migrationRefactoring);
-        results.getSearchResults().add(result);
+      if (indicator.isCanceled())       break;
+      AbstractMigrationRefactoring migrationRefactoring=(AbstractMigrationRefactoring)refactoring;
+      String category=TreeTextUtil.toHtml(scriptInstance.getName() + "  " + migrationRefactoring.getAdditionalInfo());
+      indicator.setText2(category);
+      Set<SNode> instances=FindUsagesManager.getInstance().findInstances(MigrationScriptUtil.getApplicableConcept(migrationRefactoring),queryScope,null,false);
+      for (      SNode instance : instances) {
+        if (MigrationScriptUtil.isApplicableRefactoring(instance,migrationRefactoring)) {
+          SearchResult<SNode> result=new SearchResult<SNode>(instance,category);
+          myMigrationBySearchResult.put(result,migrationRefactoring);
+          results.getSearchResults().add(result);
+        }
       }
     }
   }
