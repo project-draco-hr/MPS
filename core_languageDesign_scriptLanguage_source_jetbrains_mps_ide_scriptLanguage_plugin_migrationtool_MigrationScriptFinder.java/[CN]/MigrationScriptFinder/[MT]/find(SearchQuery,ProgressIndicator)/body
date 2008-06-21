@@ -1,28 +1,30 @@
 {
-  SearchResults<SNode> results=new SearchResults<SNode>();
+  myResults=new SearchResults<SNode>();
   IScope queryScope=query.getScope();
-  List<BaseMigrationScript> scriptInstances=MigrationScriptUtil.getScriptInstances(myScripts,myContext);
+  List<BaseMigrationScript> scriptInstances=MigrationScriptUtil.getScriptInstances(myScripts,myOperationContext);
   indicator.setText("Searching applicable nodes");
-  int count=0;
   for (  BaseMigrationScript scriptInstance : scriptInstances) {
     if (indicator.isCanceled())     break;
     List<IRefactoring> refactorings=scriptInstance.getRefactorings();
     for (    IRefactoring refactoring : refactorings) {
       if (indicator.isCanceled())       break;
       AbstractMigrationRefactoring migrationRefactoring=(AbstractMigrationRefactoring)refactoring;
-      String category=TreeTextUtil.toHtml(scriptInstance.getName() + "  " + migrationRefactoring.getAdditionalInfo());
-      indicator.setText2(category);
+      indicator.setText2(scriptInstance.getName() + " [" + migrationRefactoring.getAdditionalInfo()+ "]");
       Set<SNode> instances=FindUsagesManager.getInstance().findInstances(MigrationScriptUtil.getApplicableConcept(migrationRefactoring),queryScope,null,false);
       for (      SNode instance : instances) {
         if (MigrationScriptUtil.isApplicableRefactoring(instance,migrationRefactoring)) {
+          String category=TreeTextUtil.toHtml(scriptInstance.getName()) + " </b>[" + TreeTextUtil.toHtml(migrationRefactoring.getAdditionalInfo())+ "]<b>";
           SearchResult<SNode> result=new SearchResult<SNode>(instance,category);
           myMigrationBySearchResult.put(result,migrationRefactoring);
-          results.getSearchResults().add(result);
+          myResults.getSearchResults().add(result);
         }
       }
     }
   }
   indicator.setText("Searching applicable nodes " + (indicator.isCanceled() ? "canceled" : "finished"));
   indicator.setText2("");
-  return results;
+  if (myMigrationScriptsView != null) {
+    myMigrationScriptsView.searchResultsChanged();
+  }
+  return myResults;
 }

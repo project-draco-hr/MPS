@@ -4,22 +4,26 @@
   for (  MigrationScript scriptNode : scriptNodes) {
     myScripts.add(new SNodePointer(scriptNode));
   }
-  final MigrationScriptFinder finder=new MigrationScriptFinder(myScripts,context);
-  final IResultProvider provider=FindUtils.makeProvider(finder);
-  final SearchQuery query=new SearchQuery(scope);
   SwingUtilities.invokeLater(new Runnable(){
     public void run(){
       ProgressManager.getInstance().run(new Modal(getProject(),"Searching",true){
         public void run(        @NotNull final ProgressIndicator indicator){
           indicator.setIndeterminate(true);
-          final SearchResults searchResults=FindUtils.getSearchResults(indicator,query,provider);
+          final MigrationScriptFinder finder=new MigrationScriptFinder(myScripts,context);
+          final IResultProvider provider=FindUtils.makeProvider(finder);
+          final SearchQuery query=new SearchQuery(scope);
+          FindUtils.getSearchResults(indicator,query,provider);
           SwingUtilities.invokeLater(new Runnable(){
             public void run(){
-              if (searchResults.getSearchResults().isEmpty()) {
+              if (finder.getLastSearchResults().getSearchResults().isEmpty()) {
                 JOptionPane.showMessageDialog(getContentManager().getComponent(),"No applicable nodes found","Migration Scripts",JOptionPane.INFORMATION_MESSAGE);
               }
  else {
-                addTab(finder,searchResults,provider,query);
+                int count=myViews.size();
+                for (int i=0; i < count; i++) {
+                  closeTab(0);
+                }
+                addTab(finder,provider,query);
                 openTool(true);
               }
             }
