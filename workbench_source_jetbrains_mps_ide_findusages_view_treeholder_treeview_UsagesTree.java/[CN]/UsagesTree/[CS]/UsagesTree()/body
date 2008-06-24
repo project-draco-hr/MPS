@@ -6,7 +6,15 @@
   getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER,0),COMMAND_OPEN_NODE_IN_PROJECT);
   getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F4,0),COMMAND_OPEN_NODE_IN_PROJECT);
   getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_F1,InputEvent.ALT_MASK),COMMAND_OPEN_NODE_IN_TREE);
-  getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE,0),COMMAND_TOGGLE);
+  KeyStroke deleteKeyStroke=KeyStroke.getKeyStroke(KeyEvent.VK_DELETE,0);
+  KeyStroke insertKeyStroke=KeyStroke.getKeyStroke(KeyEvent.VK_INSERT,0);
+  if (SystemInfo.isMac) {
+    getInputMap().put(deleteKeyStroke,COMMAND_TOGGLE);
+  }
+ else {
+    getInputMap().put(deleteKeyStroke,COMMAND_EXCLUDE);
+    getInputMap().put(insertKeyStroke,COMMAND_INCLUDE);
+  }
   addTreeExpansionListener(new TreeExpansionListener(){
     public void treeExpanded(    TreeExpansionEvent event){
       BaseNodeData data=((UsagesTreeNode)event.getPath().getLastPathComponent()).getUserObject().getData();
@@ -36,13 +44,26 @@
     }
   }
 );
+  getActionMap().put(COMMAND_EXCLUDE,new AbstractAction(){
+    public void actionPerformed(    ActionEvent e){
+      setCurrentNodeExclusion(true);
+    }
+  }
+);
+  getActionMap().put(COMMAND_INCLUDE,new AbstractAction(){
+    public void actionPerformed(    ActionEvent e){
+      setCurrentNodeExclusion(false);
+    }
+  }
+);
   addMouseListener(new MouseAdapter(){
     public void mouseClicked(    MouseEvent e){
-      if ((e.getButton() == MouseEvent.BUTTON1) && ((e.getClickCount() == 2) || (e.getClickCount() == 1 && myAutoscroll))) {
+      boolean gotoAction=(e.getClickCount() == 2) || (e.getClickCount() == 1 && myAutoscroll);
+      if ((e.getButton() == MouseEvent.BUTTON1) && gotoAction) {
         openCurrentNodeLink(false);
       }
       if (e.getButton() == MouseEvent.BUTTON3) {
-        changeCurrentNodeExclusion();
+        showChangeExclusionMenu(e);
       }
     }
   }
