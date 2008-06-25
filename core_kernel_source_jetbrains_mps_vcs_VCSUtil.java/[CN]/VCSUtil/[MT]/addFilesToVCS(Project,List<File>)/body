@@ -1,0 +1,60 @@
+{
+  if (project == null) {
+    return false;
+  }
+  final List<File> inVCS=new LinkedList<File>();
+  List<File> notInVCS=new LinkedList<File>();
+  final ProjectLevelVcsManager manager=project.getComponent(ProjectLevelVcsManager.class);
+  for (  File f : files) {
+    VirtualFile virtualFile=VFileSystem.getFile(f);
+    if (virtualFile != null) {
+      AbstractVcs vcs=manager.getVcsFor(virtualFile);
+      if (vcs != null) {
+        inVCS.add(f);
+      }
+ else {
+        notInVCS.add(f);
+      }
+    }
+  }
+  boolean result=true;
+  ApplicationManager.getApplication().invokeLater(new Runnable(){
+    public void run(){
+      ApplicationManager.getApplication().runWriteAction(new Runnable(){
+        public void run(){
+          LocalFileSystem lfs=LocalFileSystem.getInstance();
+          for (          File f : inVCS) {
+            VirtualFile vf=lfs.refreshAndFindFileByIoFile(f);
+            if (vf == null) {
+              continue;
+            }
+            AbstractVcs vcs=manager.getVcsFor(vf);
+            if (vcs != null) {
+              CheckinEnvironment ci=vcs.getCheckinEnvironment();
+              if (ci != null && !isUnderVCS(project,vf)) {
+                List<VirtualFile> vfs=new ArrayList<VirtualFile>();
+                System.out.format("add file %s to vcs",vf);
+                vfs.add(vf);
+                List<VcsException> result=ci.scheduleUnversionedFilesForAddition(vfs);
+                VcsDirtyScopeManager.getInstance(project).fileDirty(vf);
+              }
+            }
+          }
+        }
+      }
+);
+    }
+  }
+);
+  IProjectHandler projectHandler=project.getComponent(MPSProjectHolder.class).getMPSProject().getProjectHandler();
+  if (projectHandler != null) {
+    try {
+      projectHandler.addFilesToVCS(files);
+    }
+ catch (    RemoteException e) {
+      LOG.error(e);
+      return false;
+    }
+  }
+  return result;
+}
