@@ -1,0 +1,35 @@
+{
+  setPopup(true);
+  removeAll();
+  ActionEventData data=new ActionEventData(event);
+  List<Language> modelLanguages=data.getModelDescriptor() == null ? new ArrayList<Language>() : data.getModelDescriptor().getSModel().getLanguages(data.getOperationContext().getScope());
+  if (modelLanguages.size() == 0) {
+    add(new BaseAction("<NO LANGUAGES>"){
+      protected void doExecute(      AnActionEvent e){
+      }
+    }
+);
+  }
+  Collections.sort(modelLanguages,new ToStringComparator());
+  for (  final Language language : modelLanguages) {
+    if (myAllowedLanguages != null) {
+      if (!myAllowedLanguages.contains(language.getNamespace()))       continue;
+    }
+    MPSActionGroup langRootsGroup=new MPSActionGroup(language.getNamespace()){
+      public Icon getIcon(){
+        return IconManager.getIconFor(language.getNamespace());
+      }
+    }
+;
+    langRootsGroup.setPopup(true);
+    for (    ConceptDeclaration conceptDeclaration : language.getConceptDeclarations()) {
+      if (conceptDeclaration.getRootable()) {
+        langRootsGroup.add(newRootNodeAction(new SNodePointer(conceptDeclaration),data.getModelDescriptor()));
+      }
+    }
+    if (langRootsGroup.getChildren(null).length > 0) {
+      this.add(langRootsGroup);
+    }
+  }
+  setVisible(event.getPresentation(),data.hasOneSelectedItem());
+}
