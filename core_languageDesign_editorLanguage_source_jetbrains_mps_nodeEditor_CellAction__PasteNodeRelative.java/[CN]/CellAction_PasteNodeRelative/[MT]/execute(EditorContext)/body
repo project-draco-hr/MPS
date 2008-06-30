@@ -1,2 +1,31 @@
 {
+  LOG.assertInCommand();
+  AbstractEditorComponent editorComponent=context.getNodeEditorComponent();
+  EditorCell selectedCell=editorComponent.getSelectedCell();
+  SNode anchorNode=selectedCell.getSNode();
+  PasteNodeData pasteNodeData=CopyPasteUtil.getPasteNodeDataFromClipboard(anchorNode.getModel());
+  List<SNode> pasteNodes=pasteNodeData.getNodes();
+  Set<SReference> requireResolveReferences=pasteNodeData.getRequireResolveReferences();
+  PasteNodeUtil.pasteRelative(anchorNode,pasteNodes,myPastePlaceHint);
+  Resolver.resolveReferences(requireResolveReferences,context.getOperationContext());
+  editorComponent.flushEvents();
+  EditorCell nodeCell=editorComponent.findNodeCell(pasteNodes.get(0),true);
+  if (nodeCell == null)   return;
+  editorComponent.changeSelection(nodeCell);
+  EditorCell_Label labelCell=(EditorCell_Label)EditorUtil.findFirstCellWhichMeetsCondition(nodeCell,new Condition<EditorCell>(){
+    public boolean met(    EditorCell cell){
+      return cell instanceof EditorCell_Label;
+    }
+  }
+);
+  if (labelCell != null) {
+    editorComponent.changeSelection(labelCell);
+    if (pasteNodes.size() == 1) {
+      editorComponent.pushSelection(labelCell);
+      editorComponent.setSelectionDontClearStack(nodeCell,true);
+    }
+  }
+  if (pasteNodes.size() > 1) {
+    editorComponent.getNodeRangeSelection().setRange(pasteNodes.get(0),pasteNodes.get(pasteNodes.size() - 1));
+  }
 }

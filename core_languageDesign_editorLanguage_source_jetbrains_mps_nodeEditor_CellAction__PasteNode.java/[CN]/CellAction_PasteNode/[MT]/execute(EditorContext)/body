@@ -1,15 +1,31 @@
 {
   LOG.assertInCommand();
-  EditorCell selectedCell=context.getNodeEditorComponent().getSelectedCell();
+  AbstractEditorComponent editorComponent=context.getNodeEditorComponent();
+  EditorCell selectedCell=editorComponent.getSelectedCell();
   SNode selectedNode=selectedCell.getSNode();
-  SModel model=selectedNode.getModel();
-  PasteNodeData pasteNodeData=CopyPasteUtil.getPasteNodeDataFromClipboard(model);
-  Set<String> necessaryLanguages=pasteNodeData.getNecessaryLanguages();
-  Set<SModelUID> necessaryImports=pasteNodeData.getNecessaryImports();
-  if (!CopyPasteUtil.addImportsAndLanguagesToModel(model,necessaryLanguages,necessaryImports,context.getOperationContext()))   return;
+  PasteNodeData pasteNodeData=CopyPasteUtil.getPasteNodeDataFromClipboard(selectedNode.getModel());
   List<SNode> pasteNodes=pasteNodeData.getNodes();
   Set<SReference> requireResolveReferences=pasteNodeData.getRequireResolveReferences();
   PasteNodeUtil.paste(selectedCell,pasteNodes);
-  IOperationContext operationContext=context.getOperationContext();
-  Resolver.resolveReferences(requireResolveReferences,operationContext);
+  Resolver.resolveReferences(requireResolveReferences,context.getOperationContext());
+  editorComponent.flushEvents();
+  EditorCell nodeCell=editorComponent.findNodeCell(pasteNodes.get(0),true);
+  if (nodeCell == null)   return;
+  editorComponent.changeSelection(nodeCell);
+  EditorCell_Label labelCell=(EditorCell_Label)EditorUtil.findFirstCellWhichMeetsCondition(nodeCell,new Condition<EditorCell>(){
+    public boolean met(    EditorCell cell){
+      return cell instanceof EditorCell_Label;
+    }
+  }
+);
+  if (labelCell != null) {
+    editorComponent.changeSelection(labelCell);
+    if (pasteNodes.size() == 1) {
+      editorComponent.pushSelection(labelCell);
+      editorComponent.setSelectionDontClearStack(nodeCell,true);
+    }
+  }
+  if (pasteNodes.size() > 1) {
+    editorComponent.getNodeRangeSelection().setRange(pasteNodes.get(0),pasteNodes.get(pasteNodes.size() - 1));
+  }
 }
