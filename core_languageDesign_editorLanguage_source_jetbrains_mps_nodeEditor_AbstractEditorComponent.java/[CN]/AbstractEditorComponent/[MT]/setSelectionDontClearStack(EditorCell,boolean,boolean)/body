@@ -1,4 +1,5 @@
 {
+  if (mySelectionDisabled)   return;
   if (resetLastCaretX) {
     resetLastCaretX();
   }
@@ -7,7 +8,7 @@
   }
   myNodeSubstituteChooser.setVisible(false);
   myNodeRangeSelection.deactivate();
-  EditorCell oldSelection=mySelectedCell;
+  final EditorCell oldSelection=mySelectedCell;
   if (mySelectedCell != null) {
     mySelectedCell.setSelected(false);
   }
@@ -22,4 +23,18 @@
   }
   repaint();
   fireCellSelectionChanged(oldSelection,newSelectedCell);
+  if (oldSelection != null && !EditorUtil.isValidCell(oldSelection)) {
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        try {
+          mySelectionDisabled=true;
+          EditorUtil.validateCell(oldSelection,myEditorContext,true,true);
+        }
+  finally {
+          mySelectionDisabled=false;
+        }
+      }
+    }
+);
+  }
 }
