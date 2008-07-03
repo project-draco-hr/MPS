@@ -1,13 +1,10 @@
 {
   addListeners();
-  super.initComponent();
   getPanel().setLayout(new BorderLayout());
-  myToolbar.setFloatable(false);
-  getPanel().add(myToolbar,BorderLayout.NORTH);
-  JScrollPane scroller=new JScrollPane(myTree);
+  JScrollPane scroller=new JScrollPane(getTree());
   scroller.setBorder(null);
   getPanel().add(scroller,BorderLayout.CENTER);
-  myTree.addKeyListener(new KeyAdapter(){
+  getTree().addKeyListener(new KeyAdapter(){
     public void keyPressed(    KeyEvent e){
       if (e.getKeyCode() == KeyEvent.VK_F4 && e.getModifiers() == 0) {
         openEditor();
@@ -20,67 +17,38 @@
     }
   }
 );
-  myToolbar.add(myPAndRToggle=new JToggleButton(){
-{
-      setAction(new AbstractAction("",Icons.PROP_AND_REF){
-        public void actionPerformed(        ActionEvent e){
-          setShowPropertiesAndReferences(!isShowPropertiesAndReferences());
-        }
-      }
-);
-      setToolTipText("Show properties and references");
+  DefaultActionGroup toolbarGroup=new DefaultActionGroup();
+  myPAndRToggle=new ToggleAction("Show properties and references","Show properties and references",Icons.PROP_AND_REF){
+    public boolean isSelected(    @Nullable AnActionEvent e){
+      return isShowPropertiesAndReferences();
     }
-    public void updateUI(){
-      setUI(new MPSToolBarButtonUI());
+    public void setSelected(    @Nullable AnActionEvent e,    boolean state){
+      setShowPropertiesAndReferences(!isShowPropertiesAndReferences());
     }
   }
-);
-  myToolbar.add(myAutoscrollToSource=new JToggleButton(){
-{
-      setAction(new AbstractAction("",Icons.AUTOSCROLL_TO_SOURCE){
-        public void actionPerformed(        ActionEvent e){
-          myTree.setAutoOpen(!myTree.isAutoOpen());
-        }
-      }
-);
-      setToolTipText("Autoscroll to source");
+;
+  toolbarGroup.add(myPAndRToggle);
+  myAutoscrollToSource=new ToggleAction("Autoscroll to source","Autoscroll to source",Icons.AUTOSCROLL_TO_SOURCE){
+    public boolean isSelected(    @Nullable AnActionEvent e){
+      return getTree().isAutoOpen();
     }
-    public void updateUI(){
-      setUI(new MPSToolBarButtonUI());
+    public void setSelected(    @Nullable AnActionEvent e,    boolean state){
+      getTree().setAutoOpen(!getTree().isAutoOpen());
     }
   }
-);
-  myToolbar.add(myAutoscrollFromSource=new JToggleButton(){
-{
-      setAction(new AbstractAction("",Icons.AUTOSCROLL_FROM_SOURCE){
-        public void actionPerformed(        ActionEvent e){
-        }
-      }
-);
-      setToolTipText("Autoscroll from source");
+;
+  toolbarGroup.add(myAutoscrollToSource);
+  myAutoscrollFromSource=new ToggleAction("Autoscroll from source","Autoscroll from source",Icons.AUTOSCROLL_FROM_SOURCE){
+    public boolean isSelected(    @Nullable AnActionEvent e){
+      return false;
     }
-    public void updateUI(){
-      setUI(new MPSToolBarButtonUI());
+    public void setSelected(    @Nullable AnActionEvent e,    boolean state){
     }
   }
-);
-  myToolbar.add(new JButton(){
-{
-      setAction(new AbstractAction("",jetbrains.mps.ide.findusages.view.icons.Icons.COLLAPSE_ICON){
-        public void actionPerformed(        ActionEvent e){
-          for (          MPSTreeNode rootChild : myTree.getRootNode()) {
-            myTree.collapseAll(rootChild);
-          }
-        }
-      }
-);
-      setToolTipText("Collapse all");
-    }
-    public void updateUI(){
-      setUI(new MPSToolBarButtonUI());
-    }
-  }
-);
+;
+  toolbarGroup.add(myAutoscrollFromSource);
+  JComponent toolbar=ActionManager.getInstance().createActionToolbar(ActionPlaces.FILE_VIEW,toolbarGroup,true).getComponent();
+  getPanel().add(toolbar,BorderLayout.NORTH);
   if (!IdeMain.isTestMode()) {
     ThreadUtils.runInUIThreadNoWait(new Runnable(){
       public void run(){
