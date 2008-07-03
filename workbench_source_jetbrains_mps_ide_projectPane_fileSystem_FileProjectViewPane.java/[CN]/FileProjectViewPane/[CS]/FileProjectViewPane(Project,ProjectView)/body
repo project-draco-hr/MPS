@@ -2,7 +2,7 @@
   super(project);
   myProject=project;
   myProjectView=projectView;
-  myMPSTree=new MPSTree(){
+  myTree=new MPSTree(){
     protected MPSTreeNode rebuild(){
       if (myProject != null && !myProject.isDisposed()) {
         return new CompositeTreeNode(new ProjectOperationContext(getProject()));
@@ -13,7 +13,19 @@
     }
   }
 ;
-  myTree=myMPSTree;
+  myTimer=new Timer(SECOND,new ActionListener(){
+    public void actionPerformed(    ActionEvent e){
+      ModelAccess.instance().runReadInEDT(new Runnable(){
+        public void run(){
+          getTree().rebuildLater();
+        }
+      }
+);
+    }
+  }
+);
+  myTimer.setRepeats(false);
+  myTimer.setInitialDelay(3 * SECOND);
   myFileStatusListener=new FileStatusListener(){
     public void fileStatusesChanged(){
       rebuildTreeLater();
@@ -38,17 +50,4 @@
     }
   }
 ;
-  myTimer=new Timer(SECOND,new ActionListener(){
-    public void actionPerformed(    ActionEvent e){
-      ModelAccess.instance().runReadInEDT(new Runnable(){
-        public void run(){
-          myMPSTree.rebuildLater();
-        }
-      }
-);
-    }
-  }
-);
-  myTimer.setRepeats(false);
-  myTimer.setInitialDelay(3 * SECOND);
 }
