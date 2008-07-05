@@ -1,0 +1,56 @@
+{
+  Set<Language> languages=new HashSet<Language>();
+  Set<DevKit> devkits=new HashSet<DevKit>();
+  MPSProject mpsProject=myProject.getComponent(MPSProjectHolder.class).getMPSProject();
+  for (  Solution s : mpsProject.getProjectSolutions()) {
+    languages.addAll(s.getScope().getVisibleLanguages());
+    devkits.addAll(s.getScope().getVisibleDevkits());
+  }
+  for (  Language l : mpsProject.getProjectLanguages()) {
+    languages.add(l);
+  }
+  languages.addAll(LibraryManager.getInstance().getGlobalModules(Language.class));
+  devkits.addAll(LibraryManager.getInstance().getGlobalModules(DevKit.class));
+  for (  DevKit dk : mpsProject.getProjectDevKits()) {
+    devkits.add(dk);
+  }
+  for (  Language language : languages) {
+    if (language.getLanguagePluginClass() != null) {
+      addPlugin(language,language.getLanguagePluginClass());
+    }
+    if (language.getPluginModelDescriptor() != null) {
+      Class pluginClass=language.getClass(language.getGeneratedPluginClassLongName());
+      if (pluginClass != null) {
+        addPlugin(language,language.getGeneratedPluginClassLongName());
+      }
+    }
+  }
+  for (  DevKit dk : devkits) {
+    if (dk.getDevKitPluginClass() != null) {
+      addPlugin(dk,dk.getDevKitPluginClass());
+    }
+  }
+  for (  IProjectPlugin plugin : myPlugins) {
+    try {
+      plugin.init(mpsProject);
+      if (plugin instanceof DefaultPlugin) {
+        if (!((DefaultPlugin)plugin).isInitCalled()) {
+          LOG.error("WARNINIG: Plugin " + plugin + " hasn't called super init method");
+        }
+      }
+    }
+ catch (    Throwable t1) {
+      LOG.error("Plugin " + plugin + " threw an exception during initialization ",t1);
+    }
+  }
+  for (  IProjectPlugin plugin : myPlugins) {
+    if (plugin instanceof BasePlugin) {
+      try {
+        ((BasePlugin)plugin).adjustGroups();
+      }
+ catch (      Throwable t1) {
+        LOG.error("Plugin " + plugin + " threw an exception during initialization ",t1);
+      }
+    }
+  }
+}
