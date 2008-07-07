@@ -1,10 +1,11 @@
 {
-  editorContext.getNodeEditorComponent().hideMessageToolTip();
+  AbstractEditorComponent nodeEditor=editorContext.getNodeEditorComponent();
+  nodeEditor.hideMessageToolTip();
   if (keyEvent.isConsumed())   return false;
-  AbstractEditorComponent editor=editorContext.getNodeEditorComponent();
+  AbstractEditorComponent editor=nodeEditor;
   SNodePointer pointer=editor.getRootCell().getSNodePointer();
   boolean notEditable=pointer != null && pointer.getModel() != null && pointer.getModel().isNotEditable();
-  notEditable=(editorContext.getNodeEditorComponent().isReadOnly() || notEditable);
+  notEditable=(nodeEditor.isReadOnly() || notEditable);
   if (notEditable)   return false;
   EditorCell selectedCell=editor.getSelectedCell();
   if (selectedCell != null) {
@@ -31,7 +32,7 @@
     boolean endEditKeystroke=isEndEditKeystroke(keyEvent);
     boolean strictMatching=endEditKeystroke || EditorCellAction.RIGHT_TRANSFORM.equals(actionType);
     if (keyEvent.getModifiers() == KeyEvent.CTRL_MASK && keyEvent.getKeyCode() == KeyEvent.VK_F1) {
-      editorContext.getNodeEditorComponent().showMessageTooltip();
+      nodeEditor.showMessageTooltip();
       return true;
     }
     if (!EditorUtil.isValidCell(selectedCell)) {
@@ -92,9 +93,25 @@
       }
     }
     if (!keyEvent.isConsumed()) {
-      EditorCell deepestSelectedCell=editor.getDeepestSelectedCell();
-      if (allowCellToProcessEvent(deepestSelectedCell,keyEvent,true)) {
-        editor.changeSelection(deepestSelectedCell);
+      if (!(selectedCell instanceof EditorCell_Label) && !selectedCell.getSNode().isRoot() && KeyboardUtil.isDefaultAction(keyEvent)) {
+        SNode node=selectedCell.getSNode();
+        LinkDeclaration link=node.getParent().getLinkDeclaration(node.getRole_());
+        AbstractConceptDeclaration concept=link.getTarget();
+        String concreteConceptFqName=ModelConstraintsManager.getInstance().getDefaultConcreteConceptFqName(NameUtil.nodeFQName(concept),editorContext.getScope());
+        SNode newNode=new SNode(node.getModel(),concreteConceptFqName);
+        node.getParent().replaceChild(node,newNode);
+        editorContext.flushEvents();
+        EditorCell nodeCell=nodeEditor.findNodeCell(newNode);
+        EditorCell_Label editable=EditorUtil.findEditableCell(nodeCell);
+        if (editable != null) {
+          nodeEditor.changeSelection(editable);
+          allowCellToProcessEvent(editable,keyEvent,true);
+        }
+ else {
+          nodeEditor.changeSelection(nodeCell);
+          nodeEditor.activateNodeSubstituteChooser(nodeCell,true);
+          nodeEditor.processKeyPressed(keyEvent);
+        }
         return true;
       }
     }
