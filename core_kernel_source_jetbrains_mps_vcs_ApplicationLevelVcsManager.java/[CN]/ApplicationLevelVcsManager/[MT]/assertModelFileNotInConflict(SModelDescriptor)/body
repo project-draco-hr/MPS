@@ -1,0 +1,32 @@
+{
+  IFile ifile=modelDescriptor.getModelFile();
+  if (ApplicationLevelVcsManager.instance().isInConflict(ifile)) {
+    final File file=ifile.toFile();
+    File mineFile=new File(file.getPath() + ".mine");
+    if (mineFile.exists() && !IdeMain.isTestMode()) {
+      FileUtil.copyFile(mineFile,file);
+      SwingUtilities.invokeLater(new Runnable(){
+        public void run(){
+          NodeReadAccessCaster.blockEvents();
+          try {
+            Merger.merge(file);
+          }
+  finally {
+            NodeReadAccessCaster.unblockEvents();
+          }
+          ModelAccess.instance().runWriteAction(new Runnable(){
+            public void run(){
+              modelDescriptor.reloadFromDisk();
+            }
+          }
+);
+        }
+      }
+);
+    }
+ else {
+      ConflictModelException conflictModelException=new ConflictModelException(modelDescriptor);
+      throw conflictModelException;
+    }
+  }
+}
