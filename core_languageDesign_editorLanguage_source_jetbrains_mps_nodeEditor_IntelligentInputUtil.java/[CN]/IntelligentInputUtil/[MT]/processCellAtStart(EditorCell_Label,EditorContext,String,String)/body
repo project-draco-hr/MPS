@@ -1,0 +1,34 @@
+{
+  INodeSubstituteInfo info=cell.getSubstituteInfo();
+  if (info == null) {
+    info=new NullSubstituteInfo();
+  }
+  EditorCell cellForNewNode;
+  SNode newNode;
+  boolean sourceCellRemains=false;
+  if (cell.isValidText(smallPattern) && !"".equals(smallPattern) && info.hasExactlyNActions(head + smallPattern,false,0)) {
+    newNode=cell.getSNode();
+    cellForNewNode=cell;
+    sourceCellRemains=true;
+  }
+ else   if (canCompleteSmallPatternImmediately(info,smallPattern,"")) {
+    newNode=info.getMatchingActions(smallPattern,true).get(0).substitute(editorContext,smallPattern);
+    cellForNewNode=editorContext.createNodeCellInAir(newNode,ourServiceEditorManager);
+  }
+ else {
+    return;
+  }
+  EditorCellAction ltAction=EditorUtil.getCellAction(EditorUtil.findLastSelectableCell(cellForNewNode),EditorCellAction.LEFT_TRANSFORM,editorContext);
+  if (ltAction == null) {
+    CellInfo cellInfo=cellForNewNode.getCellInfo();
+    putTextInErrorChild(cellInfo,head + smallPattern,editorContext);
+    return;
+  }
+  if (sourceCellRemains) {
+    cell.changeText(smallPattern);
+    editorContext.getNodeEditorComponent().relayout();
+  }
+  ltAction.execute(editorContext);
+  EditorCell newCellForNewNode=editorContext.createNodeCellInAir(newNode,ourServiceEditorManager);
+  prepareSTCell(editorContext,newCellForNewNode,head);
+}
