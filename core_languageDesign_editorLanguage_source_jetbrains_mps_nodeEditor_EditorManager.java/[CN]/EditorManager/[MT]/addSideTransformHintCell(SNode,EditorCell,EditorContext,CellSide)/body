@@ -1,0 +1,80 @@
+{
+  final EditorCell_STHint sideTransformHintCell=EditorCell_STHint.create(context,node);
+  final CellInfo nodeCellInfo=context.getNodeEditorComponent().getRecentlySelectedCellInfo();
+  sideTransformHintCell.setAction(EditorCellAction.DELETE,new EditorCellAction(){
+    public void execute(    final EditorContext context){
+      removeSTHintAndChangeSelection(context,node,nodeCellInfo);
+    }
+  }
+);
+  sideTransformHintCell.setAction(EditorCellAction.RIGHT_TRANSFORM,new EditorCellAction(){
+    public void execute(    EditorContext context){
+      removeSTHintAndChangeSelection(context,node,nodeCellInfo);
+    }
+  }
+);
+  sideTransformHintCell.setAction(EditorCellAction.LEFT_TRANSFORM,new EditorCellAction(){
+    public void execute(    EditorContext context){
+      removeSTHintAndChangeSelection(context,node,nodeCellInfo);
+    }
+  }
+);
+  EditorCellKeyMap keyMap=new EditorCellKeyMap();
+  keyMap.putAction(EditorCellKeyMap.KEY_MODIFIERS_NONE,"VK_ESCAPE",new EditorCellKeyMapAction(){
+    public void execute(    KeyEvent keyEvent,    final EditorContext context){
+      removeSTHintAndChangeSelection(context,node,nodeCellInfo);
+    }
+  }
+);
+  sideTransformHintCell.addKeyMap(keyMap);
+  final String transformTag=(String)node.getUserObject(SIDE_TRANSFORM_HINT_ANCHOR_TAG);
+  sideTransformHintCell.setSubstituteInfo(new AbstractNodeSubstituteInfo(context){
+    protected List<INodeSubstituteAction> createActions(){
+      List list=ModelActions.createRightTransformHintSubstituteActions(node,side,transformTag,context.getOperationContext());
+      List wrapperList=new LinkedList();
+      for (      Object action : list) {
+        wrapperList.add(new NodeSubstituteActionWrapper((INodeSubstituteAction)action){
+          public SNode substitute(          @Nullable EditorContext context,          String pattern){
+            node.removeRightTransformHint();
+            node.removeLeftTransformHint();
+            return super.substitute(context,pattern);
+          }
+        }
+);
+      }
+      return wrapperList;
+    }
+  }
+);
+  EditorCell resultCell;
+  Object anchorId=node.getUserObject(SIDE_TRANSFORM_HINT_ANCHOR_CELL_ID);
+  EditorCell anchorCell=anchorId == null ? null : context.getNodeEditorComponent().findCellWithId(nodeCell,anchorId.toString());
+  if (anchorCell != null && anchorCell != nodeCell) {
+    EditorCell_Collection cellCollection=anchorCell.getParent();
+    int index;
+    if (side == CellSide.RIGHT) {
+      index=cellCollection.indexOf(anchorCell) + 1;
+    }
+ else {
+      index=cellCollection.indexOf(anchorCell);
+    }
+    cellCollection.addCellAt(index,sideTransformHintCell,false);
+    resultCell=nodeCell;
+    sideTransformHintCell.setAnchor(anchorCell);
+  }
+ else {
+    EditorCell_Collection rowWrapper=EditorCell_Collection.createHorizontal(context,node);
+    rowWrapper.setSelectable(false);
+    rowWrapper.setDrawBorder(false);
+    rowWrapper.addEditorCell(nodeCell);
+    if (side == CellSide.RIGHT) {
+      rowWrapper.addEditorCell(sideTransformHintCell);
+    }
+ else {
+      rowWrapper.addCellAt(0,sideTransformHintCell,false);
+    }
+    resultCell=rowWrapper;
+    sideTransformHintCell.setAnchor(nodeCell);
+  }
+  return resultCell;
+}
