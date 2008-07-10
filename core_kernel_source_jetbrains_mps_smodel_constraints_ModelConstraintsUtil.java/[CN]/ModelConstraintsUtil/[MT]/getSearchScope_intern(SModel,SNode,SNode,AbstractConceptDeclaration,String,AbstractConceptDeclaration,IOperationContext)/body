@@ -1,35 +1,20 @@
 {
   INodeReferentSearchScopeProvider scopeProvider=ModelConstraintsManager.getInstance().getNodeReferentSearchScopeProvider(referenceNodeConcept,linkRole);
   if (scopeProvider != null) {
-    try {
-      if (scopeProvider.canCreateNodeReferentSearchScope(context,new ReferentConstraintContext(model,enclosingNode,referenceNode,BaseAdapter.fromAdapter(linkTarget)))) {
-        ISearchScope searchScope=scopeProvider.createNodeReferentSearchScope(context,new ReferentConstraintContext(model,enclosingNode,referenceNode,BaseAdapter.fromAdapter(linkTarget)));
-        return newOK(searchScope,false);
-      }
-    }
- catch (    Throwable t) {
-      LOG.error(t);
-    }
-    return new SearchScopeStatus.ERROR("can't create referent search scope: " + scopeProvider.getNodeReferentSearchScopeDescription());
+    ISearchScope searchScope=scopeProvider.createNodeReferentSearchScope(context,new ReferentConstraintContext(model,enclosingNode,referenceNode,BaseAdapter.fromAdapter(linkTarget)));
+    return newOK(searchScope,false);
   }
   if (linkTarget == null) {
     LinkDeclaration linkDeclaration=SModelSearchUtil.findLinkDeclaration(referenceNodeConcept,linkRole);
-    if (linkDeclaration != null) {
-      linkTarget=linkDeclaration.getTarget();
+    if (linkDeclaration == null) {
+      throw new RuntimeException("couldn't find '" + linkRole + "' link declaration in concept "+ referenceNodeConcept.getDebugText());
     }
- else {
-      String mess="couldn't find '" + linkRole + "' link declaration in concept "+ referenceNodeConcept.getDebugText();
-      LOG.errorWithTrace(mess);
-      return new SearchScopeStatus.ERROR("can't create default search scope: " + mess);
-    }
+    linkTarget=linkDeclaration.getTarget();
   }
   scopeProvider=ModelConstraintsManager.getInstance().getNodeDefaultSearchScopeProvider(linkTarget);
   if (scopeProvider != null) {
-    if (scopeProvider.canCreateNodeReferentSearchScope(context,new ReferentConstraintContext(model,enclosingNode,referenceNode,BaseAdapter.fromAdapter(linkTarget)))) {
-      ISearchScope searchScope=scopeProvider.createNodeReferentSearchScope(context,new ReferentConstraintContext(model,enclosingNode,referenceNode,BaseAdapter.fromAdapter(linkTarget)));
-      return newOK(searchScope,false);
-    }
-    return new SearchScopeStatus.ERROR("can't create default search scope: " + scopeProvider.getNodeReferentSearchScopeDescription());
+    ISearchScope searchScope=scopeProvider.createNodeReferentSearchScope(context,new ReferentConstraintContext(model,enclosingNode,referenceNode,BaseAdapter.fromAdapter(linkTarget)));
+    return newOK(searchScope,false);
   }
   ISearchScope searchScope=SModelSearchUtil.createModelAndImportedModelsScope(model,false,context.getScope());
   return newOK(searchScope,true);
