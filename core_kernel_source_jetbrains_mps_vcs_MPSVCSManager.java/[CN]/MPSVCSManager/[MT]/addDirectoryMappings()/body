@@ -1,0 +1,44 @@
+{
+  VirtualFile projectBasedir=myProject.getBaseDir();
+  if (projectBasedir == null)   return;
+  List<VcsDirectoryMapping> vcsMappings=new LinkedList<VcsDirectoryMapping>();
+  Map<VirtualFile,String> map=new LinkedHashMap<VirtualFile,String>();
+  myOldDirectoryMappings=myManager.getDirectoryMappings();
+  for (  VcsDirectoryMapping mapping : vcsMappings) {
+    VirtualFile vfile=VFileSystem.getFile(mapping.getDirectory());
+    if (vfile != null) {
+      map.put(vfile,mapping.getVcs());
+    }
+  }
+  List<IModule> modules=myProject.getComponent(MPSProjectHolder.class).getMPSProject().getModules();
+  for (  IModule module : modules) {
+    if (!module.isPackaged()) {
+      IFile moduleFile=module.getDescriptorFile();
+      IFile moduleBasedir=moduleFile.getParent();
+      if (moduleBasedir.getPath().equals(projectBasedir.getPath())) {
+        break;
+      }
+      VirtualFile moduleVFile=VFileSystem.getFile(moduleFile);
+      VirtualFile moduleVBasedir=VFileSystem.getFile(moduleBasedir);
+      if (moduleVFile != null) {
+        AbstractVcs vcsFor=myManager.getVcsFor(moduleVFile);
+        if (vcsFor != null) {
+          map.put(moduleVBasedir,vcsFor.getName());
+        }
+      }
+    }
+  }
+  for (  VirtualFile directory : map.keySet()) {
+    boolean hasParents=false;
+    for (    VirtualFile directory2 : map.keySet()) {
+      if (isParent(directory2,directory)) {
+        hasParents=true;
+        break;
+      }
+    }
+    if (!hasParents) {
+      vcsMappings.add(new VcsDirectoryMapping(directory.getPath(),map.get(directory)));
+    }
+  }
+  myManager.setDirectoryMappings(vcsMappings);
+}
