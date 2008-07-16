@@ -1,50 +1,17 @@
 {
-  final ActionEventData data=new ActionEventData(e);
-  IOperationContext operationContext=data.getOperationContext();
-  IModule module=operationContext.getModule();
-  if (module instanceof Generator) {
-    module=((Generator)module).getSourceLanguage();
-  }
-  final IModule module1=module;
-  GenParameters params=ModelAccess.instance().runReadAction(new Computable<GenParameters>(){
-    public GenParameters compute(){
-      SModel tmp=new SModel();
-      tmp.setLoading(true);
-      BaseGeneratorConfiguration conf=null;
-      if (module1 instanceof Solution) {
-        SolutionGeneratorConfiguration solutionConfig=SolutionGeneratorConfiguration.newInstance(tmp);
-        solutionConfig.setSolutionModuleUID(module1.getModuleUID());
-        solutionConfig.setName("tmp");
-        conf=solutionConfig;
-      }
-      if (module1 instanceof Language) {
-        LanguageGeneratorConfiguration languageConfig=LanguageGeneratorConfiguration.newInstance(tmp);
-        languageConfig.setLanguageNamespace(module1.getModuleUID());
-        languageConfig.setName("tmp");
-        conf=languageConfig;
-      }
-      if (conf == null) {
-        throw new RuntimeException();
-      }
-      try {
-        return GeneratorConfigUtil.calculate(data.getMPSProject(),conf,myRegenerate);
-      }
- catch (      GeneratorConfigUtil.GeneratorConfigurationException e) {
-        JOptionPane.showMessageDialog(data.getFrame(),e.getMessage());
-        return null;
-      }
+  List<SModelDescriptor> modelsToGenerate=new ArrayList<SModelDescriptor>();
+  for (  IModule module : myModules) {
+    if (module instanceof Generator) {
+      module=((Generator)module).getSourceLanguage();
     }
+    modelsToGenerate.addAll(getModelsToGenerate(module));
   }
-);
-  if (params == null) {
-    return;
-  }
-  if (params.getModels().isEmpty()) {
+  if (modelsToGenerate.isEmpty()) {
     Project project=e.getData(PlatformDataKeys.PROJECT);
     WindowManager.getInstance().getIdeFrame(project).getStatusBar().setInfo("Nothing to generate");
     return;
   }
-  GeneratorManager generatorManager=operationContext.getComponent(GeneratorManager.class);
+  GeneratorManager generatorManager=myOperationContext.getComponent(GeneratorManager.class);
   IGenerationType generationType=generatorManager.getDefaultModuleGenerationType();
-  generatorManager.generateModelsWithProgressWindow(params.getModels(),operationContext,generationType,false);
+  generatorManager.generateModelsWithProgressWindow(modelsToGenerate,myOperationContext,generationType,false);
 }
