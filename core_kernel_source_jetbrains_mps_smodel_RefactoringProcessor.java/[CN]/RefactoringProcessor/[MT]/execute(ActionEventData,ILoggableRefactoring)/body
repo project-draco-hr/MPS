@@ -1,8 +1,7 @@
 {
-  final ActionContext context=ActionUtils.createContext(data);
   final RefactoringContext refactoringContext=new RefactoringContext(refactoring);
-  refactoringContext.setActionData(context);
-  boolean success=refactoring.askForInfo(context,refactoringContext);
+  refactoringContext.setActionData(data);
+  boolean success=refactoring.askForInfo(data,refactoringContext);
   if (!success)   return;
   ModelAccess.instance().runWriteActionInCommand(new Runnable(){
     public void run(){
@@ -19,7 +18,7 @@
                     ModelAccess.instance().runReadAction(new Runnable(){
                       public void run(){
                         try {
-                          ActionContext newContext=new ActionContext(context);
+                          ActionEventData newContext=data;
                           newContext.put(IOperationContext.class,new ProjectOperationContext(refactoringContext.getSelectedMPSProject()));
                           refactoringContext.setUsages(refactoring.getAffectedNodes(newContext,refactoringContext));
                         }
@@ -34,7 +33,7 @@
                 }
 );
                 if (wasError[0]) {
-                  int promptResult=JOptionPane.showConfirmDialog(context.getFrame(),"An exception occurred during searching affected nodes. Do you want to continue anyway?","Exception",JOptionPane.YES_NO_OPTION);
+                  int promptResult=JOptionPane.showConfirmDialog(data.getFrame(),"An exception occurred during searching affected nodes. Do you want to continue anyway?","Exception",JOptionPane.YES_NO_OPTION);
                   toReturn[0]=promptResult == JOptionPane.NO_OPTION;
                 }
               }
@@ -43,14 +42,14 @@
             if (toReturn[0])             return;
             SearchResults usages=refactoringContext.getUsages();
             if (usages == null || (refactoring.refactorImmediatelyIfNoUsages() && usages.getSearchResults().isEmpty())) {
-              doExecuteInThread(context,refactoringContext);
+              doExecuteInThread(data,refactoringContext);
             }
  else {
               ThreadUtils.runInUIThreadNoWait(new Runnable(){
                 public void run(){
                   ModelAccess.instance().runReadAction(new Runnable(){
                     public void run(){
-                      refactoringContext.getCurrentOperationContext().getComponent(NewRefactoringView.class).showRefactoringView(context,new LoggableRefactoringViewAction(refactoringContext),refactoringContext.getUsages());
+                      refactoringContext.getCurrentOperationContext().getComponent(NewRefactoringView.class).showRefactoringView(data,new LoggableRefactoringViewAction(refactoringContext),refactoringContext.getUsages());
                     }
                   }
 );
@@ -64,7 +63,7 @@
         thread.start();
       }
  else {
-        doExecuteInThread(context,refactoringContext);
+        doExecuteInThread(data,refactoringContext);
       }
     }
   }
