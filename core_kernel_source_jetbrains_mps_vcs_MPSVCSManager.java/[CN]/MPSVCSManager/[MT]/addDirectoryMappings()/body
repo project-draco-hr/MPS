@@ -1,44 +1,52 @@
 {
-  VirtualFile projectBasedir=myProject.getBaseDir();
-  if (projectBasedir == null)   return;
-  List<VcsDirectoryMapping> vcsMappings=new LinkedList<VcsDirectoryMapping>();
-  Map<VirtualFile,String> map=new LinkedHashMap<VirtualFile,String>();
-  myOldDirectoryMappings=myManager.getDirectoryMappings();
-  for (  VcsDirectoryMapping mapping : vcsMappings) {
-    VirtualFile vfile=VFileSystem.getFile(mapping.getDirectory());
-    if (vfile != null) {
-      map.put(vfile,mapping.getVcs());
+  long timeStart=System.currentTimeMillis();
+  List<VcsDirectoryMapping> vcsMappings=new ArrayList<VcsDirectoryMapping>();
+  List<IModule> allModules=MPSModuleRepository.getInstance().getAllModules();
+  Map<AbstractVcs,Set<VirtualFile>> vcss=new HashMap<AbstractVcs,Set<VirtualFile>>();
+  for (  VcsDirectoryMapping map : myManager.getDirectoryMappings()) {
+    AbstractVcs vcs=myManager.findVcsByName(map.getVcs());
+    Set<VirtualFile> files=vcss.get(vcs);
+    if (files == null) {
+      files=new HashSet<VirtualFile>();
+      vcss.put(vcs,files);
     }
+    files.add(VFileSystem.getFile(map.getDirectory()));
   }
-  List<IModule> modules=myProject.getComponent(MPSProjectHolder.class).getMPSProject().getModules();
-  for (  IModule module : modules) {
-    if (!module.isPackaged()) {
-      IFile moduleFile=module.getDescriptorFile();
-      IFile moduleBasedir=moduleFile.getParent();
-      if (moduleBasedir.getPath().equals(projectBasedir.getPath())) {
+  for (  IModule module : allModules) {
+    if (module.isPackaged())     continue;
+    IFile descriptor=module.getDescriptorFile();
+    if (descriptor == null)     continue;
+    VirtualFile file=VFileSystem.getFile(descriptor.getParent());
+    if (file == null)     continue;
+    AbstractVcs vcs=myManager.findVersioningVcs(file);
+    if (vcs == null)     continue;
+    while (true) {
+      VirtualFile parent=file.getParent();
+      if (parent == null) {
         break;
       }
-      VirtualFile moduleVFile=VFileSystem.getFile(moduleFile);
-      VirtualFile moduleVBasedir=VFileSystem.getFile(moduleBasedir);
-      if (moduleVFile != null) {
-        AbstractVcs vcsFor=myManager.getVcsFor(moduleVFile);
-        if (vcsFor != null) {
-          map.put(moduleVBasedir,vcsFor.getName());
-        }
+      if (vcs.isVersionedDirectory(parent)) {
+        file=parent;
       }
-    }
-  }
-  for (  VirtualFile directory : map.keySet()) {
-    boolean hasParents=false;
-    for (    VirtualFile directory2 : map.keySet()) {
-      if (isParent(directory2,directory)) {
-        hasParents=true;
+ else {
         break;
       }
     }
-    if (!hasParents) {
-      vcsMappings.add(new VcsDirectoryMapping(directory.getPath(),map.get(directory)));
+    Set<VirtualFile> files=vcss.get(vcs);
+    if (files == null) {
+      files=new HashSet<VirtualFile>();
+      vcss.put(vcs,files);
+    }
+    files.add(file);
+  }
+  for (  AbstractVcs vcs : vcss.keySet()) {
+    Set<VirtualFile> files=vcss.get(vcs);
+    Collection<String> roots=getRoots(files);
+    for (    String path : roots) {
+      vcsMappings.add(new VcsDirectoryMapping(path,vcs.getName()));
     }
   }
   myManager.setDirectoryMappings(vcsMappings);
+  long timeEnd=System.currentTimeMillis();
+  System.out.println("time " + (timeEnd - timeStart));
 }
