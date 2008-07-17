@@ -1,0 +1,36 @@
+{
+  BaseGroup group=new BaseGroup("");
+  List<Language> modelLanguages=model.getLanguages(scope);
+  Collections.sort(modelLanguages,new ToStringComparator());
+  for (  final Language language : modelLanguages) {
+    boolean hasChildren=false;
+    for (    final ConceptDeclaration concept : language.getConceptDeclarations()) {
+      if (concept.getRootable() && (conceptsFilter == null || conceptsFilter.met(concept.getNode()))) {
+        BaseAction action=new BaseAction(NodePresentationUtil.matchingText(concept.getNode())){
+          protected void doExecute(          AnActionEvent e){
+            ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+              public void run(){
+                SNode result=NodeFactoryManager.createNode(concept,null,null,model,scope);
+                model.addRoot(result);
+                if (newRootHandler != null) {
+                  newRootHandler.set(result);
+                }
+              }
+            }
+);
+          }
+        }
+;
+        Icon icon=IconManager.getIconForConceptFQName(NameUtil.nodeFQName(concept.getNode()));
+        action.getTemplatePresentation().setIcon(icon);
+        action.setExecuteOutsideCommand(true);
+        group.add(action);
+        hasChildren=true;
+      }
+    }
+    if (hasChildren) {
+      group.addSeparator();
+    }
+  }
+  return group;
+}
