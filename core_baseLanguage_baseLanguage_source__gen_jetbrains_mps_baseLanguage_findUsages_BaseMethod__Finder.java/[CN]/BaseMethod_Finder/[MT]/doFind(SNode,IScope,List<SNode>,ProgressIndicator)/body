@@ -1,7 +1,41 @@
 {
-  List<SearchResult> ancestors=new ArrayList<SearchResult>();
-  if (SNodeOperations.getAncestor(node,"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false) != null) {
+  List<SNode> allAncestors=new ArrayList<SNode>();
+  SNode method=node;
+  boolean isStatic=SNodeOperations.isInstanceOf(method,"jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration");
+  SNode classNode=SNodeOperations.getAncestor(method,"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false);
+  SNode interfaceNode=SNodeOperations.getAncestor(method,"jetbrains.mps.baseLanguage.structure.Interface",false,false);
+  if (classNode != null) {
+    ListSequence.fromList(allAncestors).addElement(classNode);
+    ListSequence.fromList(allAncestors).addSequence(ListSequence.fromList(FindUtils.executeFinder("jetbrains.mps.baseLanguage.findUsages.ClassAncestors_Finder",classNode,scope,indicator)));
+    ListSequence.fromList(allAncestors).addSequence(ListSequence.fromList(FindUtils.executeFinder("jetbrains.mps.baseLanguage.findUsages.ImplementedInterfaces_Finder",classNode,scope,indicator)));
   }
+ else   if (interfaceNode != null) {
+    ListSequence.fromList(allAncestors).addElement(interfaceNode);
+    ListSequence.fromList(allAncestors).addSequence(ListSequence.fromList(FindUtils.executeFinder("jetbrains.mps.baseLanguage.findUsages.InterfaceAncestors_Finder",interfaceNode,scope,indicator)));
+  }
+  Set<SNode> results=new HashSet<SNode>();
+  for (  SNode ancestor : allAncestors) {
+    List<SNode> classMethods=null;
+    if (isStatic) {
+      if (SNodeOperations.isInstanceOf(ancestor,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
+        classMethods=SLinkOperations.getTargets(((SNode)ancestor),"staticMethod",true);
+      }
+    }
  else {
+      if (SNodeOperations.isInstanceOf(ancestor,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
+        classMethods=SLinkOperations.getTargets(((SNode)ancestor),"method",true);
+      }
+ else {
+        classMethods=SLinkOperations.getTargets(((SNode)ancestor),"method",true);
+      }
+    }
+    for (    SNode classMethod : classMethods) {
+      if (BaseMethodDeclaration_Behavior.call_hasSameSignature_1213877350435(classMethod,method)) {
+        results.add(classMethod);
+      }
+    }
+  }
+  for (  SNode result : results) {
+    ListOperations.addElement(_results,result);
   }
 }
