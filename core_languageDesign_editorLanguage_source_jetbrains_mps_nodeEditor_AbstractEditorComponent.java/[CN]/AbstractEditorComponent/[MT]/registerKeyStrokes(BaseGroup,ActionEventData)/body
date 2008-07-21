@@ -1,22 +1,29 @@
 {
   if (group != null) {
+    AnActionEvent event=ActionUtils.createEvent(ActionPlaces.EDITOR_POPUP,data);
+    group.update(event);
+    if (!event.getPresentation().isEnabled())     return;
     for (    final AnAction child : group.getChildren(null)) {
       if (child instanceof BaseAction) {
-        BaseAction action=(BaseAction)child;
-        if (action.getShortcutSet().getShortcuts().length > 0) {
-          registerNodeAction(action);
-          myMPSActionsWithShortcuts.add(action);
+        BaseAction childAction=(BaseAction)child;
+        try {
+          childAction.update(event);
+        }
+ catch (        Throwable t) {
+          LOG.error(t);
+        }
+        if (!event.getPresentation().isEnabled())         continue;
+        if (childAction.getShortcutSet().getShortcuts().length > 0) {
+          registerNodeAction(childAction);
+          myMPSActionsWithShortcuts.add(childAction);
         }
       }
       if (child instanceof BaseGroup) {
         try {
-          if (data != null) {
-            AnActionEvent event=ActionUtils.createEvent(ActionPlaces.EDITOR_POPUP,data);
-            ActionUtils.updateGroup((BaseGroup)child,event);
-            if (event.getPresentation().isEnabled()) {
-              registerKeyStrokes((BaseGroup)child,data);
-            }
-          }
+          BaseGroup childGroup=(BaseGroup)child;
+          childGroup.update(event);
+          if (!event.getPresentation().isEnabled())           continue;
+          registerKeyStrokes(childGroup,data);
         }
  catch (        Throwable t) {
           LOG.error(t);
