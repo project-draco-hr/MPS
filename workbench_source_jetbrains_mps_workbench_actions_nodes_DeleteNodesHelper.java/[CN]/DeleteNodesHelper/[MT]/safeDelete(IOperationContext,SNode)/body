@@ -1,8 +1,16 @@
 {
   final GenericRefactoringAction safeDeleteAction=new GenericRefactoringAction(new SafeDelete());
-  final ActionEventData newContext=new ActionEventData(context,node);
-  newContext.put(List.class,CollectionUtil.asList(node));
-  AnActionEvent event=ActionUtils.createEvent(ActionPlaces.UNKNOWN,newContext);
+  DataContext dc=new DataContext(){
+    private DataContext myRealContext=DataManager.getInstance().getDataContext();
+    @Nullable public Object getData(    @NonNls String dataId){
+      if (dataId.equals(MPSDataKeys.SNODE.getName()))       return node;
+ else       if (dataId.equals(MPSDataKeys.SNODES.getName()))       return Collections.singletonList(node);
+ else       if (dataId.equals(MPSDataKeys.OPERATION_CONTEXT.getName()))       return context;
+ else       return myRealContext.getData(dataId);
+    }
+  }
+;
+  AnActionEvent event=ActionUtils.createEvent(ActionPlaces.UNKNOWN,dc);
   safeDeleteAction.update(event);
   if (event.getPresentation().isEnabled()) {
     safeDeleteAction.actionPerformed(event);
