@@ -10,19 +10,20 @@
   long startTime=System.currentTimeMillis();
   boolean res=false;
   try {
-    res=(Boolean)QueryMethodGenerated.invoke(methodName,generator.getGeneratorSessionContext(),new BaseMappingRuleContext(inputNode,generator.getInputModel(),generator),ruleNode.getModel());
+    res=(Boolean)QueryMethodGenerated.invoke(methodName,generator.getGeneratorSessionContext(),new BaseMappingRuleContext(inputNode,generator.getInputModel(),generator),ruleNode.getModel(),true);
     return res;
   }
- catch (  NoSuchMethodException e) {
-    generator.showWarningMessage(ruleNode,"condition query method '" + methodName + "' not found. evaluate to FALSE");
-    return false;
+ catch (  ClassNotFoundException e) {
+    generator.showWarningMessage(BaseAdapter.fromAdapter(condition),"couldn't find condition method '" + methodName + "' : evaluate to FALSE");
   }
-catch (  Exception e) {
-    generator.showErrorMessage(inputNode,null,ruleNode,"couldn't evaluate rule condition");
-    LOG.error(e);
-    return false;
+catch (  NoSuchMethodException e) {
+    generator.showWarningMessage(BaseAdapter.fromAdapter(condition),"couldn't find condition method '" + methodName + "' : evaluate to FALSE");
+  }
+catch (  Throwable t) {
+    throw new GenerationFailueException("error executing condition ",BaseAdapter.fromAdapter(condition),t);
   }
  finally {
     Statistics.getStatistic(Statistics.TPL).add(ruleNode.getModel(),methodName,startTime,res);
   }
+  return false;
 }
