@@ -1,0 +1,68 @@
+{
+  Thread t=Thread.currentThread();
+  System.err.println("current thread is " + t);
+  final ILoggableRefactoring refactoring=refactoringContext.getRefactoring();
+  Runnable runnable=new Runnable(){
+    public void run(){
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          SModelDescriptor modelDescriptor=refactoringContext.getSelectedModel();
+          SModelUID initialModelUID=modelDescriptor.getModelUID();
+          refactoring.doRefactor(refactoringContext);
+          final List<SNode> nodesToOpen=refactoring.getNodesToOpen(refactoringContext);
+          if (!nodesToOpen.isEmpty()) {
+            ApplicationManager.getApplication().invokeLater(new Runnable(){
+              public void run(){
+                for (                SNode nodeToOpen : nodesToOpen) {
+                  refactoringContext.getCurrentOperationContext().getComponent(MPSEditorOpener.class).openNode(nodeToOpen);
+                }
+              }
+            }
+);
+          }
+          SModel model=modelDescriptor.getSModel();
+          refactoringContext.computeCaches();
+          SearchResults usages=refactoringContext.getUsages();
+          final Map<IModule,List<SModel>> moduleToModelsMap=refactoring.getModelsToGenerate(refactoringContext);
+          List<SModel> modelsToUpdate=refactoring.getModelsToUpdate(refactoringContext);
+          if (!refactoringContext.isLocal()) {
+            if (refactoring.doesUpdateModel()) {
+              writeInLogAndUpdateModels(initialModelUID,model,refactoringContext);
+            }
+          }
+ else {
+            if (refactoring.doesUpdateModel()) {
+              Set<SModel> modelsToProcess=new LinkedHashSet<SModel>();
+              if (usages != null) {
+                modelsToProcess.addAll(usages.getModelsWithResults());
+              }
+              modelsToProcess.addAll(modelsToUpdate);
+              for (              SModel anotherModel : modelsToProcess) {
+                processModel(anotherModel,model,refactoringContext);
+              }
+            }
+          }
+          SwingUtilities.invokeLater(new Runnable(){
+            public void run(){
+              if (moduleToModelsMap != null && !moduleToModelsMap.isEmpty()) {
+                ProgressManager.getInstance().run(new Modal(refactoringContext.getCurrentOperationContext().getComponent(Project.class),"Generation",true){
+                  public void run(                  @NotNull ProgressIndicator progress){
+                    generateModels(moduleToModelsMap,refactoringContext,progress);
+                  }
+                }
+);
+                if (continuation != null) {
+                  continuation.run();
+                }
+              }
+            }
+          }
+);
+        }
+      }
+);
+    }
+  }
+;
+  ThreadUtils.runInUIThreadNoWait(runnable);
+}
