@@ -1,0 +1,52 @@
+{
+  myTabbedEditor=tabbedEditor;
+  myBaseNode=new SNodePointer(baseNode);
+  myClass=adapterClass;
+  myListener=new SModelAdapter(){
+    public void rootRemoved(    SModelRootEvent event){
+      if (event.getRoot() == getLoadableNode() || getLoadableNode() == null) {
+        myTabbedEditor.getTabbedPane().getInitializedTabs().remove(BaseSingletabbedTab.this);
+        myComponent=null;
+        SwingUtilities.invokeLater(new Runnable(){
+          public void run(){
+            myTabbedEditor.getTabbedPane().initTab(BaseSingletabbedTab.this);
+          }
+        }
+);
+      }
+    }
+    public void referenceAdded(    SModelReferenceEvent event){
+      SReference reference=event.getReference();
+      INodeAdapter sourceNode=BaseAdapter.fromNode(reference.getSourceNode());
+      if (myClass.isInstance(sourceNode.getContainingRoot()) && reference.getTargetNode() == getBaseNode()) {
+        myTabbedEditor.getTabbedPane().getInitializedTabs().remove(BaseSingletabbedTab.this);
+        SwingUtilities.invokeLater(new Runnable(){
+          public void run(){
+            myTabbedEditor.getTabbedPane().initTab(BaseSingletabbedTab.this);
+          }
+        }
+);
+      }
+    }
+  }
+;
+  final SModelDescriptor nodeModelDescriptor=baseNode.getModel().getModelDescriptor();
+  if (nodeModelDescriptor != null) {
+    nodeModelDescriptor.addWeakModelListener(myListener);
+  }
+ else {
+    myWeakSModelRepositoryListener=new SModelRepositoryAdapter(){
+      public void modelAdded(      SModelDescriptor modelDescriptor){
+        if (ProjectModels.isProjectModel(modelDescriptor.getModelUID())) {
+          return;
+        }
+        if (listenCondition.met(modelDescriptor)) {
+          modelDescriptor.addWeakModelListener(myListener);
+          SModelRepository.getInstance().removeModelRepositoryListener(this);
+        }
+      }
+    }
+;
+    SModelRepository.getInstance().addWeakModelRepositoryListener(myWeakSModelRepositoryListener);
+  }
+}
