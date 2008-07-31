@@ -1,15 +1,26 @@
 {
-  List<String> params=ListSequence.<String>fromArray();
+  final List<String> params=ListSequence.<String>fromArray();
   this.addJavaCommand(params);
   if (this.unitTestPreferences.useDebug) {
     this.addDebug(params,this.unitTestPreferences.debugPort,false);
   }
   ListSequence.fromList(params).addSequence(ListSequence.fromList(parameters.getVmParameters()));
-  this.addClassPath(params,this.getClasspathString(ListSequence.fromList(tests).first(),parameters.getCalssPath()));
-  ListSequence.fromList(params).addElement(parameters.getTestRunner());
-  for (  SNode test : tests) {
-    ListSequence.fromList(params).addSequence(ListSequence.fromList(ITestable_Behavior.call_getParametersPart_1215620460293(test)));
+  this.addDebugParameters(params);
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      UnitTestRunner.this.addClassPath(params,UnitTestRunner.this.getClasspathString(ListSequence.fromList(tests).first(),parameters.getCalssPath()));
+    }
   }
+);
+  ListSequence.fromList(params).addElement(parameters.getTestRunner());
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      SNode test : tests) {
+        ListSequence.fromList(params).addSequence(ListSequence.fromList(ITestable_Behavior.call_getParametersPart_1215620460293(test)));
+      }
+    }
+  }
+);
   ProcessBuilder p=new ProcessBuilder(params);
   this.component.appendInternal(this.getCommandString(p) + "\n\n");
   try {
@@ -21,6 +32,7 @@
     errReader.setBarrier(barrier);
     outReader.start();
     errReader.start();
+    pro.waitFor();
   }
  catch (  Exception e) {
     Logger.getLogger(UnitTestRunner.class).error("Can't run tests",e);
