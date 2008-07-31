@@ -1,0 +1,64 @@
+{
+  if (keyEvent.isConsumed())   return;
+  Project project=getOperationContext().getProject();
+  UndoManager undoManager=UndoManager.getInstance(project);
+  if (keyEvent.getKeyCode() == KeyEvent.VK_Z && keyEvent.isControlDown()) {
+    if (keyEvent.isShiftDown()) {
+      if (undoManager.isRedoAvailable(null)) {
+        undoManager.redo(null);
+      }
+    }
+ else {
+      if (undoManager.isUndoAvailable(null)) {
+        undoManager.undo(null);
+      }
+    }
+    keyEvent.consume();
+    return;
+  }
+  if (keyEvent.getKeyCode() == KeyEvent.VK_F5 && keyEvent.getModifiers() == 0) {
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        SNode sNode=getRootCell().getSNode();
+        if (sNode == null) {
+          return;
+        }
+        Highlighter highlighter=getOperationContext().getComponent(Highlighter.class);
+        if (highlighter != null) {
+          highlighter.resetCheckedState(EditorComponent.this);
+        }
+        TypeChecker.getInstance().checkRoot(sNode.getContainingRoot(),true);
+        rebuildEditorContent();
+      }
+    }
+);
+    keyEvent.consume();
+    return;
+  }
+  if (keyEvent.getKeyCode() == KeyEvent.VK_F11 && keyEvent.getModifiers() == 0) {
+    relayout();
+    keyEvent.consume();
+    return;
+  }
+  try {
+    myExecutingCommand=true;
+    final DataContext dataContext=DataManager.getInstance().getDataContext(this);
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        updateMPSActionsWithKeyStrokes(dataContext);
+        EditorContext editorContext=getEditorContext();
+        if (editorContext == null) {
+          return;
+        }
+        if (peekKeyboardHandler().processKeyPressed(editorContext,keyEvent)) {
+          keyEvent.consume();
+        }
+      }
+    }
+);
+  }
+  finally {
+    myExecutingCommand=false;
+  }
+  revalidateAndRepaint(false);
+}
