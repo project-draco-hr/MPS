@@ -1,10 +1,16 @@
 {
-  final SNode feature=_context.getReferenceNode();
-  final boolean isGeneric=SNodeOperations.isInstanceOf(feature,"jetbrains.mps.ypath.structure.IGenericFeature");
-  return new SimpleSearchScope(ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.getParent(feature,null,false,false),"features",true)).where(new IWhereFilter<SNode>(){
-    public boolean accept(    SNode it){
-      return it != feature && ((isGeneric ? SNodeOperations.isInstanceOf(it,"jetbrains.mps.ypath.structure.IGenericFeature") : !(SNodeOperations.isInstanceOf(it,"jetbrains.mps.ypath.structure.IGenericFeature"))));
-    }
+  Object searchScopeOrListOfNodes=this.createSearchScopeOrListOfNodes(operationContext,_context);
+  if (searchScopeOrListOfNodes == null) {
+    return new EmptySearchScope();
   }
-).toListSequence());
+  if (searchScopeOrListOfNodes instanceof ISearchScope) {
+    return (ISearchScope)searchScopeOrListOfNodes;
+  }
+  if (searchScopeOrListOfNodes instanceof List) {
+    return new SimpleSearchScope((List)searchScopeOrListOfNodes);
+  }
+  if (searchScopeOrListOfNodes instanceof Iterable) {
+    return new SimpleSearchScope(CollectionUtil.iterableAsList((Iterable)searchScopeOrListOfNodes));
+  }
+  throw new RuntimeException("unexpected type in search-scope provider " + searchScopeOrListOfNodes.getClass());
 }

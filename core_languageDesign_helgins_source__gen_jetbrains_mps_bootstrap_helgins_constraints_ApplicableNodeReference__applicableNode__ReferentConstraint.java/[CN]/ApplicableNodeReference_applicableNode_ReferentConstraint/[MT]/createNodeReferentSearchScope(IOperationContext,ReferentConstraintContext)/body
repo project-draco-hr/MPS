@@ -1,27 +1,16 @@
 {
-  List<SNode> result=new ArrayList<SNode>();
-  SNode rule=SNodeOperations.getAncestor(_context.getEnclosingNode(),"jetbrains.mps.bootstrap.helgins.structure.AbstractRule",false,false);
-  if (rule != null) {
-    SNode appNode=SLinkOperations.getTarget(rule,"applicableNode",true);
-    ListSequence.fromList(result).addElement(appNode);
-    if (SNodeOperations.isInstanceOf(rule,"jetbrains.mps.bootstrap.helgins.structure.ComparisonRule")) {
-      SNode appNode2=SLinkOperations.getTarget(rule,"anotherNode",true);
-      ListSequence.fromList(result).addElement(appNode2);
-    }
-    if (SNodeOperations.isInstanceOf(rule,"jetbrains.mps.bootstrap.helgins.structure.InequationReplacementRule")) {
-      SNode appNode2=SLinkOperations.getTarget(rule,"supertypeNode",true);
-      ListSequence.fromList(result).addElement(appNode2);
-    }
+  Object searchScopeOrListOfNodes=this.createSearchScopeOrListOfNodes(operationContext,_context);
+  if (searchScopeOrListOfNodes == null) {
+    return new EmptySearchScope();
   }
-  SNode coerceStatement=SNodeOperations.getAncestor(_context.getEnclosingNode(),"jetbrains.mps.bootstrap.helgins.structure.CoerceStatement",false,false);
-  while (coerceStatement != null) {
-    ListSequence.fromList(result).addElement(SLinkOperations.getTarget(coerceStatement,"pattern",true));
-    coerceStatement=SNodeOperations.getAncestor(coerceStatement,"jetbrains.mps.bootstrap.helgins.structure.CoerceStatement",false,false);
+  if (searchScopeOrListOfNodes instanceof ISearchScope) {
+    return (ISearchScope)searchScopeOrListOfNodes;
   }
-  SNode matchStatementItem=SNodeOperations.getAncestor(_context.getEnclosingNode(),"jetbrains.mps.bootstrap.helgins.structure.MatchStatementItem",false,false);
-  while (matchStatementItem != null) {
-    ListSequence.fromList(result).addElement(SLinkOperations.getTarget(matchStatementItem,"condition",true));
-    matchStatementItem=SNodeOperations.getAncestor(matchStatementItem,"jetbrains.mps.bootstrap.helgins.structure.MatchStatementItem",false,false);
+  if (searchScopeOrListOfNodes instanceof List) {
+    return new SimpleSearchScope((List)searchScopeOrListOfNodes);
   }
-  return new SimpleSearchScope(result);
+  if (searchScopeOrListOfNodes instanceof Iterable) {
+    return new SimpleSearchScope(CollectionUtil.iterableAsList((Iterable)searchScopeOrListOfNodes));
+  }
+  throw new RuntimeException("unexpected type in search-scope provider " + searchScopeOrListOfNodes.getClass());
 }
