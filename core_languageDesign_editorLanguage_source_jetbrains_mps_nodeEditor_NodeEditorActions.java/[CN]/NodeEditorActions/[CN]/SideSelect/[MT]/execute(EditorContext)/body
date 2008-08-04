@@ -1,6 +1,32 @@
 {
-  EditorCell selectedCell=context.getSelectedCell();
-  EditorCell nextLeaf=getNextLeaf(selectedCell);
-  context.getNodeEditorComponent().pushSelection(selectedCell);
-  context.getNodeEditorComponent().setSelectionDontClearStack(getCommonAncestor(selectedCell,nextLeaf),true);
+  EditorComponent editor=context.getNodeEditorComponent();
+  EditorCell deepestSelected=editor.getDeepestSelectedCell();
+  EditorCell selected=context.getSelectedCell();
+  EditorCell nextLeaf=getNextLeaf(deepestSelected);
+  editor.clearSelectionStack();
+  EditorCell commonAncestor=getCommonSelectableAncestor(deepestSelected,selected,nextLeaf);
+  EditorCell deepestSelection;
+  if (mySide == CellSide.LEFT) {
+    deepestSelection=commonAncestor.getFirstLeaf(CellConditions.SELECTABLE);
+  }
+ else {
+    deepestSelection=commonAncestor.getLastLeaf(CellConditions.SELECTABLE);
+  }
+  if (deepestSelection instanceof EditorCell_Label) {
+    EditorCell_Label label=(EditorCell_Label)deepestSelection;
+    if (mySide == CellSide.LEFT) {
+      label.home();
+    }
+ else {
+      label.end();
+    }
+  }
+  EditorCell current=deepestSelection;
+  while (current != commonAncestor) {
+    if (current.isSelectable()) {
+      editor.pushSelection(current);
+    }
+    current=current.getParent();
+  }
+  editor.setSelectionDontClearStack(commonAncestor,true);
 }
