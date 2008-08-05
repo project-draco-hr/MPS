@@ -28,10 +28,13 @@
   myEditor.registerKeyboardAction(myShowIntentionsAction,KeyStroke.getKeyStroke("alt ENTER"),JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
   myEditor.addCellSelectionListener(new CellSelectionListener(){
     public void selectionChanged(    EditorComponent editor,    EditorCell oldSelection,    EditorCell newSelection){
-      myShowIntentionsThread.interrupt();
+      Thread thread=myShowIntentionsThread.get();
+      if (thread != null) {
+        thread.interrupt();
+      }
       hideLightBulb();
       myShowIntentionsAction.setEnabled(false);
-      myShowIntentionsThread=new Thread("Intentions"){
+      myShowIntentionsThread.set(new Thread("Intentions"){
         public void run(){
           try {
             final boolean[] enabledPresent=new boolean[1];
@@ -67,6 +70,7 @@
               }
             }
 );
+            myShowIntentionsThread.compareAndSet(this,null);
           }
  catch (          InterruptedException e) {
           }
@@ -74,8 +78,8 @@ catch (          RuntimeInterruptedException e) {
           }
         }
       }
-;
-      myShowIntentionsThread.start();
+);
+      myShowIntentionsThread.get().start();
     }
   }
 );
