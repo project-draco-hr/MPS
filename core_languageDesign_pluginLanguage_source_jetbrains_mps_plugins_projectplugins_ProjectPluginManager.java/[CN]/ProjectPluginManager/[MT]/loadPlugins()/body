@@ -1,5 +1,5 @@
 {
-  if (isLoaded)   return;
+  if (myLoaded)   return;
   Set<Language> languages=new HashSet<Language>();
   Set<DevKit> devkits=new HashSet<DevKit>();
   final MPSProject mpsProject=myProject.getComponent(MPSProjectHolder.class).getMPSProject();
@@ -31,12 +31,25 @@
   addIdePlugin();
   for (  BaseProjectPlugin plugin : myPlugins) {
     try {
-      plugin.init(mpsProject);
+      plugin.initNonEDT(mpsProject);
     }
  catch (    Throwable t1) {
       LOG.error("Plugin " + plugin + " threw an exception during initialization ",t1);
     }
   }
-  spreadState();
-  isLoaded=true;
+  SwingUtilities.invokeLater(new Runnable(){
+    public void run(){
+      for (      BaseProjectPlugin plugin : myPlugins) {
+        try {
+          plugin.init(mpsProject);
+        }
+ catch (        Throwable t1) {
+          LOG.error("Plugin " + plugin + " threw an exception during initialization ",t1);
+        }
+      }
+      spreadState();
+    }
+  }
+);
+  myLoaded=true;
 }
