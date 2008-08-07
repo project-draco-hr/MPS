@@ -1,0 +1,37 @@
+{
+  if (!myLoaded)   return;
+  final List<BaseProjectPlugin> plugins=new ArrayList<BaseProjectPlugin>();
+synchronized (myPluginsLock) {
+    for (    BaseProjectPlugin plugin : myPlugins) {
+      try {
+        plugin.disposeNonEDT();
+      }
+ catch (      Throwable t) {
+        LOG.error("Plugin " + plugin + " threw an exception during disposing ",t);
+      }
+    }
+    collectState(myPlugins);
+    plugins.addAll(myPlugins);
+    myPlugins.clear();
+  }
+  Runnable runnable=new Runnable(){
+    public void run(){
+      for (      BaseProjectPlugin plugin : plugins) {
+        try {
+          plugin.dispose();
+        }
+ catch (        Throwable t) {
+          LOG.error("Plugin " + plugin + " threw an exception during disposing ",t);
+        }
+      }
+    }
+  }
+;
+  if (later) {
+    SwingUtilities.invokeLater(runnable);
+  }
+ else {
+    runnable.run();
+  }
+  myLoaded=false;
+}

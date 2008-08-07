@@ -3,6 +3,7 @@
   Set<Language> languages=new HashSet<Language>();
   Set<DevKit> devkits=new HashSet<DevKit>();
   final MPSProject mpsProject=myProject.getComponent(MPSProjectHolder.class).getMPSProject();
+  final List<BaseProjectPlugin> plugins=new ArrayList<BaseProjectPlugin>();
 synchronized (myPluginsLock) {
     for (    Solution s : mpsProject.getProjectSolutions()) {
       languages.addAll(s.getScope().getVisibleLanguages());
@@ -36,29 +37,29 @@ synchronized (myPluginsLock) {
       }
     }
     addIdePlugin();
-    for (    BaseProjectPlugin plugin : myPlugins) {
-      try {
-        plugin.initNonEDT(mpsProject);
-      }
- catch (      Throwable t1) {
-        LOG.error("Plugin " + plugin + " threw an exception during initialization ",t1);
-      }
-    }
-    final List<BaseProjectPlugin> plugins=myPlugins;
-    SwingUtilities.invokeLater(new Runnable(){
-      public void run(){
-        for (        BaseProjectPlugin plugin : plugins) {
-          try {
-            plugin.init(mpsProject);
-          }
- catch (          Throwable t1) {
-            LOG.error("Plugin " + plugin + " threw an exception during initialization ",t1);
-          }
-        }
-        spreadState(myPlugins);
-      }
-    }
-);
+    plugins.addAll(myPlugins);
   }
+  for (  BaseProjectPlugin plugin : plugins) {
+    try {
+      plugin.initNonEDT(mpsProject);
+    }
+ catch (    Throwable t1) {
+      LOG.error("Plugin " + plugin + " threw an exception during initialization ",t1);
+    }
+  }
+  SwingUtilities.invokeLater(new Runnable(){
+    public void run(){
+      for (      BaseProjectPlugin plugin : plugins) {
+        try {
+          plugin.init(mpsProject);
+        }
+ catch (        Throwable t1) {
+          LOG.error("Plugin " + plugin + " threw an exception during initialization ",t1);
+        }
+      }
+      spreadState(plugins);
+    }
+  }
+);
   myLoaded=true;
 }
