@@ -1,2 +1,59 @@
 {
+  List<INodeSubstituteAction> result=new ArrayList<INodeSubstituteAction>();
+{
+    AbstractConceptDeclaration outputConcept=SModelUtil_new.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.AnonymousClassCreator",operationContext.getScope());
+    SNode childConcept=(SNode)_context.getChildConcept();
+    if (SConceptOperations.isSuperConceptOf(childConcept,NameUtil.nodeFQName((SNode)BaseAdapter.fromAdapter(outputConcept)))) {
+      Calculable calc=new Calculable(){
+        public Object calculate(){
+          VisibleClassifiersScope serchScope=new VisibleClassifiersScope(_context.getModel(),IClassifiersSearchScope.ANYTHING,operationContext.getScope());
+          List<SNode> list=(List<SNode>)serchScope.getClassifierNodes();
+          return ListSequence.fromList(list).where(new IWhereFilter<SNode>(){
+            public boolean accept(            SNode it){
+              return SNodeOperations.isInstanceOf(it,"jetbrains.mps.baseLanguage.structure.Interface") || (SNodeOperations.isInstanceOf(it,"jetbrains.mps.baseLanguage.structure.ClassConcept") && SPropertyOperations.getBoolean(it,"abstractClass"));
+            }
+          }
+).toListSequence();
+        }
+      }
+;
+      Iterable<SNode> queryResult=(Iterable)calc.calculate();
+      if (queryResult != null) {
+        for (        final SNode item : queryResult) {
+          result.add(new DefaultChildNodeSubstituteAction(outputConcept,item,_context.getParentNode(),_context.getCurrentTargetNode(),_context.getChildSetter(),operationContext.getScope()){
+            public SNode createChildNode(            Object parameterObject,            SModel model,            String pattern){
+              SNode creator=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.AnonymousClassCreator",null);
+              SLinkOperations.setTarget(creator,"cls",SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.AnonymousClass",null),true);
+              SLinkOperations.setTarget(SLinkOperations.getTarget(creator,"cls",true),"classifier",(item),false);
+              List<SNode> methodsToImplement=SLinkOperations.getTargets((item),"method",true);
+              if (SNodeOperations.isInstanceOf((item),"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
+                methodsToImplement=ListSequence.fromList(methodsToImplement).where(new IWhereFilter<SNode>(){
+                  public boolean accept(                  SNode it){
+                    return SPropertyOperations.getBoolean(it,"isAbstract");
+                  }
+                }
+).toListSequence();
+              }
+              for (              SNode method : methodsToImplement) {
+                SNode method_copy=SNodeOperations.copyNode(method);
+                SPropertyOperations.set(method_copy,"isAbstract","" + false);
+                SLinkOperations.setNewChild(method_copy,"body","jetbrains.mps.baseLanguage.structure.StatementList");
+                SLinkOperations.addChild(SLinkOperations.getTarget(creator,"cls",true),"method",method_copy);
+              }
+              List<SNode> typeVarRefs=SNodeOperations.getDescendants(SLinkOperations.getTarget(creator,"cls",true),"jetbrains.mps.baseLanguage.structure.TypeVariableReference",false);
+              for (              SNode typeVar : typeVarRefs) {
+                SNodeOperations.replaceWithAnother(typeVar,new QuotationClass_3().createNode());
+              }
+              return creator;
+            }
+            public String getMatchingText(            String pattern){
+              return SPropertyOperations.getString((item),"nestedName") + " {..}";
+            }
+          }
+);
+        }
+      }
+    }
+  }
+  return result;
 }
