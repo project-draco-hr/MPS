@@ -1,0 +1,39 @@
+{
+  for (  SNode node : new HashSet<SNode>(myNodesToErrorsMap.keySet())) {
+    IErrorReporter iErrorReporter=myNodesToErrorsMap.get(node);
+    String errorString=iErrorReporter.reportError();
+    SimpleErrorReporter reporter=new SimpleErrorReporter(errorString,iErrorReporter.getRuleModel(),iErrorReporter.getRuleId(),iErrorReporter.isWarning());
+    reporter.setIntentionProvider(iErrorReporter.getIntentionProvider());
+    myNodesToErrorsMap.put(node,reporter);
+  }
+  removeOurListener();
+  for (  SNode nodeToDependOn : myNodesToDependentNodes.keySet()) {
+    final SModel sModel=nodeToDependOn.getModel();
+    final SModelDescriptor sm=sModel.getModelDescriptor();
+    if (sm != null) {
+      addOurListener(sm);
+    }
+ else {
+      if (SModelStereotype.isUserModel(sModel)) {
+        LOG.error("model descriptor is null: " + sModel);
+      }
+    }
+  }
+  final Set<SNodePointer> notSkippedNodes=new HashSet<SNodePointer>(myNotSkippedNodes);
+  if (HelginsPreferencesComponent.getInstance().isUsesDebugHighlighting()) {
+    SwingUtilities.invokeLater(new Runnable(){
+      public void run(){
+        EditorComponent component=(EditorComponent)getEditorComponent();
+        if (component == null)         return;
+        component.getHighlightManager().clearForOwner(component.getHighlightMessagesOwner());
+        for (        SNodePointer notSkippedNode : notSkippedNodes) {
+          markNode(component,notSkippedNode);
+          if (component instanceof NodeEditorComponent) {
+            markNode(((NodeEditorComponent)component).getInspector(),notSkippedNode);
+          }
+        }
+      }
+    }
+);
+  }
+}
