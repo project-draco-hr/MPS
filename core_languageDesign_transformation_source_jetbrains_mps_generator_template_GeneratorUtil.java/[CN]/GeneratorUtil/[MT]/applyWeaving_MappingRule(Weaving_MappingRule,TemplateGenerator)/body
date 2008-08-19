@@ -18,40 +18,34 @@
       generator.getGeneratorSessionContext().getGenerationTracer().pushInputNode(applicableNode);
       generator.getGeneratorSessionContext().getGenerationTracer().pushRule(rule.getNode());
       try {
-        TemplateDeclaration template=rule.getTemplate();
-        if (template != null) {
-          weaveTemplateDeclaration(applicableNode,template,outputContextNode,rule,generator);
+        RuleConsequence ruleConsequence=rule.getRuleConsequence();
+        if (ruleConsequence == null) {
+          generator.showErrorMessage(applicableNode,null,rule.getNode(),"no rule consequence");
         }
  else {
-          RuleConsequence ruleConsequence=rule.getRuleConsequence();
-          if (ruleConsequence == null) {
-            generator.showErrorMessage(applicableNode,null,rule.getNode(),"no rule consequence");
+          generator.getGeneratorSessionContext().getGenerationTracer().pushRuleConsequence(ruleConsequence.getNode());
+          if (ruleConsequence instanceof TemplateDeclarationReference) {
+            TemplateDeclaration template=((TemplateDeclarationReference)ruleConsequence).getTemplate();
+            weaveTemplateDeclaration(applicableNode,template,outputContextNode,rule,generator);
+          }
+ else           if (ruleConsequence instanceof WeaveEach_RuleConsequence) {
+            WeaveEach_RuleConsequence weaveEach=(WeaveEach_RuleConsequence)ruleConsequence;
+            SourceSubstituteMacro_SourceNodesQuery query=weaveEach.getSourceNodesQuery();
+            if (query == null) {
+              generator.showErrorMessage(applicableNode,rule.getNode(),"couldn't create list of source nodes");
+              break;
+            }
+            TemplateDeclaration template=weaveEach.getTemplate();
+            List<SNode> queryNodes=evaluateSourceNodesQuery(applicableNode,rule.getNode(),null,query,generator);
+            if (queryNodes.isEmpty()) {
+              someOutputGenerated=false;
+            }
+            for (            SNode queryNode : queryNodes) {
+              weaveTemplateDeclaration(queryNode,template,outputContextNode,rule,generator);
+            }
           }
  else {
-            generator.getGeneratorSessionContext().getGenerationTracer().pushRuleConsequence(ruleConsequence.getNode());
-            if (ruleConsequence instanceof TemplateDeclarationReference) {
-              template=((TemplateDeclarationReference)ruleConsequence).getTemplate();
-              weaveTemplateDeclaration(applicableNode,template,outputContextNode,rule,generator);
-            }
- else             if (ruleConsequence instanceof WeaveEach_RuleConsequence) {
-              WeaveEach_RuleConsequence weaveEach=(WeaveEach_RuleConsequence)ruleConsequence;
-              SourceSubstituteMacro_SourceNodesQuery query=weaveEach.getSourceNodesQuery();
-              if (query == null) {
-                generator.showErrorMessage(applicableNode,rule.getNode(),"couldn't create list of source nodes");
-                break;
-              }
-              template=weaveEach.getTemplate();
-              List<SNode> queryNodes=evaluateSourceNodesQuery(applicableNode,rule.getNode(),null,query,generator);
-              if (queryNodes.isEmpty()) {
-                someOutputGenerated=false;
-              }
-              for (              SNode queryNode : queryNodes) {
-                weaveTemplateDeclaration(queryNode,template,outputContextNode,rule,generator);
-              }
-            }
- else {
-              generator.showErrorMessage(applicableNode,null,ruleConsequence.getNode(),"unsapported rule consequence");
-            }
+            generator.showErrorMessage(applicableNode,null,ruleConsequence.getNode(),"unsapported rule consequence");
           }
         }
       }

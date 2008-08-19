@@ -1,7 +1,29 @@
 {
-  INodeAdapter adapter=getConsequenceForSwitchCase_internal(inputNode,templateSwitch);
-  if (adapter instanceof RuleConsequence) {
-    return (RuleConsequence)adapter;
+  ConceptDeclaration nodeConcept=(ConceptDeclaration)inputNode.getConceptDeclarationAdapter();
+  if (myTemplateSwitchGraph == null) {
+    myTemplateSwitchGraph=new TemplateSwitchGraph(getGeneratorSessionContext().getTemplateModels());
+    myTemplateSwitchToListCache=new HashMap<TemplateSwitch,List<TemplateSwitch>>();
+  }
+  List<TemplateSwitch> switches=myTemplateSwitchToListCache.get(templateSwitch);
+  if (switches == null) {
+    switches=myTemplateSwitchGraph.getSubgraphAsList(templateSwitch);
+    myTemplateSwitchToListCache.put(templateSwitch,switches);
+  }
+  for (  TemplateSwitch aSwitch : switches) {
+    List<Reduction_MappingRule> rules=aSwitch.getReductionMappingRules();
+    for (    Reduction_MappingRule rule : rules) {
+      if (GeneratorUtil.checkPremiseForBaseMappingRule(inputNode,nodeConcept,rule,this)) {
+        RuleConsequence ruleConsequence=rule.getRuleConsequence();
+        if (ruleConsequence == null) {
+          showErrorMessage(inputNode,null,rule.getNode(),"couldn't apply reduction: no rule consequence");
+        }
+        return ruleConsequence;
+      }
+    }
+    RuleConsequence ruleConsequence=aSwitch.getDefaultConsequence();
+    if (ruleConsequence != null) {
+      return ruleConsequence;
+    }
   }
   return null;
 }
