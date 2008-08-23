@@ -1,32 +1,28 @@
 {
-  if (myLoaded)   return;
-  final MPSProject mpsProject=myProject.getComponent(MPSProjectHolder.class).getMPSProject();
-  final List<BaseProjectPlugin> plugins=createPlugins(mpsProject);
-synchronized (myPluginsLock) {
-    myPlugins=new ArrayList<BaseProjectPlugin>(plugins);
-  }
-  for (  BaseProjectPlugin plugin : plugins) {
-    try {
-      plugin.initNonEDT(mpsProject);
-    }
- catch (    Throwable t1) {
-      LOG.error("Plugin " + plugin + " threw an exception during initialization ",t1);
-    }
-  }
   ThreadUtils.runInUIThreadNoWait(new Runnable(){
     public void run(){
       if (myProject.isDisposed())       return;
-      for (      BaseProjectPlugin plugin : plugins) {
-        try {
-          plugin.init(mpsProject);
+      if (myLoaded)       return;
+      final MPSProject mpsProject=myProject.getComponent(MPSProjectHolder.class).getMPSProject();
+synchronized (myPluginsLock) {
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            myPlugins=createPlugins(mpsProject);
+          }
         }
- catch (        Throwable t1) {
-          LOG.error("Plugin " + plugin + " threw an exception during initialization ",t1);
+);
+        for (        BaseProjectPlugin plugin : myPlugins) {
+          try {
+            plugin.init(mpsProject);
+          }
+ catch (          Throwable t1) {
+            LOG.error("Plugin " + plugin + " threw an exception during initialization ",t1);
+          }
         }
+        spreadState(myPlugins);
       }
-      spreadState(plugins);
+      myLoaded=true;
     }
   }
 );
-  myLoaded=true;
 }
