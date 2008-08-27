@@ -3,55 +3,19 @@
   if (application.isDisposeInProgress() || application.isDisposed()) {
     return;
   }
-  final Set<SModelDescriptor> modelsToReload=new LinkedHashSet<SModelDescriptor>();
-  final Set<IModule> modulesToReload=new LinkedHashSet<IModule>();
-  final Set<VirtualFile> addedModules=new LinkedHashSet<VirtualFile>();
-  final Set<Project> projectsToReload=new LinkedHashSet<Project>();
-  boolean needToReloadLibraries=false;
+  ReloadSession reloadSession=new ReloadSession();
   for (  VFileEvent event : events) {
     VirtualFile vfile=getVFile(event);
-    if ((event instanceof VFileCreateEvent) || (event instanceof VFileCopyEvent)) {
-      if (MPSFileTypesManager.isModuleFile(vfile)) {
-        Set<Library> librarySet=LibraryManager.getInstance().getLibraries();
-        for (        Library lib : librarySet) {
-          if (VfsUtil.isAncestor(VFileSystem.getFile(lib.getPath()),vfile,false)) {
-            needToReloadLibraries=true;
-            addedModules.add(vfile);
-          }
-        }
-      }
+    if (vfile == null)     continue;
+    if (MPSFileTypesManager.isModelFile(vfile)) {
+      ModelFileProcessor.getInstance().process(event,vfile,reloadSession);
     }
- else     if (event instanceof VFileContentChangeEvent) {
-      if (MPSFileTypesManager.isProjectFile(vfile)) {
-        Project[] projects=myProjectManager.getOpenProjects();
-        for (        Project project : projects) {
-          if (project.getProjectFile().equals(vfile)) {
-            projectsToReload.add(project);
-            break;
-          }
-        }
-      }
- else       if (MPSFileTypesManager.isModelFile(vfile)) {
-        IFile ifile=VFileSystem.toIFile(vfile);
-        if ((ifile == null) || (!ifile.exists()))         continue;
-        SModelDescriptor model=mySModelRepository.findModel(ifile);
-        if ((model == null) || ApplicationLevelVcsManager.instance().isInConflict(ifile)) {
-          continue;
-        }
-        if (model.needsReloading()) {
-          modelsToReload.add(model);
-        }
-      }
- else       if (MPSFileTypesManager.isModuleFile(vfile)) {
-        IFile ifile=VFileSystem.toIFile(vfile);
-        if ((ifile == null) || (!ifile.exists()))         continue;
-        IModule module=MPSModuleRepository.getInstance().getModuleByFile(ifile.toFile());
-        if (module != null) {
-          modulesToReload.add(module);
-        }
-      }
+ else     if (MPSFileTypesManager.isModuleFile(vfile)) {
+      ModuleFileProcessor.getInstance().process(event,vfile,reloadSession);
+    }
+ else     if (MPSFileTypesManager.isProjectFile(vfile)) {
+      ProjectFileProcessor.getInstance().process(event,vfile,reloadSession);
     }
   }
-  if (addedModules.isEmpty() && modelsToReload.isEmpty() && modulesToReload.isEmpty()&& projectsToReload.isEmpty())   return;
-  doReload(modelsToReload,modulesToReload,addedModules);
+  reloadSession.doReload();
 }
