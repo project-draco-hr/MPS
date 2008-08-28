@@ -1,11 +1,26 @@
 {
-  GenerateResult result=this.myEditor.generate();
-  final QueryExecutor executor=new QueryExecutor(result);
-  final IScope scope=this.myScope.getOptions().getScope(this.myContext,result.getModelDescriptor());
-  ProgressManager.getInstance().run(new Task.Modal(FindInstancesDialog.this.myContext.getProject(),"Executing query",false){
-    public void run(    @NotNull() ProgressIndicator indicator){
-      executor.run(indicator,scope);
-    }
-  }
+  try {
+    final GenerateResult result=this.myEditor.generate();
+    String fqName=result.getModelDescriptor().getLongName() + ".Query";
+    ClassLoader loader=result.getLoader(QueryExecutor.class.getClassLoader());
+    Query query=(Query)Class.forName(fqName,true,loader).newInstance();
+    final QueryExecutor executor=new QueryExecutor(this.myContext,query);
+    final IScope scope=this.myScope.getOptions().getScope(this.myContext,result.getModelDescriptor());
+    ProgressManager.getInstance().run(new Task.Modal(FindInstancesDialog.this.myContext.getProject(),"Executing query",false){
+      public void run(      @NotNull() ProgressIndicator indicator){
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            executor.setSNode(result.getSNode());
+          }
+        }
 );
+        executor.execute(indicator,scope);
+      }
+    }
+);
+    executor.showResults();
+  }
+ catch (  Throwable t) {
+    t.printStackTrace();
+  }
 }
