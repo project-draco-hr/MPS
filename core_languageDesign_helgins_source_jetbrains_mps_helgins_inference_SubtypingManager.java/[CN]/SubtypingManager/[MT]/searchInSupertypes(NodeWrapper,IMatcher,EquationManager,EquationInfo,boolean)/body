@@ -1,11 +1,14 @@
 {
-  StructuralNodeSet<?> frontier=new StructuralNodeSet();
-  StructuralNodeSet<?> newFrontier=new StructuralNodeSet();
-  StructuralNodeSet<?> yetPassed=new StructuralNodeSet();
   if (subRepresentator == null) {
     return false;
   }
-  long millisStart=System.currentTimeMillis();
+  Boolean answer=getCacheAnswer(subRepresentator,superRepresentator);
+  if (answer != null) {
+    return answer;
+  }
+  StructuralNodeSet<?> frontier=new StructuralNodeSet();
+  StructuralNodeSet<?> newFrontier=new StructuralNodeSet();
+  StructuralNodeSet<?> yetPassed=new StructuralNodeSet();
   frontier.add(subRepresentator.getNode());
   while (!frontier.isEmpty()) {
     StructuralNodeSet<?> ancestors=new StructuralNodeSet();
@@ -16,30 +19,43 @@
     for (    SNode passedNode : yetPassed) {
       ancestors.removeStructurally(passedNode);
     }
-    ArrayList<SNode> ancestorsSorted=new ArrayList<SNode>(ancestors);
+    ArrayList<SNode> ancestorsSorted;
+    ancestorsSorted=new ArrayList<SNode>(ancestors);
     Collections.sort(ancestorsSorted,new Comparator<SNode>(){
       public int compare(      SNode o1,      SNode o2){
         return o2.depth() - o1.depth();
       }
     }
 );
+    Pair<SubtypingManager,Map<SNode,Set<SNode>>> matchParameter=new Pair<SubtypingManager,Map<SNode,Set<SNode>>>(this,new HashMap<SNode,Set<SNode>>());
+    boolean wasMatch=false;
     for (    SNode ancestor : ancestorsSorted) {
-      if (superRepresentator.matchesWith(NodeWrapper.createWrapperFromNode(ancestor,equationManager),equationManager,errorInfo)) {
-        long millisEnd=System.currentTimeMillis();
-        if (superRepresentator instanceof NodeWrapper) {
-          myTypeChecker.getStatistics().addCheckedInequation(subRepresentator.getNode(),((NodeWrapper)superRepresentator).getNode(),millisEnd - millisStart);
+      if (superRepresentator.matchesWith(NodeWrapper.createWrapperFromNode(ancestor,equationManager),equationManager,errorInfo,matchParameter)) {
+        if (matchParameter.o2.keySet().isEmpty()) {
+          addToCache(subRepresentator,superRepresentator,true);
+          return true;
         }
-        return true;
+ else {
+          wasMatch=true;
+        }
       }
+    }
+    if (wasMatch) {
+      Map<SNode,Set<SNode>> mapWithVars=matchParameter.o2;
+      Set<Pair<SNode,SNode>> childEqs=new HashSet<Pair<SNode,SNode>>();
+      for (      SNode var : mapWithVars.keySet()) {
+        childEqs.add(new Pair<SNode,SNode>(var,mostSpecificTypes(mapWithVars.get(var)).iterator().next()));
+      }
+      if (equationManager != null) {
+        equationManager.addChildEquations(childEqs,errorInfo);
+      }
+      return true;
     }
     newFrontier.addAllStructurally(ancestors);
     yetPassed.addAllStructurally(ancestors);
     frontier=newFrontier;
     newFrontier=new StructuralNodeSet();
   }
-  long millisEnd=System.currentTimeMillis();
-  if (superRepresentator instanceof NodeWrapper) {
-    myTypeChecker.getStatistics().addCheckedInequation(subRepresentator.getNode(),((NodeWrapper)superRepresentator).getNode(),millisEnd - millisStart);
-  }
+  addToCache(subRepresentator,superRepresentator,false);
   return false;
 }
