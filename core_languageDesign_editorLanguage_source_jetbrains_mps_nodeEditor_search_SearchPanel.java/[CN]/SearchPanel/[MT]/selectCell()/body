@@ -1,35 +1,52 @@
 {
-  List<EditorCell_Label> cells=allCells();
-  Condition<String> condition;
-  if (myIsRegex.isSelected()) {
-    condition=SearchConditions.containsRegexp(myText.getText(),myIsCaseSensitive.isSelected());
+  final List<EditorCell_Label> cells=allCells();
+  List<Integer> startCellPosition=new ArrayList<Integer>();
+  List<Integer> endCellPosition=new ArrayList<Integer>();
+  StringBuilder sourceBuilder=new StringBuilder();
+  for (  EditorCell_Label cell : cells) {
+    if (cell.getStyle().get(StyleAttributes.PADDING_LEFT) >= 1.0) {
+      sourceBuilder.append(" ");
+    }
+    startCellPosition.add(sourceBuilder.length());
+    sourceBuilder.append(cell.getRenderedText());
+    endCellPosition.add(sourceBuilder.length());
+    if (cell.getStyle().get(StyleAttributes.PADDING_RIGHT) >= 1.0) {
+      sourceBuilder.append(" ");
+    }
   }
- else   if (myIsWordsOnly.isSelected()) {
-    condition=SearchConditions.containsWholeWord(myText.getText(),myIsCaseSensitive.isSelected());
-  }
- else {
-    condition=SearchConditions.containsString(myText.getText(),myIsCaseSensitive.isSelected());
+  List<Integer> resultIndex=new ArrayList<Integer>();
+  List<Integer> startHighlightPosition=new ArrayList<Integer>();
+  List<Integer> endHighlightPosition=new ArrayList<Integer>();
+  Matcher matcher=getPattern().matcher(sourceBuilder.toString());
+  while (matcher.find()) {
+    int index=0;
+    while (!((startCellPosition.get(index) <= matcher.start()) && (endCellPosition.get(index) > matcher.start()))) {
+      index++;
+    }
+    myCells.add(cells.get(index));
+    CellLayout cellLayout=cells.get(index).getParent().getCellLayout();
+    int highlightLength=0;
+    while (startCellPosition.get(index) < matcher.end()) {
+      resultIndex.add(index);
+      startHighlightPosition.add(Math.max(0,matcher.start() - startCellPosition.get(index)));
+      endHighlightPosition.add(Math.min(matcher.end(),endCellPosition.get(index)) - startCellPosition.get(index));
+      highlightLength++;
+      index++;
+    }
+    index--;
+    if (cellLayout instanceof CellLayout_Horizontal && !cellLayout.equals(cells.get(index).getParent().getCellLayout())) {
+      for (int i=0; i < highlightLength; i++) {
+        resultIndex.remove(resultIndex.size() - 1);
+        startHighlightPosition.remove(startHighlightPosition.size() - 1);
+        endHighlightPosition.remove(endHighlightPosition.size() - 1);
+      }
+      myCells.remove(myCells.size() - 1);
+    }
   }
   myOwner=new EditorMessageOwner(){
   }
 ;
-  for (int i=cells.size() - 1; i >= 0; i--) {
-    if (condition.met(cells.get(i).getRenderedText())) {
-      myCells.add(cells.get(i));
-    }
-  }
   if (!myCells.isEmpty()) {
-    myEditor.changeSelection(myCells.get(myCells.size() - 1));
-    if (myCells.size() <= 100) {
-      myHighlightManager=myEditor.getHighlightManager();
-      ModelAccess.instance().runReadAction(new Runnable(){
-        public void run(){
-          for (          EditorCell_Label myCell : myCells) {
-            myHighlightManager.mark(new SearchPanelEditorMessage(myCell));
-          }
-        }
-      }
-);
-    }
+    highlight(resultIndex,startHighlightPosition,endHighlightPosition);
   }
 }
