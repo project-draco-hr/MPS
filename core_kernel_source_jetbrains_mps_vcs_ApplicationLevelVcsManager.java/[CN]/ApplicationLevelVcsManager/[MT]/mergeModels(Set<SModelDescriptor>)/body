@@ -1,5 +1,6 @@
 {
   Map<Project,List<VirtualFile>> toMerge=new HashMap<Project,List<VirtualFile>>();
+  Map<VirtualFile,SModelDescriptor> fileToModel=new HashMap<VirtualFile,SModelDescriptor>();
   for (  SModelDescriptor modelDescriptor : models) {
     IFile ifile=modelDescriptor.getModelFile();
     if (isInConflict(ifile,true)) {
@@ -11,9 +12,25 @@
         toMerge.put(project,files);
       }
       files.add(vfile);
+      fileToModel.put(vfile,modelDescriptor);
     }
   }
+  final List<SModelDescriptor> merged=new LinkedList<SModelDescriptor>();
   for (  Project project : toMerge.keySet()) {
-    AbstractVcsHelper.getInstance(project).showMergeDialog(toMerge.get(project));
+    List<VirtualFile> virtualFileList=AbstractVcsHelper.getInstance(project).showMergeDialog(toMerge.get(project));
+    for (    VirtualFile vfile : virtualFileList) {
+      SModelDescriptor model=fileToModel.get(vfile);
+      if (model != null) {
+        merged.add(model);
+      }
+    }
   }
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      SModelDescriptor model : merged) {
+        model.reloadFromDisk();
+      }
+    }
+  }
+);
 }
