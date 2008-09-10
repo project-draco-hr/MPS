@@ -1,0 +1,18 @@
+{
+  SModelRepository modelRepository=SModelRepository.getInstance();
+  if (createStub) {
+    return getInstance(manager,createStub,fileName,modelUID,owner);
+  }
+  SModelDescriptor modelDescriptor=modelRepository.getModelDescriptor(modelUID);
+  if (modelDescriptor != null) {
+    LOG.error("can't recreate file for already loaded descriptor " + modelUID);
+    return getInstance(manager,createStub,fileName,modelUID,owner);
+  }
+  IFile modelFile=FileSystem.getFile(fileName);
+  IFile newFile=ModelPersistence.upgradeFile(modelFile);
+  SModelUID newModelUID=ModelPersistence.upgradeModelUID(modelUID);
+  newFile.createNewFile();
+  FileUtil.copyFile(modelFile.toFile(),newFile.toFile());
+  modelFile.delete();
+  return getInstance(manager,createStub,newFile.getName(),newModelUID,owner);
+}
