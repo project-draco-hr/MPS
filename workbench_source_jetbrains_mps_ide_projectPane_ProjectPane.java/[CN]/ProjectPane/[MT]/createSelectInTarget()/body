@@ -1,2 +1,49 @@
 {
+  return new SelectInTarget(){
+    public SNode myNode;
+    public boolean canSelect(    SelectInContext context){
+      VirtualFile virtualFile=context.getVirtualFile();
+      if (!(virtualFile instanceof MPSNodeVirtualFile))       return false;
+      MPSNodeVirtualFile file=(MPSNodeVirtualFile)virtualFile;
+      FileEditor[] editors=FileEditorManager.getInstance(myProject).getEditors(file);
+      if (editors.length != 0) {
+        FileEditor editor=editors[0];
+        if (!(editor instanceof MPSFileNodeEditor))         return false;
+        myNode=((MPSFileNodeEditor)editor).getNodeEditor().getCurrentEditorComponent().getEditedNode();
+      }
+ else {
+        myNode=file.getNode();
+      }
+      return true;
+    }
+    public void selectIn(    final SelectInContext context,    boolean requestFocus){
+      final ToolWindowManager manager=ToolWindowManager.getInstance(myProject);
+      manager.getToolWindow(ToolWindowId.PROJECT_VIEW).activate(new Runnable(){
+        public void run(){
+          myProjectView.changeView(getId());
+          manager.getFocusManager().requestFocus(myTree,false);
+          ModelAccess.instance().runReadAction(new Runnable(){
+            public void run(){
+              selectNode(myNode);
+            }
+          }
+);
+        }
+      }
+,false);
+    }
+    public String getToolWindowId(){
+      return ID;
+    }
+    public String getMinorViewId(){
+      return null;
+    }
+    public float getWeight(){
+      return 0;
+    }
+    public String toString(){
+      return "Logical View";
+    }
+  }
+;
 }
