@@ -1,0 +1,43 @@
+{
+  if (MPSVCSManager.getInstance(project).isChangeListManagerInitialized() && !synchronously) {
+    return ChangeListManager.getInstance(project).getStatus(vfile).equals(FileStatus.MERGED_WITH_CONFLICTS);
+  }
+  ProjectLevelVcsManager manager=ProjectLevelVcsManager.getInstance(project);
+  MPSVCSManager.getInstance(project).ensureVcssInitialized();
+  AbstractVcs vcs=manager.getVcsFor(vfile);
+  if (vcs == null) {
+    return false;
+  }
+  VcsDirtyScopeImpl scope=new VcsDirtyScopeImpl(vcs,project);
+  scope.addDirtyFile(VcsContextFactory.SERVICE.getInstance().createFilePathOn(vfile));
+  ChangeProvider changeProvider=vcs.getChangeProvider();
+  if (changeProvider == null) {
+    return false;
+  }
+  final boolean[] result=new boolean[1];
+  try {
+    changeProvider.getChanges(scope,new EmptyChangelistBuilder(){
+      @Override public void processChangeInList(      Change change,      @Nullable ChangeList changeList){
+        processChange(change);
+      }
+      @Override public void processChangeInList(      Change change,      String changeListName){
+        processChange(change);
+      }
+      public void processChange(      Change change){
+        if (change.getFileStatus().equals(FileStatus.MERGED_WITH_CONFLICTS)) {
+          ContentRevision contentRevision=change.getAfterRevision();
+          if (contentRevision != null) {
+            if (contentRevision.getFile().getPresentableUrl().equals(vfile.getPresentableUrl())) {
+              result[0]=true;
+            }
+          }
+        }
+      }
+    }
+,new EmptyProgressIndicator());
+  }
+ catch (  VcsException e) {
+    LOG.error(e);
+  }
+  return result[0];
+}
