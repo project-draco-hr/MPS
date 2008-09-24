@@ -1,0 +1,33 @@
+{
+  final List<ModuleReference> additionalLanguages=new ArrayList<ModuleReference>();
+  final List<SModelReference> additionalModels=new ArrayList<SModelReference>();
+  final Set<ModuleReference> necessaryDevKits=new HashSet<ModuleReference>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      SModelReference modelReference : necessaryImports) {
+        if (modelReference != null && !(targetModel.hasImportedModel(modelReference)) && !(targetModel.getSModelReference().equals(modelReference)))         additionalModels.add(modelReference);
+      }
+      for (      ModuleReference namespace : necessaryLanguages) {
+        if (!targetModel.hasLanguage(namespace)) {
+          additionalLanguages.add(namespace);
+        }
+      }
+      necessaryImports.retainAll(additionalModels);
+      necessaryLanguages.retainAll(additionalLanguages);
+    }
+  }
+);
+  if ((!necessaryImports.isEmpty()) || (!necessaryLanguages.isEmpty()) || (!necessaryDevKits.isEmpty())) {
+    AddRequiredModelImportsDialog dialog=ModelAccess.instance().runReadAction(new Computable<AddRequiredModelImportsDialog>(){
+      public AddRequiredModelImportsDialog compute(){
+        AddRequiredModelImportsDialog dialog=new AddRequiredModelImportsDialog(context.getMainFrame(),targetModel,necessaryImports,necessaryLanguages,necessaryDevKits);
+        dialog.setModal(true);
+        return dialog;
+      }
+    }
+);
+    dialog.showDialog();
+    return (!dialog.isCanceled());
+  }
+  return true;
+}
