@@ -1,0 +1,57 @@
+{
+  Map<SNode,Set<SNode>> subTypesToSuperTypes=MapSequence.fromMap(new HashMap<SNode,Set<SNode>>());
+  Set<SNode> keyset=new HashSet<SNode>();
+  Set<SNode> allTypes=new HashSet<SNode>();
+  Set<SNode> frontier=new HashSet(concepts);
+  Set<SNode> newFrontier=new HashSet<SNode>();
+  while (!(frontier.isEmpty())) {
+    for (    SNode concept : frontier) {
+      if (keyset.contains(concept)) {
+        continue;
+      }
+      List<SNode> supertypes=AbstractConceptDeclaration_Behavior.call_getImmediateSuperconcepts_1222430305282(concept);
+      Set<SNode> set=MapSequence.fromMap(subTypesToSuperTypes).get(concept);
+      if (set == null) {
+        set=new HashSet<SNode>();
+        MapSequence.fromMap(subTypesToSuperTypes).put(concept,set);
+      }
+      set.addAll(supertypes);
+      keyset.add(concept);
+      newFrontier.addAll(supertypes);
+      allTypes.addAll(supertypes);
+      ListSequence.fromList(supertypes).addElement(concept);
+    }
+    frontier=newFrontier;
+    newFrontier=new HashSet<SNode>();
+  }
+  for (  SNode node2 : allTypes) {
+    for (    SNode node1 : allTypes) {
+      for (      SNode node3 : allTypes) {
+        Set<SNode> supertypes1=MapSequence.fromMap(subTypesToSuperTypes).get(node1);
+        if (supertypes1 == null) {
+          continue;
+        }
+        Set<SNode> supertypes2=MapSequence.fromMap(subTypesToSuperTypes).get(node2);
+        if (supertypes2 == null) {
+          continue;
+        }
+        if (supertypes1.contains(node2) && supertypes2.contains(node3)) {
+          supertypes1.add(node3);
+        }
+      }
+    }
+  }
+  Set<SNode> result=new HashSet<SNode>(concepts);
+  while (result.size() >= 2) {
+    Iterator<SNode> iterator=result.iterator();
+    SNode a=iterator.next();
+    SNode b=iterator.next();
+    result.remove(a);
+    result.remove(b);
+    result.add(leastCommonSuperconcept(a,b,subTypesToSuperTypes));
+  }
+  if (result.isEmpty()) {
+    return SConceptOperations.findConceptDeclaration("jetbrains.mps.core.structure.BaseConcept");
+  }
+  return result.iterator().next();
+}
