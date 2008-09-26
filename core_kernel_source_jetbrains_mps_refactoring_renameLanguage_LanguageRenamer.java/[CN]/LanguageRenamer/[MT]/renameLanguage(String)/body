@@ -1,0 +1,24 @@
+{
+  for (  SModelRoot root : myLanguage.getSModelRoots()) {
+    root.setPrefix(myNewName);
+  }
+  SModelDescriptor structure=myLanguage.getStructureModelDescriptor();
+  RefactoringContext context=new RefactoringContext(new MyRefactoring());
+  for (  AbstractConceptDeclaration concept : structure.getSModel().getRootsAdapters(AbstractConceptDeclaration.class)) {
+    context.changeFeatureName(concept.getNode(),myNewName + ".structure." + concept.getName(),concept.getName());
+  }
+  context.computeCaches();
+  for (  SModelDescriptor sm : myLanguage.getOwnModelDescriptors()) {
+    if (!SModelStereotype.isUserModel(sm))     continue;
+    if (sm.getSModelFqName().toString().startsWith(oldFqName + ".")) {
+      String suffix=sm.getSModelFqName().toString().substring(oldFqName.length());
+      sm.rename(SModelFqName.fromString(myNewName + suffix),false);
+    }
+  }
+  LanguageDescriptor descriptor=myLanguage.getLanguageDescriptor();
+  descriptor.setNamespace(myNewName);
+  myLanguage.setLanguageDescriptor(descriptor,false);
+  myLanguage.save();
+  updateReferences();
+  new RefactoringProcessor().writeInLogAndUpdateModels(structure.getSModelReference(),structure.getSModel(),context);
+}
