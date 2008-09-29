@@ -11,7 +11,19 @@
   }
 );
   if (myRegenerateLanguage.getModel().isSelected()) {
-    FileUtil.clear(myLanguage.getSourceDir());
+    final MPSProject mpsProject=myProject.getComponent(MPSProjectHolder.class).getMPSProject();
+    GenParameters params=ModelAccess.instance().runReadAction(new Computable<GenParameters>(){
+      public GenParameters compute(){
+        FileUtil.clear(myLanguage.getSourceDir());
+        SModel model=AuxilaryRuntimeModel.getDescriptor().getSModel();
+        LanguageGeneratorConfiguration languageConfig=LanguageGeneratorConfiguration.newInstance(model);
+        languageConfig.setLanguageNamespace(myLanguage.getNamespace());
+        languageConfig.setName("tmp");
+        return GeneratorConfigUtil.calculate(mpsProject,languageConfig,true);
+      }
+    }
+);
+    myProject.getComponent(GeneratorManager.class).generateModelsFromDifferentModules(new ModuleContext(myLanguage,mpsProject),params.getModels(),IGenerationType.FILES);
   }
   dispose();
 }
