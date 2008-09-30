@@ -1,3 +1,34 @@
 {
   super._commit(finishChosen);
+  if (myOptions.getCreateNewSolution()) {
+    if (myPath.getPath().length() == 0) {
+      throw new CommitStepException("Enter solution directory");
+    }
+    if (myNamespace.getText().length() == 0) {
+      throw new CommitStepException("Enter solution name");
+    }
+    if (MPSModuleRepository.getInstance().getModuleByUID(myNamespace.getText()) != null) {
+      throw new CommitStepException("Duplicate solution name");
+    }
+    String descriptorPath=myPath.getPath() + File.separator + myNamespace.getText()+ MPSExtentions.DOT_SOLUTION;
+    File file=new File(descriptorPath);
+    if (file.exists()) {
+      throw new CommitStepException("Solution file already exists");
+    }
+    File dir=file.getParentFile();
+    if (!(dir.isAbsolute())) {
+      throw new CommitStepException("Path should be absolute");
+    }
+    if (!(dir.exists())) {
+      if (!(DirectoryUtil.askToCreateNewDirectory(JOptionPane.getFrameForComponent(myComponent),dir))) {
+        throw new CommitStepException("Enter correct path");
+      }
+    }
+    final File descriptorFile=prepareToCreateNewSolutionDescriptorFile(descriptorPath);
+    if (descriptorFile == null) {
+      throw new CommitStepException("Can't create " + descriptorPath);
+    }
+  }
+  myOptions.setSolutionNamespace(myNamespace.getText());
+  myOptions.setSolutionPath(myPath.getPath());
 }
