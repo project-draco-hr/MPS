@@ -1,0 +1,49 @@
+{
+  SNode n=item;
+  for (  SNode child : (List<SNode>)n.getChildren("item")) {
+    SNode optChild=optimize(child);
+    if (SNodeOperations.isInstanceOf(optChild,"webr.gtext.structure.GItemList")) {
+      inlineChildren(optChild,optChild);
+      SNodeOperations.deleteNode(optChild);
+    }
+ else     if (SNodeOperations.isInstanceOf(optChild,"webr.gtext.structure.GConditionalLine")) {
+      SNode nextChild=optChild;
+      if (SPropertyOperations.getBoolean(optChild,"isSeparate")) {
+        SNodeOperations.insertNextSiblingChild(nextChild,SModelOperations.createNewNode(SNodeOperations.getModel(item),"webr.gtext.structure.GIndent",null));
+        nextChild=(SNode)SNodeOperations.getNextSibling(nextChild);
+      }
+      nextChild=inlineChildren(optChild,nextChild);
+      if (SPropertyOperations.getBoolean(optChild,"isSeparate")) {
+        SNodeOperations.insertNextSiblingChild(nextChild,SModelOperations.createNewNode(SNodeOperations.getModel(item),"webr.gtext.structure.GNewLine",null));
+      }
+      SNodeOperations.deleteNode(optChild);
+    }
+ else     if (SNodeOperations.isInstanceOf(optChild,"webr.gtext.structure.GLine")) {
+      SNode nextChild=optChild;
+      SNodeOperations.insertNextSiblingChild(nextChild,SModelOperations.createNewNode(SNodeOperations.getModel(item),"webr.gtext.structure.GIndent",null));
+      nextChild=(SNode)SNodeOperations.getNextSibling(nextChild);
+      nextChild=inlineChildren(optChild,nextChild);
+      SNodeOperations.insertNextSiblingChild(nextChild,SModelOperations.createNewNode(SNodeOperations.getModel(item),"webr.gtext.structure.GNewLine",null));
+      SNodeOperations.deleteNode(optChild);
+    }
+  }
+  SNode t=null;
+  for (  SNode child : (List<SNode>)n.getChildren("item")) {
+    if (SNodeOperations.isInstanceOf(child,"webr.gtext.structure.GText")) {
+      if (t == null) {
+        t=child;
+      }
+ else {
+        String text=SPropertyOperations.getString(child,"text");
+        if (text != null) {
+          SPropertyOperations.set(t,"text",SPropertyOperations.getString(t,"text") + text);
+        }
+        SNodeOperations.deleteNode(child);
+      }
+    }
+ else {
+      t=null;
+    }
+  }
+  return n.getChildren("item").size();
+}
