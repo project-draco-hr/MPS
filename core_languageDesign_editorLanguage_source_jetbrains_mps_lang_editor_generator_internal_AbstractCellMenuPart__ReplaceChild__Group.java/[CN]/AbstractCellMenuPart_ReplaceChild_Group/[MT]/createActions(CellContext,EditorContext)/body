@@ -1,0 +1,33 @@
+{
+  final SNode parentNode=(SNode)cellContext.get(BasicCellContext.EDITED_NODE);
+  LinkDeclaration linkDeclaration=(LinkDeclaration)BaseAdapter.fromNode((SNode)cellContext.get(AggregationCellContext.LINK_DECLARATION));
+  IChildNodeSetter setter=new DefaultChildNodeSetter(linkDeclaration);
+  final SNode defaultConceptOfChild=BaseAdapter.fromAdapter(linkDeclaration.getTarget());
+  if (defaultConceptOfChild == null)   return new LinkedList<INodeSubstituteAction>();
+  final SNode currentChild=(SNode)cellContext.getOpt(AggregationCellContext.CURRENT_CHILD_NODE);
+  final IOperationContext context=editorContext.getOperationContext();
+  List<INodeSubstituteAction> actions=new LinkedList<INodeSubstituteAction>();
+  List parameterObjects=createParameterObjects(parentNode,currentChild,defaultConceptOfChild,context.getScope(),context);
+  if (parameterObjects == null) {
+    return actions;
+  }
+  for (  final Object parameterObject : parameterObjects) {
+    actions.add(new DefaultChildNodeSubstituteAction(parameterObject,parentNode,currentChild,setter,context.getScope()){
+      protected String getMatchingText(      String pattern,      boolean referent_presentation,      boolean visible){
+        return AbstractCellMenuPart_ReplaceChild_Group.this.getMatchingText(parameterObject);
+      }
+      public SNode createChildNode(      Object parameterObjectWhichActuallyAnOutputConcept,      SModel model,      String pattern){
+        SNode newChild;
+        if (isCustomCreateChildNode()) {
+          newChild=customCreateChildNode(parameterObject,parentNode,currentChild,defaultConceptOfChild,model,getScope(),context);
+        }
+ else {
+          newChild=super.createChildNode(parameterObject,model,pattern);
+        }
+        return newChild;
+      }
+    }
+);
+  }
+  return actions;
+}
