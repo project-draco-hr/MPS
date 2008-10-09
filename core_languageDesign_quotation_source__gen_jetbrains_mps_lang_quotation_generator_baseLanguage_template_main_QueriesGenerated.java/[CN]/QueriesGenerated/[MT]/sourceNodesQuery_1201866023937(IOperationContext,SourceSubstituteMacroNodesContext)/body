@@ -1,0 +1,33 @@
+{
+  SNode root=SLinkOperations.getTarget(_context.getNode(),"quotedNode",true);
+  List<SNode> result=new ArrayList<SNode>();
+  List<SNode> frontier=new ArrayList<SNode>();
+  SModel model=_context.getOutputModel();
+  ListSequence.fromList(frontier).addElement(root);
+  List<SNode> newFrontier=new ArrayList<SNode>();
+  while (ListSequence.fromList(frontier).isNotEmpty()) {
+    for (    SNode node : frontier) {
+      for (      SNode child : SNodeOperations.getChildren(node)) {
+        if (!(SNodeOperations.isInstanceOf(child,"jetbrains.mps.lang.quotation.structure.AbstractAntiquotation"))) {
+          for (          SReference reference : child.getReferences()) {
+            if (ReferenceAntiquotation_AnnotationLink.getReferenceAntiquotation((BaseConcept)((BaseConcept)SNodeOperations.getAdapter(child)),reference.getRole()) != null) {
+              continue;
+            }
+            SNode targetNode=reference.getTargetNode();
+            if (SNodeOperations.getAncestor(targetNode,"jetbrains.mps.lang.quotation.structure.Quotation",false,false) == SNodeOperations.getAncestor(child,"jetbrains.mps.lang.quotation.structure.Quotation",false,false)) {
+              SNode referenceNode=BaseConcept.newInstance(model).getNode();
+              referenceNode.setProperty("role",reference.getRole());
+              referenceNode.setReferent("targetNode",targetNode);
+              referenceNode.setReferent("sourceNode",child);
+              ListSequence.fromList(result).addElement(referenceNode);
+            }
+          }
+          ListSequence.fromList(newFrontier).addElement(child);
+        }
+      }
+    }
+    frontier=newFrontier;
+    newFrontier=new ArrayList<SNode>();
+  }
+  return result;
+}
