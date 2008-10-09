@@ -1,6 +1,5 @@
 {
   final boolean needToRegenerate=myRegenerateLanguage.getModel().isSelected();
-  final List<File>[] oldModelRootsContainer=new List[]{null};
   boolean renamed=ModelAccess.instance().runWriteActionInCommand(new Computable<Boolean>(){
     public Boolean compute(){
       final String fqName=myLanguageNameField.getText();
@@ -8,10 +7,7 @@
         setErrorText("Duplicate language name");
         return false;
       }
-      if (needToRegenerate) {
-        oldModelRootsContainer[0]=getModelOutputRoots();
-      }
-      new LanguageRenamer(myLanguage,fqName).rename();
+      new LanguageRenamer(myProject,myLanguage,fqName).rename(needToRegenerate);
       return true;
     }
   }
@@ -23,11 +19,6 @@
     final MPSProject mpsProject=myProject.getComponent(MPSProjectHolder.class).getMPSProject();
     GenParameters params=ModelAccess.instance().runReadAction(new Computable<GenParameters>(){
       public GenParameters compute(){
-        if (oldModelRootsContainer[0] != null) {
-          List<File> oldModelRoots=oldModelRootsContainer[0];
-          List<File> newModelRoots=getModelOutputRoots();
-          MPSVCSManager.getInstance(myProject).deleteFilesAndRemoveFromVcs(getFilesToDelete(oldModelRoots,newModelRoots));
-        }
         SModel model=AuxilaryRuntimeModel.getDescriptor().getSModel();
         LanguageGeneratorConfiguration languageConfig=LanguageGeneratorConfiguration.newInstance(model);
         languageConfig.setLanguageNamespace(myLanguage.getNamespace());
