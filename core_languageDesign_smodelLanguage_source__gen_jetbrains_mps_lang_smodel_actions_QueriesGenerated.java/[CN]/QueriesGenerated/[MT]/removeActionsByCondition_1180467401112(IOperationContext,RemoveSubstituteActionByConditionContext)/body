@@ -1,0 +1,82 @@
+{
+  final ApplicableTypesInfo appTypesInfo;
+{
+    Calculable calc=new Calculable(){
+      public Object calculate(){
+        ApplicableTypesInfo result=new ApplicableTypesInfo();
+        SNode leftExpression=SLinkOperations.getTarget(_context.getParentNode(),"operand",true);
+        SNode leftType=TypeChecker.getInstance().getTypeOf(leftExpression);
+        SNode linkAccessT=TypeChecker.getInstance().getRuntimeSupport().coerce(leftType,HUtil.createMatchingPatternByConceptFQName("jetbrains.mps.lang.smodel.structure._LinkAccessT"),false);
+        result.myLinkAccessT=linkAccessT;
+        if ((linkAccessT != null) && SPropertyOperations.getBoolean(linkAccessT,"singularCradinality")) {
+          if (TypeChecker.getInstance().getRuntimeSupport().coerce(leftType,HUtil.createMatchingPatternByConceptFQName("jetbrains.mps.lang.smodel.structure.SConceptType"),true) != null) {
+            result.myLinkToConcept=true;
+          }
+        }
+        if (TypeChecker.getInstance().getRuntimeSupport().coerce(leftType,HUtil.createMatchingPatternByConceptFQName("jetbrains.mps.lang.smodel.structure.SConceptType"),false) != null) {
+          result.myToConcept=true;
+        }
+        if (TypeChecker.getInstance().getRuntimeSupport().coerce(leftType,HUtil.createMatchingPatternByConceptFQName("jetbrains.mps.lang.smodel.structure.SNodeType"),false) != null) {
+          result.myToNode=true;
+        }
+        if (TypeChecker.getInstance().getRuntimeSupport().coerce(leftType,HUtil.createMatchingPatternByConceptFQName("jetbrains.mps.lang.smodel.structure.SModelType"),false) != null) {
+          result.myToModel=true;
+        }
+        return result;
+      }
+    }
+;
+    appTypesInfo=(ApplicableTypesInfo)calc.calculate();
+  }
+  Iterator<INodeSubstituteAction> actions=_context.getActions();
+  while (actions.hasNext()) {
+    INodeSubstituteAction current=actions.next();
+    final SNode concept=current.getOutputConcept();
+    SNode applicableConcept=SConceptOperations.findConceptDeclaration("jetbrains.mps.lang.smodel.structure.SNodeOperation");
+    Condition cond=new Condition(){
+      public boolean met(      Object object){
+        SNode parameterOp=(SNode)concept;
+        SNode leftExpression=SLinkOperations.getTarget(_context.getParentNode(),"operand",true);
+        SNode leftOperation=SLinkOperations.getTarget(leftExpression,"operation",true);
+        if (leftOperation != null) {
+          if (SNodeOperations.isInstanceOf(leftOperation,"jetbrains.mps.lang.smodel.structure.SPropertyAccess")) {
+            SNode dataType=SLinkOperations.getTarget(SLinkOperations.getTarget(leftOperation,"property",false),"dataType",false);
+            if (SNodeOperations.isInstanceOf(dataType,"jetbrains.mps.lang.structure.structure.EnumerationDataTypeDeclaration")) {
+              return !(SConceptPropertyOperations.getBoolean(parameterOp,"applicable_to_enum_property"));
+            }
+ else {
+              return !(SConceptPropertyOperations.getBoolean(parameterOp,"applicable_to_simple_property"));
+            }
+          }
+          if (SNodeOperations.isInstanceOf(leftOperation,"jetbrains.mps.lang.smodel.structure.SConceptPropertyAccess")) {
+            return !(SConceptPropertyOperations.getBoolean(parameterOp,"applicable_to_concept_property"));
+          }
+        }
+        SNode linkAccessT=appTypesInfo.myLinkAccessT;
+        if (linkAccessT != null) {
+          if (SPropertyOperations.getBoolean(linkAccessT,"singularCradinality")) {
+            if (SConceptPropertyOperations.getBoolean(parameterOp,"applicable_to_concept") && !(SConceptPropertyOperations.getBoolean(parameterOp,"applicable_to_node"))) {
+              return !(SConceptPropertyOperations.getBoolean(parameterOp,"applicable_to_link") && appTypesInfo.myLinkToConcept);
+            }
+            return !(SConceptPropertyOperations.getBoolean(parameterOp,"applicable_to_link"));
+          }
+          return !(SConceptPropertyOperations.getBoolean(parameterOp,"applicable_to_linkList"));
+        }
+        if (appTypesInfo.myToConcept) {
+          return !(SConceptPropertyOperations.getBoolean(parameterOp,"applicable_to_concept"));
+        }
+        if (appTypesInfo.myToNode) {
+          return !(SConceptPropertyOperations.getBoolean(parameterOp,"applicable_to_node"));
+        }
+        if (appTypesInfo.myToModel) {
+          return !(SConceptPropertyOperations.getBoolean(parameterOp,"applicable_to_model"));
+        }
+        return true;
+      }
+    }
+;
+    if (SConceptOperations.isSuperConceptOf(applicableConcept,NameUtil.nodeFQName(concept)) && cond.met(concept)) {
+      actions.remove();
+    }
+  }
+}
