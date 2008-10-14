@@ -1,0 +1,30 @@
+{
+  TypeChecker checker=TypeChecker.getInstance();
+  checker.checkIfNotChecked(node);
+  for (  SNode child : SNodeOperations.getDescendants(node,"jetbrains.mps.lang.core.structure.BaseConcept",false)) {
+    boolean isError=false;
+    if (SLinkOperations.getTarget(child,AttributesRolesUtil.childRoleFromAttributeRole("nodePropertiesMarker"),true) != null) {
+      SNode container=SLinkOperations.getTarget(child,AttributesRolesUtil.childRoleFromAttributeRole("nodePropertiesMarker"),true);
+      for (      SNode property : SLinkOperations.getTargets(container,"properties",true)) {
+        if (SNodeOperations.isInstanceOf(property,"jetbrains.mps.lang.test.structure.NodeTypeProperty")) {
+          SNode type1=checker.getTypeOf(child);
+          SNode type2=SLinkOperations.getTarget(((SNode)property),"type",true);
+          Assert.assertEquals(null,NodesMatcher.matchNodes(ListSequence.<SNode>fromArray(type1),ListSequence.<SNode>fromArray(type2)));
+        }
+        if (SNodeOperations.isInstanceOf(property,"jetbrains.mps.lang.test.structure.NodeErrorPropety")) {
+          Assert.assertTrue(checker.getTypeErrorDontCheck(child) != null);
+          Assert.assertFalse(checker.getTypeErrorDontCheck(child).isWarning());
+          isError=true;
+        }
+        if (SNodeOperations.isInstanceOf(property,"jetbrains.mps.lang.test.structure.NodeWarningProperty")) {
+          Assert.assertTrue(checker.getTypeErrorDontCheck(child) != null);
+          Assert.assertTrue(checker.getTypeErrorDontCheck(child).isWarning());
+          isError=true;
+        }
+      }
+    }
+    if (!(isError)) {
+      Assert.assertNull(checker.getTypeErrorDontCheck(child));
+    }
+  }
+}
