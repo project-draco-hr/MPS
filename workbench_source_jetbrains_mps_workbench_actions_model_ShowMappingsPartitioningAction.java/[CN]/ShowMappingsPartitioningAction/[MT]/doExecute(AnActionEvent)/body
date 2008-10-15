@@ -7,17 +7,22 @@
   messagesView.add(new Message(MessageKind.INFORMATION,"================================="));
   for (  Generator generator : generators) {
     List<MappingPriorityRule> rules=((GeneratorDescriptor)generator.getModuleDescriptor()).getPriorityRules();
-    List<String> strings=GenerationPartitioningUtil.toStrings(rules,true);
-    for (    String string : strings) {
-      messagesView.add(new Message(MessageKind.INFORMATION," " + string));
+    List<Pair<MappingPriorityRule,String>> strings=GenerationPartitioningUtil.toStrings(rules,true);
+    for (    Pair<MappingPriorityRule,String> string : strings) {
+      messagesView.add(new Message(MessageKind.INFORMATION," " + string.second,generator));
     }
   }
   messagesView.add(new Message(MessageKind.INFORMATION,"================================="));
   if (partitioner.hasConflictingPriorityRules()) {
     messagesView.openToolLater(true);
-    List<String> messagesFull=GenerationPartitioningUtil.toStrings(partitioner.getConflictingPriorityRules(),true);
-    for (    String message : messagesFull) {
-      messagesView.add(new Message(MessageKind.ERROR,"conflicting rule: " + message));
+    messagesView.add(new Message(MessageKind.ERROR,"Conflicting mapping priority rules encountered:"));
+    List<Pair<MappingPriorityRule,String>> messagesFull=GenerationPartitioningUtil.toStrings(partitioner.getConflictingPriorityRules(),true);
+    for (    Pair<MappingPriorityRule,String> message : messagesFull) {
+      MappingPriorityRule rule=message.first;
+      String text=message.second;
+      GeneratorDescriptor generatorDescriptor=rule.findParent(GeneratorDescriptor.class);
+      Generator generatorModule=(Generator)MPSModuleRepository.getInstance().getModuleByUID(generatorDescriptor.getGeneratorUID());
+      messagesView.add(new Message(MessageKind.ERROR,text,generatorModule));
     }
     messagesView.add(new Message(MessageKind.INFORMATION,"================================="));
     JOptionPane.showMessageDialog(myFrame,"Conflicting mapping priority rules encountered","Generation plan error",JOptionPane.WARNING_MESSAGE);
