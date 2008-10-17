@@ -1,0 +1,46 @@
+{
+  List<INodeSubstituteAction> result=new ArrayList<INodeSubstituteAction>();
+{
+    SNode outputConcept=SConceptOperations.findConceptDeclaration("jetbrains.mps.build.packaging.structure.PathComponent");
+    SNode childConcept=(SNode)_context.getChildConcept();
+    if (SConceptOperations.isSuperConceptOf(childConcept,NameUtil.nodeFQName(outputConcept))) {
+      Calculable calc=new Calculable(){
+        public Object calculate(){
+          SNode compositePathComponent=_context.getParentNode();
+          String base=SPropertyOperations.getString(SLinkOperations.getTarget(SNodeOperations.getParent(compositePathComponent),"macro",true),"path");
+          for (          SNode path : SLinkOperations.getTargets(compositePathComponent,"path",true)) {
+            if (path == _context.getCurrentTargetNode()) {
+              break;
+            }
+            base+="/" + SPropertyOperations.getString(path,"path");
+          }
+          File baseDir=new File(base);
+          File[] suggestFiles=baseDir.listFiles();
+          boolean isFile=SPropertyOperations.getBoolean(SNodeOperations.getAncestor(_context.getParentNode(),"jetbrains.mps.build.packaging.structure.AbstractProjectComponent",true,false),"file");
+          List<String> suggestStrings=ListSequence.<String>fromArray();
+          for (          File f : suggestFiles) {
+            if (f.exists() && (isFile || f.isDirectory())) {
+              ListSequence.fromList(suggestStrings).addElement(f.getName());
+            }
+          }
+          return suggestStrings;
+        }
+      }
+;
+      Iterable<String> queryResult=(Iterable)calc.calculate();
+      if (queryResult != null) {
+        for (        final String item : queryResult) {
+          result.add(new DefaultChildNodeSubstituteAction(outputConcept,item,_context.getParentNode(),_context.getCurrentTargetNode(),_context.getChildSetter(),operationContext.getScope()){
+            public SNode createChildNode(            Object parameterObject,            SModel model,            String pattern){
+              SNode pathComponent=SConceptOperations.createNewNode("jetbrains.mps.build.packaging.structure.PathComponent",null);
+              SPropertyOperations.set(pathComponent,"path",(item));
+              return pathComponent;
+            }
+          }
+);
+        }
+      }
+    }
+  }
+  return result;
+}

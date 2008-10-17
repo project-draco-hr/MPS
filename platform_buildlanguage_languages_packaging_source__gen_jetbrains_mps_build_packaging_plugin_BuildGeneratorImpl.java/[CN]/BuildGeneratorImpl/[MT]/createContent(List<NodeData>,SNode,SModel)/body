@@ -1,0 +1,35 @@
+{
+  Map<NodeData,SNode> createdComponent=MapSequence.fromMap(new HashMap<NodeData,SNode>());
+  Set<SNode> topLevel=new LinkedHashSet<SNode>();
+  for (  NodeData data : selectedData) {
+    SNode component=createComponent(data,targetSModel);
+    if (component == null) {
+      continue;
+    }
+    MapSequence.fromMap(createdComponent).put(data,component);
+    topLevel.add(component);
+    if (SNodeOperations.isInstanceOf(component,"jetbrains.mps.build.packaging.structure.ICompositeComponent")) {
+      List<NodeData> children=data.getChildren();
+      for (      NodeData child : children) {
+        if (MapSequence.fromMap(createdComponent).containsKey(child)) {
+          SNode childComponent=MapSequence.fromMap(createdComponent).get(child);
+          SLinkOperations.addChild(component,"entry",childComponent);
+          if (topLevel.contains(childComponent)) {
+            topLevel.remove(childComponent);
+          }
+        }
+      }
+    }
+    NodeData parent=data.getParent();
+    if (parent == null) {
+      break;
+    }
+    if (MapSequence.fromMap(createdComponent).containsKey(parent)) {
+      SLinkOperations.addChild(MapSequence.fromMap(createdComponent).get(parent),"entry",component);
+      topLevel.remove(component);
+    }
+  }
+  for (  SNode topLevelComponent : topLevel) {
+    SLinkOperations.addChild(folder,"entry",topLevelComponent);
+  }
+}

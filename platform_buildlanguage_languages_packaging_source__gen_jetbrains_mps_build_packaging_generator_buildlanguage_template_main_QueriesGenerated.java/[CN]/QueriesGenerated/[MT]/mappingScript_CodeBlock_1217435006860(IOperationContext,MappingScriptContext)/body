@@ -1,0 +1,35 @@
+{
+  List<SNode> layouts=SModelOperations.getRoots(_context.getModel(),"jetbrains.mps.build.packaging.structure.MPSLayout");
+  for (  SNode layout : layouts) {
+    if (!(SPropertyOperations.getBoolean(layout,"compile"))) {
+      continue;
+    }
+    List<SNode> modules=SNodeOperations.getDescendants(layout,"jetbrains.mps.build.packaging.structure.Module",false);
+    Map<IModule,List<SNode>> map=MapSequence.fromMap(new HashMap<IModule,List<SNode>>());
+    for (    SNode module : modules) {
+      IModule imodule=Module_Behavior.call_getModule_1213877515148(module);
+      if (imodule instanceof DevKit) {
+        continue;
+      }
+      List<SNode> modulesForIModule=MapSequence.fromMap(map).get(imodule);
+      if (modulesForIModule == null) {
+        modulesForIModule=new ArrayList<SNode>();
+        MapSequence.fromMap(map).put(imodule,modulesForIModule);
+      }
+      ListSequence.fromList(modulesForIModule).addElement(module);
+    }
+    List<Set<IModule>> sm=StronglyConnectedModules.getInstance().getStronglyConnectedComponents(MapSequence.fromMap(map).keySet());
+    for (    Set<IModule> moduleSet : sm) {
+      SNode cycle=SConceptOperations.createNewNode("jetbrains.mps.build.packaging.structure.ModuleCycle",null);
+      SLinkOperations.addChild(layout,"cycle",cycle);
+      for (      IModule imodule : moduleSet) {
+        List<SNode> modulesForIModule=MapSequence.fromMap(map).get(imodule);
+        for (        SNode module : modulesForIModule) {
+          SNode ref=SConceptOperations.createNewNode("jetbrains.mps.build.packaging.structure.NewModuleReference",null);
+          SLinkOperations.setTarget(ref,"module",module,false);
+          SLinkOperations.addChild(cycle,"moduleReference",ref);
+        }
+      }
+    }
+  }
+}
