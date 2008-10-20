@@ -7,6 +7,7 @@
     Language targetLanguage=Language.getLanguageFor(((SModelDescriptor)refactoringContext.getParameter("targetModel")));
     List<SNode> editors=new ArrayList<SNode>();
     List<SNode> behaviors=new ArrayList<SNode>();
+    List<SNode> constraints=new ArrayList<SNode>();
     SModelDescriptor editorModelDescriptor=sourceLanguage.getEditorModelDescriptor();
     if (editorModelDescriptor != null) {
       for (      SNode node : nodes) {
@@ -29,6 +30,16 @@
         }
       }
     }
+    SModelDescriptor constraintsModelDescriptor=sourceLanguage.getConstraintsModelDescriptor();
+    if (constraintsModelDescriptor != null) {
+      for (      SNode node : nodes) {
+        ConceptConstraints conceptConstraints=SModelUtil_new.findConstraintsDeclaration(constraintsModelDescriptor.getSModel(),((AbstractConceptDeclaration)SNodeOperations.getAdapter(node)));
+        if (conceptConstraints != null) {
+          SNode conceptConstraintsNodes=(SNode)conceptConstraints.getNode();
+          ListSequence.fromList(constraints).addElement(conceptConstraintsNodes);
+        }
+      }
+    }
     refactoringContext.moveNodesToModel(nodes,((SModelDescriptor)refactoringContext.getParameter("targetModel")).getSModel());
     for (    SNode node : nodes) {
       refactoringContext.changeFeatureName(node,((SModelDescriptor)refactoringContext.getParameter("targetModel")).getSModelFqName().toString() + "." + SPropertyOperations.getString(node,"name"),SPropertyOperations.getString(node,"name"));
@@ -44,12 +55,22 @@
       refactoringContext.updateModelWithMaps(editorModel);
     }
     if (ListSequence.fromList(behaviors).isNotEmpty()) {
+      SModelDescriptor targetBehaviorModelDescriptor=targetLanguage.getBehaviorModelDescriptor();
+      if (targetBehaviorModelDescriptor == null) {
+        targetBehaviorModelDescriptor=LanguageAspect.BEHAVIOR.createNew(targetLanguage);
+      }
+      SModel behaviorModel=targetBehaviorModelDescriptor.getSModel();
+      refactoringContext.moveNodesToModel(behaviors,behaviorModel);
+      refactoringContext.computeCaches();
+      refactoringContext.updateModelWithMaps(behaviorModel);
+    }
+    if (ListSequence.fromList(constraints).isNotEmpty()) {
       SModelDescriptor targetConstraintsModelDescriptor=targetLanguage.getConstraintsModelDescriptor();
       if (targetConstraintsModelDescriptor == null) {
         targetConstraintsModelDescriptor=LanguageAspect.CONSTRAINTS.createNew(targetLanguage);
       }
       SModel constraintsModel=targetConstraintsModelDescriptor.getSModel();
-      refactoringContext.moveNodesToModel(behaviors,constraintsModel);
+      refactoringContext.moveNodesToModel(constraints,constraintsModel);
       refactoringContext.computeCaches();
       refactoringContext.updateModelWithMaps(constraintsModel);
     }
