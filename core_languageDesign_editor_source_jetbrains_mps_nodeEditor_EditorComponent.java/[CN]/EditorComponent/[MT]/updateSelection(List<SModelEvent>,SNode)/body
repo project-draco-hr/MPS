@@ -1,2 +1,120 @@
 {
+  SModelEvent lastAdd=null;
+  SModelEvent lastRemove=null;
+  if (myNodeRangeSelection.isActive()) {
+    myNodeRangeSelection.deactivate();
+  }
+  List<SNode> childAddedEventNodes=new ArrayList<SNode>();
+  for (  SModelEvent e : events) {
+    if (e instanceof SModelChildEvent) {
+      SModelChildEvent ce=(SModelChildEvent)e;
+      if (ce.getParent().getAncestors(true).contains(getEditedNode())) {
+        if (ce.isAdded()) {
+          lastAdd=ce;
+          childAddedEventNodes.add(ce.getChild());
+        }
+        if (ce.isRemoved()) {
+          lastRemove=ce;
+        }
+      }
+    }
+    if (e instanceof SModelReferenceEvent) {
+      SModelReferenceEvent re=(SModelReferenceEvent)e;
+      if (re.isAdded())       lastAdd=re;
+      if (re.isRemoved())       lastRemove=re;
+    }
+  }
+  if (lastAdd != null && isExecutingCommand()) {
+    if (lastAdd instanceof SModelChildEvent) {
+      List<NodesParetoFrontier.NodeBox> frontier=NodesParetoFrontier.findParetoFrontier(childAddedEventNodes);
+      SNode addedChild=frontier.get(frontier.size() - 1).getNode();
+      EditorCell cell=findNodeCell(addedChild);
+      if (cell != null) {
+        changeSelectionWRTFocusPolicy(cell);
+      }
+      return;
+    }
+ else {
+      if (lastAdd instanceof SModelReferenceEvent) {
+        SModelReferenceEvent re=(SModelReferenceEvent)lastAdd;
+        selectRefCell(re.getReference());
+        return;
+      }
+ else {
+      }
+    }
+  }
+  if (lastRemove != null) {
+    if (lastRemove instanceof SModelChildEvent && (lastSelectedNode == null || lastSelectedNode.isDeleted())) {
+      SModelChildEvent ce=(SModelChildEvent)lastRemove;
+      int childIndex=ce.getChildIndex();
+      String role=ce.getChildRole();
+      SNode parent=ce.getParent();
+      List<SNode> siblings=parent.getChildren(role);
+      if (siblings.isEmpty()) {
+        EditorCell nullCell=findNodeCellWithRole(parent,role);
+        if (nullCell == null) {
+          EditorCell cell=findNodeCell(parent);
+          if (cell != null) {
+            EditorCell firstLeaf=cell.getLastLeaf(CellConditions.SELECTABLE);
+            changeSelection(firstLeaf);
+            firstLeaf.end();
+            return;
+          }
+        }
+ else {
+          changeSelectionWRTFocusPolicy(nullCell);
+        }
+      }
+ else {
+        SNode target=null;
+        for (        SNode sibling : siblings) {
+          int index=parent.getChildren().indexOf(sibling);
+          if (index < childIndex) {
+            target=sibling;
+          }
+        }
+        if (target != null) {
+          EditorCell cell=findNodeCell(target);
+          if (cell != null) {
+            EditorCell lastLeaf=cell.getLastLeaf(CellConditions.SELECTABLE);
+            changeSelection(lastLeaf);
+            lastLeaf.end();
+            return;
+          }
+        }
+ else {
+          EditorCell cell=findNodeCell(siblings.get(0));
+          if (cell != null) {
+            EditorCell lastLeaf=cell.getFirstLeaf(CellConditions.SELECTABLE);
+            changeSelection(lastLeaf);
+            lastLeaf.home();
+            return;
+          }
+        }
+      }
+    }
+    if (lastRemove instanceof SModelReferenceEvent && isExecutingCommand()) {
+      SModelReferenceEvent re=(SModelReferenceEvent)lastRemove;
+      SReference ref=re.getReference();
+      SNode sourceNode=ref.getSourceNode();
+      String role=ref.getRole();
+      EditorCell nullCell=findNodeCellWithRole(sourceNode,role);
+      if (nullCell == null) {
+        EditorCell cell=findNodeCell(sourceNode);
+        if (cell != null) {
+          changeSelectionWRTFocusPolicy(cell);
+        }
+      }
+ else {
+        changeSelectionWRTFocusPolicy(nullCell);
+      }
+    }
+  }
+  if (getSelectedNode() == null) {
+    EditorCell lastSelectedNodeCell=findNodeCell(lastSelectedNode);
+    if (lastSelectedNodeCell != null) {
+      changeSelection(lastSelectedNodeCell.findChild(CellFinders.FIRST_SELECTABLE_LEAF));
+    }
+  }
 }
