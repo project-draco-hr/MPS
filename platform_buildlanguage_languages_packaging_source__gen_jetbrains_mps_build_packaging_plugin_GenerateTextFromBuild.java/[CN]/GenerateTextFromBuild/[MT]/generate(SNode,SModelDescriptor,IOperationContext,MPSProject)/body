@@ -1,0 +1,36 @@
+{
+  final String basedir=ModelAccess.instance().runReadAction(new Computable<String>(){
+    public String compute(){
+      return ILayoutComponent_Behavior.call_getPath_1213877230696(mpsLayout);
+    }
+  }
+);
+  final GeneratorManager generatorManager=project.getComponentSafe(GeneratorManager.class);
+  GenerateModelGenerationType generationType=new GenerateModelGenerationType(){
+    @Override() public boolean handleOutput(    GenerationStatus status,    String outputDir,    IOperationContext ocontext,    ProgressIndicator monitor,    IMessageHandler messages){
+      List<SNode> roots=status.getOutputModel().getRoots();
+      File tmpDir=FileUtil.createTmpDir();
+      List<File> generatedFiles=ListSequence.<File>fromArray();
+      for (      SNode output : roots) {
+        TextGenerationUtil.TextGenerationResult result=TextGenerationUtil.generateText(ocontext,output);
+        GenerateTextFromBuild.LOG.assertLog(!(result.hasErrors()),"Could not generate build files");
+        SNode input=status.getTraceMap().getOriginalInputNode(output);
+        IFileGenerator fileGenerator=generatorManager.chooseFileGenerator(output,input);
+        try {
+          File generatedFile=fileGenerator.generateFile(output,input,status.getInputModel(),result.getText(),tmpDir);
+          ListSequence.fromList(generatedFiles).addElement(generatedFile);
+        }
+ catch (        IOException e) {
+          GenerateTextFromBuild.LOG.error("Could not generate build files.",e);
+        }
+      }
+      for (      File file : generatedFiles) {
+        FileUtil.copyFile(file,new File(basedir + File.separator + file.getName()));
+      }
+      tmpDir.delete();
+      return true;
+    }
+  }
+;
+  generatorManager.generateModelsWithProgressWindow(ListSequence.<SModelDescriptor>fromArray(descriptor),context,generationType,true);
+}
