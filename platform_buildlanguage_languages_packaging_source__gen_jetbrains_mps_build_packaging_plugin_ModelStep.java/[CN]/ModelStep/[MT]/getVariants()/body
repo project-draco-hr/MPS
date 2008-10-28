@@ -1,0 +1,30 @@
+{
+  final Solution solution=this.myGenerator.getSolution();
+  if (solution == null) {
+    return new SModelDescriptor[0];
+  }
+ else {
+    final List<SModelDescriptor> modelDescriptors=SModelRepository.getInstance().getModelDescriptors(solution);
+    List<SModelDescriptor> filteredDescriptors=ModelAccess.instance().runReadAction(new Computable<List<SModelDescriptor>>(){
+      public List<SModelDescriptor> compute(){
+        return CollectionUtil.filter(modelDescriptors,new Condition<SModelDescriptor>(){
+          public boolean met(          SModelDescriptor modelDescriptor){
+            IFile modelFile=modelDescriptor.getModelFile();
+            if (modelFile == null) {
+              return false;
+            }
+            for (            SModelRoot root : solution.getSModelRoots()) {
+              if (modelFile.getAbsolutePath().startsWith(root.getPath())) {
+                return true;
+              }
+            }
+            return false;
+          }
+        }
+);
+      }
+    }
+);
+    return filteredDescriptors.toArray(new SModelDescriptor[filteredDescriptors.size()]);
+  }
+}
