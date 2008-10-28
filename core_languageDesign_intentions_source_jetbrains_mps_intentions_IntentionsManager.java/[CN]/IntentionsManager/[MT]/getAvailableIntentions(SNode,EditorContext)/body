@@ -1,35 +1,19 @@
 {
-  Set<Intention> result=new HashSet<Intention>();
-  assert(context != null);
-  for (  String conceptFQName : myIntentions.keySet()) {
-    if (node.isInstanceOfConcept(conceptFQName)) {
-      for (      final Intention intention : Collections.unmodifiableSet(myIntentions.get(conceptFQName))) {
-        try {
-          boolean isApplicable=ModelAccess.instance().runReadAction(new Computable<Boolean>(){
-            public Boolean compute(){
-              return intention.isApplicable(node,context);
-            }
-          }
+  return ModelAccess.instance().runReadAction(new Computable<Set<Pair<Intention,SNode>>>(){
+    public Set<Pair<Intention,SNode>> compute(){
+      Set<Pair<Intention,SNode>> result=new HashSet<Pair<Intention,SNode>>();
+      for (      Intention intention : getAvailableIntentionsForExactNode(node,context,false)) {
+        result.add(new Pair<Intention,SNode>(intention,node));
+      }
+      SNode parent=node.getParent();
+      while (parent != null) {
+        for (        Intention intention : getAvailableIntentionsForExactNode(parent,context,true)) {
+          result.add(new Pair<Intention,SNode>(intention,parent));
+        }
+        parent=parent.getParent();
+      }
+      return result;
+    }
+  }
 );
-          if (isApplicable) {
-            result.add(intention);
-          }
-        }
- catch (        Throwable t) {
-          LOG.error("Intention's isApplicable method failed " + t.getMessage(),t);
-        }
-      }
-    }
-  }
-  List<EditorMessage> messages=context.getNodeEditorComponent().getHighlightManager().getMessagesFor(node);
-  for (  EditorMessage message : messages) {
-    IntentionProvider intentionProvider=message.getIntentionProvider();
-    if (intentionProvider != null) {
-      Intention intention=intentionProvider.getIntention();
-      if (intention != null) {
-        result.add(intention);
-      }
-    }
-  }
-  return Collections.unmodifiableSet(result);
 }
