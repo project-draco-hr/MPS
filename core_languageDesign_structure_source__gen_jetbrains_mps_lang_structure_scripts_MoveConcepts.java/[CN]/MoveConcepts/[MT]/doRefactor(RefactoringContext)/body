@@ -8,6 +8,7 @@
     List<SNode> editors=new ArrayList<SNode>();
     List<SNode> behaviors=new ArrayList<SNode>();
     List<SNode> constraints=new ArrayList<SNode>();
+    List<SNode> dataFlows=new ArrayList<SNode>();
     SModelDescriptor editorModelDescriptor=sourceLanguage.getEditorModelDescriptor();
     if (editorModelDescriptor != null) {
       for (      SNode node : nodes) {
@@ -37,6 +38,16 @@
         if (conceptConstraints != null) {
           SNode conceptConstraintsNodes=(SNode)conceptConstraints.getNode();
           ListSequence.fromList(constraints).addElement(conceptConstraintsNodes);
+        }
+      }
+    }
+    SModelDescriptor dataflowModelDescriptor=sourceLanguage.getDataFlowModelDescriptor();
+    if (dataflowModelDescriptor != null) {
+      for (      SNode node : nodes) {
+        DataFlowBuilderDeclaration dataFlowBuilderDeclaration=SModelUtil_new.findDataFlowDeclaration(dataflowModelDescriptor.getSModel(),((AbstractConceptDeclaration)SNodeOperations.getAdapter(node)));
+        if (dataFlowBuilderDeclaration != null) {
+          SNode dataFlow=(SNode)dataFlowBuilderDeclaration.getNode();
+          ListSequence.fromList(dataFlows).addElement(dataFlow);
         }
       }
     }
@@ -73,6 +84,16 @@
       refactoringContext.moveNodesToModel(constraints,constraintsModel);
       refactoringContext.computeCaches();
       refactoringContext.updateModelWithMaps(constraintsModel);
+    }
+    if (ListSequence.fromList(dataFlows).isNotEmpty()) {
+      SModelDescriptor targetDataFlowModelDescriptor=targetLanguage.getDataFlowModelDescriptor();
+      if (targetDataFlowModelDescriptor == null) {
+        targetDataFlowModelDescriptor=LanguageAspect.DATA_FLOW.createNew(targetLanguage);
+      }
+      SModel dataFlowModel=targetDataFlowModelDescriptor.getSModel();
+      refactoringContext.moveNodesToModel(dataFlows,dataFlowModel);
+      refactoringContext.computeCaches();
+      refactoringContext.updateModelWithMaps(dataFlowModel);
     }
   }
 }
