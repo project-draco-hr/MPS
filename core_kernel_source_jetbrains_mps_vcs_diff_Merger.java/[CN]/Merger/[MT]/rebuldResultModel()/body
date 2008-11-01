@@ -1,0 +1,31 @@
+{
+  myResultModel=ModelPersistence.copyModel(getBase(mySourceModels));
+  myResultModel.setLoading(true);
+  ModuleReference languageNamespace=ModuleReference.fromString("jetbrains.mps.core");
+  SNode tmp=new SNode(myResultModel,NameUtil.conceptFQNameFromNamespaceAndShortName(languageNamespace.getModuleFqName(),"BaseConcept"));
+  boolean notRemoveLanguage=false;
+  if (myResultModel.getExplicitlyImportedLanguages().contains(languageNamespace)) {
+    notRemoveLanguage=true;
+  }
+  myResultModel.addRoot(tmp);
+  applyNewNodes();
+  applyProperties();
+  applyReferences();
+  for (  MoveNodeChange mnc : getChanges(MoveNodeChange.class)) {
+    SNode node=myResultModel.getNodeById(mnc.getNode());
+    if (node != null) {
+      if (node.isRoot()) {
+        myResultModel.removeRoot(node);
+      }
+ else {
+        node.getParent().removeChild(node);
+      }
+      tmp.addChild("tmp",node);
+    }
+  }
+  applyDeletes();
+  applyMoves();
+  myResultModel.removeRoot(tmp);
+  if (!notRemoveLanguage)   myResultModel.deleteLanguage(languageNamespace);
+  myResultModel.setLoading(false);
+}
