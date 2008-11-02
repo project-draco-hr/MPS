@@ -1,0 +1,80 @@
+{
+  Macros macros=Macros.projectDescriptor();
+  myName=file.getName();
+  if (projectElement == null) {
+    return;
+  }
+  if (projectElement.getAttributeValue(AUTO_IMPORT_CLASSPATH) == null) {
+    myAutoImportFromIDEA=true;
+  }
+ else {
+    myAutoImportFromIDEA="true".equals(projectElement.getAttributeValue(AUTO_IMPORT_CLASSPATH));
+  }
+  Element projectSolutions=projectElement.getChild(PROJECT_SOLUTIONS);
+  if (projectSolutions != null) {
+    for (    Element element : (List<Element>)projectSolutions.getChildren(SOLUTION_PATH)) {
+      Path solutionPath=new Path();
+      solutionPath.setPath(macros.expandPath(element.getAttributeValue(PATH),file));
+      solutionPath.setFolder(element.getAttributeValue(FOLDER));
+      mySolutions.add(solutionPath);
+    }
+  }
+  Element projectLanguages=projectElement.getChild(PROJECT_LANGUAGES);
+  if (projectLanguages != null) {
+    List<Element> elementsOld=(List<Element>)projectLanguages.getChildren("projectLanguage");
+    List<Element> elementsNew=(List<Element>)projectLanguages.getChildren(LANGUAGE_PATH);
+    List<Element> elements=new LinkedList<Element>(elementsOld);
+    elements.addAll(elementsNew);
+    for (    Element element : elements) {
+      Path languagePath=new Path();
+      languagePath.setPath(macros.expandPath(element.getAttributeValue(PATH),file));
+      languagePath.setFolder(element.getAttributeValue(FOLDER));
+      myLanguages.add(languagePath);
+    }
+  }
+  Element projectDevKits=projectElement.getChild(PROJECT_DEVKITS);
+  if (projectDevKits != null) {
+    for (    Element element : (List<Element>)projectDevKits.getChildren(DEVKIT_PATH)) {
+      Path devKit=new Path();
+      devKit.setPath(macros.expandPath(element.getAttributeValue(PATH),file));
+      devKit.setFolder(element.getAttributeValue(FOLDER));
+      myDevkits.add(devKit);
+    }
+  }
+  Element projectLibraries=projectElement.getChild(LIBRARIES);
+  if (projectLibraries != null) {
+    for (    Element element : (List<Element>)projectLibraries.getChildren(LIBRARY)) {
+      Library lib=new Library();
+      lib.setName(element.getText());
+      myLibs.add(lib);
+    }
+  }
+  myTestAllLanguages="true".equals(projectElement.getAttributeValue(TEST_ALL_LANGUAGES));
+  Element tests=projectElement.getChild(GEN_CONFS);
+  if (tests != null) {
+    for (    Element e : (List<Element>)tests.getChildren(GEN_CONF)) {
+      ModelsGeneratorConfiguration tc=new ModelsGeneratorConfiguration();
+      tc.setName(e.getAttributeValue(NAME));
+      if (e.getChild(MODELS) != null) {
+        for (        Element me : (List<Element>)e.getChild(MODELS).getChildren(MODEL)) {
+          Model m=new Model();
+          m.setModelRef(me.getAttributeValue(MODEL_UID));
+          tc.addModel(m);
+        }
+      }
+      myGenConfigs.add(tc);
+    }
+    for (    Element e : (List<Element>)tests.getChildren(GEN_CONF_SOLUTION)) {
+      ModuleGeneratorConfiguration sc=new ModuleGeneratorConfiguration();
+      sc.setName(e.getAttributeValue(NAME));
+      sc.setModuleUID(e.getAttributeValue(SOLUTION));
+      myGenConfigs.add(sc);
+    }
+    for (    Element e : (List<Element>)tests.getChildren(GEN_CONF_LANGUAGE)) {
+      ModuleGeneratorConfiguration lc=new ModuleGeneratorConfiguration();
+      lc.setName(e.getAttributeValue(NAME));
+      lc.setModuleUID(e.getAttributeValue(LANGUAGE));
+      myGenConfigs.add(lc);
+    }
+  }
+}
