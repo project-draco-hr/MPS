@@ -1,12 +1,35 @@
 {
   StatusBar bar=getStatusBar();
   if (bar != null) {
+    myLabel=new JLabel();
+    myLabel.addMouseListener(new MouseAdapter(){
+      @Override public void mouseClicked(      MouseEvent e){
+        if (myState instanceof DisconnectedState) {
+          setNewState(new TryingToConnectState());
+        }
+      }
+    }
+);
     bar.addCustomIndicationComponent(myLabel);
-    myTimer=new Timer(5000,new ActionListener(){
+    myTimer=new Timer(INITIAL_DELAY,new ActionListener(){
       public void actionPerformed(      ActionEvent e){
-        boolean connected=MPSPlugin.getInstance().isIDEAPresent();
-        myLabel.setIcon(connected ? Icons.CONNECTED : Icons.DISCONNECTED);
-        myLabel.setToolTipText(connected ? "Connected to IDEA" : "Not connected to IDEA");
+        if (myState instanceof ConnectedState) {
+          if (isConnected())           return;
+          setNewState(new TryingToConnectState());
+        }
+        if (!(myState instanceof TryingToConnectState))         return;
+        if (isConnected()) {
+          setNewState(new ConnectedState());
+        }
+ else {
+          int newDelay=(int)(myTimer.getDelay() * DELAY_MUL);
+          if (newDelay <= CRITICAL_DELAY) {
+            myTimer.setDelay(newDelay);
+          }
+ else {
+            setNewState(new DisconnectedState());
+          }
+        }
       }
     }
 );
