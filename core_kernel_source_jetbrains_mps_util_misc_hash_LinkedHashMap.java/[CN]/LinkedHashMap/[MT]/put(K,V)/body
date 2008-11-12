@@ -1,32 +1,32 @@
 {
-  final Entry<K,V>[] table=_table;
+  final Entry<K,V>[] table=this.table;
   final int hash=key.hashCode();
-  final int index=(hash & 0x7fffffff) % table.length;
-  for (Entry<K,V> e=table[index]; e != null; e=e._hashNext) {
+  final int index=HashUtil.indexFor(hash,table.length,shift,mask);
+  for (Entry<K,V> e=table[index]; e != null; e=e.hashNext) {
     final K entryKey;
-    if (e.getKeyHash() == hash && ((entryKey=e.getKey()) == key || entryKey.equals(key))) {
+    if (e.keyHash == hash && ((entryKey=e.key) == key || entryKey.equals(key))) {
       moveToTop(e);
       return e.setValue(value);
     }
   }
   final Entry<K,V> e=new Entry<K,V>(key,value);
-  e._hashNext=table[index];
+  e.hashNext=table[index];
   table[index]=e;
-  final Entry<K,V> top=_top;
-  e.setNext(top);
+  final Entry<K,V> top=this.top;
+  e.next=top;
   if (top != null) {
-    top.setPrevious(e);
+    top.previous=e;
   }
  else {
-    _back=e;
+    back=e;
   }
-  _top=e;
-  _size=_size + 1;
-  if (removeEldestEntry(_back)) {
-    remove(_back.getKey());
+  this.top=e;
+  size=size + 1;
+  if (removeEldestEntry(back)) {
+    remove(back.key);
   }
- else   if (_size > _capacity) {
-    rehash((int)(_capacity * HashUtil.CAPACITY_MULTIPLE));
+ else   if (size > capacity) {
+    rehash((int)(capacity * HashUtil.CAPACITY_MULTIPLE));
   }
   return null;
 }
