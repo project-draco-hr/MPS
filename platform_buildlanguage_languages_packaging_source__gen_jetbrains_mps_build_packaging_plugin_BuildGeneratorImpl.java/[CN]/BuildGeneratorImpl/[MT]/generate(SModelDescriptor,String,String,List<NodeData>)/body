@@ -3,14 +3,22 @@
   SModel targetSModel=targetModelDescriptor.getSModel();
   targetSModel.addRoot(mpsLayout);
   SPropertyOperations.set(mpsLayout,"name",name);
-  SPropertyOperations.set(mpsLayout,"","" + (PackagingLanguageGenerator.createBasedirPath("mps.home",targetSModel)));
+  String result=Macros.mpsHomeMacros().shrinkPath(basedir,new File("")).replace("\\",File.separator);
+  int index=result.lastIndexOf("}");
+  if (index > -1) {
+    String macro=result.substring(result.indexOf("{") + 1,index);
+    SLinkOperations.setTarget(mpsLayout,"baseDirectory",PackagingLanguageGenerator.createBasedirPath(macro,result.substring(index + 2)),true);
+  }
+ else {
+    SLinkOperations.setTarget(mpsLayout,"baseDirectory",PackagingLanguageGenerator.createBasedirPath("",basedir),true);
+  }
   SPropertyOperations.set(mpsLayout,"compile","" + (true));
   SPropertyOperations.set(ListSequence.fromList(SLinkOperations.getTargets(mpsLayout,"configuration",true)).first(),"name","default");
   SNode zip=SConceptOperations.createNewNode("jetbrains.mps.build.packaging.structure.Zip",null);
-  SLinkOperations.setTarget(zip,"title",PackagingLanguageGenerator.createSimpleString(name + ".zip",targetSModel),true);
+  SLinkOperations.setTarget(zip,"title",PackagingLanguageGenerator.createSimpleString(name + ".zip"),true);
   SLinkOperations.addChild(mpsLayout,"component",zip);
   SNode folder=SConceptOperations.createNewNode("jetbrains.mps.build.packaging.structure.Folder",null);
-  SLinkOperations.setTarget(folder,"title",PackagingLanguageGenerator.createSimpleString(name,targetSModel),true);
+  SLinkOperations.setTarget(folder,"title",PackagingLanguageGenerator.createSimpleString(name),true);
   SLinkOperations.addChild(zip,"entry",folder);
   BuildGeneratorImpl.createContent(selectedData,folder,targetSModel);
   targetModelDescriptor.save();
