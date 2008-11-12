@@ -19,14 +19,22 @@
     final MPSProject mpsProject=myProject.getComponent(MPSProjectHolder.class).getMPSProject();
     GenParameters params=ModelAccess.instance().runReadAction(new Computable<GenParameters>(){
       public GenParameters compute(){
-        SModel model=AuxilaryRuntimeModel.getDescriptor().getSModel();
         ModuleTestConfiguration languageConfig=new ModuleTestConfiguration();
         languageConfig.setModuleRef(myLanguage.getModuleReference());
         languageConfig.setName("tmp");
-        return languageConfig.getGenParams(mpsProject,true);
+        try {
+          return languageConfig.getGenParams(mpsProject,true);
+        }
+ catch (        IllegalGeneratorConfigurationException e) {
+          return null;
+        }
       }
     }
 );
+    if (params == null) {
+      setErrorText("Generator configuration is invalid");
+      return;
+    }
     myProject.getComponent(GeneratorManager.class).generateModelsFromDifferentModules(new ModuleContext(myLanguage,mpsProject),params.getModels(),IGenerationType.FILES);
   }
   dispose();
