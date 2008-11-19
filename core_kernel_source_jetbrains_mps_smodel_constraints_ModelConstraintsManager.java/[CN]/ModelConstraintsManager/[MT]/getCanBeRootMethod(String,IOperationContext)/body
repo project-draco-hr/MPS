@@ -1,0 +1,35 @@
+{
+  if (myCanBeRootMethods.containsKey(conceptFqName)) {
+    return myCanBeRootMethods.get(conceptFqName);
+  }
+  IScope scope=context.getScope();
+  AbstractConceptDeclaration concept=SModelUtil_new.findConceptDeclaration(conceptFqName,scope);
+  if (concept == null) {
+    LOG.error("Can't find a concept " + conceptFqName);
+    myCanBeRootMethods.put(conceptFqName,null);
+    return null;
+  }
+  String fqName=NameUtil.nodeFQName(concept);
+  String namespace=NameUtil.namespaceFromConcept(concept);
+  Language language=scope.getLanguage(namespace);
+  if (language == null) {
+    LOG.error("Can't find a language " + namespace);
+    myCanBeRootMethods.put(conceptFqName,null);
+    return null;
+  }
+  String behaviorClassName=constraintsClassByConceptFqName(fqName);
+  Class behaviorClass=language.getClass(behaviorClassName);
+  if (behaviorClass == null) {
+    myCanBeRootMethods.put(conceptFqName,null);
+    return null;
+  }
+  try {
+    Method method=behaviorClass.getMethod(BehaviorConstants.CAN_BE_A_ROOT_METHOD_NAME,IOperationContext.class,CanBeARootContext.class);
+    myCanBeRootMethods.put(conceptFqName,method);
+    return method;
+  }
+ catch (  NoSuchMethodException e) {
+  }
+  myCanBeChildMethods.put(conceptFqName,null);
+  return null;
+}
