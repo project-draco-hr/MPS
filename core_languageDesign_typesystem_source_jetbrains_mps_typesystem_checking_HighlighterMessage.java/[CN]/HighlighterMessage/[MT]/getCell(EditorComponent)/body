@@ -1,41 +1,48 @@
 {
-  EditorCell rawCell=super.getCell(editor);
+  final EditorCell rawCell=super.getCell(editor);
+  if (rawCell == null)   return null;
   if (myErrorTarget.getTarget() == ErrorTargetEnum.NODE) {
     return rawCell;
   }
-  if (myErrorTarget.getTarget() == ErrorTargetEnum.REFERENCE) {
-    EditorCell child=rawCell.findChild(CellFinders.byCondition(new Condition<EditorCell>(){
-      public boolean met(      EditorCell cell){
-        LinkDeclaration linkDeclaration=cell.getLinkDeclaration();
-        return linkDeclaration != null && linkDeclaration.getMetaClass() == LinkMetaclass.reference && myErrorTarget.getRole().equals(linkDeclaration.getRole());
-      }
-    }
-,true),true);
-    if (child != null) {
-      return child;
-    }
- else {
-      return rawCell;
-    }
-  }
-  if (myErrorTarget.getTarget() == ErrorTargetEnum.PROPERTY) {
-    EditorCell child=rawCell.findChild(CellFinders.byCondition(new Condition<EditorCell>(){
-      public boolean met(      EditorCell cell){
-        if (!(cell instanceof EditorCell_Property))         return false;
-        EditorCell_Property propertyCell=(EditorCell_Property)cell;
-        if (myErrorTarget.getRole().equals(((PropertyAccessor)propertyCell.getModelAccessor()).getPropertyName())) {
-          return true;
+  EditorCell result=ModelAccess.instance().runReadAction(new Computable<EditorCell>(){
+    public EditorCell compute(){
+      if (myErrorTarget.getTarget() == ErrorTargetEnum.REFERENCE) {
+        EditorCell child=rawCell.findChild(CellFinders.byCondition(new Condition<EditorCell>(){
+          public boolean met(          EditorCell cell){
+            LinkDeclaration linkDeclaration=cell.getLinkDeclaration();
+            return linkDeclaration != null && linkDeclaration.getMetaClass() == LinkMetaclass.reference && myErrorTarget.getRole().equals(linkDeclaration.getRole());
+          }
         }
-        return false;
-      }
-    }
 ,true),true);
-    if (child != null) {
-      return child;
-    }
+        if (child != null) {
+          return child;
+        }
  else {
-      return rawCell;
+          return rawCell;
+        }
+      }
+      if (myErrorTarget.getTarget() == ErrorTargetEnum.PROPERTY) {
+        EditorCell child=rawCell.findChild(CellFinders.byCondition(new Condition<EditorCell>(){
+          public boolean met(          EditorCell cell){
+            if (!(cell instanceof EditorCell_Property))             return false;
+            EditorCell_Property propertyCell=(EditorCell_Property)cell;
+            if (myErrorTarget.getRole().equals(((PropertyAccessor)propertyCell.getModelAccessor()).getPropertyName())) {
+              return true;
+            }
+            return false;
+          }
+        }
+,true),true);
+        if (child != null) {
+          return child;
+        }
+ else {
+          return rawCell;
+        }
+      }
+      return null;
     }
   }
-  return null;
+);
+  return result;
 }
