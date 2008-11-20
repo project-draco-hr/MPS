@@ -1,36 +1,35 @@
 {
-  if (getSelectedCell() != null) {
+  final EditorCell selectedCell=getSelectedCell();
+  if (selectedCell != null) {
     ModelAccess.instance().runReadAction(new Runnable(){
       public void run(){
-        SNode selectedNode=getSelectedCell().getSNode();
-        while (selectedNode != null) {
-          final IErrorReporter herror=TypeChecker.getInstance().getTypeErrorDontCheck(selectedNode);
-          if (herror != null) {
-            SwingUtilities.invokeLater(new Runnable(){
-              public void run(){
-                String s=herror.reportError();
-                final MPSErrorDialog dialog=new MPSErrorDialog(myOperationContext.getMainFrame(),s,"TYPESYSTEM ERROR",false);
-                JButton button=new JButton(new AbstractAction("Go To Rule"){
-                  public void actionPerformed(                  ActionEvent e){
-                    ModelAccess.instance().runReadAction(new Runnable(){
-                      public void run(){
-                        GoToTypeErrorRuleUtil.goToTypeErrorRule(myOperationContext,herror,LOG);
-                        dialog.dispose();
-                      }
+        final EditorMessage message=getEditorMessageFor(selectedCell);
+        Object info=message.getUserObject(HelginsTypesEditorChecker.ERROR_INFO);
+        if (info instanceof IErrorReporter) {
+          final IErrorReporter herror=(IErrorReporter)info;
+          SwingUtilities.invokeLater(new Runnable(){
+            public void run(){
+              String s=message.getMessage();
+              final MPSErrorDialog dialog=new MPSErrorDialog(myOperationContext.getMainFrame(),s,"Typesystem " + message.getStatus().getPresentation(),false);
+              JButton button=new JButton(new AbstractAction("Go To Rule"){
+                public void actionPerformed(                ActionEvent e){
+                  ModelAccess.instance().runReadAction(new Runnable(){
+                    public void run(){
+                      GoToTypeErrorRuleUtil.goToTypeErrorRule(myOperationContext,herror,LOG);
+                      dialog.dispose();
                     }
-);
                   }
+);
                 }
-);
-                dialog.addButton(button);
-                dialog.initializeUI();
-                dialog.setVisible(true);
               }
-            }
 );
-            return;
+              dialog.addButton(button);
+              dialog.initializeUI();
+              dialog.setVisible(true);
+            }
           }
-          selectedNode=selectedNode.getParent();
+);
+          return;
         }
       }
     }
