@@ -1,31 +1,6 @@
 {
-  Set<Language> languages=new HashSet<Language>();
-  Set<DevKit> devkits=new HashSet<DevKit>();
-  languages.addAll(LibraryManager.getInstance().getGlobalModules(Language.class));
-  devkits.addAll(LibraryManager.getInstance().getGlobalModules(DevKit.class));
-  for (  Project p : ProjectManager.getInstance().getOpenProjects()) {
-    MPSProject mpsProject=p.getComponent(MPSProjectHolder.class).getMPSProject();
-    for (    Solution s : mpsProject.getProjectSolutions()) {
-      languages.addAll(s.getScope().getVisibleLanguages());
-      devkits.addAll(s.getScope().getVisibleDevkits());
-    }
-    for (    Language l : mpsProject.getProjectLanguages()) {
-      languages.add(l);
-    }
-    for (    DevKit dk : mpsProject.getProjectDevKits()) {
-      devkits.add(dk);
-    }
-  }
-  for (  Language language : languages) {
-    if (language.getPluginModelDescriptor() != null) {
-      Class pluginClass=language.getClass(language.getGeneratedApplicationPluginClassLongName());
-      if (pluginClass != null) {
-        addPlugin(language,language.getGeneratedApplicationPluginClassLongName());
-      }
-    }
-  }
-  addIdePlugin();
-  for (  IApplicationPlugin plugin : myPlugins.values()) {
+  mySortedPlugins=createPlugins();
+  for (  BaseApplicationPlugin plugin : mySortedPlugins) {
     try {
       plugin.preInit();
     }
@@ -33,7 +8,7 @@
       LOG.error("Plugin " + plugin + " threw an exception during initialization ",t1);
     }
   }
-  for (  IApplicationPlugin plugin : myPlugins.values()) {
+  for (  BaseApplicationPlugin plugin : mySortedPlugins) {
     try {
       plugin.init();
     }
