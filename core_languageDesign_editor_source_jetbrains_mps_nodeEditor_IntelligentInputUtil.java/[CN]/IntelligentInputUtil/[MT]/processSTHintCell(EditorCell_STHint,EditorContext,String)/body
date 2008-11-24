@@ -1,22 +1,22 @@
 {
-  NodeSubstituteInfo substituteInfo=cell.getSubstituteInfo();
+  NodeSubstituteInfo info=cell.getSubstituteInfo();
   String smallPattern=pattern.substring(0,pattern.length() - 1);
   String tail="" + pattern.charAt(pattern.length() - 1);
   EditorCell nextCell=cell.getNextLeaf();
   while (nextCell != null && !nextCell.isSelectable()) {
     nextCell=nextCell.getNextLeaf();
   }
-  if (canCompleteSmallPatternImmediately(substituteInfo,pattern,"") || canCompleteSmallPatternImmediately(substituteInfo,trimLeft(pattern),"")) {
-    if (!canCompleteSmallPatternImmediately(substituteInfo,pattern,"")) {
+  if (canCompleteSmallPatternImmediately(info,pattern,"") || canCompleteSmallPatternImmediately(info,trimLeft(pattern),"")) {
+    if (!canCompleteSmallPatternImmediately(info,pattern,"")) {
       pattern=trimLeft(pattern);
     }
-    substituteInfo.getMatchingActions(pattern,true).get(0).substitute(editorContext,pattern);
+    info.getMatchingActions(pattern,true).get(0).substitute(editorContext,pattern);
   }
- else   if (pattern.length() > 0 && (canCompleteSmallPatternImmediately(substituteInfo,smallPattern,tail) || canCompleteSmallPatternImmediately(substituteInfo,trimLeft(smallPattern),tail))) {
-    if (!canCompleteSmallPatternImmediately(substituteInfo,smallPattern,tail)) {
+ else   if (pattern.length() > 0 && (canCompleteSmallPatternImmediately(info,smallPattern,tail) || canCompleteSmallPatternImmediately(info,trimLeft(smallPattern),tail))) {
+    if (!canCompleteSmallPatternImmediately(info,smallPattern,tail)) {
       smallPattern=trimLeft(smallPattern);
     }
-    List<INodeSubstituteAction> matchingActions=substituteInfo.getMatchingActions(smallPattern,true);
+    List<INodeSubstituteAction> matchingActions=info.getMatchingActions(smallPattern,true);
     INodeSubstituteAction item=matchingActions.get(0);
     SNode newNode=item.substitute(editorContext,smallPattern);
     editorContext.flushEvents();
@@ -40,12 +40,17 @@
       }
     }
   }
- else   if (substituteInfo.getMatchingActions(pattern,false).isEmpty() && substituteInfo.getMatchingActions(trimLeft(pattern),false).isEmpty() && nextCell != null && nextCell.isErrorState() && nextCell instanceof EditorCell_Label && ((EditorCell_Label)nextCell).isEditable()) {
+ else   if (info.getMatchingActions(pattern,false).isEmpty() && info.getMatchingActions(trimLeft(pattern),false).isEmpty() && nextCell != null && nextCell.isErrorState() && nextCell instanceof EditorCell_Label && ((EditorCell_Label)nextCell).isEditable()) {
     cell.getSNode().removeRightTransformHint();
     EditorCell_Label label=(EditorCell_Label)nextCell;
     label.changeText(pattern);
     label.end();
     editorContext.getNodeEditorComponent().changeSelection(label);
     editorContext.getNodeEditorComponent().relayout();
+  }
+ else {
+    if (isInAmbigousPositionOnST(info,smallPattern + tail)) {
+      editorContext.getNodeEditorComponent().activateNodeSubstituteChooser(cell,info,false);
+    }
   }
 }
