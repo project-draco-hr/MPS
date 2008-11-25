@@ -1,36 +1,49 @@
 {
   LOG.assertInCommand();
-  EditorComponent editorComponent=context.getNodeEditorComponent();
-  EditorCell selectedCell=getCellToPasteTo(editorComponent.getSelectedCell());
-  SNode selectedNode=selectedCell.getSNode();
-  PasteNodeData pasteNodeData=CopyPasteUtil.getPasteNodeDataFromClipboard(selectedNode.getModel());
-  Set<ModuleReference> necessaryLanguages=pasteNodeData.getNecessaryLanguages();
-  Set<SModelReference> necessaryImports=pasteNodeData.getNecessaryImports();
-  if (!CopyPasteUtil.addImportsAndLanguagesToModel(selectedNode.getModel(),necessaryLanguages,necessaryImports,context.getOperationContext())) {
-    return;
-  }
-  List<SNode> pasteNodes=pasteNodeData.getNodes();
-  Set<SReference> requireResolveReferences=pasteNodeData.getRequireResolveReferences();
-  if (canPasteBefore(selectedCell,pasteNodes)) {
-    new NodePaster(pasteNodes).pasteRelative(selectedNode,PastePlaceHint.BEFORE_ANCHOR);
-  }
+  final EditorComponent editorComponent=context.getNodeEditorComponent();
+  final EditorCell selectedCell=getCellToPasteTo(editorComponent.getSelectedCell());
+  final SNode selectedNode=selectedCell.getSNode();
+  final PasteNodeData pasteNodeData=CopyPasteUtil.getPasteNodeDataFromClipboard(selectedNode.getModel());
+  final Set<ModuleReference> necessaryLanguages=pasteNodeData.getNecessaryLanguages();
+  final Set<SModelReference> necessaryImports=pasteNodeData.getNecessaryImports();
+  final SModel model=selectedNode.getModel();
+  SwingUtilities.invokeLater(new Runnable(){
+    public void run(){
+      CopyPasteUtil.addImportsAndLanguagesToModel(model,necessaryLanguages,necessaryImports,context.getOperationContext(),new Runnable(){
+        public void run(){
+          ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+            public void run(){
+              List<SNode> pasteNodes=pasteNodeData.getNodes();
+              Set<SReference> requireResolveReferences=pasteNodeData.getRequireResolveReferences();
+              if (canPasteBefore(selectedCell,pasteNodes)) {
+                new NodePaster(pasteNodes).pasteRelative(selectedNode,PastePlaceHint.BEFORE_ANCHOR);
+              }
  else {
-    new NodePaster(pasteNodes).paste(selectedCell);
-  }
-  Resolver.resolveReferences(requireResolveReferences,context.getOperationContext());
-  editorComponent.flushEvents();
-  EditorCell nodeCell=editorComponent.findNodeCell(pasteNodes.get(0));
-  if (nodeCell == null)   return;
-  editorComponent.changeSelection(nodeCell);
-  EditorCell_Label labelCell=nodeCell.findChild(CellFinders.byClass(EditorCell_Label.class,true));
-  if (labelCell != null) {
-    editorComponent.changeSelection(labelCell);
-    if (pasteNodes.size() == 1) {
-      editorComponent.pushSelection(labelCell);
-      editorComponent.setSelectionDontClearStack(nodeCell,true);
+                new NodePaster(pasteNodes).paste(selectedCell);
+              }
+              Resolver.resolveReferences(requireResolveReferences,context.getOperationContext());
+              editorComponent.flushEvents();
+              EditorCell nodeCell=editorComponent.findNodeCell(pasteNodes.get(0));
+              if (nodeCell == null)               return;
+              editorComponent.changeSelection(nodeCell);
+              EditorCell_Label labelCell=nodeCell.findChild(CellFinders.byClass(EditorCell_Label.class,true));
+              if (labelCell != null) {
+                editorComponent.changeSelection(labelCell);
+                if (pasteNodes.size() == 1) {
+                  editorComponent.pushSelection(labelCell);
+                  editorComponent.setSelectionDontClearStack(nodeCell,true);
+                }
+              }
+              if (pasteNodes.size() > 1) {
+                editorComponent.getNodeRangeSelection().setRange(pasteNodes.get(0),pasteNodes.get(pasteNodes.size() - 1));
+              }
+            }
+          }
+);
+        }
+      }
+);
     }
   }
-  if (pasteNodes.size() > 1) {
-    editorComponent.getNodeRangeSelection().setRange(pasteNodes.get(0),pasteNodes.get(pasteNodes.size() - 1));
-  }
+);
 }
