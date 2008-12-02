@@ -4,26 +4,29 @@
     ModelAccess.instance().runReadAction(new Runnable(){
       public void run(){
         final EditorMessage message=getEditorMessageFor(selectedCell);
-        Object info=message.getUserObject(HelginsTypesEditorChecker.ERROR_INFO);
+        if (message == null)         return;
+        Object info=message.getUserObject(EditorCheckerAdapter.ERROR_INFO);
         if (info instanceof IErrorReporter) {
           final IErrorReporter herror=(IErrorReporter)info;
           SwingUtilities.invokeLater(new Runnable(){
             public void run(){
               String s=message.getMessage();
-              final MPSErrorDialog dialog=new MPSErrorDialog(myOperationContext.getMainFrame(),s,"Typesystem " + message.getStatus().getPresentation(),false);
-              JButton button=new JButton(new AbstractAction("Go To Rule"){
-                public void actionPerformed(                ActionEvent e){
-                  ModelAccess.instance().runReadAction(new Runnable(){
-                    public void run(){
-                      GoToTypeErrorRuleUtil.goToTypeErrorRule(myOperationContext,herror,LOG);
-                      dialog.dispose();
+              final MPSErrorDialog dialog=new MPSErrorDialog(myOperationContext.getMainFrame(),s,message.getStatus().getPresentation(),false);
+              if (herror.getRuleModel() != null && herror.getRuleId() != null) {
+                JButton button=new JButton(new AbstractAction("Go To Rule"){
+                  public void actionPerformed(                  ActionEvent e){
+                    ModelAccess.instance().runReadAction(new Runnable(){
+                      public void run(){
+                        GoToTypeErrorRuleUtil.goToTypeErrorRule(myOperationContext,herror,LOG);
+                        dialog.dispose();
+                      }
                     }
+);
                   }
-);
                 }
-              }
 );
-              dialog.addButton(button);
+                dialog.addButton(button);
+              }
               dialog.initializeUI();
               dialog.setVisible(true);
             }
