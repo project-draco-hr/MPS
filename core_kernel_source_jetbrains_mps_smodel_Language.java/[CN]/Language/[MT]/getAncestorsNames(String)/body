@@ -3,48 +3,53 @@
     return myAncestorsNamesMap.get(conceptFqName);
   }
  else {
-    Set<String> result=new HashSet<String>();
-    Set<String> parents=new HashSet<String>();
-    AbstractConceptDeclaration declaration=findConceptDeclaration(NameUtil.shortNameFromLongName(conceptFqName));
-    if (declaration == null) {
-      return result;
-    }
-    result.add(conceptFqName);
-    if (declaration instanceof ConceptDeclaration) {
-      ConceptDeclaration cd=(ConceptDeclaration)declaration;
-      ConceptDeclaration extendedConcept=cd.getExtends();
-      if (extendedConcept != null) {
-        String fqName=NameUtil.nodeFQName(extendedConcept);
-        Language declaringLanguage=SModelUtil_new.getDeclaringLanguage(fqName,GlobalScope.getInstance());
-        if (declaringLanguage != null) {
-          parents.add(fqName);
-          result.addAll(declaringLanguage.getAncestorsNames(fqName));
+    return NodeReadAccessCaster.runReadTransparentAction(new Computable<Set<String>>(){
+      public Set<String> compute(){
+        Set<String> result=new HashSet<String>();
+        Set<String> parents=new HashSet<String>();
+        AbstractConceptDeclaration declaration=findConceptDeclaration(NameUtil.shortNameFromLongName(conceptFqName));
+        if (declaration == null) {
+          return result;
         }
-      }
-      for (      InterfaceConceptReference icr : cd.getImplementses()) {
-        InterfaceConceptDeclaration interfaceConcept=icr.getIntfc();
-        if (interfaceConcept == null)         continue;
-        String fqName=NameUtil.nodeFQName(interfaceConcept);
-        Language declaringLanguage=SModelUtil_new.getDeclaringLanguage(fqName,GlobalScope.getInstance());
-        if (declaringLanguage == null)         continue;
-        parents.add(fqName);
-        result.addAll(declaringLanguage.getAncestorsNames(fqName));
+        result.add(conceptFqName);
+        if (declaration instanceof ConceptDeclaration) {
+          ConceptDeclaration cd=(ConceptDeclaration)declaration;
+          ConceptDeclaration extendedConcept=cd.getExtends();
+          if (extendedConcept != null) {
+            String fqName=NameUtil.nodeFQName(extendedConcept);
+            Language declaringLanguage=SModelUtil_new.getDeclaringLanguage(fqName,GlobalScope.getInstance());
+            if (declaringLanguage != null) {
+              parents.add(fqName);
+              result.addAll(declaringLanguage.getAncestorsNames(fqName));
+            }
+          }
+          for (          InterfaceConceptReference icr : cd.getImplementses()) {
+            InterfaceConceptDeclaration interfaceConcept=icr.getIntfc();
+            if (interfaceConcept == null)             continue;
+            String fqName=NameUtil.nodeFQName(interfaceConcept);
+            Language declaringLanguage=SModelUtil_new.getDeclaringLanguage(fqName,GlobalScope.getInstance());
+            if (declaringLanguage == null)             continue;
+            parents.add(fqName);
+            result.addAll(declaringLanguage.getAncestorsNames(fqName));
+          }
+        }
+        if (declaration instanceof InterfaceConceptDeclaration) {
+          InterfaceConceptDeclaration icd=(InterfaceConceptDeclaration)declaration;
+          for (          InterfaceConceptReference icr : icd.getExtendses()) {
+            InterfaceConceptDeclaration interfaceConcept=icr.getIntfc();
+            if (interfaceConcept == null)             continue;
+            String fqName=NameUtil.nodeFQName(interfaceConcept);
+            Language declaringLanguage=SModelUtil_new.getDeclaringLanguage(fqName,GlobalScope.getInstance());
+            if (declaringLanguage == null)             continue;
+            parents.add(fqName);
+            result.addAll(declaringLanguage.getAncestorsNames(fqName));
+          }
+        }
+        myParentsNamesMap.put(conceptFqName,parents);
+        myAncestorsNamesMap.put(conceptFqName,result);
+        return result;
       }
     }
-    if (declaration instanceof InterfaceConceptDeclaration) {
-      InterfaceConceptDeclaration icd=(InterfaceConceptDeclaration)declaration;
-      for (      InterfaceConceptReference icr : icd.getExtendses()) {
-        InterfaceConceptDeclaration interfaceConcept=icr.getIntfc();
-        if (interfaceConcept == null)         continue;
-        String fqName=NameUtil.nodeFQName(interfaceConcept);
-        Language declaringLanguage=SModelUtil_new.getDeclaringLanguage(fqName,GlobalScope.getInstance());
-        if (declaringLanguage == null)         continue;
-        parents.add(fqName);
-        result.addAll(declaringLanguage.getAncestorsNames(fqName));
-      }
-    }
-    myParentsNamesMap.put(conceptFqName,parents);
-    myAncestorsNamesMap.put(conceptFqName,result);
-    return result;
+);
   }
 }

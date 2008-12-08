@@ -1,23 +1,28 @@
 {
-  Language l=SModelUtil_new.getDeclaringLanguage(concept,GlobalScope.getInstance());
-  Method method=null;
-  String fqName=NameUtil.nodeFQName(concept);
-  MethodInfo mi=new MethodInfo(fqName,methodName,parameterTypes);
-  if (myMethods.containsKey(mi)) {
-    return myMethods.get(mi);
-  }
-  String behaviorClass=behaviorClassByConceptFqName(fqName);
-  try {
-    Class cls=l.getClass(behaviorClass);
-    if (cls != null) {
-      method=cls.getMethod(methodName,parameterTypes);
+  return NodeReadAccessCaster.runReadTransparentAction(new Computable<Method>(){
+    public Method compute(){
+      Language l=SModelUtil_new.getDeclaringLanguage(concept,GlobalScope.getInstance());
+      Method method=null;
+      String fqName=NameUtil.nodeFQName(concept);
+      MethodInfo mi=new MethodInfo(fqName,methodName,parameterTypes);
+      if (myMethods.containsKey(mi)) {
+        return myMethods.get(mi);
+      }
+      String behaviorClass=behaviorClassByConceptFqName(fqName);
+      try {
+        Class cls=l.getClass(behaviorClass);
+        if (cls != null) {
+          method=cls.getMethod(methodName,parameterTypes);
+        }
+      }
+ catch (      NoSuchMethodException e) {
+      }
+      if (method != null) {
+        method.setAccessible(true);
+      }
+      myMethods.put(mi,method);
+      return method;
     }
   }
- catch (  NoSuchMethodException e) {
-  }
-  if (method != null) {
-    method.setAccessible(true);
-  }
-  myMethods.put(mi,method);
-  return method;
+);
 }

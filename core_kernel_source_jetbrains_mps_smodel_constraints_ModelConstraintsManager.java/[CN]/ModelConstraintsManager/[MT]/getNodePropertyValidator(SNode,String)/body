@@ -1,33 +1,38 @@
 {
   if (node == null)   return null;
-  StringBuilder builder=new StringBuilder();
+  final StringBuilder builder=new StringBuilder();
   builder.append('#');
   builder.append(propertyName);
-  String prefixedPropertyName=builder.toString();
+  final String prefixedPropertyName=builder.toString();
   builder.setLength(0);
   String nodeConceptFqName=node.getConceptFqName();
   builder.append(nodeConceptFqName);
   builder.append(prefixedPropertyName);
-  String originalKey=builder.toString();
+  final String originalKey=builder.toString();
   if (myNodePropertyValidatorsCache.containsKey(originalKey)) {
     return myNodePropertyValidatorsCache.get(originalKey);
   }
-  List<AbstractConceptDeclaration> hierarchy=SModelUtil_new.getConceptAndSuperConcepts(node.getConceptDeclarationAdapter());
-  for (  AbstractConceptDeclaration concept : hierarchy) {
-    Language l=SModelUtil_new.getDeclaringLanguage(concept,GlobalScope.getInstance());
-    if (!myAddedLanguageNamespaces.containsKey(l.getNamespace())) {
-      processLanguageAdded(l);
-    }
-    String conceptFqName=NameUtil.nodeFQName(concept);
-    builder.setLength(0);
-    builder.append(conceptFqName);
-    builder.append(prefixedPropertyName);
-    INodePropertyValidator result=myNodePropertyValidatorsMap.get(builder.toString());
-    if (result != null) {
-      myNodePropertyValidatorsCache.put(originalKey,result);
-      return result;
+  return NodeReadAccessCaster.runReadTransparentAction(new Computable<INodePropertyValidator>(){
+    public INodePropertyValidator compute(){
+      List<AbstractConceptDeclaration> hierarchy=SModelUtil_new.getConceptAndSuperConcepts(node.getConceptDeclarationAdapter());
+      for (      AbstractConceptDeclaration concept : hierarchy) {
+        Language l=SModelUtil_new.getDeclaringLanguage(concept,GlobalScope.getInstance());
+        if (!myAddedLanguageNamespaces.containsKey(l.getNamespace())) {
+          processLanguageAdded(l);
+        }
+        String conceptFqName=NameUtil.nodeFQName(concept);
+        builder.setLength(0);
+        builder.append(conceptFqName);
+        builder.append(prefixedPropertyName);
+        INodePropertyValidator result=myNodePropertyValidatorsMap.get(builder.toString());
+        if (result != null) {
+          myNodePropertyValidatorsCache.put(originalKey,result);
+          return result;
+        }
+      }
+      myNodePropertyValidatorsCache.put(originalKey,null);
+      return null;
     }
   }
-  myNodePropertyValidatorsCache.put(originalKey,null);
-  return null;
+);
 }
