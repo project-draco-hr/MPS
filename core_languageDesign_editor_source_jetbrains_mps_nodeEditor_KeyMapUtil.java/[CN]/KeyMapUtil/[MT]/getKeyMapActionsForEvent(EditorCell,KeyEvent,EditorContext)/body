@@ -1,18 +1,23 @@
 {
-  if (keyEvent.getID() != KeyEvent.KEY_PRESSED && keyEvent.getID() != KeyEvent.KEY_TYPED)   return Collections.emptyList();
-  int keyCode=keyEvent.getKeyCode();
-  if (keyCode == KeyEvent.VK_CONTROL || keyCode == KeyEvent.VK_ALT || keyCode == KeyEvent.VK_SHIFT || keyCode == KeyEvent.VK_PAGE_UP || keyCode == KeyEvent.VK_PAGE_DOWN) {
-    return Collections.emptyList();
-  }
-  if ((keyEvent.getModifiers() & (KeyEvent.CTRL_MASK | KeyEvent.ALT_MASK | KeyEvent.SHIFT_MASK)) == 0) {
-    char keyChar=keyEvent.getKeyChar();
-    if (Character.isLetterOrDigit(keyChar)) {
-      return Collections.emptyList();
+  return ModelAccess.instance().runReadAction(new Computable<List<Pair<EditorCellKeyMapAction,EditorCell>>>(){
+    public List<Pair<EditorCellKeyMapAction,EditorCell>> compute(){
+      if (keyEvent.getID() != KeyEvent.KEY_PRESSED && keyEvent.getID() != KeyEvent.KEY_TYPED)       return Collections.emptyList();
+      int keyCode=keyEvent.getKeyCode();
+      if (keyCode == KeyEvent.VK_CONTROL || keyCode == KeyEvent.VK_ALT || keyCode == KeyEvent.VK_SHIFT || keyCode == KeyEvent.VK_PAGE_UP || keyCode == KeyEvent.VK_PAGE_DOWN) {
+        return Collections.emptyList();
+      }
+      if ((keyEvent.getModifiers() & (KeyEvent.CTRL_MASK | KeyEvent.ALT_MASK | KeyEvent.SHIFT_MASK)) == 0) {
+        char keyChar=keyEvent.getKeyChar();
+        if (Character.isLetterOrDigit(keyChar)) {
+          return Collections.emptyList();
+        }
+      }
+      List<Pair<EditorCellKeyMap,EditorCell>> keymapsAndCells=getRegisteredKeymaps(selectedCell,editorContext);
+      if (keymapsAndCells.isEmpty()) {
+        return Collections.emptyList();
+      }
+      return selectActionsFromKeymaps(selectedCell,keyEvent,editorContext,keymapsAndCells);
     }
   }
-  List<Pair<EditorCellKeyMap,EditorCell>> keymapsAndCells=getRegisteredKeymaps(selectedCell,editorContext);
-  if (keymapsAndCells.isEmpty()) {
-    return Collections.emptyList();
-  }
-  return selectActionsFromKeymaps(selectedCell,keyEvent,editorContext,keymapsAndCells);
+);
 }

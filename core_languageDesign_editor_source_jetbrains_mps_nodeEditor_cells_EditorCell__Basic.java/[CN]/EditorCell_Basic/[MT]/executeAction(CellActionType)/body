@@ -1,7 +1,24 @@
 {
-  EditorCellAction action=getApplicableCellAction(type);
+  final EditorCellAction action=getApplicableCellAction(type);
   if (action == null)   return false;
-  if (!action.canExecute(myEditorContext))   return false;
-  action.execute(myEditorContext);
+  if (ModelAccess.instance().runReadAction(new Computable<Boolean>(){
+    public Boolean compute(){
+      return !action.canExecute(myEditorContext);
+    }
+  }
+)) {
+    return false;
+  }
+  if (action.executeInCommand()) {
+    getEditorContext().executeCommand(new Runnable(){
+      public void run(){
+        action.execute(myEditorContext);
+      }
+    }
+);
+  }
+ else {
+    action.execute(myEditorContext);
+  }
   return true;
 }
