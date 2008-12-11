@@ -1,0 +1,56 @@
+{
+  myEquationLogItem=equationLogItem;
+  setLayout(new GridBagLayout());
+  GridBagConstraints constraints=new GridBagConstraints();
+  constraints.gridy=0;
+  constraints.weighty=0;
+  constraints.fill=GridBagConstraints.NONE;
+  constraints.anchor=GridBagConstraints.NORTHWEST;
+  JLabel label=new JLabel("equation");
+  add(label,constraints);
+  constraints.gridx=1;
+  SNodeTree leftTree=new SNodeTree(myEquationLogItem.getLeftRepresentator());
+  add(leftTree,constraints);
+  constraints.gridx=2;
+  SNodeTree rightTree=new SNodeTree(myEquationLogItem.getRightRepresentator());
+  add(rightTree,constraints);
+  constraints.gridx=3;
+  constraints.weightx=1;
+  JLabel reasonLabel=new JLabel(myEquationLogItem.getReason());
+  reasonLabel.addMouseListener(new MouseAdapter(){
+    @Override public void mousePressed(    MouseEvent e){
+      if (e.getClickCount() == 2) {
+        String ruleModel=myEquationLogItem.getRuleModel();
+        final String ruleID=myEquationLogItem.getRuleId();
+        if (ruleModel == null || ruleID == null)         return;
+        SModelReference modelUID=SModelReference.fromString(ruleModel);
+        modelUID=SModelReference.fromString(modelUID.getLongName());
+        final SModelDescriptor modelDescriptor=SModelRepository.getInstance().getModelDescriptor(modelUID);
+        if (modelDescriptor == null) {
+          LOG.error("can't find rule's model " + ruleModel);
+          return;
+        }
+        final SNode rule=ModelAccess.instance().runReadAction(new Computable<SNode>(){
+          public SNode compute(){
+            return modelDescriptor.getSModel().getNodeById(ruleID);
+          }
+        }
+);
+        if (rule == null) {
+          LOG.error("can't find rule with id " + ruleID + " in the model "+ modelDescriptor);
+          return;
+        }
+        ModelAccess.instance().executeCommand(new Runnable(){
+          public void run(){
+            myOperationContext.getComponent(MPSEditorOpener.class).openNode(rule);
+          }
+        }
+);
+      }
+    }
+  }
+);
+  add(reasonLabel,constraints);
+  leftTree.rebuildNow();
+  rightTree.rebuildNow();
+}

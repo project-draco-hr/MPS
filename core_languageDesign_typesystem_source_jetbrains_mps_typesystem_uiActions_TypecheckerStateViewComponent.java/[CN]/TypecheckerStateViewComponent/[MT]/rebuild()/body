@@ -1,0 +1,52 @@
+{
+  removeAll();
+  setLayout(new GridBagLayout());
+  GridBagConstraints gridBagConstraints=new GridBagConstraints();
+  gridBagConstraints.gridx=0;
+  gridBagConstraints.gridy=0;
+  gridBagConstraints.weightx=1;
+  gridBagConstraints.weighty=0;
+  gridBagConstraints.anchor=GridBagConstraints.NORTH;
+  gridBagConstraints.fill=GridBagConstraints.BOTH;
+  JButton debugCurrentRootButton=new JButton(new AbstractAction("Debug Current Root"){
+    public void actionPerformed(    ActionEvent e){
+      IEditor currentEditor=myEditorsProvider.getCurrentEditor();
+      if (currentEditor != null) {
+        EditorComponent editorComponent=currentEditor.getCurrentEditorComponent();
+        if (editorComponent != null) {
+          final SNode currentRoot=editorComponent.getEditedNode();
+          mySlicer=ModelAccess.instance().runReadAction(new Computable<ISlicer>(){
+            public ISlicer compute(){
+              return TypeChecker.getInstance().debugRoot(currentRoot);
+            }
+          }
+);
+          rebuild();
+        }
+      }
+    }
+  }
+);
+  JPanel upperPanel=new JPanel();
+  upperPanel.setLayout(new GridBagLayout());
+  GridBagConstraints upperPanelConstraints=new GridBagConstraints();
+  upperPanelConstraints.gridx=0;
+  upperPanelConstraints.gridy=0;
+  upperPanelConstraints.weightx=0;
+  upperPanelConstraints.weighty=0;
+  upperPanelConstraints.anchor=GridBagConstraints.NORTHWEST;
+  upperPanel.add(debugCurrentRootButton,upperPanelConstraints);
+  String text=mySlicer == null ? "no info collected" : "info collected for " + mySlicer.getRootInfo();
+  upperPanelConstraints.gridx=1;
+  upperPanel.add(new JLabel(text));
+  upperPanelConstraints.weightx=1;
+  upperPanelConstraints.gridx=2;
+  upperPanel.add(new JPanel(),upperPanelConstraints);
+  add(upperPanel,gridBagConstraints);
+  int y=1;
+  for (  EquationLogItem equationLogItem : myCurrentSlice) {
+    gridBagConstraints.gridy=y;
+    add(new EquationLogItemPanel(equationLogItem));
+    y++;
+  }
+}
