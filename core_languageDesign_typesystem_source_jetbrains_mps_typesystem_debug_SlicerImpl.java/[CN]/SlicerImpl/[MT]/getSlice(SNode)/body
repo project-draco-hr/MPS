@@ -1,0 +1,44 @@
+{
+  SNode type=myNodesToTypes.get(nodeToSliceWith);
+  if (type == null) {
+    return new ArrayList<EquationLogItem>();
+  }
+  EquationManager equationManager=myNodeTypesComponent.getEquationManager();
+  List<SNode> varsAffectingType=new ArrayList<SNode>();
+  List<SNode> varsAffectingType_collected=new ArrayList<SNode>();
+  varsAffectingType.add(type);
+  List<EquationLogItem> slice=new ArrayList<EquationLogItem>();
+  List<EquationLogItem> residual=new ArrayList<EquationLogItem>(myEquationLogItems);
+  while (!varsAffectingType.isEmpty()) {
+    for (    SNode var : varsAffectingType) {
+      IWrapper varWrapper=NodeWrapper.fromNode(var,equationManager);
+      for (      EquationLogItem logItem : new ArrayList<EquationLogItem>(residual)) {
+        IWrapper leftWrapper=NodeWrapper.fromNode(logItem.getLeftRepresentator(),equationManager);
+        IWrapper rightWrapper=NodeWrapper.fromNode(logItem.getRightRepresentator(),equationManager);
+        if (varWrapper.equals(leftWrapper)) {
+          residual.remove(logItem);
+          slice.add(logItem);
+          if (rightWrapper.isVariable()) {
+            varsAffectingType_collected.add(rightWrapper.getNode());
+          }
+        }
+        if (varWrapper.equals(rightWrapper)) {
+          residual.remove(logItem);
+          slice.add(logItem);
+          if (leftWrapper.isVariable()) {
+            varsAffectingType_collected.add(leftWrapper.getNode());
+          }
+        }
+      }
+    }
+    varsAffectingType=varsAffectingType_collected;
+    varsAffectingType_collected=new ArrayList<SNode>();
+  }
+  Collections.sort(slice,new Comparator<EquationLogItem>(){
+    public int compare(    EquationLogItem o1,    EquationLogItem o2){
+      return myEquationLogItems.indexOf(o2) - myEquationLogItems.indexOf(o1);
+    }
+  }
+);
+  return slice;
+}
