@@ -1,3 +1,52 @@
 {
-  return null;
+  return new SelectInTarget(){
+    public VirtualFile myFile;
+    public boolean canSelect(    SelectInContext context){
+      VirtualFile virtualFile=context.getVirtualFile();
+      if (!(virtualFile instanceof MPSNodeVirtualFile)) {
+        if (getNode(virtualFile) == null)         return false;
+        myFile=virtualFile;
+        return true;
+      }
+      final MPSNodeVirtualFile nodeVirtualFile=(MPSNodeVirtualFile)virtualFile;
+      SModel smodel=ModelAccess.instance().runReadAction(new Computable<SModel>(){
+        public SModel compute(){
+          return nodeVirtualFile.getNode().getModel();
+        }
+      }
+);
+      VirtualFile realFile=VFileSystem.getFile(smodel.getModelDescriptor().getModelFile());
+      if ((realFile == null) || (getNode(realFile) == null))       return false;
+      myFile=realFile;
+      return true;
+    }
+    public void selectIn(    final SelectInContext context,    boolean requestFocus){
+      final ToolWindowManager manager=ToolWindowManager.getInstance(getProject());
+      manager.getToolWindow(ToolWindowId.PROJECT_VIEW).activate(new Runnable(){
+        public void run(){
+          manager.getFocusManager().requestFocus(myTree,false);
+          ModelAccess.instance().runReadAction(new Runnable(){
+            public void run(){
+              selectNode(myFile,true);
+            }
+          }
+);
+        }
+      }
+,false);
+    }
+    public String getToolWindowId(){
+      return FileViewProjectPane.this.getId();
+    }
+    public String getMinorViewId(){
+      return null;
+    }
+    public float getWeight(){
+      return FileViewProjectPane.this.getWeight();
+    }
+    public String toString(){
+      return FileViewProjectPane.this.getTitle();
+    }
+  }
+;
 }
