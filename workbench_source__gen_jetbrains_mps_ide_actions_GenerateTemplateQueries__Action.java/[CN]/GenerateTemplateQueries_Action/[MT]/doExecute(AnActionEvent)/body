@@ -1,0 +1,23 @@
+{
+  try {
+    GeneratorManager manager=GenerateTemplateQueries_Action.this.context.getComponent(GeneratorManager.class);
+    IGenerationType genType=manager.getDefaultModuleGenerationType();
+    final Wrappers._T<List<SModelDescriptor>> models=new Wrappers._T<List<SModelDescriptor>>(ListSequence.<SModelDescriptor>fromArray());
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        ListSequence.fromList(models.value).addSequence(ListSequence.fromList(TemplateLanguageGenerationUtil.getGeneratorModels((Generator)GenerateTemplateQueries_Action.this.module)));
+        models.value=ListSequence.fromList(models.value).where(new IWhereFilter<SModelDescriptor>(){
+          public boolean accept(          SModelDescriptor it){
+            return !(GenerateTemplateQueries_Action.this.regenerate) && !(ModelGenerationStatusManager.getInstance().generationRequired(it));
+          }
+        }
+).toListSequence();
+      }
+    }
+);
+    manager.generateModelsWithProgressWindow(models.value,GenerateTemplateQueries_Action.this.context,genType,false);
+  }
+ catch (  Throwable t) {
+    LOG.error("User's action execute method failed. Action:" + "GenerateTemplateQueries",t);
+  }
+}
