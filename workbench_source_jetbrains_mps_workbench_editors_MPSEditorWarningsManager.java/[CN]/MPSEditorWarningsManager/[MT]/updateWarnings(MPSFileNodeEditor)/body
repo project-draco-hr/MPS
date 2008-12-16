@@ -1,0 +1,52 @@
+{
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      if (myWarnings.containsKey(editor)) {
+        for (        WarningPanel panel : myWarnings.get(editor)) {
+          myFileEditorManager.removeTopComponent(editor,panel);
+        }
+        myWarnings.remove(editor);
+      }
+      SModelDescriptor model=editor.getFile().getNode().getModel().getModelDescriptor();
+      if (model.isTransient()) {
+        addWarningPanel(editor,"Warning: node is in transient model. Your changes won't be saved.");
+      }
+      if (model.getModule().isPackaged()) {
+        addWarningPanel(editor,"Warning: node is in packaged model. Your changes won't be saved");
+      }
+      final Set<Language> outdatedLanguages=new HashSet<Language>();
+      for (      Language l : model.getSModel().getLanguages(GlobalScope.getInstance())) {
+        if (l.getEditorModelDescriptor() != null && ModelGenerationStatusManager.getInstance().generationRequired(l.getEditorModelDescriptor())) {
+          outdatedLanguages.add(l);
+        }
+      }
+      if (!outdatedLanguages.isEmpty()) {
+        addWarningPanel(editor,"Warning: one or more of the used languges requires generation","Generate",new Runnable(){
+          public void run(){
+            final MPSProject mpsProject=myProject.getComponent(MPSProjectHolder.class).getMPSProject();
+            final List<SModelDescriptor> models=new ArrayList<SModelDescriptor>();
+            ModelAccess.instance().runReadAction(new Runnable(){
+              public void run(){
+                for (                Language l : outdatedLanguages) {
+                  ModuleTestConfiguration languageConfig=new ModuleTestConfiguration();
+                  languageConfig.setModuleRef(l.getModuleReference());
+                  languageConfig.setName("tmp");
+                  try {
+                    models.addAll(languageConfig.getGenParams(mpsProject,false).getModels());
+                  }
+ catch (                  IllegalGeneratorConfigurationException e) {
+                    LOG.error(e);
+                  }
+                }
+              }
+            }
+);
+            myProject.getComponent(GeneratorManager.class).generateModelsFromDifferentModules(editor.getNodeEditor().getOperationContext(),models,IGenerationType.FILES);
+          }
+        }
+);
+      }
+    }
+  }
+);
+}
