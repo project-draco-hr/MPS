@@ -1,2 +1,38 @@
 {
+  SNode statementNode=SNodeOperations.getAncestor(node,"jetbrains.mps.baseLanguage.structure.Statement",false,false);
+  SNode ifNode=SNodeOperations.insertNewPrevSiblingChild(statementNode,"jetbrains.mps.baseLanguage.structure.IfStatement");
+  SNode ifTrue=SLinkOperations.setNewChild(ifNode,"ifTrue","jetbrains.mps.baseLanguage.structure.StatementList");
+  SNode ifFalse=SLinkOperations.setNewChild(SLinkOperations.setNewChild(ifNode,"ifFalseStatement","jetbrains.mps.baseLanguage.structure.BlockStatement"),"statements","jetbrains.mps.baseLanguage.structure.StatementList");
+  SLinkOperations.setTarget(ifNode,"condition",SNodeOperations.copyNode(node),true);
+  SLinkOperations.insertChildFirst(ifTrue,"statement",SNodeOperations.copyNode(statementNode));
+  SLinkOperations.insertChildFirst(ifFalse,"statement",SNodeOperations.copyNode(statementNode));
+  final SNode fake_node=node;
+  Iterable<SNode> refs;
+  refs=ListSequence.fromList(SNodeOperations.getDescendants(ListSequence.fromList(SLinkOperations.getTargets(ifTrue,"statement",true)).first(),null,false)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.baseLanguage.structure.VariableReference") && SLinkOperations.getTarget(it,"variableDeclaration",false) == SLinkOperations.getTarget(fake_node,"variableDeclaration",false);
+    }
+  }
+);
+  Sequence.fromIterable(refs).visitAll(new IVisitor<SNode>(){
+    public void visit(    SNode it){
+      SNode booleanConstant=SNodeOperations.replaceWithNewChild(it,"jetbrains.mps.baseLanguage.structure.BooleanConstant");
+      SPropertyOperations.set(booleanConstant,"value","" + (true));
+    }
+  }
+);
+  refs=ListSequence.fromList(SNodeOperations.getDescendants(ListSequence.fromList(SLinkOperations.getTargets(ifFalse,"statement",true)).first(),null,false)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.baseLanguage.structure.VariableReference") && SLinkOperations.getTarget(it,"variableDeclaration",false) == SLinkOperations.getTarget(fake_node,"variableDeclaration",false);
+    }
+  }
+);
+  Sequence.fromIterable(refs).visitAll(new IVisitor<SNode>(){
+    public void visit(    SNode it){
+      SNode booleanConstant=SNodeOperations.replaceWithNewChild(it,"jetbrains.mps.baseLanguage.structure.BooleanConstant");
+      SPropertyOperations.set(booleanConstant,"value","" + (false));
+    }
+  }
+);
+  SNodeOperations.deleteNode(statementNode);
 }

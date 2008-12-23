@@ -1,2 +1,55 @@
 {
+  List<INodeSubstituteAction> result=new ArrayList<INodeSubstituteAction>();
+{
+    SNode outputConcept=SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.DotExpression");
+    SNode childConcept=(SNode)_context.getChildConcept();
+    if (SConceptOperations.isSuperConceptOf(childConcept,NameUtil.nodeFQName(outputConcept))) {
+      Calculable calc=new Calculable(){
+        public Object calculate(){
+          SNode classConcept=SNodeOperations.getAncestor(_context.getParentNode(),"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false);
+          List<SNode> fieldDeclarations=(List<SNode>)Classifier_Behavior.call_getVisibleMembers_1213877306257(classConcept,_context.getParentNode(),IClassifiersSearchScope.INSTANCE_FIELD);
+          final Set<String> localNames=new HashSet<String>();
+          ListSequence.fromList(new LocalVariablesScope(_context.getParentNode()).getNodes()).visitAll(new IVisitor<SNode>(){
+            public void visit(            SNode it){
+              localNames.add(SPropertyOperations.getString(it,"name"));
+            }
+          }
+);
+          for (          SNode method : ListSequence.fromList(SNodeOperations.getAncestors(_context.getParentNode(),"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration",true))) {
+            ListSequence.fromList(SLinkOperations.getTargets(method,"parameter",true)).visitAll(new IVisitor<SNode>(){
+              public void visit(              SNode it){
+                localNames.add(SPropertyOperations.getString(it,"name"));
+              }
+            }
+);
+          }
+          return ListSequence.fromList(fieldDeclarations).where(new IWhereFilter<SNode>(){
+            public boolean accept(            SNode it){
+              return !(localNames.contains(SPropertyOperations.getString(it,"name")));
+            }
+          }
+).toListSequence();
+        }
+      }
+;
+      Iterable<SNode> queryResult=(Iterable)calc.calculate();
+      if (queryResult != null) {
+        for (        final SNode item : queryResult) {
+          result.add(new DefaultChildNodeSubstituteAction(outputConcept,item,_context.getParentNode(),_context.getCurrentTargetNode(),_context.getChildSetter(),operationContext.getScope()){
+            public SNode createChildNode(            Object parameterObject,            SModel model,            String pattern){
+              SNode operationExpression=SModelOperations.createNewNode(model,"jetbrains.mps.baseLanguage.structure.DotExpression",null);
+              SLinkOperations.setTarget(SLinkOperations.setNewChild(operationExpression,"operation","jetbrains.mps.baseLanguage.structure.FieldReferenceOperation"),"fieldDeclaration",(item),false);
+              SLinkOperations.setNewChild(operationExpression,"operand","jetbrains.mps.baseLanguage.structure.ThisExpression");
+              return operationExpression;
+            }
+            public String getDescriptionText(            String pattern){
+              return "this." + SPropertyOperations.getString((item),"name");
+            }
+          }
+);
+        }
+      }
+    }
+  }
+  return result;
 }

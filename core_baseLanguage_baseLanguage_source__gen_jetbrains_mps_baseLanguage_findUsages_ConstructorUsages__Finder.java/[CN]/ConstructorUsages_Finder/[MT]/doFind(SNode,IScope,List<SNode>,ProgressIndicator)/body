@@ -1,2 +1,48 @@
 {
+  for (  SNode nodeUsage : ListSequence.fromList(FindUtils.executeFinder("jetbrains.mps.lang.structure.findUsages.NodeUsages_Finder",node,scope,indicator))) {
+    ListOperations.addElement(_results,nodeUsage);
+  }
+  for (  SNode subclassResult : ListSequence.fromList(FindUtils.executeFinder("jetbrains.mps.baseLanguage.findUsages.StraightDerivedClasses_Finder",SNodeOperations.getAncestor(node,"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false),scope,indicator))) {
+    for (    SNode constructorNode : ListSequence.fromList(SLinkOperations.getTargets(subclassResult,"constructor",true))) {
+      for (      SNode invocation : ListSequence.fromList(SNodeOperations.getDescendants(constructorNode,null,false)).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return SNodeOperations.isInstanceOf(it,"jetbrains.mps.baseLanguage.structure.SuperConstructorInvocation");
+        }
+      }
+)) {
+        boolean thisConstructor=true;
+        SNode invocationNode=(SNode)invocation;
+        if (ListSequence.fromList(SLinkOperations.getTargets(invocationNode,"actualArgument",true)).count() == ListSequence.fromList(SLinkOperations.getTargets(node,"parameter",true)).count()) {
+          for (int i=0; i < ListSequence.fromList(SLinkOperations.getTargets(invocationNode,"actualArgument",true)).count(); i=i + 1) {
+            SNode actualArgument=ListSequence.fromList(SLinkOperations.getTargets(invocationNode,"actualArgument",true)).getElement(i);
+            SNode formalArgument=ListSequence.fromList(SLinkOperations.getTargets(node,"parameter",true)).getElement(i);
+            if (!(TypeChecker.getInstance().getSubtypingManager().isSubtype(TypeChecker.getInstance().getTypeOf(actualArgument),SLinkOperations.getTarget(formalArgument,"type",true)))) {
+              thisConstructor=false;
+            }
+          }
+          if (thisConstructor) {
+            ListOperations.addElement(_results,invocationNode);
+          }
+        }
+      }
+    }
+  }
+  SNode enumNode=SNodeOperations.getAncestor(node,"jetbrains.mps.baseLanguage.structure.EnumClass",false,false);
+  if (enumNode != null) {
+    for (    SNode enumConstant : ListSequence.fromList(SLinkOperations.getTargets(enumNode,"enumConstant",true))) {
+      boolean thisConstructor=true;
+      if (ListSequence.fromList(SLinkOperations.getTargets(enumConstant,"actualArgument",true)).count() == ListSequence.fromList(SLinkOperations.getTargets(node,"parameter",true)).count()) {
+        for (int i=0; i < ListSequence.fromList(SLinkOperations.getTargets(enumConstant,"actualArgument",true)).count(); i=i + 1) {
+          SNode actualArgument=ListSequence.fromList(SLinkOperations.getTargets(enumConstant,"actualArgument",true)).getElement(i);
+          SNode formalArgument=ListSequence.fromList(SLinkOperations.getTargets(node,"parameter",true)).getElement(i);
+          if (!(TypeChecker.getInstance().getSubtypingManager().isSubtype(TypeChecker.getInstance().getTypeOf(actualArgument),SLinkOperations.getTarget(formalArgument,"type",true)))) {
+            thisConstructor=false;
+          }
+        }
+        if (thisConstructor) {
+          ListOperations.addElement(_results,enumConstant);
+        }
+      }
+    }
+  }
 }
