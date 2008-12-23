@@ -21,6 +21,35 @@
  else {
     saveTransientModels=false;
   }
+  if (!myGeneratingRequirements) {
+    boolean wasSaveTransientModels=isSaveTransientModels();
+    myGeneratingRequirements=true;
+    try {
+      final List<SModelDescriptor> requirements=new ArrayList<SModelDescriptor>();
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          for (          Pair<SModelDescriptor,IOperationContext> inputModel : inputModels) {
+            requirements.addAll(getModelsToGenerateBeforeGeneration(inputModel.o1,inputModel.o2));
+          }
+        }
+      }
+);
+      if (!requirements.isEmpty()) {
+        String message="The following models might be required for generation\n" + "but aren't generated. Do you want to generate them?\n";
+        for (        SModelDescriptor sm : requirements) {
+          message+="\n" + sm.getSModelFqName();
+        }
+        int result=Messages.showYesNoDialog(myProject,message,"Generate Required Models",Messages.getWarningIcon());
+        if (result == 0) {
+          generateModelsFromDifferentModules(invocationContext,requirements,IGenerationType.FILES);
+        }
+      }
+    }
+  finally {
+      setSaveTransientModels(wasSaveTransientModels);
+      myGeneratingRequirements=false;
+    }
+  }
   ModelAccess.instance().runWriteActionInCommand(new Runnable(){
     public void run(){
       SModelRepository.getInstance().saveAll();
