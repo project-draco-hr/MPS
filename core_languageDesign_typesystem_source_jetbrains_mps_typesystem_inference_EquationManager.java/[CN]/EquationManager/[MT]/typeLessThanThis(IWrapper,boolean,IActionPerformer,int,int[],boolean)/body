@@ -1,0 +1,47 @@
+{
+  final Map<IWrapper,Map<IWrapper,EquationInfo>> supertypesToSubtypesMap;
+  final Map<IWrapper,Map<IWrapper,EquationInfo>> subtypesToSupertypesMap;
+  if (isWeak) {
+    supertypesToSubtypesMap=mySupertypesToSubtypesMap;
+    subtypesToSupertypesMap=mySubtypesToSupertypesMap;
+  }
+ else {
+    supertypesToSubtypesMap=mySupertypesToSubtypesMapStrong;
+    subtypesToSupertypesMap=mySubtypesToSupertypesMapStrong;
+  }
+  Map<IWrapper,EquationInfo> subtypes=supertypesToSubtypesMap.get(thisType);
+  if (subtypes == null) {
+    return false;
+  }
+  if (subtypes.isEmpty()) {
+    supertypesToSubtypesMap.remove(thisType);
+    return false;
+  }
+  Set<IWrapper> concreteSubtypes=new HashSet<IWrapper>();
+  for (  IWrapper subtypeNode : new HashSet<IWrapper>(subtypes.keySet())) {
+    if (subtypeNode == null) {
+      subtypes.remove(subtypeNode);
+      continue;
+    }
+    int inequationPriority=subtypes.get(subtypeNode).getInequationPriority();
+    if (subtypeNode.isConcrete() && isShallow || isConcrete(subtypeNode)) {
+      minPriority[0]=Math.min(minPriority[0],inequationPriority);
+      if (inequationPriority <= priority) {
+        concreteSubtypes.add(subtypeNode);
+      }
+    }
+  }
+  if (concreteSubtypes.isEmpty())   return false;
+  Map<IWrapper,EquationInfo> equationInfoMap=new HashMap<IWrapper,EquationInfo>();
+  for (  IWrapper concreteSubtype : concreteSubtypes) {
+    EquationInfo errorInfo=subtypesToSupertypesMap.get(concreteSubtype).get(thisType);
+    equationInfoMap.put(concreteSubtype,errorInfo);
+  }
+  EquationInfo equationInfo=subtypesToSupertypesMap.get(concreteSubtypes.iterator().next()).get(thisType);
+  for (  IWrapper subtypeNode : concreteSubtypes) {
+    supertypesToSubtypesMap.get(thisType).remove(subtypeNode);
+    subtypesToSupertypesMap.get(subtypeNode).remove(thisType);
+  }
+  action.performAction(thisType,concreteSubtypes,equationInfoMap,isWeak,equationInfo);
+  return true;
+}

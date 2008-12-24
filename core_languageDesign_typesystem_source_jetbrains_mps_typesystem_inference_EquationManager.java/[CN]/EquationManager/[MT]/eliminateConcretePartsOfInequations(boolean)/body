@@ -1,0 +1,34 @@
+{
+  Set<IWrapper> types=subtypingGraphVertices();
+  boolean hasConcreteTypes=true;
+  int priority=0;
+  while (hasConcreteTypes) {
+    int[] minPriority=new int[]{Integer.MAX_VALUE};
+    startCollectingConcretes();
+    hasConcreteTypes=false;
+    for (    IWrapper type : types) {
+      if (type == null)       continue;
+      if (!type.isConcrete()) {
+        typeLessThanVar(type,true,priority,minPriority,shallow);
+        typeLessThanVar(type,false,priority,minPriority,shallow);
+        varLessThanType(type,true,priority,minPriority,shallow);
+        varLessThanType(type,false,priority,minPriority,shallow);
+      }
+ else       if ((shallow && type.isConcrete()) || (!shallow && isConcrete(type))) {
+        if (shallow) {
+          hasConcreteTypes=true;
+        }
+        hasConcreteTypes=typeLessThanConcrete(type,true,priority,minPriority,shallow) || hasConcreteTypes;
+        hasConcreteTypes=typeLessThanConcrete(type,false,priority,minPriority,shallow) || hasConcreteTypes;
+        hasConcreteTypes=concreteLessThanType(type,true,priority,minPriority,shallow) || hasConcreteTypes;
+        hasConcreteTypes=concreteLessThanType(type,false,priority,minPriority,shallow) || hasConcreteTypes;
+      }
+    }
+    processConcretes();
+    if (minPriority[0] < Integer.MAX_VALUE && minPriority[0] > priority) {
+      priority=minPriority[0];
+    }
+    types=subtypingGraphVertices();
+  }
+  return types;
+}
