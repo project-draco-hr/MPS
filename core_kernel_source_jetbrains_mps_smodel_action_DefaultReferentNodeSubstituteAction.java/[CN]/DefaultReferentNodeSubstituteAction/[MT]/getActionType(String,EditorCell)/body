@@ -1,7 +1,8 @@
 {
   HashMap<SNode,SNode> mapping=new HashMap<SNode,SNode>();
   SModel auxModel=AuxilaryRuntimeModel.getDescriptor().getSModel();
-  SNode nodeCopyRoot=CopyUtil.copy(CollectionUtil.list(mySourceNode.getContainingRoot()),mapping).get(0);
+  SNode sourceNodePeer=getSourceNode();
+  SNode nodeCopyRoot=CopyUtil.copy(CollectionUtil.list(sourceNodePeer.getContainingRoot()),mapping).get(0);
   boolean wasLoading=auxModel.isLoading();
   auxModel.setLoading(true);
   try {
@@ -9,8 +10,8 @@
       auxModel.addRoot(nodeCopyRoot);
     }
     String role=SModelUtil_new.getGenuineLinkRole(myLinkDeclaration);
-    SNode sourceNode=mapping.get(mySourceNode);
-    SNode nodeToEquatePeer=mySourceNode;
+    SNode sourceNode=mapping.get(sourceNodePeer);
+    SNode nodeToEquatePeer=sourceNodePeer;
     TypeChecker typeChecker=TypeChecker.getInstance();
     while (nodeToEquatePeer != null && typeChecker.getTypeOf(nodeToEquatePeer) == null) {
       nodeToEquatePeer=nodeToEquatePeer.getParent();
@@ -23,11 +24,10 @@
     if (parent == null) {
       return null;
     }
-    SNode hole=SModelUtil_new.instantiateConceptDeclaration("jetbrains.mps.lang.core.structure.BaseConcept",auxModel,GlobalScope.getInstance());
-    parent.replaceChild(nodeToEquate,hole);
-    InequationSystem inequationsForHole=TypeChecker.getInstance().getInequationsForHole(hole);
+    sourceNode.setReferent(role,(SNode)getParameterObject());
+    SNode type=TypeChecker.getInstance().getTypeOf(nodeToEquate);
     auxModel.removeRoot(nodeCopyRoot);
-    return inequationsForHole;
+    return type;
   }
   finally {
     auxModel.setLoading(wasLoading);
