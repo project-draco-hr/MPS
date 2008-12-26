@@ -1,3 +1,32 @@
 {
-  add(message,(String)null);
+  if (IdeMain.isTestMode()) {
+    return;
+  }
+  myMessagesInProgress.incrementAndGet();
+  ThreadUtils.runInUIThreadNoWait(new Runnable(){
+    public void run(){
+      int messages=myMessagesInProgress.decrementAndGet();
+      if (myMessages.size() >= MAX_MESSAGES_SIZE) {
+        Message toRemove=myMessages.remove();
+        if (isVisible(toRemove)) {
+          myModel.removeElement(toRemove);
+        }
+      }
+      if (isVisible(message)) {
+        myModel.addElement(message);
+        int index=myModel.size() - 1;
+        myList.getSelectionModel().setSelectionInterval(index,index);
+        if (messages == 0) {
+          myList.ensureIndexIsVisible(index);
+        }
+      }
+      myMessages.add(message);
+      int width=getMessageWidth(message);
+      if (width > myList.getFixedCellWidth()) {
+        myList.setFixedCellWidth(width);
+      }
+      updateActions();
+    }
+  }
+);
 }
