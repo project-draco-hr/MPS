@@ -8,16 +8,25 @@
     side=CellSide.RIGHT;
   }
   myCaretIsVisible=true;
-  if (isEditable() && processMutableKeyTyped(keyEvent,allowErrors)) {
-    getEditorContext().flushEvents();
-    getEditor().relayout();
-    if (isErrorState()) {
-      if (allowsIntelligentInputKeyStroke(keyEvent)) {
-        String pattern=this.getRenderedText();
-        IntelligentInputUtil.processCell(this,getEditorContext(),pattern,side);
+  if (isEditable()) {
+    final boolean result[]=new boolean[1];
+    getEditorContext().executeCommand(new Runnable(){
+      public void run(){
+        result[0]=processMutableKeyTyped(keyEvent,allowErrors);
       }
     }
-    return true;
+);
+    if (result[0]) {
+      getEditorContext().flushEvents();
+      getEditor().relayout();
+      if (isErrorState()) {
+        if (allowsIntelligentInputKeyStroke(keyEvent)) {
+          String pattern=this.getRenderedText();
+          IntelligentInputUtil.processCell(this,getEditorContext(),pattern,side);
+        }
+      }
+      return true;
+    }
   }
   if (!isEditable() && allowsIntelligentInputKeyStroke(keyEvent)) {
     String pattern=getRenderedTextOn(keyEvent);
