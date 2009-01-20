@@ -1,2 +1,32 @@
 {
+  List<INodeSubstituteAction> result=new ArrayList<INodeSubstituteAction>();
+{
+    SNode concept=SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.Type");
+    Iterable<SNode> concepts=ListOperations.<SNode>createList(concept);
+    concepts=SequenceOperations.concat(concepts,SConceptOperations.getAllSubConcepts(concept,_context.getModel(),operationContext.getScope()));
+    for (    final SNode subconcept : concepts) {
+      if (!(SNodeOperations.isInstanceOf(subconcept,"jetbrains.mps.lang.structure.structure.ConceptDeclaration"))) {
+        continue;
+      }
+      if (SConceptPropertyOperations.getBoolean(subconcept,"abstract")) {
+        continue;
+      }
+      result.add(new AbstractSideTransformHintSubstituteAction(subconcept,_context.getSourceNode()){
+        public SNode doSubstitute(        String pattern){
+          SNode result=SConceptOperations.createNewNode(NameUtil.nodeFQName(subconcept),null);
+{
+            SNode statement=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.LocalVariableDeclarationStatement",null);
+            SNodeOperations.replaceWithAnother(SNodeOperations.getParent(_context.getSourceNode()),statement);
+            SNode localVariableDeclaration=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.LocalVariableDeclaration",null);
+            SLinkOperations.setTarget(statement,"localVariableDeclaration",localVariableDeclaration,true);
+            SLinkOperations.setTarget(localVariableDeclaration,"type",result,true);
+            SLinkOperations.setTarget(localVariableDeclaration,"initializer",_context.getSourceNode(),true);
+            return result;
+          }
+        }
+      }
+);
+    }
+  }
+  return result;
 }
