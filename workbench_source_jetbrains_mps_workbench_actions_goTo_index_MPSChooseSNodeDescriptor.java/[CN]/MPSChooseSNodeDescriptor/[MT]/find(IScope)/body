@@ -1,0 +1,28 @@
+{
+  ensureCachesAreUpToDate();
+  final Set<SNodeDescriptor> keys=new HashSet<SNodeDescriptor>();
+  final Set<SModelReference> hasToLoad=new HashSet<SModelReference>();
+  final Set<SModelReference> changedModels=new HashSet<SModelReference>();
+  for (  SModelDescriptor sm : SModelRepository.getInstance().getChangedModels()) {
+    changedModels.add(sm.getSModelReference());
+  }
+  FileBasedIndex.getInstance().processAllKeys(RootNodeNameIndex.NAME,new Processor<SNodeDescriptor>(){
+    public boolean process(    SNodeDescriptor s){
+      if (s.isDependOnOtherModel() || changedModels.contains(s.getModelReference())) {
+        hasToLoad.add(s.getModelReference());
+      }
+ else {
+        keys.add(s);
+      }
+      return true;
+    }
+  }
+);
+  for (  SModelReference ref : hasToLoad) {
+    SModelDescriptor sm=scope.getModelDescriptor(ref);
+    for (    SNode root : sm.getSModel().getRoots()) {
+      keys.add(new SNodeDescriptor(NameUtil.nodeFQName(root),root.getConceptFqName(),root.getModel().getSModelReference(),true));
+    }
+  }
+  return keys.toArray(new SNodeDescriptor[keys.size()]);
+}

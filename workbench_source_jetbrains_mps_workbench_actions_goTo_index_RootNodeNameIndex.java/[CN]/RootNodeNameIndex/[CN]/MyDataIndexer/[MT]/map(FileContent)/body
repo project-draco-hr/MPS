@@ -1,0 +1,39 @@
+{
+  final Map<SNodeDescriptor,Void> result=new HashMap<SNodeDescriptor,Void>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      try {
+        SModel model=ModelPersistence.readModel(inputData);
+        if (model == null)         return;
+        DependencyRecorder<SNode> recorder=new DependencyRecorder<SNode>();
+        List<SNode> roots=model.getRoots();
+        for (        final SNode root : roots) {
+          recorder.rebuild(root,new Runnable(){
+            public void run(){
+              root.getName();
+            }
+          }
+);
+          boolean dependOnOtherModel=false;
+          for (          SNode node : recorder.getDependencies(root)) {
+            if (node.getModel() != model) {
+              dependOnOtherModel=true;
+            }
+          }
+          String nodeName=NameUtil.nodeFQName(root);
+          String conceptFqName=root.getConceptFqName();
+          SModelReference modelRef=model.getSModelReference();
+          result.put(new SNodeDescriptor((nodeName == null) ? "null" : nodeName,conceptFqName,modelRef,dependOnOtherModel),null);
+        }
+      }
+ catch (      JDOMException e) {
+        e.printStackTrace();
+      }
+catch (      IOException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+);
+  return result;
+}
