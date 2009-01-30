@@ -1,0 +1,30 @@
+{
+  URL resource=LibraryManager.class.getResource(CONFIG_FILE_NAME);
+  if (resource == null)   return;
+  File configFile=new File(resource.getFile());
+  if (!configFile.exists())   return;
+  try {
+    Document document=JDOMUtil.loadDocument(configFile);
+    Element element=document.getRootElement();
+    List children=element.getChildren(LIBRARY_TAG);
+    for (    Object childObj : children) {
+      Element child=(Element)childObj;
+      String name=child.getAttribute(LIBRARY_NAME_TAG).getValue();
+      String path=child.getAttribute(LIBRARY_PATH_TAG).getValue();
+      final String realPath=Macros.mpsHomeMacros().expandPath(path,new File(PathManager.getHomePath()));
+      PredefinedLibrary predefinedLibrary=new PredefinedLibrary(name){
+        @Override public String getPath(){
+          return realPath;
+        }
+      }
+;
+      libraryMap.put(name,predefinedLibrary);
+    }
+  }
+ catch (  JDOMException e) {
+    LOG.error(e);
+  }
+catch (  IOException e) {
+    LOG.error(e);
+  }
+}
