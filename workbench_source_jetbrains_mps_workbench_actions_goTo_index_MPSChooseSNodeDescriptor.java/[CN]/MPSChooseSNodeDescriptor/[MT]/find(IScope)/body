@@ -4,15 +4,27 @@
   final Set<SModelReference> hasToLoad=new HashSet<SModelReference>();
   final Set<SModelReference> changedModels=new HashSet<SModelReference>();
   for (  SModelDescriptor sm : SModelRepository.getInstance().getChangedModels()) {
-    changedModels.add(sm.getSModelReference());
+    if (scope instanceof GlobalScope || scope.getModelDescriptors().contains(sm)) {
+      changedModels.add(sm.getSModelReference());
+    }
   }
-  FileBasedIndex.getInstance().processAllKeys(RootNodeNameIndex.NAME,new Processor<SNodeDescriptor>(){
+  ID<SNodeDescriptor,Void> indexName;
+  if (myIndex instanceof RootNodeNameIndex) {
+    indexName=RootNodeNameIndex.NAME;
+  }
+ else   if (myIndex instanceof NamedNodeIndex) {
+    indexName=NamedNodeIndex.NAME;
+  }
+ else   return null;
+  FileBasedIndex.getInstance().processAllKeys(indexName,new Processor<SNodeDescriptor>(){
     public boolean process(    SNodeDescriptor s){
-      if (s.isDependOnOtherModel() || changedModels.contains(s.getModelReference())) {
-        hasToLoad.add(s.getModelReference());
-      }
+      if (scope instanceof GlobalScope || scope.getModelDescriptor(s.getModelReference()) != null) {
+        if (s.isDependOnOtherModel() || changedModels.contains(s.getModelReference())) {
+          hasToLoad.add(s.getModelReference());
+        }
  else {
-        keys.add(s);
+          keys.add(s);
+        }
       }
       return true;
     }
@@ -20,7 +32,7 @@
 );
   for (  SModelReference ref : hasToLoad) {
     SModelDescriptor sm=scope.getModelDescriptor(ref);
-    List<SNode> roots=sm.getSModel().getRoots();
+    List<SNode> roots=((BaseSNodeDescriptorIndexer)myIndex.getIndexer()).getNodes(sm.getSModel());
     for (    SNode root : roots) {
       int number=roots.indexOf(root);
       String nodeName=(root.getName() == null) ? "null" : root.getName();
