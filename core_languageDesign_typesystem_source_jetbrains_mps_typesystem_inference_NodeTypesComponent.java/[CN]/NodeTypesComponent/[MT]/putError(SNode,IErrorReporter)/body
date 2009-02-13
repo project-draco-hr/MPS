@@ -1,14 +1,38 @@
 {
-  Map<SNode,IErrorReporter> map;
   if (myIsNonTypesystemCheckingInProgress) {
-    map=myNodesToNonTypesystemErrorsMap;
+    Stack<IErrorReporter> iErrorReporters=myNodesToNonTypesystemErrorsMap.get(node);
+    if (iErrorReporters == null) {
+      iErrorReporters=new Stack<IErrorReporter>();
+      myNodesToNonTypesystemErrorsMap.put(node,iErrorReporters);
+    }
+    iErrorReporters.push(errorReporter);
+    Collections.sort(iErrorReporters,new Comparator<IErrorReporter>(){
+      public int compare(      IErrorReporter o1,      IErrorReporter o2){
+        return o1.getMessageStatus().compareTo(o2.getMessageStatus());
+      }
+    }
+);
+    if (myNonTypesystemRuleAndNodeBeingChecked != null) {
+      SNode currentNode=myNonTypesystemRuleAndNodeBeingChecked.o1;
+      NonTypesystemRule_Runtime currentRule=myNonTypesystemRuleAndNodeBeingChecked.o2;
+      Map<NonTypesystemRule_Runtime,Set<IErrorReporter>> rulesToErrorsMap=myNodesAndNTRulesToErrors.get(currentNode);
+      if (rulesToErrorsMap == null) {
+        rulesToErrorsMap=new HashMap<NonTypesystemRule_Runtime,Set<IErrorReporter>>();
+        myNodesAndNTRulesToErrors.put(currentNode,rulesToErrorsMap);
+      }
+      Set<IErrorReporter> errorsSet=rulesToErrorsMap.get(currentRule);
+      if (errorsSet == null) {
+        errorsSet=new HashSet<IErrorReporter>();
+        rulesToErrorsMap.put(currentRule,errorsSet);
+      }
+      errorsSet.add(errorReporter);
+    }
   }
  else {
-    map=myNodesToErrorsMap;
+    IErrorReporter former=myNodesToErrorsMap.get(node);
+    if (former != null && former.getMessageStatus().compareTo(errorReporter.getMessageStatus()) > 0) {
+      return;
+    }
+    myNodesToErrorsMap.put(node,errorReporter);
   }
-  IErrorReporter former=map.get(node);
-  if (former != null && former.getMessageStatus().compareTo(errorReporter.getMessageStatus()) > 0) {
-    return;
-  }
-  map.put(node,errorReporter);
 }

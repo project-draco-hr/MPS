@@ -2,8 +2,6 @@
   SNode root=myRootNode;
   if (root == null)   return;
   doInvalidateNonTypesystem(events);
-  myPartlyCheckedNodesNonTypesystem.addAll(myFullyCheckedNodesNonTypesystem);
-  myFullyCheckedNodesNonTypesystem.clear();
   myIsNonTypesystemCheckingInProgress=true;
   try {
     Set<SNode> frontier=new LinkedHashSet<SNode>();
@@ -11,34 +9,8 @@
     frontier.add(root);
     while (!(frontier.isEmpty())) {
       for (      SNode sNode : frontier) {
-        if (myFullyCheckedNodesNonTypesystem.contains(sNode)) {
-          continue;
-        }
         newFrontier.addAll(sNode.getChildren());
-        if (!myPartlyCheckedNodesNonTypesystem.contains(sNode)) {
-          if (isIncrementalMode()) {
-            myNodesReadListener.clear();
-            NodeReadEventsCaster.setNodesReadListener(myNodesReadListener);
-          }
-          try {
-            applyNonTypesystemRulesToNode(sNode);
-          }
-  finally {
-            if (isIncrementalMode()) {
-              NodeReadEventsCaster.removeNodesReadListener();
-            }
-          }
-          if (isIncrementalMode()) {
-synchronized (ACCESS_LOCK) {
-              myNodesReadListener.setAccessReport(true);
-              addDepedentNodesNonTypesystem(sNode,new HashSet<SNode>(myNodesReadListener.myAcessedNodes));
-              myNodesReadListener.setAccessReport(false);
-            }
-            myNodesReadListener.clear();
-          }
-          myPartlyCheckedNodesNonTypesystem.add(sNode);
-        }
-        myFullyCheckedNodesNonTypesystem.add(sNode);
+        applyNonTypesystemRulesToNode(sNode);
       }
       frontier=newFrontier;
       newFrontier=new LinkedHashSet<SNode>();

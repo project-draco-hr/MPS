@@ -1,3 +1,27 @@
 {
-  doInvalidate(true);
+  Set<Pair<SNode,NonTypesystemRule_Runtime>> invalidatedNodesAndRules=new HashSet<Pair<SNode,NonTypesystemRule_Runtime>>();
+  for (  SNode node : myCurrentNodesToInvalidateNonTypesystem) {
+    WeakHashMap<SNode,NonTypesystemRule_Runtime> nodesAndRules=myNodesToDependentNodesWithNTRules.get(node);
+    if (nodesAndRules != null) {
+      for (      Entry<SNode,NonTypesystemRule_Runtime> entry : nodesAndRules.entrySet()) {
+        invalidatedNodesAndRules.add(new Pair<SNode,NonTypesystemRule_Runtime>(entry.getKey(),entry.getValue()));
+      }
+    }
+  }
+  for (  Pair<SNode,NonTypesystemRule_Runtime> nodeAndRule : invalidatedNodesAndRules) {
+    myCheckedNodesNonTypesystem.remove(nodeAndRule);
+    Map<NonTypesystemRule_Runtime,Set<IErrorReporter>> rulesAndErrors=myNodesAndNTRulesToErrors.get(nodeAndRule.o1);
+    if (rulesAndErrors != null) {
+      Set<IErrorReporter> errors=rulesAndErrors.get(nodeAndRule.o2);
+      if (errors != null) {
+        for (        IErrorReporter errorReporter : errors) {
+          Stack<IErrorReporter> iErrorReporters=myNodesToNonTypesystemErrorsMap.get(errorReporter.getSNode());
+          if (iErrorReporters != null) {
+            iErrorReporters.remove(errorReporter);
+          }
+        }
+      }
+    }
+  }
+  myCurrentNodesToInvalidateNonTypesystem.clear();
 }
