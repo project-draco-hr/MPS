@@ -1,11 +1,22 @@
 {
   myGenerator=generator;
-  ConceptDeclaration baseConcept=SModelUtil_new.getBaseConcept();
-  myRules_applicableExactly.put(baseConcept,new ArrayList<Reduction_MappingRule>(3));
-  myRules_applicableInheritor.put(baseConcept,new ArrayList<Reduction_MappingRule>(5));
+  Map<String,List<Reduction_MappingRule>> applicableRules=new HashMap<String,List<Reduction_MappingRule>>();
   for (  Reduction_MappingRule rule : reductionRules) {
-    AbstractConceptDeclaration applicableConcept=rule.getApplicableConcept();
-    if (applicableConcept == null)     applicableConcept=baseConcept;
-    addRule_applicableExactly(applicableConcept,rule);
+    Set<String> applicableTo=new LinkedHashSet<String>();
+    String applicableConceptFqName=NameUtil.nodeFQName(rule.getApplicableConcept());
+    applicableTo.add(applicableConceptFqName);
+    if (rule.getApplyToConceptInheritors()) {
+      applicableTo.addAll(LanguageHierarchyCache.getInstance().getAllDescendantsOfConcept(applicableConceptFqName));
+    }
+    for (    String conceptFqName : applicableTo) {
+      if (!applicableRules.containsKey(conceptFqName)) {
+        applicableRules.put(conceptFqName,new ArrayList<Reduction_MappingRule>());
+      }
+      applicableRules.get(conceptFqName).add(rule);
+    }
+  }
+  for (  Entry<String,List<Reduction_MappingRule>> entry : applicableRules.entrySet()) {
+    List<Reduction_MappingRule> rules=entry.getValue();
+    myApplicableRules.put(entry.getKey(),rules.toArray(new Reduction_MappingRule[rules.size()]));
   }
 }
