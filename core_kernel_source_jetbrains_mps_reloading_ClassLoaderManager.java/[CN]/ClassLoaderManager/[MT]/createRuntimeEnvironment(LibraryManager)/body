@@ -1,0 +1,29 @@
+{
+  final Set<String> excludedPackages=new HashSet<String>();
+  final Set<String> generatorPrefixes=new HashSet<String>();
+  for (  Language l : libraryManager.getBootstrapModules(Language.class)) {
+    for (    LanguageAspect aspect : LanguageAspect.values()) {
+      if (aspect == LanguageAspect.STRUCTURE)       continue;
+      excludedPackages.add(l.getNamespace() + "." + aspect.getName());
+    }
+    generatorPrefixes.add(l.getNamespace() + ".generator");
+  }
+  return new RuntimeEnvironment<ModuleReference>(){
+    public Class loadFromParent(    String cls,    RBundle<ModuleReference> bundle){
+      if (MPSModuleRepository.getInstance().getModule(bundle.getId()) instanceof Solution) {
+        return null;
+      }
+      String pack=NameUtil.namespaceFromLongName(cls);
+      if (excludedPackages.contains(pack)) {
+        return null;
+      }
+      for (      String prefix : generatorPrefixes) {
+        if (cls.startsWith(prefix)) {
+          return null;
+        }
+      }
+      return getFromParent(cls);
+    }
+  }
+;
+}
