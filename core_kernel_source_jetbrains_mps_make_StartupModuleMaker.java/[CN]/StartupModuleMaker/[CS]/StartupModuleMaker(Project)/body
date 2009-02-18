@@ -1,24 +1,26 @@
 {
   super(project);
   if (IdeMain.isTestMode())   return;
-  StartupManagerEx.getInstanceEx(myProject).registerPostStartupActivity(new Runnable(){
+  StartupManagerEx.getInstanceEx(myProject).registerPreStartupActivity(new Runnable(){
     public void run(){
-      MakeAllModules_Action action=new MakeAllModules_Action();
-      DataContext dc=new DataContext(){
-        private DataContext myRealContext=DataManager.getInstance().getDataContext();
-        @Nullable public Object getData(        @NonNls String dataId){
-          if (dataId.equals(MPSDataKeys.MPS_PROJECT.getName())) {
-            return myProject.getComponent(MPSProjectHolder.class).getMPSProject();
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          ProgressIndicator indicator=ProgressManager.getInstance().getProgressIndicator();
+          if (indicator == null) {
+            indicator=new EmptyProgressIndicator();
           }
- else {
-            return myRealContext.getData(dataId);
+          indicator.pushState();
+          try {
+            ModuleMaker maker=new ModuleMaker();
+            maker.make(new LinkedHashSet<IModule>(MPSModuleRepository.getInstance().getAllModules()),indicator);
+            ClassLoaderManager.getInstance().reloadAll(indicator);
+          }
+  finally {
+            indicator.popState();
           }
         }
       }
-;
-      AnActionEvent event=ActionUtils.createEvent(ActionPlaces.UNKNOWN,dc);
-      action.update(event);
-      action.actionPerformed(event);
+);
     }
   }
 );
