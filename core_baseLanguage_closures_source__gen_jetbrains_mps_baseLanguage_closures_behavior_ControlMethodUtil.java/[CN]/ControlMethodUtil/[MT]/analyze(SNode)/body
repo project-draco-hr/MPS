@@ -1,0 +1,63 @@
+{
+  if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(smd,"returnType",true),"jetbrains.mps.baseLanguage.structure.VoidType")) {
+    List<SNode> params=SLinkOperations.getTargets(smd,"parameter",true);
+    ControlMethodUtil.Info inf=new ControlMethodUtil.Info();
+    int functionParams=0;
+    int initClosures=0;
+    int controlClosures=0;
+    List<SNode> closureParamTypes=null;
+    for (int idx=params.size() - 1; idx >= 0; idx--) {
+      SNode p=params.get(idx);
+      SNode ptype=SLinkOperations.getTarget(p,"type",true);
+      if (SNodeOperations.isInstanceOf(ptype,"jetbrains.mps.baseLanguage.closures.structure.FunctionType")) {
+        if (functionParams > 0) {
+          return null;
+        }
+        if (SNodeOperations.getConceptDeclaration(ptype) == SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.closures.structure.UnrestrictedFunctionType") && SNodeOperations.isInstanceOf(SLinkOperations.getTarget(ptype,"resultType",true),"jetbrains.mps.baseLanguage.structure.VoidType")) {
+          controlClosures++;
+          inf.addControlClosureType(SNodeOperations.copyNode(ptype));
+          if (closureParamTypes == null) {
+            closureParamTypes=new ArrayList<SNode>();
+            for (            SNode pt : SLinkOperations.getTargets(ptype,"parameterType",true)) {
+              closureParamTypes.add(SNodeOperations.copyNode(pt));
+            }
+          }
+ else           if (closureParamTypes != null && closureParamTypes.size() == SLinkOperations.getCount(ptype,"parameterType")) {
+            int i=0;
+            for (            SNode pt : SLinkOperations.getTargets(ptype,"parameterType",true)) {
+              if (!(MatchingUtil.matchNodes(pt,closureParamTypes.get(i++)))) {
+                return null;
+              }
+            }
+          }
+ else {
+            return null;
+          }
+        }
+ else         if (SLinkOperations.getCount(ptype,"parameterType") == 0 && !(SNodeOperations.isInstanceOf(SLinkOperations.getTarget(ptype,"resultType",true),"jetbrains.mps.baseLanguage.structure.VoidType"))) {
+          if (controlClosures == 0 || initClosures >= closureParamTypes.size()) {
+            return null;
+          }
+          initClosures++;
+          inf.addInitClosureType(SNodeOperations.copyNode(ptype));
+          SNode rt=SLinkOperations.getTarget(ptype,"resultType",true);
+          if (!(MatchingUtil.matchNodes(rt,closureParamTypes.get(closureParamTypes.size() - initClosures)))) {
+            return null;
+          }
+        }
+ else {
+          return null;
+        }
+      }
+ else       if (controlClosures > 0) {
+        functionParams++;
+        inf.addFunctionParameterType(SNodeOperations.copyNode(ptype));
+      }
+ else {
+        return null;
+      }
+    }
+    return inf;
+  }
+  return null;
+}
