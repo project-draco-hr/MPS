@@ -1,2 +1,48 @@
 {
+  ensureCachesAreUpToDate();
+  final Set<SNodeDescriptor> keys=new HashSet<SNodeDescriptor>();
+  final Set<SModelReference> hasToLoad=new HashSet<SModelReference>();
+  final Set<SModelReference> changedModels=new HashSet<SModelReference>();
+  for (  SModelDescriptor sm : SModelRepository.getInstance().getChangedModels()) {
+    if (scope instanceof GlobalScope || scope.getModelDescriptors().contains(sm)) {
+      changedModels.add(sm.getSModelReference());
+    }
+  }
+  ID<SNodeDescriptor,Void> indexName;
+  if (myIndex instanceof RootNodeNameIndex) {
+    indexName=RootNodeNameIndex.NAME;
+  }
+ else   if (myIndex instanceof NamedNodeIndex) {
+    indexName=NamedNodeIndex.NAME;
+  }
+ else   return null;
+  FileBasedIndex.getInstance().processAllKeys(indexName,new Processor<SNodeDescriptor>(){
+    public boolean process(    SNodeDescriptor s){
+      if (scope instanceof GlobalScope || scope.getModelDescriptor(s.getModelReference()) != null) {
+        if (s.isDependOnOtherModel() || s.isInvalid() || changedModels.contains(s.getModelReference())) {
+          s.setInvalid(false);
+          hasToLoad.add(s.getModelReference());
+        }
+ else {
+          keys.add(s);
+        }
+      }
+      return true;
+    }
+  }
+);
+  for (  SModelReference ref : hasToLoad) {
+    SModelDescriptor sm=scope.getModelDescriptor(ref);
+    if (sm == null)     continue;
+    List<SNode> roots=((BaseSNodeDescriptorIndexer)myIndex.getIndexer()).getNodes(sm.getSModel());
+    for (    SNode root : roots) {
+      int number=roots.indexOf(root);
+      String nodeName=(root.getName() == null) ? "null" : root.getName();
+      SNodeDescriptor nodeDescriptor=SNodeDescriptor.fromModelReference(nodeName,root.getConceptFqName(),root.getModel().getSModelReference(),true,false,number);
+      if (!keys.contains(nodeDescriptor)) {
+        keys.add(nodeDescriptor);
+      }
+    }
+  }
+  return keys.toArray(new SNodeDescriptor[keys.size()]);
 }
