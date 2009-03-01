@@ -1,29 +1,30 @@
 {
   super.read(element,project);
-  Element finderXML=element.getChild(FINDER);
-  String finderName=finderXML.getAttribute(CLASS_NAME).getValue();
-  try {
-    Class finderClass=null;
-    for (    Language l : project.getProjectLanguages()) {
-      finderClass=l.getClass(finderName);
-      if (finderClass != null)       break;
-    }
-    if (finderClass == null) {
-      try {
-        finderClass=Class.forName(finderName);
-      }
- catch (      ClassNotFoundException e) {
-        finderClass=null;
-      }
-    }
-    if (finderClass != null) {
+  if (element.getChild(FINDER) != null) {
+    Element finderXML=element.getChild(FINDER);
+    String finderName=finderXML.getAttribute(CLASS_NAME).getValue();
+    try {
+      Class finderClass=Class.forName(finderName);
       myFinder=(IFinder)finderClass.newInstance();
     }
- else {
-      throw new CantLoadSomethingException("Can't find finder class " + finderName);
+ catch (    Throwable t) {
+      throw new CantLoadSomethingException("Can't instantiate finder " + finderName,t);
     }
   }
- catch (  Throwable t) {
-    throw new CantLoadSomethingException("Can't find or read finder " + finderName,t);
+ else {
+    Element finderXML=element.getChild(GENERATED_FINDER);
+    String finderName=finderXML.getAttribute(CLASS_NAME).getValue();
+    try {
+      for (      Language l : project.getProjectLanguages()) {
+        if (l.getClass(finderName) != null) {
+          myFinder=new ReloadableFinder(l.getModuleReference(),finderName);
+          break;
+        }
+      }
+      throw new CantLoadSomethingException("Can't find finder " + finderName);
+    }
+ catch (    Throwable t) {
+      throw new CantLoadSomethingException("Can't instantiate finder " + finderName,t);
+    }
   }
 }
