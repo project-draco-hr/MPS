@@ -1,9 +1,16 @@
 {
   Set<OverloadedOperationsTypesProvider> operationsTypesProviderSet=myOperationsToTypeProviders.getRules(operation);
-  operationsTypesProviderSet.retainAll(myOperandTypesToTypeProviders.getRules(leftOperandType,rightOperandType));
   if (operationsTypesProviderSet.isEmpty()) {
     return null;
   }
-  OverloadedOperationsTypesProvider provider=operationsTypesProviderSet.iterator().next();
-  return provider.getOperationType(operation,leftOperandType,rightOperandType);
+  SubtypingManager subtypingManager=myTypeChecker.getSubtypingManager();
+  for (  OverloadedOperationsTypesProvider provider : operationsTypesProviderSet) {
+    if (subtypingManager.isSubtype(rightOperandType,provider.getRightOperandType()) && subtypingManager.isSubtype(leftOperandType,provider.getLeftOperandType())) {
+      SNode result=provider.getOperationType(operation,leftOperandType,rightOperandType);
+      if (result != null) {
+        return result;
+      }
+    }
+  }
+  return null;
 }
