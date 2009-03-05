@@ -5,13 +5,15 @@
   StringBuilder sourceBuilder=new StringBuilder();
   boolean doubleSpace=false;
   for (  EditorCell_Label cell : cells) {
-    if (cell.getStyle().get(StyleAttributes.PADDING_LEFT).getValue() >= 1.0 && !doubleSpace) {
+    boolean punctuationLeft=cell.getStyle().get(StyleAttributes.PUNCTUATION_LEFT);
+    boolean punctuationRight=cell.getStyle().get(StyleAttributes.PUNCTUATION_RIGTH);
+    if (!punctuationLeft && !doubleSpace) {
       sourceBuilder.append(" ");
     }
     startCellPosition.add(sourceBuilder.length());
     sourceBuilder.append(cell.getRenderedText());
     endCellPosition.add(sourceBuilder.length());
-    if (cell.getStyle().get(StyleAttributes.PADDING_RIGHT).getValue() >= 1.0) {
+    if (!punctuationRight) {
       sourceBuilder.append(" ");
       doubleSpace=true;
     }
@@ -23,30 +25,41 @@
   List<Integer> startHighlightPosition=new ArrayList<Integer>();
   List<Integer> endHighlightPosition=new ArrayList<Integer>();
   Matcher matcher=getPattern().matcher(sourceBuilder.toString());
+  int index=0;
+  boolean needChangeSelection, selected=false;
   while (matcher.find()) {
-    int index=0;
     while (index < cells.size() && !((startCellPosition.get(index) <= matcher.start()) && (endCellPosition.get(index) > matcher.start()))) {
       index++;
     }
     if (index == cells.size()) {
       break;
     }
-    myCells.add(cells.get(index));
-    CellLayout cellLayout=cells.get(index).getParent().getCellLayout();
+    EditorCell_Label currentCell=cells.get(index);
+    myCells.add(currentCell);
+    CellLayout cellLayout=currentCell.getParent().getCellLayout();
     int highlightLength=0;
-    while (index < startCellPosition.size() && startCellPosition.get(index) < matcher.end()) {
-      resultIndex.add(index);
-      startHighlightPosition.add(Math.max(0,matcher.start() - startCellPosition.get(index)));
-      endHighlightPosition.add(Math.min(matcher.end(),endCellPosition.get(index)) - startCellPosition.get(index));
-      highlightLength++;
-      index++;
+    needChangeSelection=index >= cells.indexOf(myEditor.getSelectedCell());
+    if (needChangeSelection && !selected) {
+      myEditor.changeSelection(cells.get(index));
+      selected=true;
     }
-    index--;
+    if (!(needChangeSelection && myCells.size() > 100)) {
+      while (index < startCellPosition.size() && startCellPosition.get(index) < matcher.end()) {
+        resultIndex.add(index);
+        startHighlightPosition.add(Math.max(0,matcher.start() - startCellPosition.get(index)));
+        endHighlightPosition.add(Math.min(matcher.end(),endCellPosition.get(index)) - startCellPosition.get(index));
+        highlightLength++;
+        index++;
+      }
+      index--;
+    }
     if (cellLayout instanceof CellLayout_Horizontal && !cellLayout.equals(cells.get(index).getParent().getCellLayout())) {
-      for (int i=0; i < highlightLength; i++) {
-        resultIndex.remove(resultIndex.size() - 1);
-        startHighlightPosition.remove(startHighlightPosition.size() - 1);
-        endHighlightPosition.remove(endHighlightPosition.size() - 1);
+      if (!needChangeSelection && myCells.size() > 100) {
+        for (int i=0; i < highlightLength; i++) {
+          resultIndex.remove(resultIndex.size() - 1);
+          startHighlightPosition.remove(startHighlightPosition.size() - 1);
+          endHighlightPosition.remove(endHighlightPosition.size() - 1);
+        }
       }
       myCells.remove(myCells.size() - 1);
     }
@@ -54,7 +67,7 @@
   myOwner=new EditorMessageOwner(){
   }
 ;
-  if (!myCells.isEmpty()) {
-    highlight(resultIndex,startHighlightPosition,endHighlightPosition);
+  if (!myCells.isEmpty() && myCells.size() <= 100) {
+    highlight(resultIndex,startHighlightPosition,endHighlightPosition,cells);
   }
 }
