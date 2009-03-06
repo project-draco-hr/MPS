@@ -10,13 +10,39 @@
     }
   }
   Set<ModuleReference> unusedLanguages=new HashSet<ModuleReference>();
-  for (  ModuleReference languageNamespace : modelDescriptor.getSModel().getExplicitlyImportedLanguages()) {
-    Language language=context.getScope().getLanguage(languageNamespace);
+  for (  ModuleReference languageRef : modelDescriptor.getSModel().getExplicitlyImportedLanguages()) {
+    Language language=context.getScope().getLanguage(languageRef);
     if (language == null) {
-      unusedLanguages.add(languageNamespace);
+      unusedLanguages.add(languageRef);
     }
  else     if (!usedLanguages.contains(language)) {
       unusedLanguages.add(language.getModuleReference());
+    }
+  }
+  Set<ModuleReference> unusedDevkits=new HashSet<ModuleReference>();
+  for (  ModuleReference devkitRef : modelDescriptor.getSModel().getDevKitRefs()) {
+    boolean used=false;
+    DevKit dk=(DevKit)MPSModuleRepository.getInstance().getModule(devkitRef);
+    if (dk != null) {
+      for (      Language lang : dk.getAllExportedLanguages()) {
+        if (usedLanguages.contains(lang)) {
+          used=true;
+          break;
+        }
+      }
+      if (!used) {
+        for (        Solution solution : dk.getAllExportedSolutions()) {
+          for (          SModelDescriptor model : solution.getOwnModelDescriptors()) {
+            if (usedModels.contains(model.getSModelReference())) {
+              used=true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (!used) {
+      unusedDevkits.add(devkitRef);
     }
   }
   Set<SModelReference> unusedModels=new HashSet<SModelReference>();
@@ -25,5 +51,5 @@
       unusedModels.add(model);
     }
   }
-  return removeFromImports(modelDescriptor,unusedModels,unusedLanguages);
+  return removeFromImports(modelDescriptor,unusedModels,unusedLanguages,unusedDevkits);
 }
