@@ -1,0 +1,55 @@
+{
+  Result result=new Result();
+  for (  SNode node : modelDescriptor.getSModel().allNodes()) {
+    result.myUsedLanguages.add(node.getLanguage(context.getScope()));
+    for (    SReference ref : node.getReferences()) {
+      if (!ref.getTargetSModelReference().equals(modelDescriptor.getSModelReference())) {
+        result.myUsedModels.add(ref.getTargetSModelReference());
+      }
+    }
+  }
+  Set<ModuleReference> unusedLanguages=new HashSet<ModuleReference>();
+  for (  ModuleReference languageRef : modelDescriptor.getSModel().getExplicitlyImportedLanguages()) {
+    Language language=context.getScope().getLanguage(languageRef);
+    if (language == null) {
+      unusedLanguages.add(languageRef);
+    }
+ else     if (!result.myUsedLanguages.contains(language)) {
+      unusedLanguages.add(language.getModuleReference());
+    }
+  }
+  Set<ModuleReference> unusedDevkits=new HashSet<ModuleReference>();
+  for (  ModuleReference devkitRef : modelDescriptor.getSModel().getDevKitRefs()) {
+    boolean used=false;
+    DevKit dk=(DevKit)MPSModuleRepository.getInstance().getModule(devkitRef);
+    if (dk != null) {
+      for (      Language lang : dk.getAllExportedLanguages()) {
+        if (result.myUsedLanguages.contains(lang)) {
+          used=true;
+          break;
+        }
+      }
+      if (!used) {
+        for (        Solution solution : dk.getAllExportedSolutions()) {
+          for (          SModelDescriptor model : solution.getOwnModelDescriptors()) {
+            if (result.myUsedModels.contains(model.getSModelReference())) {
+              used=true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (!used) {
+      unusedDevkits.add(devkitRef);
+    }
+  }
+  Set<SModelReference> unusedModels=new HashSet<SModelReference>();
+  for (  SModelReference model : modelDescriptor.getSModel().getImportedModelUIDs()) {
+    if (!result.myUsedModels.contains(model)) {
+      unusedModels.add(model);
+    }
+  }
+  result.myReport=removeFromImports(modelDescriptor,unusedModels,unusedLanguages,unusedDevkits);
+  return result;
+}
