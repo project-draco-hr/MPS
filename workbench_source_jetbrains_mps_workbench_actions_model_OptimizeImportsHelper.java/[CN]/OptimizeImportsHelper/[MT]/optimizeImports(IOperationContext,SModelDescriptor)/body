@@ -1,0 +1,29 @@
+{
+  Set<Language> usedLanguages=new HashSet<Language>();
+  Set<SModelReference> usedModels=new HashSet<SModelReference>();
+  for (  SNode node : modelDescriptor.getSModel().allNodes()) {
+    usedLanguages.add(node.getLanguage(context.getScope()));
+    for (    SReference ref : node.getReferences()) {
+      if (!ref.getTargetSModelReference().equals(modelDescriptor.getSModelReference())) {
+        usedModels.add(ref.getTargetSModelReference());
+      }
+    }
+  }
+  Set<ModuleReference> unusedLanguages=new HashSet<ModuleReference>();
+  for (  ModuleReference languageNamespace : modelDescriptor.getSModel().getExplicitlyImportedLanguages()) {
+    Language language=context.getScope().getLanguage(languageNamespace);
+    if (language == null) {
+      unusedLanguages.add(languageNamespace);
+    }
+ else     if (!usedLanguages.contains(language)) {
+      unusedLanguages.add(language.getModuleReference());
+    }
+  }
+  Set<SModelReference> unusedModels=new HashSet<SModelReference>();
+  for (  SModelReference model : modelDescriptor.getSModel().getImportedModelUIDs()) {
+    if (!usedModels.contains(model)) {
+      unusedModels.add(model);
+    }
+  }
+  return removeFromImports(modelDescriptor,unusedModels,unusedLanguages);
+}
