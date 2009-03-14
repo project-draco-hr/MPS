@@ -1,0 +1,29 @@
+{
+  Set<String> roles=new HashSet<String>();
+  SNode curNode=node;
+  do {
+    roles.add(SPropertyOperations.getString(curNode,"role"));
+    curNode=SLinkOperations.getTarget(curNode,"specializedLink",false);
+  }
+ while (curNode != null);
+  SNode conceptDeclaration=SNodeOperations.getAncestor(node,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration",false,false);
+  if ((conceptDeclaration == null)) {
+    return;
+  }
+  boolean isChild=SPropertyOperations.hasValue(node,"metaClass","aggregation","reference");
+  for (  SNode instance : ListSequence.fromList(FindUtils.executeFinder("jetbrains.mps.lang.structure.findUsages.ConceptInstances_Finder",conceptDeclaration,scope,indicator))) {
+    for (    String role : SetSequence.fromSet(roles)) {
+      if (isChild) {
+        for (        SNode child : ListSequence.fromList(instance.getChildren(role))) {
+          ListOperations.addElement(_results,child);
+        }
+      }
+ else {
+        SNode referent=instance.getReference(role).getSourceNode();
+        if (referent != null) {
+          ListOperations.addElement(_results,referent);
+        }
+      }
+    }
+  }
+}
