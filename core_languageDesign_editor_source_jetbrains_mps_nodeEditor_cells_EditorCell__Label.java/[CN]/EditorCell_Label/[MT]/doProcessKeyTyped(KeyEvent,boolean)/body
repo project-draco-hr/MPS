@@ -1,6 +1,6 @@
 {
-  int wasPosition=getCaretPosition();
-  CellSide side;
+  final int wasPosition=getCaretPosition();
+  final CellSide side;
   if (wasPosition == 0) {
     side=CellSide.LEFT;
   }
@@ -12,22 +12,24 @@
     final boolean result[]=new boolean[1];
     getEditorContext().executeCommand(new Runnable(){
       public void run(){
-        result[0]=processMutableKeyTyped(keyEvent,allowErrors);
+        if (processMutableKeyTyped(keyEvent,allowErrors)) {
+          getEditorContext().flushEvents();
+          getEditor().relayout();
+          if (isErrorState()) {
+            if (allowsIntelligentInputKeyStroke(keyEvent)) {
+              String pattern=getRenderedText();
+              IntelligentInputUtil.processCell(EditorCell_Label.this,getEditorContext(),pattern,side);
+            }
+          }
+          result[0]=true;
+        }
+ else         if (isErrorState() && wasPosition == 0 && keyEvent.getKeyChar() == ' ') {
+          result[0]=true;
+        }
       }
     }
 );
     if (result[0]) {
-      getEditorContext().flushEvents();
-      getEditor().relayout();
-      if (isErrorState()) {
-        if (allowsIntelligentInputKeyStroke(keyEvent)) {
-          String pattern=this.getRenderedText();
-          IntelligentInputUtil.processCell(this,getEditorContext(),pattern,side);
-        }
-      }
-      return true;
-    }
- else     if (isErrorState() && wasPosition == 0 && keyEvent.getKeyChar() == ' ') {
       return true;
     }
   }
