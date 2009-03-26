@@ -1,0 +1,37 @@
+{
+  Frame frame=MPSDataKeys.FRAME.getData(DataManager.getInstance().getDataContext());
+  assertNotNull("Main frame not found",frame);
+  final NewLanguageDialog dialog=new NewLanguageDialog(frame);
+  dialog.setProject(myCreatedProject);
+  SwingUtilities.invokeLater(new Runnable(){
+    public void run(){
+      dialog.showDialog();
+    }
+  }
+);
+  flushAWT();
+  JTextField nameField=findTextField("Name");
+  getHelper().sendString(new StringEventData(this,nameField,"myLang"));
+  flushAWT();
+  PathField pathField=findPathField("Path");
+  boolean correctSuffix=pathField.getPath().endsWith(nameField.getText());
+  assertTrue("Language suffix is not added to path",correctSuffix);
+  pressButton(dialog,"OK");
+  final boolean[] loaded=new boolean[1];
+  ClassLoaderManager.getInstance().addReloadHandler(new ReloadAdapter(){
+    @Override public void onAfterReload(){
+      loaded[0]=true;
+    }
+  }
+);
+  TestUtil.conditionalWaitAndFlush(this,new Computable<Boolean>(){
+    public Boolean compute(){
+      return loaded[0];
+    }
+  }
+);
+  final Language l=dialog.getResult();
+  assertNotNull("Language is not created",l);
+  boolean isImported=myCreatedProject.getProjectLanguages().contains(l);
+  assertTrue("Language is not imported into project",isImported);
+}
