@@ -1,0 +1,28 @@
+{
+  Language language=Language.getLanguageFor(_context.getOriginalInputModel().getModelDescriptor());
+  if (language == null) {
+    return;
+  }
+  SModel structureModel=language.getStructureModelDescriptor().getSModel();
+  Map<SNode,SNode> conceptsToTargets=new HashMap<SNode,SNode>();
+  Map<SNode,SNode> linePartsToLinkDeclarations=new HashMap<SNode,SNode>();
+  List<SNode> mpsliteConceptDeclarations=SModelOperations.getRoots(_context.getModel(),"jetbrains.mpslite.structure.MPSLiteConceptDeclaration");
+  for (  SNode conceptDeclaration : mpsliteConceptDeclarations) {
+    SNode concept=SConceptOperations.createNewNode("jetbrains.mps.lang.structure.structure.ConceptDeclaration",null);
+    SPropertyOperations.set(concept,"name",SPropertyOperations.getString(conceptDeclaration,"name"));
+    conceptsToTargets.put(conceptDeclaration,concept);
+  }
+  for (  SNode conceptDeclaration : mpsliteConceptDeclarations) {
+    SLinkOperations.setTarget((conceptsToTargets.get(conceptDeclaration)),"extends",(SNode)conceptsToTargets.get(SLinkOperations.getTarget(conceptDeclaration,"extends",false)),false);
+  }
+  for (  SNode conceptDeclaration : mpsliteConceptDeclarations) {
+    LineList_Behavior.call_fillConceptStructure_1238593666753(SLinkOperations.getTarget(conceptDeclaration,"lineList",true),null,(SNode)conceptsToTargets.get(conceptDeclaration),conceptsToTargets,linePartsToLinkDeclarations);
+  }
+  structureModel.setLoading(true);
+  for (  SNode conceptDeclaration : mpsliteConceptDeclarations) {
+    SNode concept=conceptsToTargets.get(conceptDeclaration);
+    SModelOperations.addRootNode(structureModel,concept);
+    SNodeOperations.deleteNode(conceptDeclaration);
+  }
+  structureModel.setLoading(false);
+}
