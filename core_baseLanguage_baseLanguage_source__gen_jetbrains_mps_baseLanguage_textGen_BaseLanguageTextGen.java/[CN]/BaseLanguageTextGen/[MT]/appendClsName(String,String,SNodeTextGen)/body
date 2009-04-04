@@ -1,0 +1,44 @@
+{
+  if (className == null) {
+    textGen.foundError("class name is NULL");
+    textGen.append("???");
+    return;
+  }
+  if (packageName.contains("@") || className.contains("@")) {
+    textGen.foundError("class name not contain '@'");
+  }
+  String importedFqName;
+  String importedShortName=className.split("\\.")[0];
+  if (packageName.length() > 0) {
+    importedFqName=packageName + "." + importedShortName;
+  }
+ else {
+    importedFqName=importedShortName;
+  }
+  Set<String> importedNames=BaseLanguageTextGen.getImportedNames(textGen);
+  if (importedNames.contains(importedFqName)) {
+    textGen.append(className);
+    return;
+  }
+  for (  String importedName : importedNames) {
+    if (importedShortName.equals(JavaNameUtil.shortName(importedName))) {
+      String fqName;
+      if (packageName.length() > 0) {
+        fqName=packageName + "." + className;
+      }
+ else {
+        fqName=className;
+      }
+      textGen.append(fqName);
+      return;
+    }
+  }
+  importedNames.add(importedFqName);
+  if (!(packageName.equals("java.lang")) || packageName.equals(textGen.getBuffer().getUserObject("PACKAGE_NAME"))) {
+    int currPartId=textGen.getBuffer().selectPart(TextGenBuffer.TOP);
+    textGen.appendNewLine();
+    textGen.append("import " + importedFqName + ";");
+    textGen.getBuffer().selectPart(currPartId);
+  }
+  textGen.append(className);
+}
