@@ -7,7 +7,7 @@
       changedModels.add(sm.getSModelReference());
     }
   }
-  ID<SNodeDescriptor,Void> indexName;
+  final ID<SNodeDescriptor,Void> indexName;
   if (myIndex instanceof RootNodeNameIndex) {
     indexName=RootNodeNameIndex.NAME;
   }
@@ -15,7 +15,8 @@
     indexName=NamedNodeIndex.NAME;
   }
  else   return null;
-  FileBasedIndex.getInstance().processAllKeys(indexName,new Processor<SNodeDescriptor>(){
+  final FileBasedIndex fileBasedIndex=FileBasedIndex.getInstance();
+  fileBasedIndex.processAllKeys(indexName,new Processor<SNodeDescriptor>(){
     public boolean process(    SNodeDescriptor s){
       if (scope.getModelDescriptor(s.getModelReference()) != null) {
         if (s.isDependOnOtherModel() || s.isInvalid() || changedModels.contains(s.getModelReference())) {
@@ -23,7 +24,9 @@
           hasToLoad.add(s.getModelReference());
         }
  else {
-          keys.add(s);
+          if (!fileBasedIndex.getContainingFiles(indexName,s,VirtualFileFilter.ALL).isEmpty()) {
+            keys.add(s);
+          }
         }
       }
       return true;
