@@ -1,0 +1,33 @@
+{
+  this.myNode=node;
+  this.setFont(EditorSettings.getInstance().getDefaultEditorFont());
+  this.setBorder(new MetalBorders.ButtonBorder());
+  final Language language=Language.getLanguageFor(SNodeOperations.getModel(this.myNode).getModelDescriptor());
+  String filename=Macros.languageDescriptor().expandPath(SPropertyOperations.getString(node,"imageFile"),language.getDescriptorFile());
+  final File baseFile=(filename == null ? null : new File(filename));
+  this.setAction(new AbstractAction(" ... "){
+    public void actionPerformed(    ActionEvent e){
+      Component root=SwingUtilities.getRoot(SelectImageFileButton.this);
+      if (root instanceof Frame) {
+        Frame frame=(Frame)root;
+        TreeFileChooser chooser=new TreeFileChooser();
+        if (baseFile != null && baseFile.exists()) {
+          chooser.setInitialFile(new FileSystemFile(baseFile.getAbsolutePath()));
+        }
+        IFile result=chooser.showDialog(frame);
+        if (result == null) {
+          return;
+        }
+        String selectedPath=FileUtil.getCanonicalPath(result.toFile());
+        final String pathToShow=Macros.languageDescriptor().shrinkPath(selectedPath,language.getDescriptorFile());
+        ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+          public void run(){
+            SPropertyOperations.set(SelectImageFileButton.this.myNode,"imageFile",pathToShow);
+          }
+        }
+);
+      }
+    }
+  }
+);
+}
