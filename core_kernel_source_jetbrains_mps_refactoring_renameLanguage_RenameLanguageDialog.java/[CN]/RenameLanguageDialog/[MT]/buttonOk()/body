@@ -16,26 +16,36 @@
     return;
   }
   if (needToRegenerate) {
-    final MPSProject mpsProject=myProject.getComponent(MPSProjectHolder.class).getMPSProject();
-    GenParameters params=ModelAccess.instance().runReadAction(new Computable<GenParameters>(){
-      public GenParameters compute(){
-        ModuleTestConfiguration languageConfig=new ModuleTestConfiguration();
-        languageConfig.setModuleRef(myLanguage.getModuleReference());
-        languageConfig.setName("tmp");
-        try {
-          return languageConfig.getGenParams(mpsProject,true);
-        }
- catch (        IllegalGeneratorConfigurationException e) {
-          return null;
-        }
+    final Set<Language> langs=new LinkedHashSet<Language>();
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        langs.add(myLanguage);
+        langs.addAll(MPSModuleRepository.getInstance().getAllExtendingLanguages(myLanguage));
       }
     }
 );
-    if (params == null) {
-      setErrorText("Generator configuration is invalid");
-      return;
+    for (    final Language l : langs) {
+      final MPSProject mpsProject=myProject.getComponent(MPSProjectHolder.class).getMPSProject();
+      GenParameters params=ModelAccess.instance().runReadAction(new Computable<GenParameters>(){
+        public GenParameters compute(){
+          ModuleTestConfiguration languageConfig=new ModuleTestConfiguration();
+          languageConfig.setModuleRef(l.getModuleReference());
+          languageConfig.setName("tmp");
+          try {
+            return languageConfig.getGenParams(mpsProject,true);
+          }
+ catch (          IllegalGeneratorConfigurationException e) {
+            return null;
+          }
+        }
+      }
+);
+      if (params == null) {
+        setErrorText("Generator configuration is invalid");
+        return;
+      }
+      myProject.getComponent(GeneratorManager.class).generateModelsFromDifferentModules(new ModuleContext(myLanguage,mpsProject),params.getModels(),IGenerationType.FILES);
     }
-    myProject.getComponent(GeneratorManager.class).generateModelsFromDifferentModules(new ModuleContext(myLanguage,mpsProject),params.getModels(),IGenerationType.FILES);
   }
   dispose();
 }
