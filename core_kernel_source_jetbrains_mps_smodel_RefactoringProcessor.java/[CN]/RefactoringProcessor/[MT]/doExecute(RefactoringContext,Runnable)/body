@@ -2,12 +2,18 @@
   Thread t=Thread.currentThread();
   System.err.println("current thread is " + t);
   final ILoggableRefactoring refactoring=refactoringContext.getRefactoring();
+  final Map<IModule,List<SModel>> moduleToModelsMap=ModelAccess.instance().runReadAction(new Computable<Map<IModule,List<SModel>>>(){
+    public Map<IModule,List<SModel>> compute(){
+      return refactoring.getModelsToGenerate(refactoringContext);
+    }
+  }
+);
+  final SModelDescriptor modelDescriptor=refactoringContext.getSelectedModel();
+  final SModelReference initialModelReference=modelDescriptor.getSModelReference();
   Runnable runnable=new Runnable(){
     public void run(){
       ModelAccess.instance().runWriteActionInCommand(new Runnable(){
         public void run(){
-          SModelDescriptor modelDescriptor=refactoringContext.getSelectedModel();
-          SModelReference initialModelReference=modelDescriptor.getSModelReference();
           refactoring.doRefactor(refactoringContext);
           final List<SNode> nodesToOpen=refactoring.getNodesToOpen(refactoringContext);
           if (!nodesToOpen.isEmpty()) {
@@ -20,44 +26,61 @@
             }
 );
           }
-          SModel model=modelDescriptor.getSModel();
-          refactoringContext.computeCaches();
-          SearchResults usages=refactoringContext.getUsages();
-          final Map<IModule,List<SModel>> moduleToModelsMap=refactoring.getModelsToGenerate(refactoringContext);
-          List<SModel> modelsToUpdate=refactoring.getModelsToUpdate(refactoringContext);
-          if (!refactoringContext.isLocal()) {
-            if (refactoring.doesUpdateModel()) {
-              writeInLogAndUpdateModels(initialModelReference,model,refactoringContext);
-            }
-          }
- else {
-            if (refactoring.doesUpdateModel()) {
-              Set<SModel> modelsToProcess=new LinkedHashSet<SModel>();
-              if (usages != null) {
-                modelsToProcess.addAll(usages.getModelsWithResults());
-              }
-              modelsToProcess.addAll(modelsToUpdate);
-              for (              SModel anotherModel : modelsToProcess) {
-                processModel(anotherModel,model,refactoringContext);
-              }
-            }
-          }
-          SwingUtilities.invokeLater(new Runnable(){
-            public void run(){
-              if (moduleToModelsMap != null && !moduleToModelsMap.isEmpty()) {
-                ProgressManager.getInstance().run(new Modal(refactoringContext.getCurrentOperationContext().getComponent(Project.class),"Generation",true){
-                  public void run(                  @NotNull ProgressIndicator progress){
-                    generateModels(moduleToModelsMap,refactoringContext,progress);
+        }
+      }
+);
+      MPSProject mpsProject=refactoringContext.getSelectedMPSProject();
+      ProgressManager.getInstance().run(new Modal(mpsProject.getComponent(Project.class),"Updating models...",false){
+        @Override public void run(        @NotNull ProgressIndicator indicator){
+          indicator.pushState();
+          try {
+            indicator.setIndeterminate(true);
+            ModelAccess.instance().runWriteAction(new Runnable(){
+              public void run(){
+                SModel model=modelDescriptor.getSModel();
+                refactoringContext.computeCaches();
+                SearchResults usages=refactoringContext.getUsages();
+                List<SModel> modelsToUpdate=refactoring.getModelsToUpdate(refactoringContext);
+                if (!refactoringContext.isLocal()) {
+                  if (refactoring.doesUpdateModel()) {
+                    writeInLogAndUpdateModels(initialModelReference,model,refactoringContext);
                   }
                 }
-);
-                if (continuation != null) {
-                  continuation.run();
+ else {
+                  if (refactoring.doesUpdateModel()) {
+                    Set<SModel> modelsToProcess=new LinkedHashSet<SModel>();
+                    if (usages != null) {
+                      modelsToProcess.addAll(usages.getModelsWithResults());
+                    }
+                    modelsToProcess.addAll(modelsToUpdate);
+                    for (                    SModel anotherModel : modelsToProcess) {
+                      processModel(anotherModel,model,refactoringContext);
+                    }
+                  }
                 }
               }
             }
-          }
 );
+          }
+  finally {
+            indicator.popState();
+          }
+        }
+      }
+);
+      SwingUtilities.invokeLater(new Runnable(){
+        public void run(){
+          if (moduleToModelsMap != null && !moduleToModelsMap.isEmpty()) {
+            ProgressManager.getInstance().run(new Modal(refactoringContext.getCurrentOperationContext().getComponent(Project.class),"Generation",true){
+              public void run(              @NotNull ProgressIndicator progress){
+                generateModels(moduleToModelsMap,refactoringContext,progress);
+              }
+            }
+);
+            if (continuation != null) {
+              continuation.run();
+            }
+          }
         }
       }
 );
