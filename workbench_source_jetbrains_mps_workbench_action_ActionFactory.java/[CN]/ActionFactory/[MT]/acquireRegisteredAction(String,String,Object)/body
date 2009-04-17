@@ -2,56 +2,19 @@
   IModule module=MPSModuleRepository.getInstance().getModule(new ModuleReference(moduleNamespace));
   if (module == null)   return null;
   Class actionClass=module.getClass(actionClassName);
-  Method idMethod=null;
   if (actionClass == null) {
     LOG.warning("Action " + actionClassName + " is not found in module "+ moduleNamespace);
     return null;
   }
-  for (  Method m : actionClass.getMethods()) {
-    if (m.getName().equals(GeneratedAction.getIdMethodName())) {
-      idMethod=m;
-      break;
-    }
-  }
-  String id;
-  if (idMethod == null) {
-    id=actionClass.getName();
+  BaseAction newAction=(BaseAction)createAction(actionClass,params);
+  String actionId=newAction.getActionId();
+  String id=getFullId(actionId,moduleNamespace,actionClass);
+  AnAction registeredAction=ActionManager.getInstance().getAction(id);
+  if (registeredAction == null) {
+    registerAction(newAction,id,moduleNamespace);
+    return newAction;
   }
  else {
-    try {
-      String actionId=(String)idMethod.invoke(null,new Object[]{params});
-      id=getFullId(actionId,moduleNamespace,actionClass);
-    }
- catch (    IllegalAccessException e) {
-      LOG.error("This can't happen",e);
-      return null;
-    }
-catch (    InvocationTargetException e) {
-      LOG.error("User's " + BaseAction.getIdMethodName() + "() method failed",e);
-      return null;
-    }
-  }
-  AnAction action=ActionManager.getInstance().getAction(id);
-  if (action == null) {
-    try {
-      AnAction newAction=(AnAction)actionClass.getConstructors()[0].newInstance(params);
-      registerAction(newAction,id,moduleNamespace);
-      return newAction;
-    }
- catch (    InstantiationException e) {
-      LOG.error("Unable to create action " + actionClass.getSimpleName(),e);
-      return null;
-    }
-catch (    IllegalAccessException e) {
-      LOG.error("Unable to create action " + actionClass.getSimpleName(),e);
-      return null;
-    }
-catch (    InvocationTargetException e) {
-      LOG.error("Unable to create action " + actionClass.getSimpleName(),e);
-      return null;
-    }
-  }
- else {
-    return action;
+    return registeredAction;
   }
 }
