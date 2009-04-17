@@ -1,20 +1,35 @@
 {
   final boolean needToRegenerate=myRegenerateLanguage.getModel().isSelected();
-  boolean renamed=ModelAccess.instance().runWriteActionInCommand(new Computable<Boolean>(){
-    public Boolean compute(){
-      final String fqName=myLanguageNameField.getText();
-      if (MPSModuleRepository.getInstance().getModuleByUID(fqName) != null) {
-        setErrorText("Duplicate language name");
-        return false;
-      }
-      new LanguageRenamer(myProject,myLanguage,fqName).rename(needToRegenerate);
-      return true;
+  final String fqName=myLanguageNameField.getText();
+  if (MPSModuleRepository.getInstance().getModuleByUID(fqName) != null) {
+    setErrorText("Duplicate language name");
+    return;
+  }
+  final LanguageRenamer renamer=new LanguageRenamer(myProject,myLanguage,fqName);
+  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+    public void run(){
+      renamer.rename(needToRegenerate);
     }
   }
 );
-  if (!renamed) {
-    return;
+  ProgressManager.getInstance().run(new Modal(myProject,"Updating langauge references...",false){
+    @Override public void run(    @NotNull ProgressIndicator indicator){
+      indicator.pushState();
+      try {
+        indicator.setIndeterminate(true);
+        ModelAccess.instance().runWriteAction(new Runnable(){
+          public void run(){
+            renamer.update();
+          }
+        }
+);
+      }
+  finally {
+        indicator.popState();
+      }
+    }
   }
+);
   if (needToRegenerate) {
     final Set<Language> langs=new LinkedHashSet<Language>();
     ModelAccess.instance().runReadAction(new Runnable(){
