@@ -1,0 +1,72 @@
+{
+  String namespace=NameUtil.namespaceFromConceptFQName(conceptFqName);
+  if (namespace.equals("jetbrains.mps.bootstrap.structureLanguage") && propertyName.equals(INamedConcept.NAME) && !conceptFqName.equals("jetbrains.mps.bootstrap.structureLanguage.structure.AnnotationLinkDeclaration")) {
+    return null;
+  }
+  if (conceptFqName.equals(RuntimeTypeVariable.concept)) {
+    return null;
+  }
+  final StringBuilder builder=StringBuilderSpinAllocator.alloc();
+  try {
+    builder.append('#');
+    builder.append(propertyName);
+    final String prefixedPropertyName=builder.toString();
+    builder.setLength(0);
+    builder.append(conceptFqName);
+    builder.append(prefixedPropertyName);
+    final String originalKey=builder.toString();
+    if (isSetter) {
+      if (myNodePropertySettersCache.containsKey(originalKey)) {
+        return myNodePropertySettersCache.get(originalKey);
+      }
+    }
+ else {
+      if (myNodePropertyGettersCache.containsKey(originalKey)) {
+        return myNodePropertyGettersCache.get(originalKey);
+      }
+    }
+    return NodeReadAccessCaster.runReadTransparentAction(new Computable<IModelConstraints>(){
+      public IModelConstraints compute(){
+        AbstractConceptDeclaration conceptDeclaration=SModelUtil_new.findConceptDeclaration(conceptFqName,GlobalScope.getInstance());
+        List<AbstractConceptDeclaration> hierarchy=SModelUtil_new.getConceptAndSuperConcepts(conceptDeclaration);
+        for (        final AbstractConceptDeclaration concept : hierarchy) {
+          Language l=SModelUtil_new.getDeclaringLanguage(concept,GlobalScope.getInstance());
+          if (!myAddedLanguageNamespaces.containsKey(l.getNamespace())) {
+            processLanguageAdded(l);
+          }
+          final String conceptFqName=NameUtil.nodeFQName(concept);
+          final IModelConstraints result;
+          builder.setLength(0);
+          builder.append(conceptFqName);
+          builder.append(prefixedPropertyName);
+          if (isSetter) {
+            result=myNodePropertySettersMap.get(builder.toString());
+          }
+ else {
+            result=myNodePropertyGettersMap.get(builder.toString());
+          }
+          if (result != null) {
+            if (isSetter) {
+              myNodePropertySettersCache.put(originalKey,(INodePropertySetter)result);
+            }
+ else {
+              myNodePropertyGettersCache.put(originalKey,(INodePropertyGetter)result);
+            }
+            return result;
+          }
+        }
+        if (isSetter) {
+          myNodePropertySettersCache.put(originalKey,null);
+        }
+ else {
+          myNodePropertyGettersCache.put(originalKey,null);
+        }
+        return null;
+      }
+    }
+);
+  }
+  finally {
+    StringBuilderSpinAllocator.dispose(builder);
+  }
+}
