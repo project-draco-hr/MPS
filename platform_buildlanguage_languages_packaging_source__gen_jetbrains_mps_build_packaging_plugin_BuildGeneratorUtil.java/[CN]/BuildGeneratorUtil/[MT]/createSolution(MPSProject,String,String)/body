@@ -4,20 +4,34 @@
     baseDirFile.mkdirs();
   }
   String solutionFilePath=solutionBaseDir + File.separator + solutionName+ MPSExtentions.DOT_SOLUTION;
-  IFile solutionFile=FileSystem.getFile(solutionFilePath);
-  Solution solution;
+  final IFile solutionFile=FileSystem.getFile(solutionFilePath);
+  final Solution solution;
   if (solutionFile.exists()) {
-    IModule module=MPSModuleRepository.getInstance().getModuleByFile(solutionFile.toFile());
-    if (!(module instanceof Solution)) {
+    IModule module=ModelAccess.instance().runReadAction(new Computable<IModule>(){
+      public IModule compute(){
+        return MPSModuleRepository.getInstance().getModuleByFile(solutionFile.toFile());
+      }
+    }
+);
+    if (module instanceof Solution) {
+      solution=(Solution)module;
+    }
+ else     if (module == null) {
+      solution=BuildGeneratorUtil.createSolutionFormFile(mpsProject,solutionFile);
+    }
+ else {
       return null;
     }
-    solution=(Solution)module;
   }
  else {
     solution=BuildGeneratorUtil.createSolutionFormFile(mpsProject,solutionFile);
   }
-  ModuleReference packagingLanguageRef=BuildGeneratorUtil.getPackagingLanguageReference();
-  solution.addDependency(packagingLanguageRef,false);
-  solution.addUsedLangauge(packagingLanguageRef);
+  final ModuleReference packagingLanguageRef=BuildGeneratorUtil.getPackagingLanguageReference();
+  ModelAccess.instance().runWriteAction(new Runnable(){
+    public void run(){
+      solution.addUsedLangauge(packagingLanguageRef);
+    }
+  }
+);
   return solution;
 }
