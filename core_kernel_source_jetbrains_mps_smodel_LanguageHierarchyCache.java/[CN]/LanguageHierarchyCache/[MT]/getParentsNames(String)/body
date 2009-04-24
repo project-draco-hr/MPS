@@ -2,26 +2,33 @@
   if (myParentsNamesMap.containsKey(conceptFqName)) {
     return Collections.unmodifiableSet(myParentsNamesMap.get(conceptFqName));
   }
-  Set<String> result=new LinkedHashSet<String>();
-  AbstractConceptDeclaration declaration=SModelUtil_new.findConceptDeclaration(conceptFqName,GlobalScope.getInstance());
-  if (declaration == null) {
-    return result;
-  }
-  if (declaration instanceof ConceptDeclaration) {
-    ConceptDeclaration cd=(ConceptDeclaration)declaration;
-    if (cd.getExtends() != null) {
-      result.add(NameUtil.nodeFQName(cd.getExtends()));
+ else {
+    return NodeReadAccessCaster.runReadTransparentAction(new Computable<Set<String>>(){
+      public Set<String> compute(){
+        Set<String> result=new LinkedHashSet<String>();
+        AbstractConceptDeclaration declaration=SModelUtil_new.findConceptDeclaration(conceptFqName,GlobalScope.getInstance());
+        if (declaration == null) {
+          return result;
+        }
+        if (declaration instanceof ConceptDeclaration) {
+          ConceptDeclaration cd=(ConceptDeclaration)declaration;
+          if (cd.getExtends() != null) {
+            result.add(NameUtil.nodeFQName(cd.getExtends()));
+          }
+          for (          InterfaceConceptReference icr : cd.getImplementses()) {
+            result.add(NameUtil.nodeFQName(icr.getIntfc()));
+          }
+        }
+        if (declaration instanceof InterfaceConceptDeclaration) {
+          InterfaceConceptDeclaration icd=(InterfaceConceptDeclaration)declaration;
+          for (          InterfaceConceptReference icr : icd.getExtendses()) {
+            result.add(NameUtil.nodeFQName(icr.getIntfc()));
+          }
+        }
+        myParentsNamesMap.put(conceptFqName,result);
+        return Collections.unmodifiableSet(result);
+      }
     }
-    for (    InterfaceConceptReference icr : cd.getImplementses()) {
-      result.add(NameUtil.nodeFQName(icr.getIntfc()));
-    }
+);
   }
-  if (declaration instanceof InterfaceConceptDeclaration) {
-    InterfaceConceptDeclaration icd=(InterfaceConceptDeclaration)declaration;
-    for (    InterfaceConceptReference icr : icd.getExtendses()) {
-      result.add(NameUtil.nodeFQName(icr.getIntfc()));
-    }
-  }
-  myParentsNamesMap.put(conceptFqName,result);
-  return Collections.unmodifiableSet(result);
 }
