@@ -1,17 +1,27 @@
 {
   try {
     Language language=((Language)CheckLangForJavaStubModels_Action.this.module);
-    boolean noStubs=true;
-    String stubMsg="";
+    boolean langStubsPresent=false;
+    boolean otherStubsPresent=false;
+    String langStubsMsg="";
+    String otherStubsMsg="";
     for (    SModelDescriptor md : SetSequence.fromSet(language.getAspectModelDescriptors())) {
       for (      SModelDescriptor model : ListSequence.fromList(md.getSModel().importedModels(GlobalScope.getInstance()))) {
         if (model.getSModelReference().getStereotype().equals(SModelStereotype.JAVA_STUB)) {
-          noStubs=false;
-          stubMsg+=model.getSModelFqName().toString() + "\n";
+          SModelDescriptor langModelForStub=SModelRepository.getInstance().getModelDescriptor(SModelReference.fromString(model.getLongName()));
+          if (language.getAspectForModel(langModelForStub) != null) {
+            langStubsPresent=true;
+            langStubsMsg+="  " + model.getSModelFqName().toString() + "\n";
+          }
+ else {
+            otherStubsPresent=true;
+            otherStubsMsg+="  " + model.getSModelFqName().toString() + "\n";
+          }
         }
       }
     }
-    JOptionPane.showMessageDialog(CheckLangForJavaStubModels_Action.this.frmae,(noStubs ? "No java_stub models" : stubMsg));
+    String message=((!(langStubsPresent) ? "No language stub models" : "Language stub models: \n" + langStubsMsg)) + "\n\n" + ((!(otherStubsPresent) ? "No other stub models" : "Other stub models: \n" + otherStubsMsg));
+    JOptionPane.showMessageDialog(CheckLangForJavaStubModels_Action.this.frame,message);
   }
  catch (  Throwable t) {
     LOG.error("User's action execute method failed. Action:" + "CheckLangForJavaStubModels",t);
