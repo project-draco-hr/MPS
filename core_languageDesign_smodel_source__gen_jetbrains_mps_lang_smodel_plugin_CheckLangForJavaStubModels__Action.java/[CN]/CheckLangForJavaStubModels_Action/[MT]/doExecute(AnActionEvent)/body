@@ -1,26 +1,31 @@
 {
   try {
     Language language=((Language)CheckLangForJavaStubModels_Action.this.module);
-    boolean langStubsPresent=false;
-    boolean otherStubsPresent=false;
-    String langStubsMsg="";
-    String otherStubsMsg="";
+    Set<String> langStubModels=SetSequence.fromSet(new HashSet<String>());
+    Set<String> otherStubModels=SetSequence.fromSet(new HashSet<String>());
     for (    SModelDescriptor md : SetSequence.fromSet(language.getAspectModelDescriptors())) {
-      for (      SModelDescriptor model : ListSequence.fromList(md.getSModel().importedModels(GlobalScope.getInstance()))) {
-        if (model.getSModelReference().getStereotype().equals(SModelStereotype.JAVA_STUB)) {
+      for (      SModelReference model : ListSequence.fromList(md.getSModel().getImportedModelUIDs())) {
+        if (model.getStereotype().equals(SModelStereotype.JAVA_STUB)) {
           SModelDescriptor langModelForStub=SModelRepository.getInstance().getModelDescriptor(SModelReference.fromString(model.getLongName()));
+          String modelName=model.getSModelFqName().toString();
           if (langModelForStub != null && language.getAspectForModel(langModelForStub) != null) {
-            langStubsPresent=true;
-            langStubsMsg+="  " + model.getSModelFqName().toString() + "\n";
+            SetSequence.fromSet(langStubModels).addElement(modelName);
           }
  else {
-            otherStubsPresent=true;
-            otherStubsMsg+="  " + model.getSModelFqName().toString() + "\n";
+            SetSequence.fromSet(otherStubModels).addElement(modelName);
           }
         }
       }
     }
-    String message=((!(langStubsPresent) ? "No language stub models" : "Language stub models: \n" + langStubsMsg)) + "\n\n" + ((!(otherStubsPresent) ? "No other stub models" : "Other stub models: \n" + otherStubsMsg));
+    String langStubsMsg="";
+    for (    String modelName : SetSequence.fromSet(langStubModels)) {
+      langStubsMsg+="  " + modelName + "\n";
+    }
+    String otherStubsMsg="";
+    for (    String modelName : SetSequence.fromSet(otherStubModels)) {
+      otherStubsMsg+="  " + modelName + "\n";
+    }
+    String message=((SetSequence.fromSet(langStubModels).isEmpty() ? "No language stub models" : "Language stub models: \n" + langStubsMsg)) + "\n" + ((SetSequence.fromSet(otherStubModels).isEmpty() ? "No other stub models" : "Other stub models: \n" + otherStubsMsg));
     JOptionPane.showMessageDialog(CheckLangForJavaStubModels_Action.this.frame,message);
   }
  catch (  Throwable t) {
