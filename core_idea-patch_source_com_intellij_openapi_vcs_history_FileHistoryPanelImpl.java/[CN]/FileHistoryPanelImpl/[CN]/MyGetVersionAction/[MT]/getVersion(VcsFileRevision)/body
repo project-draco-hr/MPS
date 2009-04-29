@@ -1,0 +1,50 @@
+{
+  final VirtualFile file=getVirtualFile();
+  if ((file != null) && !file.isWritable()) {
+    if (ReadonlyStatusHandler.getInstance(myProject).ensureFilesWritable(file).hasReadonlyFiles()) {
+      return;
+    }
+  }
+  LocalHistoryAction action=file != null ? startLocalHistoryAction(revision) : LocalHistoryAction.NULL;
+  final byte[] revisionContent;
+  try {
+    revision.loadContent();
+    revisionContent=revision.getContent();
+  }
+ catch (  IOException e) {
+    LOG.error(e);
+    return;
+  }
+catch (  VcsException e) {
+    Messages.showMessageDialog(VcsBundle.message("message.text.cannot.load.revision",e.getLocalizedMessage()),VcsBundle.message("message.title.get.revision.content"),Messages.getInformationIcon());
+    return;
+  }
+catch (  ProcessCanceledException ex) {
+    return;
+  }
+  final byte[] finalRevisionContent=revisionContent;
+  try {
+    ApplicationManager.getApplication().runWriteAction(new Runnable(){
+      public void run(){
+        CommandProcessor.getInstance().executeCommand(myProject,new Runnable(){
+          public void run(){
+            try {
+              write(finalRevisionContent);
+            }
+ catch (            IOException e) {
+              Messages.showMessageDialog(VcsBundle.message("message.text.cannot.save.content",e.getLocalizedMessage()),VcsBundle.message("message.title.get.revision.content"),Messages.getErrorIcon());
+            }
+          }
+        }
+,createGetActionTitle(revision),null);
+      }
+    }
+);
+    if (file != null) {
+      VcsDirtyScopeManager.getInstance(myProject).fileDirty(file);
+    }
+  }
+  finally {
+    action.finish();
+  }
+}
