@@ -3,12 +3,14 @@
   if (nonTypesystemRules != null) {
     for (    NonTypesystemRule_Runtime rule : nonTypesystemRules) {
       Pair<SNode,NonTypesystemRule_Runtime> nodeAndRule=new Pair<SNode,NonTypesystemRule_Runtime>(node,rule);
+      MyTypesReadListener typesReadListener=new MyTypesReadListener();
       if (isIncrementalMode()) {
         if (myCheckedNodesNonTypesystem.contains(nodeAndRule)) {
           continue;
         }
         myNodesReadListener.clear();
         NodeReadEventsCaster.setNodesReadListener(myNodesReadListener);
+        TypeChecker.getInstance().setTypesReadListener(typesReadListener);
         myNonTypesystemRuleAndNodeBeingChecked=new Pair<SNode,NonTypesystemRule_Runtime>(node,rule);
       }
       try {
@@ -17,14 +19,18 @@
   finally {
         if (isIncrementalMode()) {
           NodeReadEventsCaster.removeNodesReadListener();
+          TypeChecker.getInstance().removeTypesReadListener();
         }
         myNonTypesystemRuleAndNodeBeingChecked=null;
       }
       if (isIncrementalMode()) {
 synchronized (ACCESS_LOCK) {
           myNodesReadListener.setAccessReport(true);
-          addDepedentNodesNonTypesystem(node,rule,new HashSet<SNode>(myNodesReadListener.myAcessedNodes));
+          addDepedentNodesNonTypesystem(node,rule,new HashSet<SNode>(myNodesReadListener.myAccessedNodes));
           myNodesReadListener.setAccessReport(false);
+          typesReadListener.setAccessReport(true);
+          addDepedentTypeTermsNonTypesystem(node,rule,new HashSet<SNode>(typesReadListener.myAccessedNodes));
+          typesReadListener.setAccessReport(false);
         }
         myNodesReadListener.clear();
       }
