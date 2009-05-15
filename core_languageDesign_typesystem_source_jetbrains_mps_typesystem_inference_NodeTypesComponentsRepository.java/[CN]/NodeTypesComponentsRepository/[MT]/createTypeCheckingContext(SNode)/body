@@ -4,19 +4,21 @@
       if (node == null)       return null;
       SNode root=node.getContainingRoot();
       if (root == null)       return null;
-      TypeCheckingContext typeCheckingContext=getTypeCheckingContext(root);
-      if (typeCheckingContext != null) {
+synchronized (myLock) {
+        TypeCheckingContext typeCheckingContext=getTypeCheckingContext(root);
+        if (typeCheckingContext != null) {
+          return typeCheckingContext;
+        }
+        typeCheckingContext=new TypeCheckingContext(root,myTypeChecker);
+        myNodesToContexts.put(typeCheckingContext.getNode(),typeCheckingContext);
+        SModelRepository.getInstance().removeModelRepositoryListener(myModelRepositoryListener);
+        SModelRepository.getInstance().addModelRepositoryListener(myModelRepositoryListener);
+        SModel sModel=root.getModel();
+        if (!sModel.hasModelListener(myModelListener)) {
+          sModel.addWeakSModelListener(myModelListener);
+        }
         return typeCheckingContext;
       }
-      typeCheckingContext=new TypeCheckingContext(root,myTypeChecker);
-      myNodesToContexts.put(typeCheckingContext.getNode(),typeCheckingContext);
-      SModelRepository.getInstance().removeModelRepositoryListener(myModelRepositoryListener);
-      SModelRepository.getInstance().addModelRepositoryListener(myModelRepositoryListener);
-      SModel sModel=root.getModel();
-      if (!sModel.hasModelListener(myModelListener)) {
-        sModel.addWeakSModelListener(myModelListener);
-      }
-      return typeCheckingContext;
     }
   }
 );
