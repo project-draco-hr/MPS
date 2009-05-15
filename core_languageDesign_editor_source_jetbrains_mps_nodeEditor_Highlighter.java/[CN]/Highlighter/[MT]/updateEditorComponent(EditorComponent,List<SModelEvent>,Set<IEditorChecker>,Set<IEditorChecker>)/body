@@ -1,37 +1,39 @@
 {
-  final SNode editedNode=component.getEditedNode();
-  if (editedNode != null) {
-    final Set<IEditorChecker> checkersToRecheck=new LinkedHashSet<IEditorChecker>();
-    boolean wasCheckedOnce=wasCheckedOnce(component);
-    if (!wasCheckedOnce) {
-      checkersToRecheck.addAll(checkers);
-    }
+synchronized (UPDATE_EDITOR_LOCK) {
+    final SNode editedNode=component.getEditedNode();
+    if (editedNode != null) {
+      final Set<IEditorChecker> checkersToRecheck=new LinkedHashSet<IEditorChecker>();
+      boolean wasCheckedOnce=wasCheckedOnce(component);
+      if (!wasCheckedOnce) {
+        checkersToRecheck.addAll(checkers);
+      }
  else {
-      ModelAccess.instance().runReadAction(new Runnable(){
-        public void run(){
-          for (          IEditorChecker checker : checkers) {
-            if (checker.hasDramaticalEvent(events)) {
-              checkersToRecheck.add(checker);
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            for (            IEditorChecker checker : checkers) {
+              if (checker.hasDramaticalEvent(events)) {
+                checkersToRecheck.add(checker);
+              }
             }
           }
         }
-      }
 );
-    }
-    if (checkersToRecheck.isEmpty()) {
-      return false;
-    }
-    boolean hackCheckedOnce=wasCheckedOnce;
-    if (component instanceof InspectorEditorComponent) {
-      hackCheckedOnce=true;
-      myCheckedOnceInspectors.add(((InspectorEditorComponent)component).getInspectionSessionId());
-    }
+      }
+      if (checkersToRecheck.isEmpty()) {
+        return false;
+      }
+      boolean hackCheckedOnce=wasCheckedOnce;
+      if (component instanceof InspectorEditorComponent) {
+        hackCheckedOnce=true;
+        myCheckedOnceInspectors.add(((InspectorEditorComponent)component).getInspectionSessionId());
+      }
  else {
-      myCheckedOnceEditors.add(component);
+        myCheckedOnceEditors.add(component);
+      }
+      if (updateEditor(component,events,hackCheckedOnce,checkersToRecheck,checkersToRemove)) {
+        return true;
+      }
     }
-    if (updateEditor(component,events,hackCheckedOnce,checkersToRecheck,checkersToRemove)) {
-      return true;
-    }
+    return false;
   }
-  return false;
 }
