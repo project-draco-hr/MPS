@@ -1,38 +1,40 @@
 {
-  Application application=ApplicationManager.getApplication();
+  final Application application=ApplicationManager.getApplication();
   if (application.isDisposeInProgress() || application.isDisposed()) {
     return;
   }
-  final ReloadSession reloadSession=new ReloadSession();
-  for (  final VFileEvent event : events) {
-    String path=event.getPath();
-    File file=new File(path);
-    if (file.isDirectory() && file.exists()) {
-      FileUtil.processFilesRecursively(file,new Processor<File>(){
-        public boolean process(        File file){
-          String filePath=file.getAbsolutePath();
-          if (MPSFileTypesManager.instance().isModelFile(filePath)) {
-            ModelFileProcessor.getInstance().process(new VFileEventDecorator(event,filePath),reloadSession);
+synchronized (myLock) {
+    if (myReloadSession == null) {
+      myReloadSession=new ReloadSession();
+    }
+    final ReloadSession reloadSession=myReloadSession;
+    for (    final VFileEvent event : events) {
+      String path=event.getPath();
+      File file=new File(path);
+      if (file.isDirectory() && file.exists()) {
+        FileUtil.processFilesRecursively(file,new Processor<File>(){
+          public boolean process(          File file){
+            String filePath=file.getAbsolutePath();
+            if (MPSFileTypesManager.instance().isModelFile(filePath)) {
+              ModelFileProcessor.getInstance().process(new VFileEventDecorator(event,filePath),reloadSession);
+            }
+ else             if (MPSFileTypesManager.instance().isModuleFile(filePath)) {
+              ModuleFileProcessor.getInstance().process(new VFileEventDecorator(event,filePath),reloadSession);
+            }
+            return true;
           }
- else           if (MPSFileTypesManager.instance().isModuleFile(filePath)) {
-            ModuleFileProcessor.getInstance().process(new VFileEventDecorator(event,filePath),reloadSession);
-          }
-          return true;
         }
-      }
 );
+      }
+      if (MPSFileTypesManager.instance().isModelFile(path)) {
+        ModelFileProcessor.getInstance().process(event,reloadSession);
+      }
+ else       if (MPSFileTypesManager.instance().isModuleFile(path)) {
+        ModuleFileProcessor.getInstance().process(event,reloadSession);
+      }
     }
-    if (MPSFileTypesManager.instance().isModelFile(path)) {
-      ModelFileProcessor.getInstance().process(event,reloadSession);
-    }
- else     if (MPSFileTypesManager.instance().isModuleFile(path)) {
-      ModuleFileProcessor.getInstance().process(event,reloadSession);
+    if (!isRefreshInProgress) {
+      doReload();
     }
   }
-  application.invokeLater(new Runnable(){
-    public void run(){
-      reloadSession.doReload();
-    }
-  }
-,ModalityState.NON_MODAL);
 }
