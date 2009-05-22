@@ -1,27 +1,40 @@
 {
   try {
-    List<String> packages=SetNodePackage_Action.this.fetchExistingPackages(SetNodePackage_Action.this.nodes);
-    String oldPackage=Sequence.fromIterable(SetNodePackage_Action.this.nodes).first().getProperty(SModelTreeNode.PACK);
-    SetNodePackageDialog dialog=new SetNodePackageDialog(SetNodePackage_Action.this.frame,"Set Virtual Package...",packages);
-    dialog.setPackage(oldPackage);
-    if (!(dialog.showDialog())) {
+    final Wrappers._T<List<String>> packages=new Wrappers._T<List<String>>();
+    final Wrappers._T<String> oldPackage=new Wrappers._T<String>();
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        packages.value=SetNodePackage_Action.this.fetchExistingPackages(SetNodePackage_Action.this.nodes);
+        oldPackage.value=Sequence.fromIterable(SetNodePackage_Action.this.nodes).first().getProperty(SModelTreeNode.PACK);
+      }
+    }
+);
+    final SetNodePackageDialog dialog=new SetNodePackageDialog(SetNodePackage_Action.this.frame,"Set Virtual Package...",packages.value);
+    dialog.setPackage(oldPackage.value);
+    dialog.showDialog();
+    if (dialog.isCancelled()) {
       return;
     }
-    for (    SNode node : ListSequence.fromList(SetNodePackage_Action.this.nodes)) {
-      node.setProperty(SModelTreeNode.PACK,dialog.getPackage());
-      if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration")) {
-        SNode behavior=AbstractConceptDeclaration_Behavior.call_findBehaviour_1213877394029(SNodeOperations.cast(node,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration"),SetNodePackage_Action.this.scope);
-        if (behavior != null) {
-          behavior.setProperty(SModelTreeNode.PACK,dialog.getPackage());
-        }
-      }
-      if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.lang.structure.structure.ConceptDeclaration")) {
-        SNode editor=ConceptDeclaration_Behavior.call_findEditor_1213877216527(SNodeOperations.cast(node,"jetbrains.mps.lang.structure.structure.ConceptDeclaration"),SetNodePackage_Action.this.scope);
-        if (editor != null) {
-          editor.setProperty(SModelTreeNode.PACK,dialog.getPackage());
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        for (        SNode node : ListSequence.fromList(SetNodePackage_Action.this.nodes)) {
+          node.setProperty(SModelTreeNode.PACK,dialog.getPackage());
+          if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration")) {
+            SNode behavior=AbstractConceptDeclaration_Behavior.call_findBehaviour_1213877394029(SNodeOperations.cast(node,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration"),SetNodePackage_Action.this.scope);
+            if (behavior != null) {
+              behavior.setProperty(SModelTreeNode.PACK,dialog.getPackage());
+            }
+          }
+          if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.lang.structure.structure.ConceptDeclaration")) {
+            SNode editor=ConceptDeclaration_Behavior.call_findEditor_1213877216527(SNodeOperations.cast(node,"jetbrains.mps.lang.structure.structure.ConceptDeclaration"),SetNodePackage_Action.this.scope);
+            if (editor != null) {
+              editor.setProperty(SModelTreeNode.PACK,dialog.getPackage());
+            }
+          }
         }
       }
     }
+);
   }
  catch (  Throwable t) {
     if (log.isErrorEnabled()) {
