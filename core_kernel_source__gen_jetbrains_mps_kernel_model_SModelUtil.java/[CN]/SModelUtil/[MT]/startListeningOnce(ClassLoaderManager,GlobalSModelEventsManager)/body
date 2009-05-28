@@ -1,0 +1,33 @@
+{
+  clManager.addReloadHandler(new ReloadAdapter(){
+    public void onReload(){
+      MapSequence.fromMap(SModelUtil.myFQNameToConcepDecl).clear();
+      MapSequence.fromMap(SModelUtil.myConceptToLanguage).clear();
+    }
+  }
+);
+  meManager.addGlobalModelListener(new SModelAdapter(){
+    public void rootRemoved(    SModelRootEvent p0){
+      if (Language.getModelAspect(p0.getModelDescriptor()) == LanguageAspect.STRUCTURE) {
+        if (SNodeOperations.isInstanceOf(((SNode)p0.getRoot()),"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration")) {
+          MapSequence.fromMap(SModelUtil.myFQNameToConcepDecl).clear();
+          MapSequence.fromMap(SModelUtil.myConceptToLanguage).clear();
+        }
+      }
+    }
+    public void propertyChanged(    SModelPropertyEvent p0){
+      if (Language.getModelAspect(p0.getModelDescriptor()) == LanguageAspect.STRUCTURE) {
+        if (SNodeOperations.isInstanceOf(((SNode)p0.getNode()),"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration")) {
+          if (p0.getPropertyName().equals("name")) {
+            String modelName=p0.getNode().getModel().getLongName();
+            String newName=modelName + "." + p0.getNewPropertyValue();
+            String oldName=modelName + "." + p0.getOldPropertyValue();
+            MapSequence.fromMap(SModelUtil.myFQNameToConcepDecl).put(newName,MapSequence.fromMap(SModelUtil.myFQNameToConcepDecl).get(oldName));
+            MapSequence.fromMap(SModelUtil.myFQNameToConcepDecl).remove(oldName);
+          }
+        }
+      }
+    }
+  }
+);
+}
