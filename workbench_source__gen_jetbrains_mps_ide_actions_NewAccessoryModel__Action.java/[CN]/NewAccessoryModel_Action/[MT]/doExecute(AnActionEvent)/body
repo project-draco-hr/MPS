@@ -1,0 +1,48 @@
+{
+  try {
+    final Language language=((Language)NewAccessoryModel_Action.this.module);
+    final Wrappers._T<String> languageNamespace=new Wrappers._T<String>();
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        languageNamespace.value=language.getNamespace();
+      }
+    }
+);
+    final String name=JOptionPane.showInputDialog(NewAccessoryModel_Action.this.frame,"Enter a model's name",languageNamespace.value);
+    if (name == null) {
+      return;
+    }
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        try {
+          ModelRoot newAccRoot=language.createAccessoriesRoot();
+          SModelRoot existingAccRoot=language.findModelRoot(newAccRoot.getPath());
+          if (existingAccRoot == null) {
+            LanguageDescriptor descriptor=language.getLanguageDescriptor();
+            descriptor.getModelRoots().add(newAccRoot);
+            language.setLanguageDescriptor(descriptor);
+            language.save();
+          }
+          SModelDescriptor model=language.createModel(SModelFqName.fromString(name),language.findModelRoot(newAccRoot.getPath()));
+          model.save();
+          LanguageDescriptor descriptor=language.getLanguageDescriptor();
+          descriptor.getAccessoryModels().add(SModelReference.fromString(name));
+          if (existingAccRoot == null) {
+            descriptor.getModelRoots().add(newAccRoot);
+          }
+          language.setLanguageDescriptor(descriptor);
+          language.save();
+        }
+ catch (        IllegalArgumentException e) {
+          JOptionPane.showMessageDialog(NewAccessoryModel_Action.this.frame,"Invalid Accessory Model Name","Invalid Accessory Model Name",JOptionPane.ERROR_MESSAGE);
+        }
+      }
+    }
+);
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "NewAccessoryModel",t);
+    }
+  }
+}
