@@ -14,15 +14,21 @@
   }
  else   if (ruleConsequence instanceof TemplateDeclarationReference) {
     TemplateDeclaration template=((TemplateDeclarationReference)ruleConsequence).getTemplate();
-    TemplateFragment fragment=GeneratorUtil.getFragmentFromTemplate(template,inputNode,ruleNode,generator);
-    if (fragment != null) {
-      return new Pair<SNode,String>(fragment.getParent().getNode(),fragment.getName());
+    List<TemplateFragment> fragments=GeneratorUtil.getTemplateFragments(template);
+    if (assertOneOrMaryAdjacentFragments(fragments,template,inputNode,ruleNode,generator)) {
+      List<Pair<SNode,String>> result=new ArrayList<Pair<SNode,String>>(fragments.size());
+      for (      TemplateFragment fragment : fragments) {
+        result.add(new Pair<SNode,String>(fragment.getParent().getNode(),GeneratorUtil.getMappingName(fragment,null)));
+      }
+      return result;
     }
   }
  else   if (ruleConsequence instanceof InlineTemplate_RuleConsequence) {
     BaseConcept templateNode=((InlineTemplate_RuleConsequence)ruleConsequence).getTemplateNode();
     if (templateNode != null) {
-      return new Pair<SNode,String>(templateNode.getNode(),null);
+      List<Pair<SNode,String>> result=new ArrayList<Pair<SNode,String>>(1);
+      result.add(new Pair<SNode,String>(templateNode.getNode(),null));
+      return result;
     }
  else {
       generator.showErrorMessage(inputNode,null,ruleConsequence.getNode(),"no template node");
@@ -32,7 +38,7 @@
     InlineSwitch_RuleConsequence inlineSwitch=(InlineSwitch_RuleConsequence)ruleConsequence;
     for (    InlineSwitch_Case switchCase : inlineSwitch.getCases()) {
       if (GeneratorUtil.checkCondition(switchCase.getConditionFunction(),true,inputNode,switchCase.getNode(),generator)) {
-        return getTemplateNodeFromRuleConsequence(switchCase.getCaseConsequence(),inputNode,switchCase.getNode(),generator);
+        return getTemplateNodesFromRuleConsequence(switchCase.getCaseConsequence(),inputNode,switchCase.getNode(),generator);
       }
     }
     RuleConsequence defaultConsequence=inlineSwitch.getDefaultConsequence();
@@ -40,7 +46,7 @@
       generator.showErrorMessage(inputNode,null,inlineSwitch.getNode(),"no default consequence in switch");
     }
  else {
-      return getTemplateNodeFromRuleConsequence(defaultConsequence,inputNode,defaultConsequence.getNode(),generator);
+      return getTemplateNodesFromRuleConsequence(defaultConsequence,inputNode,defaultConsequence.getNode(),generator);
     }
   }
  else {

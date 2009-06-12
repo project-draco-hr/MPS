@@ -5,35 +5,34 @@
     generator.showErrorMessage(inputNode,null,rule.getNode(),"error processing reduction rule: no rule consequence");
     return null;
   }
-  Pair<SNode,String> nodeAndMappingName=getTemplateNodeFromRuleConsequence(ruleConsequence,inputNode,rule.getNode(),generator);
-  if (nodeAndMappingName == null) {
+  List<Pair<SNode,String>> nodeAndMappingNamePairs=getTemplateNodesFromRuleConsequence(ruleConsequence,inputNode,rule.getNode(),generator);
+  if (nodeAndMappingNamePairs == null) {
     generator.showErrorMessage(inputNode,null,ruleConsequence.getNode(),"error processing reduction rule consequence");
     return null;
   }
-  SNode reductionTemplateNode=nodeAndMappingName.o1;
-  String mappingName=nodeAndMappingName.o2 != null ? nodeAndMappingName.o2 : ruleMappingName;
-  if (reductionTemplateNode == null) {
-    generator.showErrorMessage(inputNode,null,rule.getNode(),"error processing reduction rule");
-    return new ArrayList<SNode>();
+  List<SNode> result=new ArrayList<SNode>(1);
+  for (  Pair<SNode,String> nodeAndMappingNamePair : nodeAndMappingNamePairs) {
+    SNode templateNode=nodeAndMappingNamePair.o1;
+    String mappingName=nodeAndMappingNamePair.o2 != null ? nodeAndMappingNamePair.o2 : ruleMappingName;
+    try {
+      result.addAll(TemplateProcessor.createOutputNodesForTemplateNode(mappingName,templateNode,inputNode,generator));
+    }
+ catch (    DismissTopMappingRuleException e) {
+      throw e;
+    }
+catch (    TemplateProcessingFailureException e) {
+      generator.showErrorMessage(inputNode,templateNode,rule.getNode(),"error processing reduction rule");
+    }
+catch (    GenerationFailureException e) {
+      throw e;
+    }
+catch (    GenerationCanceledException e) {
+      throw e;
+    }
+catch (    Throwable t) {
+      LOG.error(t,BaseAdapter.fromNode(templateNode));
+      generator.showErrorMessage(inputNode,templateNode,rule.getNode(),"error processing reduction rule");
+    }
   }
-  try {
-    return TemplateProcessor.createOutputNodesForTemplateNode(mappingName,reductionTemplateNode,inputNode,generator);
-  }
- catch (  DismissTopMappingRuleException e) {
-    throw e;
-  }
-catch (  TemplateProcessingFailureException e) {
-    generator.showErrorMessage(inputNode,reductionTemplateNode,rule.getNode(),"error processing reduction rule");
-  }
-catch (  GenerationFailureException e) {
-    throw e;
-  }
-catch (  GenerationCanceledException e) {
-    throw e;
-  }
-catch (  Throwable t) {
-    LOG.error(t,BaseAdapter.fromNode(reductionTemplateNode));
-    generator.showErrorMessage(inputNode,reductionTemplateNode,rule.getNode(),"error processing reduction rule");
-  }
-  return new ArrayList<SNode>(1);
+  return result;
 }

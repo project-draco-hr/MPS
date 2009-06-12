@@ -53,16 +53,22 @@
       RuleConsequence altConsequence=((IfMacro)nodeMacro).getAlternativeConsequence();
       if (altConsequence != null) {
         try {
-          Pair<SNode,String> nodeAndMappingName=GeneratorUtil.getTemplateNodeFromRuleConsequence(altConsequence,inputNode,nodeMacro.getNode(),myGenerator);
-          if (nodeAndMappingName == null) {
+          List<Pair<SNode,String>> nodeAndMappingNamePairs=GeneratorUtil.getTemplateNodesFromRuleConsequence(altConsequence,inputNode,nodeMacro.getNode(),myGenerator);
+          if (nodeAndMappingNamePairs == null) {
             myGenerator.showErrorMessage(inputNode,null,nodeMacro.getNode(),"error processing $IF$/alternative");
             return null;
           }
-          SNode altTemplateNode=nodeAndMappingName.o1;
-          if (nodeAndMappingName.o2 != null) {
-            mappingName=nodeAndMappingName.o2;
+          for (          Pair<SNode,String> nodeAndMappingNamePair : nodeAndMappingNamePairs) {
+            SNode altTemplateNode=nodeAndMappingNamePair.o1;
+            if (nodeAndMappingNamePair.o2 != null) {
+              mappingName=nodeAndMappingNamePair.o2;
+            }
+            List<SNode> __outputNodes=createOutputNodesForExternalTemplateNode(mappingName,altTemplateNode,inputNode);
+            if (__outputNodes != null) {
+              if (_outputNodes == null)               _outputNodes=new ArrayList<SNode>();
+              _outputNodes.addAll(__outputNodes);
+            }
           }
-          _outputNodes=createOutputNodesForExternalTemplateNode(mappingName,altTemplateNode,inputNode);
         }
  catch (        AbandonRuleInputException e) {
         }
@@ -134,25 +140,28 @@
     }
     generationTracer.pushSwitch(templateSwitch.getNode());
     try {
+      List<SNode> _outputNodes=null;
       RuleConsequence consequenceForCase=(RuleConsequence)myGenerator.getConsequenceForSwitchCase(newInputNode,templateSwitch);
-      SNode templateNodeForCase=null;
-      if (consequenceForCase != null) {
-        Pair<SNode,String> nodeAndMappingName=GeneratorUtil.getTemplateNodeFromRuleConsequence(consequenceForCase,newInputNode,nodeMacro.getNode(),myGenerator);
-        if (nodeAndMappingName == null) {
+      if (consequenceForCase == null) {
+        _outputNodes=createOutputNodesForTemplateNode(mappingName,templateNode,newInputNode,nodeMacrosToSkip + 1);
+      }
+ else {
+        List<Pair<SNode,String>> nodeAndMappingNamePairs=GeneratorUtil.getTemplateNodesFromRuleConsequence(consequenceForCase,newInputNode,nodeMacro.getNode(),myGenerator);
+        if (nodeAndMappingNamePairs == null) {
           myGenerator.showErrorMessage(newInputNode,nodeMacro.getNode(),consequenceForCase.getNode(),"error processing $SWITCH$");
           return null;
         }
-        templateNodeForCase=nodeAndMappingName.o1;
-        if (nodeAndMappingName.o2 != null) {
-          mappingName=nodeAndMappingName.o2;
+        for (        Pair<SNode,String> nodeAndMappingNamePair : nodeAndMappingNamePairs) {
+          SNode templateNodeForCase=nodeAndMappingNamePair.o1;
+          if (nodeAndMappingNamePair.o2 != null) {
+            mappingName=nodeAndMappingNamePair.o2;
+          }
+          List<SNode> __outputNodes=createOutputNodesForExternalTemplateNode(mappingName,templateNodeForCase,newInputNode);
+          if (__outputNodes != null) {
+            if (_outputNodes == null)             _outputNodes=new ArrayList<SNode>();
+            _outputNodes.addAll(__outputNodes);
+          }
         }
-      }
-      List<SNode> _outputNodes;
-      if (templateNodeForCase != null) {
-        _outputNodes=createOutputNodesForExternalTemplateNode(mappingName,templateNodeForCase,newInputNode);
-      }
- else {
-        _outputNodes=createOutputNodesForTemplateNode(mappingName,templateNode,newInputNode,nodeMacrosToSkip + 1);
       }
       if (_outputNodes != null)       outputNodes.addAll(_outputNodes);
     }
@@ -177,8 +186,8 @@
       myGenerator.showErrorMessage(newInputNode,null,nodeMacro.getNode(),"error processing $INCLIDE$ : no 'include template'");
       return null;
     }
-    TemplateFragment fragment=GeneratorUtil.getFragmentFromTemplate(includeTemplate,newInputNode,nodeMacro.getNode(),myGenerator);
-    if (fragment == null) {
+    List<TemplateFragment> fragments=GeneratorUtil.getTemplateFragments(includeTemplate);
+    if (!GeneratorUtil.assertOneOrMaryAdjacentFragments(fragments,includeTemplate,newInputNode,nodeMacro.getNode(),myGenerator)) {
       myGenerator.showErrorMessage(newInputNode,null,nodeMacro.getNode(),"error processing $INCLIDE$");
       return null;
     }
@@ -189,10 +198,12 @@
     }
     generationTracer.pushTemplateNode(includeTemplate.getNode());
     try {
-      SNode templateForInclude=fragment.getParent().getNode();
-      mappingName=GeneratorUtil.getMappingName(fragment,mappingName);
-      List<SNode> _outputNodes=createOutputNodesForExternalTemplateNode(mappingName,templateForInclude,newInputNode);
-      if (_outputNodes != null)       outputNodes.addAll(_outputNodes);
+      for (      TemplateFragment fragment : fragments) {
+        SNode templateForInclude=fragment.getParent().getNode();
+        mappingName=GeneratorUtil.getMappingName(fragment,mappingName);
+        List<SNode> _outputNodes=createOutputNodesForExternalTemplateNode(mappingName,templateForInclude,newInputNode);
+        if (_outputNodes != null)         outputNodes.addAll(_outputNodes);
+      }
     }
   finally {
       if (inputChanged) {
