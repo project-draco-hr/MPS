@@ -1,7 +1,4 @@
 {
-  File projectFile=FileUtil.createTmpFile();
-  MPSProject project=new MPSProject(projectFile,new ProjectDescriptor(),ProjectManager.getInstance().getDefaultProject());
-  ArrayList<SModelDescriptor> modelDescriptors=new ArrayList<SModelDescriptor>();
   final Set<File> probablyModelFiles=new LinkedHashSet<File>();
   for (  File f : myWhatToGenerate.getModelDirectories()) {
     com.intellij.openapi.util.io.FileUtil.processFilesRecursively(f,new Processor<File>(){
@@ -16,6 +13,12 @@
   }
   for (  File f : probablyModelFiles) {
     final IFile ifile=FileSystem.getFile(f);
+    SModelDescriptor model=SModelRepository.getInstance().findModel(ifile);
+    if (model != null) {
+      modelDescriptors.add(model);
+      myMessageHandler.handle(new Message(MessageKind.INFORMATION,"Found model " + model));
+      continue;
+    }
     try {
       SModel smodel=ModelAccess.instance().runReadAction(new Computable<SModel>(){
         public SModel compute(){
@@ -23,7 +26,7 @@
         }
       }
 );
-      myMessageHandler.handle(new Message(MessageKind.INFORMATION,"Loaded model " + smodel));
+      myMessageHandler.handle(new Message(MessageKind.INFORMATION,"Read model " + smodel));
       SModelDescriptor smodelDescriptor=new DefaultSModelDescriptor(new DefaultModelRootManager(),ifile,smodel.getSModelReference());
       modelDescriptors.add(smodelDescriptor);
     }
@@ -31,5 +34,4 @@
       myMessageHandler.handle(e);
     }
   }
-  generateModels(project,modelDescriptors);
 }
