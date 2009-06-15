@@ -25,33 +25,38 @@
     Logger.addLoggingHandler(generationSession.getLoggingHandler());
     for (    SModelDescriptor inputModel : inputModels) {
       TypeChecker.getInstance().setIsGeneration(true);
-      if (!myGenerationType.isApplicable(inputModel)) {
-        LOG.error("Can't apply generation type " + myGenerationType + " to "+ inputModel.getSModelFqName());
-        continue;
-      }
-      info("");
-      String taskName=ModelsProgressUtil.generationModelTaskName(inputModel);
-      setText2("model " + inputModel.getSModelFqName(),totalJob,startJobTime);
       TaskProgressHelper progress=new TaskProgressHelper(this);
-      progress.startLeafTask(taskName,myProgress,totalJob,startJobTime);
-      GenerationStatus status=generationSession.generateModel(inputModel);
-      currentGenerationOK=currentGenerationOK && status.isOk();
-      info("handling output...");
-      checkMonitorCanceled();
-      if (status.getOutputModel() != null) {
-        boolean result=myGenerationType.handleOutput(status,outputFolder,invocationContext,myProgress,myMesssages);
-        if (!result) {
-          info("there were errors.");
-          currentGenerationOK=false;
+      try {
+        if (!myGenerationType.isApplicable(inputModel)) {
+          LOG.error("Can't apply generation type " + myGenerationType + " to "+ inputModel.getSModelFqName());
+          continue;
+        }
+        info("");
+        String taskName=ModelsProgressUtil.generationModelTaskName(inputModel);
+        setText2("model " + inputModel.getSModelFqName(),totalJob,startJobTime);
+        progress.startLeafTask(taskName,myProgress,totalJob,startJobTime);
+        GenerationStatus status=generationSession.generateModel(inputModel);
+        currentGenerationOK=currentGenerationOK && status.isOk();
+        info("handling output...");
+        checkMonitorCanceled();
+        if (status.getOutputModel() != null) {
+          boolean result=myGenerationType.handleOutput(status,outputFolder,invocationContext,myProgress,myMesssages);
+          if (!result) {
+            info("there were errors.");
+            currentGenerationOK=false;
+          }
+        }
+ else         if (!(status.isCanceled() || status.isError())) {
+          myGenerationType.handleEmptyOutput(status,outputFolder,invocationContext,myProgress,myMesssages);
         }
       }
- else       if (!(status.isCanceled() || status.isError())) {
-        myGenerationType.handleEmptyOutput(status,outputFolder,invocationContext,myProgress,myMesssages);
+  finally {
+        generationSession.discardTransients();
+        CleanupManager.getInstance().cleanup();
+        progress.finishTask();
+        TypeChecker.getInstance().setIsGeneration(false);
+        setText2("",totalJob,startJobTime);
       }
-      generationSession.discardTransients();
-      CleanupManager.getInstance().cleanup();
-      progress.finishTask();
-      setText2("",totalJob,startJobTime);
     }
   }
   finally {
@@ -59,7 +64,6 @@
       Logger.setThreshold(wasLoggingThreshold);
     }
     Logger.removeLoggingHandler(generationSession.getLoggingHandler());
-    TypeChecker.getInstance().setIsGeneration(false);
   }
   checkMonitorCanceled();
   info("");
