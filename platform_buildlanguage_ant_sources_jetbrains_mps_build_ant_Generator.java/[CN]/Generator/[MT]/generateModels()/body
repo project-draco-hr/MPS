@@ -1,0 +1,35 @@
+{
+  File projectFile=FileUtil.createTmpFile();
+  MPSProject project=new MPSProject(projectFile,new ProjectDescriptor(),ProjectManager.getInstance().getDefaultProject());
+  ArrayList<SModelDescriptor> modelDescriptors=new ArrayList<SModelDescriptor>();
+  final Set<File> probablyModelFiles=new LinkedHashSet<File>();
+  for (  File f : myWhatToGenerate.getModelDirectories()) {
+    com.intellij.openapi.util.io.FileUtil.processFilesRecursively(f,new Processor<File>(){
+      public boolean process(      File file){
+        if (file.getPath().endsWith(MPSExtentions.DOT_MODEL)) {
+          probablyModelFiles.add(file);
+        }
+        return true;
+      }
+    }
+);
+  }
+  for (  File f : probablyModelFiles) {
+    final IFile ifile=FileSystem.getFile(f);
+    try {
+      SModel smodel=ModelAccess.instance().runReadAction(new Computable<SModel>(){
+        public SModel compute(){
+          return ModelPersistence.readModel(ifile);
+        }
+      }
+);
+      myMessageHandler.handle(new Message(MessageKind.INFORMATION,"Loaded model " + smodel));
+      SModelDescriptor smodelDescriptor=new DefaultSModelDescriptor(new DefaultModelRootManager(),ifile,smodel.getSModelReference());
+      modelDescriptors.add(smodelDescriptor);
+    }
+ catch (    ModelFileReadException e) {
+      myMessageHandler.handle(e);
+    }
+  }
+  generateModels(project,modelDescriptors);
+}
