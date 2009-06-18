@@ -1,16 +1,24 @@
 {
   final Collection<Conflictable> merged=showMergeDialog(models);
-  if (merged.isEmpty())   return;
+  if (merged.isEmpty()) {
+    ModelChangesWatcher.instance().tryToResumeTasksProcessing();
+    return;
+  }
   ApplicationManager.getApplication().invokeLater(new Runnable(){
     public void run(){
-      ModelAccess.instance().runReadAction(new Runnable(){
-        public void run(){
-          for (          Conflictable conflictable : merged) {
-            conflictable.reloadFromDisk();
+      try {
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            for (            Conflictable conflictable : merged) {
+              conflictable.reloadFromDisk();
+            }
           }
         }
-      }
 );
+      }
+  finally {
+        ModelChangesWatcher.instance().tryToResumeTasksProcessing();
+      }
     }
   }
 ,ModalityState.NON_MODAL);
