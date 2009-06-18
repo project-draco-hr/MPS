@@ -10,20 +10,49 @@
     methodsToCall=myConstructors.get(conceptFqName);
   }
  else {
-    while (concept != null) {
-      String fqName=NameUtil.nodeFQName(concept);
-      String behaviorClass=behaviorClassByConceptFqName(fqName);
-      try {
-        Class cls=language.getClass(behaviorClass);
-        if (cls != null) {
-          Method method=cls.getMethod("init",SNode.class);
-          method.setAccessible(true);
-          methodsToCall.add(method);
+    List<AbstractConceptDeclaration> concepts=new ArrayList<AbstractConceptDeclaration>();
+    List<AbstractConceptDeclaration> newFrontier=new ArrayList<AbstractConceptDeclaration>();
+    Set<AbstractConceptDeclaration> processed=new HashSet<AbstractConceptDeclaration>();
+    concepts.add(concept);
+    while (!concepts.isEmpty()) {
+      for (      AbstractConceptDeclaration currentConcept : concepts) {
+        if (processed.contains(currentConcept)) {
+          continue;
         }
+        String fqName=NameUtil.nodeFQName(currentConcept);
+        String behaviorClass=behaviorClassByConceptFqName(fqName);
+        try {
+          Class cls=language.getClass(behaviorClass);
+          if (cls != null) {
+            Method method=cls.getMethod("init",SNode.class);
+            method.setAccessible(true);
+            methodsToCall.add(method);
+          }
+        }
+ catch (        NoSuchMethodException e) {
+        }
+        if (currentConcept instanceof ConceptDeclaration) {
+          ConceptDeclaration conceptDeclaration=(ConceptDeclaration)currentConcept;
+          List<InterfaceConceptReference> references=conceptDeclaration.getImplementses();
+          for (          InterfaceConceptReference reference : references) {
+            newFrontier.add(reference.getIntfc());
+          }
+          ConceptDeclaration parentConcept=conceptDeclaration.getExtends();
+          if (parentConcept != null) {
+            newFrontier.add(parentConcept);
+          }
+        }
+ else         if (currentConcept instanceof InterfaceConceptDeclaration) {
+          InterfaceConceptDeclaration interfaceConcept=(InterfaceConceptDeclaration)currentConcept;
+          List<InterfaceConceptReference> references=interfaceConcept.getExtendses();
+          for (          InterfaceConceptReference reference : references) {
+            newFrontier.add(reference.getIntfc());
+          }
+        }
+        processed.add(currentConcept);
       }
- catch (      NoSuchMethodException e) {
-      }
-      concept=((ConceptDeclaration)concept).getExtends();
+      concepts=newFrontier;
+      newFrontier=new ArrayList<AbstractConceptDeclaration>();
     }
     myConstructors.put(conceptFqName,methodsToCall);
   }
