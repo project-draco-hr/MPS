@@ -1,0 +1,55 @@
+{
+  ProgressManager.getInstance().run(new Task.Modal(this.myProject,"Generating Build Script",false){
+    public void run(    @NotNull() ProgressIndicator progressIndicator){
+      progressIndicator.setIndeterminate(true);
+      progressIndicator.setText("Preparing...");
+      final SModelDescriptor descriptor=BuildGeneratorImpl.this.getSModelDescriptor(progressIndicator);
+      final String projectName=BuildGeneratorImpl.this.getProjectName();
+      final String projectBasedirPath=this.myProject.getBaseDir().getPath();
+      final List<NodeData> modules=BuildGeneratorImpl.this.getModules();
+      progressIndicator.setText("Creating Script...");
+      final List<ModuleReference> moduleReferencesToAdd=BuildGeneratorImpl.this.getModuleReferencesToAdd();
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        public void run(){
+          final Wrappers._T<Runnable> runnable=new Wrappers._T<Runnable>();
+          final Solution solution=(Solution)descriptor.getModule();
+          ModelAccess.instance().runWriteAction(new Runnable(){
+            public void run(){
+              for (              ModuleReference ref : ListSequence.fromList(moduleReferencesToAdd)) {
+                (solution).getSolutionDescriptor().getUsedLanguages().add(ref);
+              }
+            }
+          }
+);
+          ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+            public void run(){
+              for (              ModuleReference ref : ListSequence.fromList(moduleReferencesToAdd)) {
+                descriptor.getSModel().addLanguage(ref);
+              }
+              runnable.value=BuildGeneratorImpl.this.generate(descriptor,projectName,projectBasedirPath,modules);
+            }
+          }
+);
+          runnable.value.run();
+          final MPSProject project=BuildGeneratorImpl.this.myProject.getComponent(MPSProjectHolder.class).getMPSProject();
+          project.getProjectDescriptor().addSolution(solution.getDescriptorFile().getAbsolutePath());
+          ProgressManager.getInstance().run(new Task.Modal(BuildGeneratorImpl.this.myProject,"Reloading Classes",false){
+            public void run(            @NotNull() ProgressIndicator progressIndicator){
+              progressIndicator.setIndeterminate(true);
+              progressIndicator.setText("Realoding Classes... Please Wait");
+              ModelAccess.instance().runWriteAction(new Runnable(){
+                public void run(){
+                  project.update();
+                }
+              }
+);
+            }
+          }
+);
+        }
+      }
+,ModalityState.NON_MODAL);
+    }
+  }
+);
+}
