@@ -4,10 +4,7 @@
     public void actionPerformed(    ActionEvent e){
       ModelAccess.instance().runWriteActionInCommand(new Runnable(){
         public void run(){
-          List<SNodeId> ids=new ArrayList<SNodeId>();
-          addNodeIds(ids,myChange1Model);
-          addNodeIds(ids,myResultModel);
-          addNodeIds(ids,myChange2Model);
+          Set<SNodeId> ids=collectRootIds();
           for (          Change change : new ArrayList<Change>(myMerger.getExcludedChanges())) {
             if (ids.contains(change.getAffectedNodeId())) {
               myMerger.includeChange(change);
@@ -16,6 +13,31 @@
           for (          Change change : new ArrayList<Change>(myMerger.getApplyedChanges())) {
             if (ids.contains(change.getAffectedNodeId())) {
               myMerger.getApplyedChanges().remove(change);
+            }
+          }
+          rebuildChangeBlocks();
+        }
+      }
+);
+    }
+  }
+));
+  controlPanel.add(new JButton(new AbstractAction("Apply all"){
+    public void actionPerformed(    ActionEvent e){
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          Set<SNodeId> ids=collectRootIds();
+          ArrayList<Change> changes=new ArrayList<Change>();
+          changes.addAll(myMerger.getBaseMyneChange());
+          changes.addAll(myMerger.getBaseRepoChange());
+          changes.removeAll(myMerger.getExcludedChanges());
+          for (          Conflict conflict : myMerger.getUnresolvedConflicts()) {
+            changes.remove(conflict.getC1());
+            changes.remove(conflict.getC2());
+          }
+          for (          Change change : changes) {
+            if (ids.contains(change.getAffectedNodeId())) {
+              myMerger.getApplyedChanges().add(change);
             }
           }
           rebuildChangeBlocks();
