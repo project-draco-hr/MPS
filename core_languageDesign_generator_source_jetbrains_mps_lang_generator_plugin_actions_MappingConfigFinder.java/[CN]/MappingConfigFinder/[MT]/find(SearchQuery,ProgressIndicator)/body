@@ -1,0 +1,25 @@
+{
+  List<SearchResult<SNode>> results=new ArrayList<SearchResult<SNode>>();
+  List<MappingConfiguration> mappingConfigs=myGenerator.getOwnMappings();
+  List<SNode> nodesToCheck=new ArrayList<SNode>();
+  for (  MappingConfiguration mappingConfig : mappingConfigs) {
+    List<BaseMappingRule> rules=mappingConfig.getChildren(BaseMappingRule.class);
+    for (    BaseMappingRule rule : rules) {
+      nodesToCheck.add(rule.getNode());
+      collectChildrenThatMayHaveReferenceOnTemplate(rule.getNode(),nodesToCheck);
+    }
+    List<CreateRootRule> createRootRules=mappingConfig.getCreateRootRules();
+    nodesToCheck.addAll(BaseAdapter.toNodes(createRootRules));
+  }
+  for (  SNode node : nodesToCheck) {
+    List<SReference> references=node.getReferences();
+    for (    SReference reference : references) {
+      if (myNodeToFindUsages.getSNodeId().equals(reference.getTargetNodeId())) {
+        SearchResult<SNode> result=new SearchResult<SNode>(node,"");
+        results.add(result);
+        break;
+      }
+    }
+  }
+  return new SearchResults<SNode>(CollectionUtil.set(myNodeToFindUsages),results);
+}
