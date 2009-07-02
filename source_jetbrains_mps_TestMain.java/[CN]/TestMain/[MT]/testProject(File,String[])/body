@@ -1,3 +1,42 @@
 {
-  return testProject(projectFile,(String)null,configurations);
+  IdeMain.setTestMode(TestMode.CORE_TEST);
+  long start=System.currentTimeMillis();
+  configureMPS();
+  System.out.println("loading project " + projectFile + "...");
+  if (!projectFile.exists()) {
+    throw new RuntimeException("Can't find a project in file " + projectFile.getAbsolutePath());
+  }
+  final MPSProject project=loadProject(projectFile);
+  TestResult result=new ProjectTester(project).testProject(configurations);
+  ThreadUtils.runInUIThreadAndWait(new Runnable(){
+    public void run(){
+      project.dispose();
+      IdeEventQueue.getInstance().flushQueue();
+      gc();
+    }
+  }
+);
+  result.dump(System.out);
+  if (!result.isOk()) {
+    if (result.hasGenerationErrors()) {
+      System.out.println("there were " + result.myGenerationErrors.size() + " generation error");
+      for (      String error : result.myGenerationErrors) {
+        System.out.println(error);
+      }
+    }
+    if (result.hasGenerationWarnings()) {
+      System.out.println("there were " + result.myGenerationWarnings.size() + " generation warnings");
+      for (      String warning : result.myGenerationWarnings) {
+        System.out.println(warning);
+      }
+    }
+    if (result.hasCompilationProblems()) {
+      System.out.println("there were " + result.myCompilationProblems.size() + " compilation problems");
+      for (      String compilationProblem : result.myCompilationProblems) {
+        System.out.println(compilationProblem);
+      }
+    }
+  }
+  System.out.println("testing took " + (System.currentTimeMillis() - start) + " ms");
+  return result;
 }
