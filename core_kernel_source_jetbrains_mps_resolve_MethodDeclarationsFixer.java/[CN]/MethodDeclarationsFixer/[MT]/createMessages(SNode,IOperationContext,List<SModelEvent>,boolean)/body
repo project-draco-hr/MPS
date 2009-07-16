@@ -1,0 +1,43 @@
+{
+  Set<SNode> expressionsWithChangedTypes;
+synchronized (myRecalculatedTypesLock) {
+    expressionsWithChangedTypes=new HashSet<SNode>(myCurrentExpressionsWithChangedTypes);
+    myCurrentExpressionsWithChangedTypes.clear();
+  }
+  SModelEventVisitor visitor=new SModelEventVisitorAdapter(){
+    public void visitChildEvent(    SModelChildEvent event){
+      if (event.isAdded()) {
+        nodeAdded(event.getChild());
+      }
+ else {
+        nodeRemoved(event.getChild(),event.getParent());
+      }
+    }
+    public void visitReferenceEvent(    SModelReferenceEvent event){
+      SReference reference=event.getReference();
+      SNode sourceNode=reference.getSourceNode();
+      if (BaseAdapter.isInstance(sourceNode,BaseMethodCall.class) && BaseMethodCall.BASE_METHOD_DECLARATION.equals(reference.getRole())) {
+        methodCallDeclarationChanged(sourceNode);
+      }
+    }
+    public void visitPropertyEvent(    SModelPropertyEvent event){
+      SNode node=event.getNode();
+      if (BaseAdapter.isInstance(node,BaseMethodDeclaration.class)) {
+        if (BaseMethodDeclaration.NAME.equals(event.getPropertyName())) {
+          methodDeclarationChanged(node);
+        }
+      }
+    }
+  }
+;
+  for (  SModelEvent event : events) {
+    if (event.getAffectedRoot() != rootNode) {
+      continue;
+    }
+    event.accept(visitor);
+  }
+  for (  SNode expressionWithChangedType : expressionsWithChangedTypes) {
+    expressionTypeChanged(expressionWithChangedType);
+  }
+  return new HashSet<EditorMessage>();
+}
