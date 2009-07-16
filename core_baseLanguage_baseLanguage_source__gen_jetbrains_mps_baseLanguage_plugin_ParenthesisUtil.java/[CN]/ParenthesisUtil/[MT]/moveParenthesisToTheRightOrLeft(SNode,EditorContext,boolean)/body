@@ -1,0 +1,44 @@
+{
+  if (!(SNodeOperations.isInstanceOf(SNodeOperations.getParent(expr),"jetbrains.mps.baseLanguage.structure.BinaryOperation"))) {
+    return;
+  }
+  SNode binOp=getBinOp(expr,toRight);
+  if (binOp == null) {
+    return;
+  }
+  SNode sidemost=findRightmostOrLeftmostLeafExpression(SLinkOperations.getTarget(expr,"expression",true),toRight);
+  SNode leaf=findRightmostOrLeftmostLeafExpression((toRight ? SLinkOperations.getTarget(binOp,"rightExpression",true) : SLinkOperations.getTarget(binOp,"leftExpression",true)),!(toRight));
+  SNode backsideSubtree=(toRight ? SLinkOperations.getTarget(binOp,"leftExpression",true) : SLinkOperations.getTarget(binOp,"rightExpression",true));
+  SNodeOperations.detachNode(backsideSubtree);
+  SNodeOperations.replaceWithAnother(binOp,backsideSubtree);
+  SNodeOperations.replaceWithAnother(sidemost,binOp);
+  if (toRight) {
+    SLinkOperations.setTarget(binOp,"leftExpression",sidemost,true);
+  }
+ else {
+    SLinkOperations.setTarget(binOp,"rightExpression",sidemost,true);
+  }
+  SNode sideSubtree=(toRight ? SLinkOperations.getTarget(binOp,"rightExpression",true) : SLinkOperations.getTarget(binOp,"leftExpression",true));
+  SNodeOperations.detachNode(leaf);
+  if (toRight) {
+    SLinkOperations.setTarget(binOp,"rightExpression",leaf,true);
+  }
+ else {
+    SLinkOperations.setTarget(binOp,"leftExpression",leaf,true);
+  }
+  if (sideSubtree != leaf) {
+    SNode leafParentOperation=SNodeOperations.cast(SNodeOperations.getParent(leaf),"jetbrains.mps.baseLanguage.structure.BinaryOperation");
+    SNode exprParent=SNodeOperations.getParent(expr);
+    SNodeOperations.replaceWithAnother(expr,sideSubtree);
+    if (toRight) {
+      SLinkOperations.setTarget(leafParentOperation,"leftExpression",expr,true);
+    }
+ else {
+      SLinkOperations.setTarget(leafParentOperation,"rightExpression",expr,true);
+    }
+    checkOperationWRTPriority(SNodeOperations.cast(exprParent,"jetbrains.mps.baseLanguage.structure.BinaryOperation"));
+  }
+  SNode binOpCheck=(SNodeOperations.isInstanceOf(SNodeOperations.getParent(binOp),"jetbrains.mps.baseLanguage.structure.BinaryOperation") ? SNodeOperations.cast(SNodeOperations.getParent(binOp),"jetbrains.mps.baseLanguage.structure.BinaryOperation") : binOp);
+  checkOperationWRTPriority(binOpCheck);
+  selectNode(context,expr,toRight);
+}

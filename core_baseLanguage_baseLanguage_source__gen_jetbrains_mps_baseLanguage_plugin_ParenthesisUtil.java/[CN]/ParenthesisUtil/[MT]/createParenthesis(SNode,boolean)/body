@@ -1,0 +1,40 @@
+{
+  SNode current=expression;
+  SNode prev=expression;
+  while (current != null && !(SNodeOperations.isInstanceOf(current,"jetbrains.mps.baseLanguage.structure.BinaryOperation"))) {
+    prev=current;
+    if (!(SNodeOperations.isInstanceOf(SNodeOperations.getParent(current),"jetbrains.mps.baseLanguage.structure.Expression"))) {
+      break;
+    }
+    current=SNodeOperations.cast(SNodeOperations.getParent(current),"jetbrains.mps.baseLanguage.structure.Expression");
+  }
+  current=prev;
+  SNode binOp=getBinOp(current,opening);
+  if (binOp == null) {
+    SNode parExpr=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ParenthesizedExpression",null);
+    SNodeOperations.replaceWithAnother(current,parExpr);
+    SLinkOperations.setTarget(parExpr,"expression",current,true);
+    return parExpr;
+  }
+  boolean left=opening && SLinkOperations.getTarget(binOp,"leftExpression",true) == current;
+  boolean right=!(opening) && SLinkOperations.getTarget(binOp,"rightExpression",true) == current;
+  if (left || right) {
+    SNode parExpr=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ParenthesizedExpression",null);
+    if (SNodeOperations.isInstanceOf(SNodeOperations.getParent(binOp),"jetbrains.mps.baseLanguage.structure.ParenthesizedExpression")) {
+      SNodeOperations.replaceWithAnother(current,parExpr);
+      SLinkOperations.setTarget(parExpr,"expression",current,true);
+    }
+ else {
+      SNodeOperations.replaceWithAnother(binOp,parExpr);
+      SLinkOperations.setTarget(parExpr,"expression",binOp,true);
+    }
+    return parExpr;
+  }
+  SNode subtree=(opening ? SLinkOperations.getTarget(binOp,"leftExpression",true) : SLinkOperations.getTarget(binOp,"rightExpression",true));
+  SNode parExpr=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ParenthesizedExpression",null);
+  SNodeOperations.replaceWithAnother(current,parExpr);
+  SNodeOperations.replaceWithAnother(subtree,current);
+  SNodeOperations.replaceWithAnother(binOp,subtree);
+  SLinkOperations.setTarget(parExpr,"expression",binOp,true);
+  return parExpr;
+}
