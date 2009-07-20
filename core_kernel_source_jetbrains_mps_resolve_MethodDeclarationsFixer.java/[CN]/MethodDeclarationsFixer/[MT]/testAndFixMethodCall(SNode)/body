@@ -1,8 +1,23 @@
 {
-  BaseMethodCall baseMethodCall=(BaseMethodCall)BaseAdapter.fromNode(methodCall);
-  BaseMethodDeclaration baseMethodDeclaration=baseMethodCall.getBaseMethodDeclaration();
+  IMethodCall methodCall=(IMethodCall)BaseAdapter.fromNode(methodCallNode);
+  BaseMethodDeclaration baseMethodDeclaration=methodCall.getBaseMethodDeclaration();
   if (baseMethodDeclaration == null) {
     return;
   }
   String methodName=baseMethodDeclaration.getName();
+  List<Expression> actualArgs=methodCall.getActualArguments();
+  Classifier classifier=getClassifier(methodCall);
+  List<? extends BaseMethodDeclaration> candidates=getCandidates(methodCall,methodName,classifier);
+  Map<TypeVariableDeclaration,Type> typeByTypeVar=getTypeByTypeVar(methodCall);
+  List<? extends BaseMethodDeclaration> methodDeclarationsGoodParams=MethodResolveUtil.selectByParmCount(candidates,actualArgs);
+  BaseMethodDeclaration newTarget=null;
+  if (methodDeclarationsGoodParams.size() == 1) {
+    newTarget=methodDeclarationsGoodParams.get(0);
+  }
+ else {
+    newTarget=MethodResolveUtil.chooseByParameterType(methodDeclarationsGoodParams,actualArgs,typeByTypeVar);
+  }
+  if (newTarget != null) {
+    methodCall.setBaseMethodDeclaration(newTarget);
+  }
 }
