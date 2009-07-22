@@ -7,28 +7,29 @@ synchronized (myRecalculatedTypesLock) {
     expressionsWithChangedTypes=new HashSet<SNode>(myCurrentExpressionsWithChangedTypes);
     myCurrentExpressionsWithChangedTypes.clear();
   }
+  final Map<SNode,SNode> resolveTargets=new HashMap<SNode,SNode>();
   SModelEventVisitor visitor=new SModelEventVisitorAdapter(){
     public void visitChildEvent(    SModelChildEvent event){
       SNode child=event.getChild();
       if (event.isAdded()) {
-        nodeAdded(child);
+        nodeAdded(child,resolveTargets);
       }
  else {
-        nodeRemoved(child,event.getParent());
+        nodeRemoved(child,event.getParent(),resolveTargets);
       }
     }
     public void visitReferenceEvent(    SModelReferenceEvent event){
       SReference reference=event.getReference();
       SNode sourceNode=reference.getSourceNode();
       if (BaseAdapter.isInstance(sourceNode,BaseMethodCall.class) && BaseMethodCall.BASE_METHOD_DECLARATION.equals(reference.getRole())) {
-        methodCallDeclarationChanged(sourceNode);
+        methodCallDeclarationChanged(sourceNode,resolveTargets);
       }
     }
     public void visitPropertyEvent(    SModelPropertyEvent event){
       SNode node=event.getNode();
       if (BaseAdapter.isInstance(node,BaseMethodDeclaration.class)) {
         if (BaseMethodDeclaration.NAME.equals(event.getPropertyName())) {
-          methodDeclarationChanged(node);
+          methodDeclarationChanged(node,resolveTargets);
         }
       }
     }
@@ -41,7 +42,29 @@ synchronized (myRecalculatedTypesLock) {
     event.accept(visitor);
   }
   for (  SNode expressionWithChangedType : expressionsWithChangedTypes) {
-    expressionTypeChanged(expressionWithChangedType);
+    expressionTypeChanged(expressionWithChangedType,resolveTargets);
   }
+  ThreadUtils.runInUIThreadNoWait(new Runnable(){
+    public void run(){
+      if (resolveTargets.isEmpty())       return;
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          CommandProcessor.getInstance().runUndoTransparentAction(new Runnable(){
+            public void run(){
+              for (              SNode methodCall : resolveTargets.keySet()) {
+                SNode referent=resolveTargets.get(methodCall);
+                if (referent != null) {
+                  methodCall.setReferent(IMethodCall.BASE_METHOD_DECLARATION,referent);
+                }
+              }
+            }
+          }
+);
+        }
+      }
+);
+    }
+  }
+);
   return new HashSet<EditorMessage>();
 }
