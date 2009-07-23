@@ -1,0 +1,62 @@
+{
+  return new RunProfileState(){
+    @Nullable() public ExecutionResult execute(    Executor executor,    @NotNull() ProgramRunner runner) throws ExecutionException {
+      final Wrappers._T<JComponent> consoleComponent=new Wrappers._T<JComponent>();
+      final Wrappers._T<Runnable> consoleDispose=new Wrappers._T<Runnable>(null);
+      final List<AnAction> actions=ListSequence.fromList(new ArrayList<AnAction>());
+      ProcessHandler handler=null;
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          Project project=MPSDataKeys.PROJECT.getData(environment.getDataContext());
+          final RunComponent runComponent=new RunComponent(project);
+          consoleComponent.value=runComponent;
+          consoleDispose.value=new Runnable(){
+            public void run(){
+              runComponent.dispose();
+            }
+          }
+;
+          ClassRunner classRunner=new ClassRunner(runComponent);
+          classRunner.run(DefaultJavaApplication_Configuration.this.getStateObject().myNode.getNode());
+        }
+      }
+);
+      final JComponent finalConsoleComponent=consoleComponent.value;
+      final Runnable finalConsoleDispose=consoleDispose.value;
+      final ProcessHandler finalHandler=handler;
+      return new ExecutionResult(){
+        public ExecutionConsole getExecutionConsole(){
+          return new ExecutionConsole(){
+            public void dispose(){
+              if (finalConsoleDispose == null) {
+                return;
+              }
+              finalConsoleDispose.run();
+            }
+            public JComponent getComponent(){
+              return finalConsoleComponent;
+            }
+            public JComponent getPreferredFocusableComponent(){
+              return finalConsoleComponent;
+            }
+          }
+;
+        }
+        public AnAction[] getActions(){
+          return ListSequence.fromList(actions).toGenericArray(AnAction.class);
+        }
+        public ProcessHandler getProcessHandler(){
+          return finalHandler;
+        }
+      }
+;
+    }
+    public RunnerSettings getRunnerSettings(){
+      return null;
+    }
+    public ConfigurationPerRunnerSettings getConfigurationSettings(){
+      return null;
+    }
+  }
+;
+}
