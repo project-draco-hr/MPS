@@ -2,57 +2,64 @@
   if (DISABLED) {
     return new HashSet<EditorMessage>();
   }
-  Set<SNode> expressionsWithChangedTypes;
-synchronized (myRecalculatedTypesLock) {
-    expressionsWithChangedTypes=new HashSet<SNode>(myCurrentExpressionsWithChangedTypes);
-    myCurrentExpressionsWithChangedTypes.clear();
+  final Map<SNode,SNode> reResolvedTargets=new HashMap<SNode,SNode>();
+  if (!wasCheckedOnce) {
+    for (    SNode methodCall : rootNode.getDescendants(new IsInstanceCondition(IMethodCall.concept))) {
+      testAndFixMethodCall(methodCall,reResolvedTargets);
+    }
   }
-  final Map<SNode,SNode> resolveTargets=new HashMap<SNode,SNode>();
-  SModelEventVisitor visitor=new SModelEventVisitorAdapter(){
-    public void visitChildEvent(    SModelChildEvent event){
-      SNode child=event.getChild();
-      if (event.isAdded()) {
-        nodeAdded(child,resolveTargets);
-      }
  else {
-        nodeRemoved(child,event.getParent(),resolveTargets);
-      }
+    Set<SNode> expressionsWithChangedTypes;
+synchronized (myRecalculatedTypesLock) {
+      expressionsWithChangedTypes=new HashSet<SNode>(myCurrentExpressionsWithChangedTypes);
+      myCurrentExpressionsWithChangedTypes.clear();
     }
-    public void visitReferenceEvent(    SModelReferenceEvent event){
-      SReference reference=event.getReference();
-      SNode sourceNode=reference.getSourceNode();
-      if (BaseAdapter.isInstance(sourceNode,BaseMethodCall.class) && BaseMethodCall.BASE_METHOD_DECLARATION.equals(reference.getRole())) {
-        methodCallDeclarationChanged(sourceNode,resolveTargets);
+    SModelEventVisitor visitor=new SModelEventVisitorAdapter(){
+      public void visitChildEvent(      SModelChildEvent event){
+        SNode child=event.getChild();
+        if (event.isAdded()) {
+          nodeAdded(child,reResolvedTargets);
+        }
+ else {
+          nodeRemoved(child,event.getParent(),reResolvedTargets);
+        }
       }
-    }
-    public void visitPropertyEvent(    SModelPropertyEvent event){
-      SNode node=event.getNode();
-      if (BaseAdapter.isInstance(node,BaseMethodDeclaration.class)) {
-        if (BaseMethodDeclaration.NAME.equals(event.getPropertyName())) {
-          methodDeclarationChanged(node,resolveTargets);
+      public void visitReferenceEvent(      SModelReferenceEvent event){
+        SReference reference=event.getReference();
+        SNode sourceNode=reference.getSourceNode();
+        if (BaseAdapter.isInstance(sourceNode,BaseMethodCall.class) && BaseMethodCall.BASE_METHOD_DECLARATION.equals(reference.getRole())) {
+          methodCallDeclarationChanged(sourceNode,reResolvedTargets);
+        }
+      }
+      public void visitPropertyEvent(      SModelPropertyEvent event){
+        SNode node=event.getNode();
+        if (BaseAdapter.isInstance(node,BaseMethodDeclaration.class)) {
+          if (BaseMethodDeclaration.NAME.equals(event.getPropertyName())) {
+            methodDeclarationChanged(node,reResolvedTargets);
+          }
         }
       }
     }
-  }
 ;
-  for (  SModelEvent event : events) {
-    if (event.getAffectedRoot() != rootNode) {
-      continue;
+    for (    SModelEvent event : events) {
+      if (event.getAffectedRoot() != rootNode) {
+        continue;
+      }
+      event.accept(visitor);
     }
-    event.accept(visitor);
-  }
-  for (  SNode expressionWithChangedType : expressionsWithChangedTypes) {
-    expressionTypeChanged(expressionWithChangedType,resolveTargets);
+    for (    SNode expressionWithChangedType : expressionsWithChangedTypes) {
+      expressionTypeChanged(expressionWithChangedType,reResolvedTargets);
+    }
   }
   ThreadUtils.runInUIThreadNoWait(new Runnable(){
     public void run(){
-      if (resolveTargets.isEmpty())       return;
+      if (reResolvedTargets.isEmpty())       return;
       ModelAccess.instance().runWriteActionInCommand(new Runnable(){
         public void run(){
           CommandProcessor.getInstance().runUndoTransparentAction(new Runnable(){
             public void run(){
-              for (              SNode methodCall : resolveTargets.keySet()) {
-                SNode referent=resolveTargets.get(methodCall);
+              for (              SNode methodCall : reResolvedTargets.keySet()) {
+                SNode referent=reResolvedTargets.get(methodCall);
                 if (referent != null) {
                   methodCall.setReferent(IMethodCall.BASE_METHOD_DECLARATION,referent);
                 }
