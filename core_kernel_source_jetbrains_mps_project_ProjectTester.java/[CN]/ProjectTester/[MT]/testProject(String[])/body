@@ -4,6 +4,7 @@
   final List<String> warnings=new ArrayList<String>();
   final List<String> compilationResults=new ArrayList<String>();
   final List<TestFailure> failedTests=new ArrayList<TestFailure>();
+  final List<String> diffReports=new ArrayList<String>();
   final IMessageHandler handler=new IMessageHandler(){
     public void handle(    Message msg){
 switch (msg.getKind()) {
@@ -85,38 +86,13 @@ return;
 }
 GeneratorManager gm=myProject.getComponentSafe(GeneratorManager.class);
 gm.generateModels(parms.getModelDescriptors(),new ModuleContext(parms.getModule(),myProject),generationType,new EmptyProgressIndicator(),handler);
+if (t.getIsRunnable()) {
+diffReports.addAll(createDiffReports(generationType,parms));
+}
 List<CompilationResult> compilationResultList=generationType.compile(IAdaptiveProgressMonitor.NULL_PROGRESS_MONITOR);
 compilationResults.addAll(createCompilationProblemsList(compilationResultList));
 if (t.getIsRunnable()) {
-for (SModel model : parms.getSModels()) {
-for (SNode root : model.getRoots()) {
-try {
-  ClassLoader classLoader=generationType.getCompiler().getClassLoader(getClass().getClassLoader());
-  String className=JavaNameUtil.packageNameForModelUID(model.getSModelReference()) + "." + root.getName();
-  Class instanceClass=Class.forName(className,true,classLoader);
-  Object instance=instanceClass.newInstance();
-  Method setName=TestCase.class.getMethod("setName",String.class);
-  for (  Method method : instanceClass.getMethods()) {
-    if (method.getAnnotation(org.junit.Test.class) == null) {
-      continue;
-    }
-    setName.invoke(instance,method.getName());
-    if (instance instanceof TestCase) {
-      junit.framework.TestResult testResult=new junit.framework.TestResult();
-      ((TestCase)instance).run(testResult);
-      for (      TestFailure testError : Collections.list(testResult.errors())) {
-        failedTests.add(testError);
-      }
-      for (      TestFailure testFailure : Collections.list(testResult.failures())) {
-        failedTests.add(testFailure);
-      }
-    }
-  }
-}
- catch (Throwable ignored) {
-}
-}
-}
+failedTests.addAll(createTestFailures(generationType,parms));
 }
 System.out.println("");
 System.out.println("");
@@ -129,5 +105,5 @@ System.out.println("");
   finally {
 Logger.removeLoggingHandler(loggingHandler);
 }
-return new TestResult(errors,warnings,compilationResults,failedTests);
+return new TestResult(errors,warnings,compilationResults,failedTests,diffReports);
 }
