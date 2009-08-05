@@ -1,6 +1,4 @@
 {
-  Thread t=Thread.currentThread();
-  System.err.println("current thread is " + t);
   final ILoggableRefactoring refactoring=refactoringContext.getRefactoring();
   final Map<IModule,List<SModel>> moduleToModelsMap=ModelAccess.instance().runReadAction(new Computable<Map<IModule,List<SModel>>>(){
     public Map<IModule,List<SModel>> compute(){
@@ -15,16 +13,20 @@
       ModelAccess.instance().runWriteActionInCommand(new Runnable(){
         public void run(){
           refactoring.doRefactor(refactoringContext);
-          final List<SNode> nodesToOpen=refactoring.getNodesToOpen(refactoringContext);
-          if (!nodesToOpen.isEmpty()) {
-            ApplicationManager.getApplication().invokeLater(new Runnable(){
-              public void run(){
-                for (                SNode nodeToOpen : nodesToOpen) {
-                  refactoringContext.getCurrentOperationContext().getComponent(MPSEditorOpener.class).openNode(nodeToOpen);
-                }
-              }
-            }
+        }
+      }
 );
+      final List<SNode> nodesToOpen=ModelAccess.instance().runReadAction(new Computable<List<SNode>>(){
+        public List<SNode> compute(){
+          return refactoring.getNodesToOpen(refactoringContext);
+        }
+      }
+);
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        public void run(){
+          for (          SNode nodeToOpen : nodesToOpen) {
+            IOperationContext context=refactoringContext.getCurrentOperationContext();
+            context.getComponent(MPSEditorOpener.class).editNode(nodeToOpen,context);
           }
         }
       }
@@ -37,27 +39,7 @@
             indicator.setIndeterminate(true);
             ModelAccess.instance().runWriteAction(new Runnable(){
               public void run(){
-                SModel model=modelDescriptor.getSModel();
-                refactoringContext.computeCaches();
-                SearchResults usages=refactoringContext.getUsages();
-                List<SModel> modelsToUpdate=refactoring.getModelsToUpdate(refactoringContext);
-                if (!refactoringContext.isLocal()) {
-                  if (refactoring.doesUpdateModel()) {
-                    writeInLogAndUpdateModels(initialModelReference,model,refactoringContext);
-                  }
-                }
- else {
-                  if (refactoring.doesUpdateModel()) {
-                    Set<SModel> modelsToProcess=new LinkedHashSet<SModel>();
-                    if (usages != null) {
-                      modelsToProcess.addAll(usages.getModelsWithResults());
-                    }
-                    modelsToProcess.addAll(modelsToUpdate);
-                    for (                    SModel anotherModel : modelsToProcess) {
-                      processModel(anotherModel,model,refactoringContext);
-                    }
-                  }
-                }
+                updateModels(modelDescriptor,refactoringContext,refactoring,initialModelReference);
               }
             }
 );

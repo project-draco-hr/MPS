@@ -1,16 +1,23 @@
 {
   refactoringContext.setRefactoring(refactoring);
-  boolean success=refactoring.askForInfo(refactoringContext);
-  if (!success)   return;
-  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+  final boolean[] success=new boolean[1];
+  ThreadUtils.runInUIThreadAndWait(new Runnable(){
     public void run(){
-      if (refactoring.showsAffectedNodes()) {
-        showRefactoring(refactoringContext,refactoring);
-      }
- else {
-        executeRefactoring(refactoringContext);
-      }
+      success[0]=refactoring.askForInfo(refactoringContext);
     }
   }
 );
+  if (!success[0])   return;
+  final boolean show=ModelAccess.instance().runReadAction(new Computable<Boolean>(){
+    public Boolean compute(){
+      return refactoring.showsAffectedNodes();
+    }
+  }
+);
+  if (show) {
+    showRefactoring(refactoringContext);
+  }
+ else {
+    doExecuteWithDialog(refactoringContext);
+  }
 }
