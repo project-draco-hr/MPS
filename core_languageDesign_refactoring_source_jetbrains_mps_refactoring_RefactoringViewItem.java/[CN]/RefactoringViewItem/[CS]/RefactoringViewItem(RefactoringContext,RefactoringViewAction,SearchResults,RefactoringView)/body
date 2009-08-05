@@ -1,0 +1,86 @@
+{
+  myRefactoringContext=refactoringContext;
+  myRefactoringView=refactoringView;
+  myRefactoringViewAction=refactoringViewAction;
+  mySearchResults=searchResults;
+  if (mySearchResults == null) {
+    throw new IllegalArgumentException("search result is null");
+  }
+  myPanel=new JPanel(new BorderLayout());
+  myUsagesView=new UsagesView(MPSDataKeys.MPS_PROJECT.getData(DataManager.getInstance().getDataContext()),new ViewOptions()){
+    public void close(){
+      cancel();
+    }
+    public String getCaption(){
+      return "";
+    }
+    public Icon getIcon(){
+      return null;
+    }
+    public void read(    Element element,    MPSProject project){
+    }
+    public void write(    Element element,    MPSProject project){
+    }
+  }
+;
+  myButtonsPanel=new JPanel(new FlowLayout(FlowLayout.LEFT));
+  myDoRefactorButton=new JButton(new AbstractAction("Do Refactor"){
+    public void actionPerformed(    ActionEvent e){
+      doRefactor();
+    }
+  }
+);
+  myDoRefactorButton.addKeyListener(new KeyAdapter(){
+    @Override public void keyTyped(    KeyEvent e){
+      if (e.getKeyChar() == '\n') {
+        doRefactor();
+      }
+    }
+  }
+);
+  myButtonsPanel.add(myDoRefactorButton);
+  myCancelButton=new JButton(new AbstractAction("Cancel"){
+    public void actionPerformed(    ActionEvent e){
+      cancel();
+    }
+  }
+);
+  myButtonsPanel.add(myCancelButton);
+  if (myRefactoringContext != null) {
+    myGenerateModelsCheckbox=new JCheckBox("generate models");
+    myGenerateModelsCheckbox.setSelected(true);
+    myButtonsPanel.add(myGenerateModelsCheckbox);
+    if (refactoringContext.getRefactoring().doesUpdateModel()) {
+      boolean isLocal=ModelAccess.instance().runReadAction(new Computable<Boolean>(){
+        public Boolean compute(){
+          return RefactoringUtil.isLocalByDefault(myRefactoringContext);
+        }
+      }
+);
+      myIsLocalCheckbox=new JCheckBox("is local");
+      myIsLocalCheckbox.setSelected(isLocal);
+      myButtonsPanel.add(myIsLocalCheckbox);
+    }
+  }
+  myPanel.add(myUsagesView.getComponent(),BorderLayout.CENTER);
+  myPanel.add(myButtonsPanel,BorderLayout.SOUTH);
+  final FocusTraversalPolicy ftp=myPanel.getFocusTraversalPolicy();
+  myPanel.setFocusTraversalPolicy(new FocusTraversalPolicy(){
+    public Component getComponentAfter(    Container aContainer,    Component aComponent){
+      return ftp.getComponentAfter(aContainer,aComponent);
+    }
+    public Component getComponentBefore(    Container aContainer,    Component aComponent){
+      return ftp.getComponentBefore(aContainer,aComponent);
+    }
+    public Component getFirstComponent(    Container aContainer){
+      return ftp.getFirstComponent(aContainer);
+    }
+    public Component getLastComponent(    Container aContainer){
+      return ftp.getLastComponent(aContainer);
+    }
+    @Override public Component getDefaultComponent(    Container aContainer){
+      return myDoRefactorButton;
+    }
+  }
+);
+}
