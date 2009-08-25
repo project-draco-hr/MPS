@@ -1,33 +1,26 @@
 {
-  if (!findUsages(refactoringContext))   return;
-  SearchResults usages=refactoringContext.getUsages();
-  if (usages == null || (refactoringContext.getRefactoring().refactorImmediatelyIfNoUsages() && usages.getSearchResults().isEmpty())) {
-    doExecuteWithDialog(refactoringContext);
-  }
- else {
-    ThreadUtils.runInUIThreadNoWait(new Runnable(){
-      public void run(){
-        ModelAccess.instance().runReadAction(new Runnable(){
-          public void run(){
-            RefactoringView refactorintView=refactoringContext.getCurrentOperationContext().getComponent(RefactoringView.class);
-            RefactoringViewAction okAction=new RefactoringViewAction(){
-              public void performAction(              final RefactoringViewItem refactoringViewItem){
-                new Thread(){
-                  public void run(){
-                    refactoringViewItem.close();
-                    doExecute(refactoringContext,null);
-                  }
+  ThreadUtils.runInUIThreadNoWait(new Runnable(){
+    public void run(){
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          RefactoringView refactorintView=refactoringContext.getCurrentOperationContext().getComponent(RefactoringView.class);
+          RefactoringViewAction okAction=new RefactoringViewAction(){
+            public void performAction(            final RefactoringViewItem refactoringViewItem){
+              new Thread(){
+                public void run(){
+                  refactoringViewItem.close();
+                  doExecute(refactoringContext,null);
                 }
-.start();
               }
+.start();
             }
-;
-            refactorintView.showRefactoringView(refactoringContext,okAction,refactoringContext.getUsages());
           }
+;
+          refactorintView.showRefactoringView(refactoringContext,okAction,refactoringContext.getUsages());
         }
-);
       }
-    }
 );
+    }
   }
+);
 }
