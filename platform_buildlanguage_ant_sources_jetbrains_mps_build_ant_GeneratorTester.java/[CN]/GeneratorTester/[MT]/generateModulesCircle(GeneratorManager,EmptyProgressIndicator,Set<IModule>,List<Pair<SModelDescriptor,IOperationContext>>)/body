@@ -1,16 +1,8 @@
 {
-  myCurrentTestName=escapeMessageForTeamCity("generating " + modulesSet);
-  myErrorMessagesBuffer=new StringBuffer();
-  System.out.println("##teamcity[testStarted name='" + myCurrentTestName + "']");
+  String currentTestName=escapeMessageForTeamCity("generating " + modulesSet);
+  System.out.println("##teamcity[testStarted name='" + currentTestName + "']");
   final EditorGenerateType generationType=new EditorGenerateType(true);
   gm.generateModels(modelsToContext,generationType,emptyProgressIndicator,myMessageHandler,false);
-  printDiffReportIfNeeded(generationType);
-  List<CompilationResult> compilationResult=ModelAccess.instance().runReadAction(new Computable<List<CompilationResult>>(){
-    public List<CompilationResult> compute(){
-      return generationType.compile(IAdaptiveProgressMonitor.NULL_PROGRESS_MONITOR);
-    }
-  }
-);
   List<String> diffReports;
   if (myWhatToGenerate.getShowDiff()) {
     diffReports=ModelAccess.instance().runReadAction(new Computable<List<String>>(){
@@ -23,15 +15,16 @@
  else {
     diffReports=new ArrayList<String>();
   }
-  TestResult testResult=new TestResult(myMessageHandler.getGenerationErrors(),myMessageHandler.getGenerationWarnings(),ProjectTester.createCompilationProblemsList(compilationResult),new ArrayList<TestFailure>(),diffReports);
-  testResult.dump(new PrintStream(new LineOrientedOutputStream(){
-    @Override protected void processLine(    String line) throws IOException {
-      info(line);
+  List<CompilationResult> compilationResult=ModelAccess.instance().runReadAction(new Computable<List<CompilationResult>>(){
+    public List<CompilationResult> compute(){
+      return generationType.compile(IAdaptiveProgressMonitor.NULL_PROGRESS_MONITOR);
     }
   }
-));
-  if (myErrorMessagesBuffer.length() > 0) {
-    System.out.println("##teamcity[testFailed name='" + myCurrentTestName + "' message='generation errors' details='"+ myErrorMessagesBuffer.toString()+ "']");
+);
+  StringBuffer sb=createDetailedReport(compilationResult,diffReports);
+  if (sb.length() > 0) {
+    myTestFailed=true;
+    System.out.println("##teamcity[testFailed name='" + currentTestName + "' message='generation errors' details='"+ sb.toString()+ "']");
   }
-  System.out.println("##teamcity[testFinished name='" + myCurrentTestName + "']");
+  System.out.println("##teamcity[testFinished name='" + currentTestName + "']");
 }
