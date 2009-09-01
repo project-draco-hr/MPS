@@ -1,0 +1,32 @@
+{
+  boolean removeBody=isOptimizedFalse(x.condition);
+  List<Statement> init=processStatements(x.initializations);
+  jetbrains.mps.baseLanguage.structure.Expression expr=processExpressionRefl(x.condition);
+  List<ExpressionStatement> incr=processExpressionStatements(x.increments);
+  StatementList body;
+  Statement loopBody=removeBody ? null : processStatementRefl(x.action);
+  if (loopBody instanceof BlockStatement) {
+    body=((BlockStatement)loopBody).getStatements();
+  }
+ else {
+    body=StatementList.newInstance(myCurrentModel);
+    if (loopBody != null) {
+      body.addStatement(loopBody);
+    }
+  }
+  jetbrains.mps.baseLanguage.structure.ForStatement forStatement=jetbrains.mps.baseLanguage.structure.ForStatement.newInstance(myCurrentModel);
+  forStatement.setCondition(expr);
+  forStatement.setBody(body);
+  if (!incr.isEmpty()) {
+    forStatement.setIteration(incr.get(0).getExpression());
+  }
+  if (!init.isEmpty()) {
+    if (init.get(0) instanceof LocalVariableDeclarationStatement) {
+      LocalVariableDeclarationStatement lvds=(LocalVariableDeclarationStatement)init.get(0);
+      LocalVariableDeclaration variableDeclaration=lvds.getLocalVariableDeclaration();
+      lvds.removeChild(variableDeclaration);
+      forStatement.setVariable(variableDeclaration);
+    }
+  }
+  return forStatement;
+}
