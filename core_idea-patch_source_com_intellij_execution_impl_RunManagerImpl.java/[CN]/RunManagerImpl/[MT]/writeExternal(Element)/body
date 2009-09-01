@@ -1,8 +1,11 @@
 {
-  if (myTempConfiguration != null) {
-    addConfigurationElement(parentNode,myTempConfiguration,TEMP_CONFIGURATION);
-  }
+  writeContext(parentNode);
   for (  final RunnerAndConfigurationSettingsImpl runnerAndConfigurationSettings : myTemplateConfigurationsMap.values()) {
+    if (runnerAndConfigurationSettings.getConfiguration() instanceof UnknownRunConfiguration) {
+      if (((UnknownRunConfiguration)runnerAndConfigurationSettings.getConfiguration()).isDoNotStore()) {
+        continue;
+      }
+    }
     addConfigurationElement(parentNode,runnerAndConfigurationSettings);
   }
   final Collection<RunnerAndConfigurationSettingsImpl> configurations=getStableConfigurations().values();
@@ -12,12 +15,13 @@
     }
   }
   final JDOMExternalizableStringList order=new JDOMExternalizableStringList();
-  order.addAll(myConfigurations.keySet());
-  order.writeExternal(parentNode);
-  getSelectedConfiguration();
-  if (mySelectedConfiguration != null) {
-    parentNode.setAttribute(SELECTED_ATTR,getUniqueName(mySelectedConfiguration.getConfiguration()));
+  order.addAll(ContainerUtil.findAll(myConfigurations.keySet(),new Condition<String>(){
+    public boolean value(    final String s){
+      return !s.startsWith(UnknownConfigurationType.NAME);
+    }
   }
+));
+  order.writeExternal(parentNode);
   if (myUnloadedElements != null) {
     for (    Element unloadedElement : myUnloadedElements) {
       parentNode.addContent((Element)unloadedElement.clone());

@@ -1,5 +1,5 @@
 {
-  mySplitters.startListeningFocus();
+  getSplitters().startListeningFocus();
   myConnection=myProject.getMessageBus().connect();
   final FileStatusManager fileStatusManager=FileStatusManager.getInstance(myProject);
   if (fileStatusManager != null) {
@@ -8,14 +8,25 @@
   myConnection.subscribe(AppTopics.FILE_TYPES,new MyFileTypeListener());
   VirtualFileManager.getInstance().addVirtualFileListener(myVirtualFileListener);
   UISettings.getInstance().addUISettingsListener(myUISettingsListener);
-  StartupManager.getInstance(myProject).registerPostStartupActivity(new Runnable(){
+  StartupManager.getInstance(myProject).registerPostStartupActivity(new DumbAwareRunnable(){
     public void run(){
       ToolWindowManager.getInstance(myProject).invokeLater(new Runnable(){
         public void run(){
           CommandProcessor.getInstance().executeCommand(myProject,new Runnable(){
             public void run(){
               setTabsMode(UISettings.getInstance().EDITOR_TAB_PLACEMENT != UISettings.TABS_NONE);
-              mySplitters.openFiles();
+              getSplitters().openFiles();
+              LaterInvocator.invokeLater(new Runnable(){
+                public void run(){
+                  long currentTime=System.nanoTime();
+                  Long startTime=myProject.getUserData(ProjectImpl.CREATION_TIME);
+                  if (startTime != null) {
+                    LOG.info("Project opening took " + (currentTime - startTime.longValue()) / 1000000 + " ms");
+                    PluginManager.dumpPluginClassStatistics();
+                  }
+                }
+              }
+);
             }
           }
 ,"",null);
