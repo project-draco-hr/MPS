@@ -1,0 +1,36 @@
+{
+  INodeAdapter adapter=myBindingMap.get(declaration.binding);
+  if (adapter == null) {
+    return;
+  }
+  if (adapter instanceof FieldDeclaration) {
+    FieldDeclaration field=(FieldDeclaration)adapter;
+    try {
+      jetbrains.mps.baseLanguage.structure.Expression initializer=null;
+      if (declaration.initialization != null) {
+        initializer=processExpressionRefl(declaration.initialization);
+      }
+      if (initializer != null) {
+        field.setInitializer(initializer);
+      }
+    }
+ catch (    Throwable e) {
+      throw new JavaConverterException(e);
+    }
+  }
+  if (adapter instanceof EnumConstantDeclaration) {
+    try {
+      EnumConstantDeclaration enumConstant=(EnumConstantDeclaration)adapter;
+      assert(myCurrentClass instanceof EnumClass);
+      AllocationExpression initializer=(AllocationExpression)declaration.initialization;
+      jetbrains.mps.baseLanguage.structure.ConstructorDeclaration constructor=(jetbrains.mps.baseLanguage.structure.ConstructorDeclaration)myBindingMap.get(initializer.binding);
+      enumConstant.setConstructor(constructor);
+      for (      Expression arg : initializer.arguments) {
+        enumConstant.addActualArgument(processExpressionRefl(arg));
+      }
+    }
+ catch (    Throwable t) {
+      throw new JavaConverterException(t);
+    }
+  }
+}

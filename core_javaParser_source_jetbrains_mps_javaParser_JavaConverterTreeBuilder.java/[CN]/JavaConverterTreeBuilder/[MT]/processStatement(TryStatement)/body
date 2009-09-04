@@ -1,9 +1,12 @@
 {
   Statement tryBlock=processStatementRefl(x.tryBlock);
+  List<LocalVariableDeclaration> catchArgs=new ArrayList<LocalVariableDeclaration>();
   List<Statement> catchBlocks=new ArrayList<Statement>();
   Statement finallyBlock=processStatementRefl(x.finallyBlock);
   if (x.catchBlocks != null) {
     for (int i=0, c=x.catchArguments.length; i < c; ++i) {
+      LocalVariableDeclaration local=(LocalVariableDeclaration)myBindingMap.get(x.catchArguments[i].binding);
+      catchArgs.add(local);
     }
     for (int i=0, c=x.catchBlocks.length; i < c; ++i) {
       catchBlocks.add(processStatementRefl(x.catchBlocks[i]));
@@ -11,10 +14,13 @@
   }
   if (finallyBlock != null) {
     jetbrains.mps.baseLanguage.structure.TryStatement tryStatement=jetbrains.mps.baseLanguage.structure.TryStatement.newInstance(myCurrentModel);
-    for (    Statement catchBlock : catchBlocks) {
+    for (int i=0; i < catchBlocks.size(); i++) {
+      Statement catchBlock=catchBlocks.get(i);
+      LocalVariableDeclaration lvd=catchArgs.get(i);
       CatchClause catchClause=CatchClause.newInstance(myCurrentModel);
       tryStatement.addCatchClause(catchClause);
       catchClause.setCatchBody(getStatementListFromStatement(catchBlock));
+      catchClause.setThrowable(lvd);
     }
     tryStatement.setFinallyBody(getStatementListFromStatement(finallyBlock));
     tryStatement.setBody(getStatementListFromStatement(tryBlock));
@@ -22,10 +28,13 @@
   }
  else {
     TryCatchStatement tryCatchStatement=TryCatchStatement.newInstance(myCurrentModel);
-    for (    Statement catchBlock : catchBlocks) {
+    for (int i=0; i < catchBlocks.size(); i++) {
+      Statement catchBlock=catchBlocks.get(i);
+      LocalVariableDeclaration lvd=catchArgs.get(i);
       CatchClause catchClause=CatchClause.newInstance(myCurrentModel);
       tryCatchStatement.addCatchClause(catchClause);
       catchClause.setCatchBody(getStatementListFromStatement(catchBlock));
+      catchClause.setThrowable(lvd);
     }
     tryCatchStatement.setBody(getStatementListFromStatement(tryBlock));
     return tryCatchStatement;
