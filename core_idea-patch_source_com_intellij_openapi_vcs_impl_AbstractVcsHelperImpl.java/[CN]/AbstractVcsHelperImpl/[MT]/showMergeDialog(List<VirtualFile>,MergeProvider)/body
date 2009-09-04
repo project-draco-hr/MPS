@@ -1,0 +1,32 @@
+{
+  if (files.isEmpty())   return Collections.emptyList();
+  MergeProvider providerDecorator=new MergeProvider(){
+    @NotNull public MergeData loadRevisions(    VirtualFile file) throws VcsException {
+      MergeData mergeData=provider.loadRevisions(file);
+      if (file.getFileType().equals(MPSFileTypeFactory.MODEL_FILE_TYPE)) {
+        String leftText=decodeContent(file,mergeData.CURRENT);
+        String rightText=decodeContent(file,mergeData.LAST);
+        String originalText=decodeContent(file,mergeData.ORIGINAL);
+        DiffRequestFactory diffRequestFactory=DiffRequestFactory.getInstance();
+        MergeRequest request=diffRequestFactory.createMergeRequest(leftText,rightText,originalText,file,myProject,ActionButtonPresentation.createApplyButton());
+        try {
+          zipModel(request.getContents(),file);
+        }
+ catch (        IOException e) {
+          LOG.error(e);
+        }
+      }
+      return mergeData;
+    }
+    public void conflictResolvedForFile(    VirtualFile file){
+      provider.conflictResolvedForFile(file);
+    }
+    public boolean isBinary(    VirtualFile file){
+      return provider.isBinary(file);
+    }
+  }
+;
+  final MultipleFileMergeDialog fileMergeDialog=new MultipleFileMergeDialog(myProject,files,providerDecorator);
+  fileMergeDialog.show();
+  return fileMergeDialog.getProcessedFiles();
+}
