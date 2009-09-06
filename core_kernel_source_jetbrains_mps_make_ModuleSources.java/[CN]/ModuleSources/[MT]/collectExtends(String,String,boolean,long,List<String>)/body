@@ -1,0 +1,39 @@
+{
+  if (needCollectInput) {
+    if (uniqExtendsName.contains(extendName)) {
+      return;
+    }
+ else {
+      uniqExtendsName.add(extendName);
+    }
+  }
+  SModelDescriptor extendModel=getModelByClassName(extendName);
+  if (extendModel == null) {
+    return;
+  }
+  JavaFile extendJavaFile=getDependJavaFile(extendName);
+  JavaFile thisJavaFile=myJavaFiles.get(thisName);
+  if (thisJavaFile == null || extendJavaFile == null) {
+    return;
+  }
+  if (extendJavaFile.getFile().exists() && extendJavaFile.getFile().lastModified() > lastModified) {
+    myFilesToCompile.add(extendJavaFile);
+    if (!needCollectInput) {
+      myFilesToCompile.add(thisJavaFile);
+    }
+  }
+  IFile extendDependFile=getDependencyFile(extendModel);
+  if (extendDependFile == null || !extendDependFile.exists() || !extendDependFile.isDirectory()) {
+    return;
+  }
+  DependenciesRoot extendDependRoot=DependenciesRoot.load(extendDependFile);
+  if (extendDependRoot != null) {
+    for (    Dependency extendDependency : extendDependRoot.getDependencies()) {
+      if (extendDependency.getClassName().equals(extendName)) {
+        for (        String newExntedName : extendDependency.getExtends()) {
+          collectExtends(newExntedName,extendName,true,lastModified,uniqExtendsName);
+        }
+      }
+    }
+  }
+}
