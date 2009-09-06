@@ -1,11 +1,25 @@
 {
   try {
+    final List<String> finders=ListSequence.fromList(new ArrayList<String>());
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        for (        String finderClass : GoToOverridingMethod_Action.this.finderClasses) {
+          GeneratedFinder finder=FindUtils.getFinderByClassName(finderClass);
+          if (finder.isApplicable(GoToOverridingMethod_Action.this.methodNode)) {
+            ListSequence.fromList(finders).addElement(finderClass);
+          }
+        }
+      }
+    }
+);
     final List<SNode> nodes=new ArrayList<SNode>();
     ProgressManager.getInstance().run(new Task.Modal(GoToOverridingMethod_Action.this.project,"Searching...",true){
       public void run(      @NotNull final ProgressIndicator p){
         ModelAccess.instance().runReadAction(new Runnable(){
           public void run(){
-            ListSequence.fromList(nodes).addSequence(ListSequence.fromList(FindUtils.executeFinder("jetbrains.mps.baseLanguage.findUsages.OverridingMethods_Finder",GoToOverridingMethod_Action.this.methodNode,GoToOverridingMethod_Action.this.scope,p)));
+            for (            String finder : ListSequence.fromList(finders)) {
+              ListSequence.fromList(nodes).addSequence(ListSequence.fromList(FindUtils.executeFinder(finder,GoToOverridingMethod_Action.this.methodNode,GoToOverridingMethod_Action.this.scope,p)));
+            }
           }
         }
 );
