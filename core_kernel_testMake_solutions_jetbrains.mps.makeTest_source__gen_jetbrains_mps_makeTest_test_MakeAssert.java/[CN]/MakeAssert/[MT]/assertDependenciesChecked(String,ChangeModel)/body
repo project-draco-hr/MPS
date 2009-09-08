@@ -1,0 +1,52 @@
+{
+  final MPSProject project=launchProject();
+  final String changedModelName=modelName + '2';
+  final SModel[] model=new SModel[]{null};
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      model[0]=getModel(changedModelName).getSModel();
+    }
+  }
+);
+  model[0].setLoading(true);
+  step(modelName,project,new Runnable(){
+    public void run(){
+      changer.change(model[0]);
+    }
+  }
+,STEP_TYPE_CHANGE,getFilesGenType());
+  final EditorGenerateType genType=new EditorGenerateType(true);
+  generate(modelName + '1',project,genType);
+  generate(modelName + '2',project,genType);
+  final Boolean[] returnValue=new Boolean[]{null};
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      try {
+        SModel testModel=getModel(modelName + '1').getSModel();
+        SNode test=ListSequence.fromList(SModelOperations.getRoots(testModel,null)).first();
+        String className=NameUtil.nodeFQName(test);
+        genType.compile(IAdaptiveProgressMonitor.NULL_PROGRESS_MONITOR);
+        ClassLoader classLoader=genType.getCompiler().getClassLoader(MakeAssert.class.getClassLoader());
+        Class testClass=classLoader.loadClass(className);
+        Method method=testClass.getMethods()[0];
+        returnValue[0]=(Boolean)method.invoke(null);
+        System.out.println("Test " + className + "."+ method.getName()+ " return "+ returnValue[0]);
+        step(modelName,project,new Runnable(){
+          public void run(){
+            changer.rollback(model[0]);
+          }
+        }
+,STEP_TYPE_REVERT,getFilesGenType());
+        generate(modelName + '2',project,getFilesGenType());
+      }
+ catch (      Throwable t) {
+        disposeProject(project);
+        t.printStackTrace();
+        Assert.assertTrue("Exception: " + t,false);
+      }
+    }
+  }
+);
+  disposeProject(project);
+  Assert.assertFalse(MESSAGE_DEPENDENCY_NOT_CHECKED,returnValue[0]);
+}
