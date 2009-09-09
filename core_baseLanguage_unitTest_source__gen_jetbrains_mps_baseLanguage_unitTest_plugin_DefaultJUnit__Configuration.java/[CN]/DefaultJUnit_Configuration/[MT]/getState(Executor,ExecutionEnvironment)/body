@@ -1,0 +1,75 @@
+{
+  return new RunProfileState(){
+    @Nullable public ExecutionResult execute(    Executor executor,    @NotNull ProgramRunner runner) throws ExecutionException {
+      JComponent consoleComponent;
+      Runnable consoleDispose=null;
+      final List<AnAction> actions=ListSequence.fromList(new ArrayList<AnAction>());
+      ProcessHandler handler=null;
+{
+        DefaultJUnit_Configuration.this.getStateObject().myParams=new RunParameters();
+        final Wrappers._T<SNode> node=new Wrappers._T<SNode>();
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            node.value=new SNodePointer(DefaultJUnit_Configuration.this.getStateObject().modelId,DefaultJUnit_Configuration.this.getStateObject().nodeId).getNode();
+          }
+        }
+);
+        Project project=MPSDataKeys.PROJECT.getData(environment.getDataContext());
+        final RunComponent runComponent=new RunComponent(project);
+        final ClassRunner classRunner=new ClassRunner(runComponent);
+        ListSequence.fromList(actions).addSequence(ListSequence.fromList(ListSequence.fromListAndArray(new ArrayList<AnAction>(),runComponent.getConsoleView().createConsoleActions())));
+        consoleComponent=runComponent;
+        consoleDispose=new Runnable(){
+          public void run(){
+            runComponent.dispose();
+          }
+        }
+;
+        final Wrappers._T<Process> process=new Wrappers._T<Process>();
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            process.value=classRunner.run(node.value,DefaultJUnit_Configuration.this.getStateObject().myParams.getProgramParameters(),DefaultJUnit_Configuration.this.getStateObject().myParams.getVMParameters(),DefaultJUnit_Configuration.this.getStateObject().myParams.getWorkingDirectory());
+          }
+        }
+);
+        handler=new BLProcessHandler(runComponent,process.value,"",Charset.defaultCharset());
+      }
+      final JComponent finalConsoleComponent=consoleComponent;
+      final Runnable finalConsoleDispose=consoleDispose;
+      final ProcessHandler finalHandler=handler;
+      return new ExecutionResult(){
+        public ExecutionConsole getExecutionConsole(){
+          return new ExecutionConsole(){
+            public void dispose(){
+              if (finalConsoleDispose == null) {
+                return;
+              }
+              finalConsoleDispose.run();
+            }
+            public JComponent getComponent(){
+              return finalConsoleComponent;
+            }
+            public JComponent getPreferredFocusableComponent(){
+              return finalConsoleComponent;
+            }
+          }
+;
+        }
+        public AnAction[] getActions(){
+          return ListSequence.fromList(actions).toGenericArray(AnAction.class);
+        }
+        public ProcessHandler getProcessHandler(){
+          return finalHandler;
+        }
+      }
+;
+    }
+    public RunnerSettings getRunnerSettings(){
+      return null;
+    }
+    public ConfigurationPerRunnerSettings getConfigurationSettings(){
+      return null;
+    }
+  }
+;
+}
