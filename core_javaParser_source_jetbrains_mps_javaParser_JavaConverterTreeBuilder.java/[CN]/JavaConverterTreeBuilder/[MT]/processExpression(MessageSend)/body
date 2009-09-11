@@ -1,10 +1,15 @@
 {
-  BaseMethodDeclaration method=(BaseMethodDeclaration)myBindingMap.get(x.binding);
   IMethodCall methodCall=null;
   jetbrains.mps.baseLanguage.structure.Expression result;
-  if (x.receiver instanceof SuperReference || x.receiver instanceof QualifiedSuperReference) {
+  if (x.binding.isStatic()) {
+    StaticMethodCall smc=StaticMethodCall.newInstance(myCurrentModel);
+    methodCall=smc;
+    result=smc;
+    SReference classifierReference=myTypesProvider.createClassifierReference(x.binding.declaringClass,StaticMethodCall.CLASS_CONCEPT,smc.getNode());
+    smc.getNode().addReference(classifierReference);
+  }
+ else   if (x.receiver instanceof SuperReference || x.receiver instanceof QualifiedSuperReference) {
     SuperMethodCall smc=SuperMethodCall.newInstance(myCurrentModel);
-    smc.setInstanceMethodDeclaration((InstanceMethodDeclaration)method);
     methodCall=smc;
     result=smc;
   }
@@ -13,29 +18,23 @@
     InstanceMethodCallOperation imco=InstanceMethodCallOperation.newInstance(myCurrentModel);
     methodCall=imco;
     if (x.receiver instanceof ThisReference) {
-      if (method instanceof StaticMethodDeclaration) {
-        qualifier=null;
-        return null;
+      if (x.receiver instanceof QualifiedThisReference) {
+        qualifier=processExpressionRefl(x.receiver);
       }
  else {
-        if (x.receiver instanceof QualifiedThisReference) {
-          qualifier=processExpressionRefl(x.receiver);
-        }
- else {
-          qualifier=processExpressionRefl(x.receiver);
-        }
+        qualifier=processExpressionRefl(x.receiver);
       }
     }
  else {
-      methodCall=InstanceMethodCallOperation.newInstance(myCurrentModel);
       qualifier=processExpressionRefl(x.receiver);
     }
-    methodCall.setBaseMethodDeclaration(method);
     DotExpression dotExpression=DotExpression.newInstance(myCurrentModel);
     dotExpression.setOperand(qualifier);
     dotExpression.setOperation(imco);
     result=dotExpression;
   }
+  SReference methodReference=myTypesProvider.createMethodReference(x.binding,BaseMethodCall.BASE_METHOD_DECLARATION,methodCall.getNode());
+  methodCall.getNode().addReference(methodReference);
   addCallArgs(x.arguments,methodCall);
   return result;
 }
