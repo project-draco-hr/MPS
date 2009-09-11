@@ -5,6 +5,7 @@
     System.err.println(this + ": current version of used model " + modelDescriptor.getLongName()+ " is "+ currentVersion+ ", used version is "+ usedVersion);
   }
   if (currentVersion > usedVersion) {
+    boolean result=false;
     if (myIsTestRefactoringMode) {
       System.err.println("updating a model " + this);
     }
@@ -12,6 +13,7 @@
     RefactoringHistory refactoringHistory=importedModel.getRefactoringHistory();
     for (    RefactoringContext refactoringContext : refactoringHistory.getRefactoringContexts()) {
       if (refactoringContext.getModelVersion() <= usedVersion)       continue;
+      result=true;
       refactoringContext.getRefactoring().updateModel(mySModel,refactoringContext);
     }
     mySModel.updateImportedModelUsedVersion(modelDescriptor.getSModelReference(),currentVersion);
@@ -19,13 +21,14 @@
     if (modelFile != null && !modelFile.isReadOnly()) {
       SModelRepository.getInstance().markChanged(mySModel);
     }
+    return result;
   }
   if (currentVersion < usedVersion) {
     if (currentVersion == -1) {
       if (modelDescriptor instanceof DefaultSModelDescriptor) {
         modelDescriptor.getSModel();
       }
-      if (modelDescriptor.getVersion() == usedVersion)       return;
+      if (modelDescriptor.getVersion() == usedVersion)       return false;
     }
     LOG.error("Model version mismatch for import " + modelDescriptor.getSModelFqName() + " in model "+ getSModelFqName());
     LOG.error("Used version = " + usedVersion + ", current version = "+ currentVersion);
@@ -33,4 +36,5 @@
     SModelRepository.getInstance().markChanged(mySModel);
     LOG.error("Mismatch fixed");
   }
+  return false;
 }
