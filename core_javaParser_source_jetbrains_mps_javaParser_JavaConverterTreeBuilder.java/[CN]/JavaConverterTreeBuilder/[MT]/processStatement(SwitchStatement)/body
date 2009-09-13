@@ -2,11 +2,25 @@
   jetbrains.mps.baseLanguage.structure.Expression expression=processExpressionRefl(x.expression);
   jetbrains.mps.baseLanguage.structure.SwitchStatement result=jetbrains.mps.baseLanguage.structure.SwitchStatement.newInstance(myCurrentModel);
   result.setExpression(expression);
+  result.setDefaultBlock(StatementList.newInstance(myCurrentModel));
   if (x.statements != null) {
+    StatementList currentSwitchCase=null;
     for (    org.eclipse.jdt.internal.compiler.ast.Statement stmt : x.statements) {
-      SwitchCase switchCase=processCaseStatement((CaseStatement)stmt);
-      if (switchCase != null) {
-        result.addCase(switchCase);
+      if (stmt instanceof CaseStatement) {
+        CaseStatement caseStatement=(CaseStatement)stmt;
+        if (caseStatement.constantExpression == null) {
+          currentSwitchCase=result.getDefaultBlock();
+        }
+ else {
+          SwitchCase switchCase=processCaseStatement((CaseStatement)stmt);
+          if (switchCase != null) {
+            result.addCase(switchCase);
+          }
+          currentSwitchCase=switchCase == null ? null : switchCase.getBody();
+        }
+      }
+ else       if (currentSwitchCase != null) {
+        currentSwitchCase.addStatement(processStatementRefl(stmt));
       }
     }
   }
