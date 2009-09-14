@@ -1,5 +1,8 @@
 {
-  removeOurListeners();
+  Set<SNode> nodesWhichEditorDependedOn=myCellsToNodesToDependOnMap.get(myRootCell);
+  if (nodesWhichEditorDependedOn == null) {
+    nodesWhichEditorDependedOn=new HashSet<SNode>();
+  }
   if (myRootCell != null) {
     ((EditorCell_Basic)myRootCell).onRemove();
   }
@@ -10,11 +13,19 @@
   requestRelayout();
   Set<SNode> nodesWhichEditorDependsOn=myCellsToNodesToDependOnMap.get(myRootCell);
   if (nodesWhichEditorDependsOn != null) {
-    for (    SNode node : nodesWhichEditorDependsOn) {
-      SModelDescriptor modelDescriptor=node.getModel().getModelDescriptor();
-      if (modelDescriptor != null) {
-        addOurListeners(modelDescriptor);
-      }
+    nodesWhichEditorDependedOn=new HashSet<SNode>();
+  }
+  Set<SModelReference> oldsDeps=getModels(nodesWhichEditorDependedOn);
+  Set<SModelReference> newDeps=getModels(nodesWhichEditorDependedOn);
+  IScope scope=GlobalScope.getInstance();
+  for (  SModelReference newDep : newDeps) {
+    if (!oldsDeps.contains(newDep)) {
+      addOurListeners(scope.getModelDescriptor(newDep));
+    }
+  }
+  for (  SModelReference oldDep : oldsDeps) {
+    if (!newDeps.contains(oldDep)) {
+      removeOurListeners(scope.getModelDescriptor(oldDep));
     }
   }
   Set<SNodePointer> refTargetsWhichEditorDependsOn=myCellsToRefTargetsToDependOnMap.get(myRootCell);
