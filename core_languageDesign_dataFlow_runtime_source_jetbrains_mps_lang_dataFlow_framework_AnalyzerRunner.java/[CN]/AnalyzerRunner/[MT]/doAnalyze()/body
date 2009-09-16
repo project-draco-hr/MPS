@@ -1,26 +1,32 @@
 {
-  final List<E> stateValues=new ArrayList<E>();
-  for (int i=0; i < myProgram.getInstructions().size() * 2; i++) {
-    stateValues.add(myAnalyzer.initial(myProgram));
+  Map<ProgramState,E> stateValues=new ProgramStateMap<E>(myProgram);
+  for (  ProgramState ps : myProgram.getStates()) {
+    stateValues.put(ps,myAnalyzer.initial(myProgram));
+  }
+  AnalysisDirection direction=myAnalyzer.getDirection();
+  Map<ProgramState,List<ProgramState>> dependencies=new ProgramStateMap<List<ProgramState>>(myProgram);
+  Map<ProgramState,List<ProgramState>> dependents=new ProgramStateMap<List<ProgramState>>(myProgram);
+  for (  ProgramState ps : myProgram.getStates()) {
+    dependencies.put(ps,direction.dependencies(ps));
+    dependents.put(ps,direction.dependents(ps));
   }
   Queue<ProgramState> workList=new LinkedList<ProgramState>();
   for (  Instruction i : myProgram.getInstructions()) {
     workList.add(new ProgramState(i,false));
     workList.add(new ProgramState(i,true));
   }
-  AnalysisDirection direction=myAnalyzer.getDirection();
   while (!workList.isEmpty()) {
     ProgramState current=workList.remove();
     List<E> input=new ArrayList<E>();
-    for (    ProgramState s : direction.dependencies(current)) {
-      input.add(stateValues.get(s.getIndex()));
+    for (    ProgramState s : dependencies.get(current)) {
+      input.add(stateValues.get(s));
     }
-    E oldValue=stateValues.get(current.getIndex());
+    E oldValue=stateValues.get(current);
     E mergedValue=myAnalyzer.merge(myProgram,input);
     E newValue=myAnalyzer.fun(mergedValue,current);
     if (!newValue.equals(oldValue)) {
-      stateValues.set(current.getIndex(),newValue);
-      for (      ProgramState s : direction.dependents(current)) {
+      stateValues.put(current,newValue);
+      for (      ProgramState s : dependents.get(current)) {
         workList.add(s);
       }
     }
