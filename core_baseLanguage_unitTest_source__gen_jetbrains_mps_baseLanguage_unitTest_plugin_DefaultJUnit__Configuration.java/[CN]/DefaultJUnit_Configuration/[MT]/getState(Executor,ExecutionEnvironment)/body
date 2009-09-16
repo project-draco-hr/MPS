@@ -6,14 +6,6 @@
       final List<AnAction> actions=ListSequence.fromList(new ArrayList<AnAction>());
       ProcessHandler handler=null;
 {
-        DefaultJUnit_Configuration.this.getStateObject().myParams=new RunParameters();
-        final Wrappers._T<SNode> node=new Wrappers._T<SNode>();
-        ModelAccess.instance().runReadAction(new Runnable(){
-          public void run(){
-            node.value=new SNodePointer(DefaultJUnit_Configuration.this.getStateObject().model,DefaultJUnit_Configuration.this.getStateObject().node).getNode();
-          }
-        }
-);
         Project project=MPSDataKeys.PROJECT.getData(environment.getDataContext());
         final RunComponent runComponent=new RunComponent(project);
         final UnitTestClassRunner testRunner=new UnitTestClassRunner(runComponent);
@@ -26,15 +18,38 @@
           }
         }
 ;
-        final Wrappers._T<Process> process=new Wrappers._T<Process>();
+        final Wrappers._T<Process> process=new Wrappers._T<Process>(null);
         ModelAccess.instance().runReadAction(new Runnable(){
           public void run(){
-            testRunner.runTest(node.value);
-            process.value=testRunner.getProcess();
+            if (DefaultJUnit_Configuration.this.getStateObject().type != null) {
+              if (DefaultJUnit_Configuration.this.getStateObject().type == JUnitRunTypes.METHOD) {
+                SNode method=(SNode)SModelUtil.findNodeByFQName(DefaultJUnit_Configuration.this.getStateObject().method,SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.unitTest.structure.ITestMethod"),GlobalScope.getInstance());
+                testRunner.runTestMethod(method);
+              }
+ else               if (DefaultJUnit_Configuration.this.getStateObject().type == JUnitRunTypes.TESTCLASS) {
+                SNode test=(SNode)SModelUtil.findNodeByFQName(DefaultJUnit_Configuration.this.getStateObject().node,SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.unitTest.structure.BTestCase"),GlobalScope.getInstance());
+                testRunner.runTest(test);
+              }
+ else               if (DefaultJUnit_Configuration.this.getStateObject().type == JUnitRunTypes.MODEL) {
+                SModel model=GlobalScope.getInstance().getModelDescriptor(SModelReference.fromString(DefaultJUnit_Configuration.this.getStateObject().model)).getSModel();
+                testRunner.runTestInModel(model);
+              }
+ else               if (DefaultJUnit_Configuration.this.getStateObject().type == JUnitRunTypes.MODULE) {
+                for (                IModule module : GlobalScope.getInstance().getVisibleModules()) {
+                  if (module.getModuleFqName().equals(module)) {
+                    testRunner.runTestInModule(module);
+                    break;
+                  }
+                }
+              }
+              process.value=testRunner.getProcess();
+            }
           }
         }
 );
-        handler=new BLProcessHandler(runComponent,process.value,"",Charset.defaultCharset());
+        if (process.value != null) {
+          handler=new BLProcessHandler(runComponent,process.value,"",Charset.defaultCharset());
+        }
       }
       final JComponent finalConsoleComponent=consoleComponent;
       final Runnable finalConsoleDispose=consoleDispose;
