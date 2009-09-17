@@ -1,0 +1,29 @@
+{
+  IScope scope=sm.getModule().getScope();
+  StringBuffer errorMessages=new StringBuffer();
+  List<String> validationResult=sm.validate(scope);
+  for (  String item : validationResult) {
+    errorMessages.append(myBuildServerMessageFormat.escapeBuildMessage(item));
+    errorMessages.append(myBuildServerMessageFormat.getLinesSeparator());
+  }
+  for (  SNode node : sm.getSModel().allNodes()) {
+    if (SModelUtil_new.findConceptDeclaration(node.getConceptFqName(),GlobalScope.getInstance()) == null) {
+      errorMessages.append(myBuildServerMessageFormat.escapeBuildMessage("Unknown concept "));
+      errorMessages.append(myBuildServerMessageFormat.escapeBuildMessage(node.getConceptFqName()));
+      errorMessages.append(myBuildServerMessageFormat.getLinesSeparator());
+    }
+  }
+  for (  SNode node : sm.getSModel().allNodes()) {
+    for (    SReference ref : node.getReferences()) {
+      if (ReferenceMacro_AnnotationLink.getReferenceMacro((BaseConcept)node.getAdapter(),ref.getRole()) != null) {
+        continue;
+      }
+      if (ref.getTargetNode() == null) {
+        errorMessages.append(myBuildServerMessageFormat.escapeBuildMessage("Broken reference in node "));
+        errorMessages.append(myBuildServerMessageFormat.escapeBuildMessage(node.toString()));
+        errorMessages.append(myBuildServerMessageFormat.getLinesSeparator());
+      }
+    }
+  }
+  return errorMessages;
+}
