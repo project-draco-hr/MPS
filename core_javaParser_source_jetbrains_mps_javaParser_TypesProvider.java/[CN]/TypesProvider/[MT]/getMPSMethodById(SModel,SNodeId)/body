@@ -1,0 +1,49 @@
+{
+  String idString=nodeId.toString();
+  int offset1=idString.lastIndexOf('(');
+  String methodAndClassName=idString.substring(0,offset1);
+  String className=NameUtil.namespaceFromLongName(methodAndClassName);
+  Classifier classifier=getMPSClassByIdString(model,className);
+  if (classifier == null) {
+    return null;
+  }
+  String methodName=NameUtil.shortNameFromLongName(methodAndClassName);
+  int offset2=idString.lastIndexOf(')');
+  String signature=idString.substring(offset1 + 1,offset2);
+  boolean constructor="<init>".equals(methodName);
+  List<BaseMethodDeclaration> goodMethods=new ArrayList<BaseMethodDeclaration>();
+  for (  InstanceMethodDeclaration method : classifier.getMethods()) {
+    if (methodName.equals(method.getName())) {
+      goodMethods.add(method);
+    }
+  }
+  if (classifier instanceof ClassConcept) {
+    ClassConcept classConcept=(ClassConcept)classifier;
+    if (constructor) {
+      for (      ConstructorDeclaration method : classConcept.getConstructors()) {
+        goodMethods.add(method);
+      }
+    }
+ else {
+      for (      StaticMethodDeclaration method : classConcept.getStaticMethods()) {
+        if (methodName.equals(method.getName())) {
+          goodMethods.add(method);
+        }
+      }
+    }
+  }
+  for (  BaseMethodDeclaration method : goodMethods) {
+    Iterator<ParameterDeclaration> iterator=method.parameters();
+    StringBuilder sb=new StringBuilder();
+    while (iterator.hasNext()) {
+      sb.append(mpsTypeAsString(iterator.next().getType()));
+      if (iterator.hasNext()) {
+        sb.append(',');
+      }
+    }
+    if (signature.equals(sb.toString())) {
+      return method;
+    }
+  }
+  return null;
+}
