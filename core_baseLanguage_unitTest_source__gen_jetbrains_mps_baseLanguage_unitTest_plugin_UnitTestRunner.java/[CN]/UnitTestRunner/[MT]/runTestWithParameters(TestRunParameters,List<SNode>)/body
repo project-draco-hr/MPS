@@ -1,13 +1,24 @@
 {
   final List<String> params=ListSequence.fromList(new ArrayList<String>());
+  String workingDir=null;
+  String programParams=null;
+  String vmParams=null;
+  if (this.configParameter != null) {
+    workingDir=this.configParameter.getWorkingDirectory();
+    programParams=this.configParameter.getProgramParameters();
+    vmParams=this.configParameter.getVMParameters();
+  }
   this.addJavaCommand(params);
   if (this.unitTestPreferences.getStateObject().useDebug) {
     this.addDebug(params,this.unitTestPreferences.getStateObject().debugPort,false);
   }
   ListSequence.fromList(params).addSequence(ListSequence.fromList(parameters.getVmParameters()));
+  if (vmParams != null) {
+    ListSequence.fromList(params).addElement(vmParams);
+  }
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
-      UnitTestRunner.this.addClassPath(params,UnitTestRunner.this.getClasspathString(ListSequence.fromList(tests).first(),parameters.getCalssPath()));
+      UnitTestRunner.this.addClassPath(params,UnitTestRunner.this.getClasspathString(ListSequence.fromList(tests).first(),parameters.getClassPath()));
     }
   }
 );
@@ -20,7 +31,13 @@
     }
   }
 );
+  if (programParams != null) {
+    ListSequence.fromList(params).addElement(programParams);
+  }
   ProcessBuilder p=new ProcessBuilder(params);
+  if (workingDir != null) {
+    p.directory(new File(workingDir));
+  }
   this.myComponent.appendInternal(this.getCommandString(p) + "\n\n");
   try {
     this.myProcess=p.start();
