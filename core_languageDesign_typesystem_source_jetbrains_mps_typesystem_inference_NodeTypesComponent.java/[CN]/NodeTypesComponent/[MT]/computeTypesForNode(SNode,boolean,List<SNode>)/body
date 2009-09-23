@@ -24,15 +24,19 @@
       if (!myPartlyCheckedNodes.contains(sNode)) {
         myNotSkippedNodes.add(new SNodePointer(sNode));
         myCurrentFrontier=newFrontier;
+        MyLanguageCachesReadListener languageCachesReadListener=null;
         if (isIncrementalMode()) {
+          languageCachesReadListener=new MyLanguageCachesReadListener();
           myNodesReadListener.clear();
           NodeReadEventsCaster.setNodesReadListener(myNodesReadListener);
+          LanguageHierarchyCache.getInstance().setReadAccessListener(languageCachesReadListener);
         }
         try {
           applyRulesToNode(sNode);
         }
   finally {
           if (isIncrementalMode()) {
+            LanguageHierarchyCache.getInstance().removeReadAccessListener();
             NodeReadEventsCaster.removeNodesReadListener();
           }
           myCurrentFrontier=null;
@@ -43,6 +47,13 @@ synchronized (ACCESS_LOCK) {
             Set<SNode> accessedNodes=myNodesReadListener.myAccessedNodes;
             addDepedentNodesTypesystem(sNode,accessedNodes);
             myNodesReadListener.setAccessReport(false);
+            if (languageCachesReadListener != null) {
+              languageCachesReadListener.setAccessReport(true);
+              if (languageCachesReadListener.myIsCacheAccessed) {
+                addCacheDependentNodesTypesystem(sNode);
+              }
+              languageCachesReadListener.setAccessReport(false);
+            }
           }
           myNodesReadListener.clear();
         }

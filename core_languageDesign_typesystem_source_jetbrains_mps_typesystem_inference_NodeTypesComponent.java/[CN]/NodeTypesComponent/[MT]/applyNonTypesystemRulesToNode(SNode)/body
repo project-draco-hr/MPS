@@ -4,6 +4,7 @@
     for (    NonTypesystemRule_Runtime rule : nonTypesystemRules) {
       Pair<SNode,NonTypesystemRule_Runtime> nodeAndRule=new Pair<SNode,NonTypesystemRule_Runtime>(node,rule);
       MyTypesReadListener typesReadListener=new MyTypesReadListener();
+      MyLanguageCachesReadListener languageCachesReadListener=new MyLanguageCachesReadListener();
       if (isIncrementalMode()) {
         if (myCheckedNodesNonTypesystem.contains(nodeAndRule)) {
           continue;
@@ -11,17 +12,19 @@
         myNodesReadListener.clear();
         NodeReadEventsCaster.setNodesReadListener(myNodesReadListener);
         TypeChecker.getInstance().setTypesReadListener(typesReadListener);
+        LanguageHierarchyCache.getInstance().setReadAccessListener(languageCachesReadListener);
         myNonTypesystemRuleAndNodeBeingChecked=new Pair<SNode,NonTypesystemRule_Runtime>(node,rule);
       }
       try {
         applyRuleToNode(node,rule);
       }
   finally {
-        if (isIncrementalMode()) {
-          NodeReadEventsCaster.removeNodesReadListener();
-          TypeChecker.getInstance().removeTypesReadListener();
-        }
         myNonTypesystemRuleAndNodeBeingChecked=null;
+        if (isIncrementalMode()) {
+          LanguageHierarchyCache.getInstance().removeReadAccessListener();
+          TypeChecker.getInstance().removeTypesReadListener();
+          NodeReadEventsCaster.removeNodesReadListener();
+        }
       }
       if (isIncrementalMode()) {
 synchronized (ACCESS_LOCK) {
@@ -29,6 +32,11 @@ synchronized (ACCESS_LOCK) {
           addDepedentNodesNonTypesystem(node,rule,new HashSet<SNode>(myNodesReadListener.myAccessedNodes));
           addDepedentPropertiesNonTypesystem(node,rule,new HashSet<Pair<SNode,String>>(myNodesReadListener.myAccessedProperties));
           myNodesReadListener.setAccessReport(false);
+          languageCachesReadListener.setAccessReport(true);
+          if (languageCachesReadListener.myIsCacheAccessed) {
+            addCacheDependentNodesNonTypesystem(node,rule);
+          }
+          languageCachesReadListener.setAccessReport(false);
           typesReadListener.setAccessReport(true);
           addDepedentTypeTermsNonTypesystem(node,rule,new HashSet<SNode>(typesReadListener.myAccessedNodes));
           typesReadListener.setAccessReport(false);
