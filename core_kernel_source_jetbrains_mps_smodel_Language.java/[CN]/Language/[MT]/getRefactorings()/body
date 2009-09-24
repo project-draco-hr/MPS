@@ -4,34 +4,37 @@
     result.addAll(myCachedRefactorings);
     return result;
   }
-  SModelDescriptor scriptsModelDescriptor=getScriptsModelDescriptor();
-  if (scriptsModelDescriptor == null) {
-    return result;
-  }
-  SModel scriptsModel=scriptsModelDescriptor.getSModel();
-  String packageName=scriptsModel.getLongName();
-  for (  OldRefactoring refactoring : scriptsModel.getRootsAdapters(OldRefactoring.class)) {
-    try {
-      String fqName=packageName + "." + refactoring.getName();
-      Class<AbstractLoggableRefactoring> cls=getClass(fqName);
-      SNodePointer pointer=new SNodePointer(refactoring.getNode());
-      if (cls == null) {
-        if (!myNotFoundRefactorings.contains(pointer)) {
-          LOG.error("Can't find " + fqName);
-          myNotFoundRefactorings.add(pointer);
+{
+    SModelDescriptor scriptsModelDescriptor=getScriptsModelDescriptor();
+    if (scriptsModelDescriptor != null) {
+      SModel scriptsModel=scriptsModelDescriptor.getSModel();
+      String packageName=scriptsModel.getLongName();
+      for (      OldRefactoring refactoring : scriptsModel.getRootsAdapters(OldRefactoring.class)) {
+        try {
+          String fqName=packageName + "." + refactoring.getName();
+          Class<AbstractLoggableRefactoring> cls=getClass(fqName);
+          SNodePointer pointer=new SNodePointer(refactoring.getNode());
+          if (cls == null) {
+            if (!myNotFoundRefactorings.contains(pointer)) {
+              LOG.error("Can't find " + fqName);
+              myNotFoundRefactorings.add(pointer);
+            }
+            continue;
+          }
+          Constructor<AbstractLoggableRefactoring> constructor=cls.getConstructor();
+          constructor.setAccessible(false);
+          AbstractLoggableRefactoring oldRefactoring=constructor.newInstance();
+          result.add(OldRefactoringAdapter.createAdapterFor(oldRefactoring));
         }
-        continue;
+ catch (        Throwable t) {
+          LOG.error(t);
+        }
       }
-      Constructor<AbstractLoggableRefactoring> constructor=cls.getConstructor();
-      constructor.setAccessible(false);
-      AbstractLoggableRefactoring oldRefactoring=constructor.newInstance();
-      result.add(OldRefactoringAdapter.createAdapterFor(oldRefactoring));
-    }
- catch (    Throwable t) {
-      LOG.error(t);
     }
   }
-  for (  Refactoring refactoring : scriptsModel.getRootsAdapters(Refactoring.class)) {
+  SModel refactoringsModel=getRefactoringsModelDescriptor().getSModel();
+  String packageName=refactoringsModel.getLongName();
+  for (  Refactoring refactoring : refactoringsModel.getRootsAdapters(Refactoring.class)) {
     try {
       String fqName=packageName + "." + refactoring.getName();
       Class<IRefactoring> cls=getClass(fqName);
