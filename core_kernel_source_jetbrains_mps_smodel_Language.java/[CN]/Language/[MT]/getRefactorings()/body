@@ -1,5 +1,5 @@
 {
-  Set<ILoggableRefactoringOld> result=new HashSet<ILoggableRefactoringOld>();
+  Set<IRefactoring> result=new HashSet<IRefactoring>();
   if (myCachedRefactorings != null) {
     result.addAll(myCachedRefactorings);
     return result;
@@ -13,7 +13,7 @@
   for (  OldRefactoring refactoring : scriptsModel.getRootsAdapters(OldRefactoring.class)) {
     try {
       String fqName=packageName + "." + refactoring.getName();
-      Class<ILoggableRefactoringOld> cls=getClass(fqName);
+      Class<AbstractLoggableRefactoring> cls=getClass(fqName);
       SNodePointer pointer=new SNodePointer(refactoring.getNode());
       if (cls == null) {
         if (!myNotFoundRefactorings.contains(pointer)) {
@@ -22,7 +22,28 @@
         }
         continue;
       }
-      Constructor<ILoggableRefactoringOld> constructor=cls.getConstructor();
+      Constructor<AbstractLoggableRefactoring> constructor=cls.getConstructor();
+      constructor.setAccessible(false);
+      AbstractLoggableRefactoring oldRefactoring=constructor.newInstance();
+      result.add(OldRefactoringAdapter.createAdapterFor(oldRefactoring));
+    }
+ catch (    Throwable t) {
+      LOG.error(t);
+    }
+  }
+  for (  Refactoring refactoring : scriptsModel.getRootsAdapters(Refactoring.class)) {
+    try {
+      String fqName=packageName + "." + refactoring.getName();
+      Class<IRefactoring> cls=getClass(fqName);
+      SNodePointer pointer=new SNodePointer(refactoring.getNode());
+      if (cls == null) {
+        if (!myNotFoundRefactorings.contains(pointer)) {
+          LOG.error("Can't find " + fqName);
+          myNotFoundRefactorings.add(pointer);
+        }
+        continue;
+      }
+      Constructor<IRefactoring> constructor=cls.getConstructor();
       constructor.setAccessible(false);
       result.add(constructor.newInstance());
     }
@@ -30,6 +51,6 @@
       LOG.error(t);
     }
   }
-  myCachedRefactorings=new HashSet<ILoggableRefactoringOld>(result);
+  myCachedRefactorings=new HashSet<IRefactoring>(result);
   return result;
 }

@@ -1,0 +1,39 @@
+{
+  final IRefactoring refactoring=refactoringContext.getRefactoring();
+  final SModelDescriptor modelDescriptor=refactoringContext.getSelectedModel();
+  final SModelReference initialModelReference=modelDescriptor.getSModelReference();
+  Runnable runnable=new Runnable(){
+    public void run(){
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          refactoring.refactor(refactoringContext);
+        }
+      }
+);
+      MPSProject mpsProject=refactoringContext.getSelectedMPSProject();
+      if (refactoring instanceof ILoggableRefactoring) {
+        ProgressManager.getInstance().run(new Modal(mpsProject.getComponent(Project.class),"Updating models...",false){
+          public void run(          @NotNull ProgressIndicator indicator){
+            indicator.pushState();
+            try {
+              indicator.setIndeterminate(true);
+              ModelAccess.instance().runWriteAction(new Runnable(){
+                public void run(){
+                  updateModels(modelDescriptor,refactoringContext,((ILoggableRefactoring)refactoring),initialModelReference);
+                }
+              }
+);
+            }
+  finally {
+              indicator.popState();
+            }
+          }
+        }
+);
+      }
+      refactoring.doWhenDone(refactoringContext);
+    }
+  }
+;
+  ThreadUtils.runInUIThreadNoWait(runnable);
+}
