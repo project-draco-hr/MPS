@@ -11,8 +11,34 @@
   if (isDoNotGenerate(sm)) {
     return false;
   }
-  if (isEmpty(sm)) {
-    return getLastGenerationTime(sm) != 0 && sm.lastChangeTime() >= getLastGenerationTime(sm);
+  if (!USE_HASHES) {
+    if (isEmpty(sm)) {
+      return getLastGenerationTime(sm) != 0 && sm.lastChangeTime() >= getLastGenerationTime(sm);
+    }
+    return sm.lastChangeTime() >= getLastGenerationTime(sm);
   }
-  return sm.lastChangeTime() >= getLastGenerationTime(sm);
+ else {
+    if (SModelRepository.getInstance().isChanged(sm))     return true;
+    if (isEmpty(sm)) {
+      return false;
+    }
+    String generatedHash=getGenerationHash(sm);
+    if (generatedHash == null)     return true;
+    Collection<VirtualFile> files=FileBasedIndex.getInstance().getContainingFiles(ModelDigestIndex.NAME,generatedHash,new GlobalSearchScope(){
+      @Override public boolean contains(      VirtualFile file){
+        return true;
+      }
+      @Override public int compare(      VirtualFile file1,      VirtualFile file2){
+        return file1.getPath().compareTo(file2.getPath());
+      }
+      @Override public boolean isSearchInModuleContent(      @NotNull Module aModule){
+        return true;
+      }
+      @Override public boolean isSearchInLibraries(){
+        return false;
+      }
+    }
+);
+    return files.isEmpty();
+  }
 }
