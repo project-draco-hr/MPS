@@ -1,2 +1,30 @@
 {
+  super.doInit();
+  Map<SNodeId,SNodeTreeNode> idToTreeNode=new HashMap();
+  Set<SNodeId> rootNodes=new HashSet<SNodeId>();
+  for (  SNodeId deletedNodeId : myDeletedNodes) {
+    boolean firstTime=processNode(deletedNodeId,null,idToTreeNode,rootNodes);
+    if (firstTime) {
+      rootNodes.add(deletedNodeId);
+    }
+  }
+  for (  SNodeId root : rootNodes) {
+    SNode parent=myOldModel.getNodeById(root).getParent();
+    if (parent == null) {
+      add(idToTreeNode.get(root));
+    }
+ else {
+      final SNodeId deletedNodeParentId=parent.getSNodeId();
+      MPSTreeNode parentTreeNode=findDescendantWith(new Condition<Object>(){
+        public boolean met(        Object object){
+          if (object == null)           return false;
+          return ((SNode)object).getSNodeId().equals(deletedNodeParentId);
+        }
+      }
+);
+      if (parentTreeNode != null) {
+        parentTreeNode.add(idToTreeNode.get(root));
+      }
+    }
+  }
 }
