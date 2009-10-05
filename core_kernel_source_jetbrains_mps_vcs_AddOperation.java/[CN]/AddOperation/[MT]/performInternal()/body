@@ -1,22 +1,18 @@
 {
+  Set<VirtualFile> filesToCheckStatuses=new HashSet<VirtualFile>(myVirtualFilesToAdd);
+  myVirtualFilesToAdd.clear();
   for (  File f : myFilesToAdd) {
     VirtualFile virtualFile=VFileSystem.refreshAndGetFile(f);
     if (virtualFile != null && !isIgnored(virtualFile)) {
-      FileStatus status=ChangeListManager.getInstance(myProject).getStatus(virtualFile);
-      if (status.equals(FileStatus.DELETED)) {
-        myVirtualFilesToRevert.add(virtualFile);
-      }
- else       if (!status.equals(FileStatus.MODIFIED)) {
-        myVirtualFilesToAdd.add(virtualFile);
-      }
+      filesToCheckStatuses.add(virtualFile);
     }
  else     if (virtualFile == null && f.exists()) {
       LOG.error("Cannot find virtual file for IO file " + f);
     }
   }
   if (myRecursive) {
-    myVirtualFilesToAdd.addAll(getAllChildren(myVirtualFilesToAdd,new LinkedHashSet<VirtualFile>()));
-    myVirtualFilesToRevert.addAll(getAllChildren(myVirtualFilesToRevert,new LinkedHashSet<VirtualFile>()));
+    filesToCheckStatuses.addAll(getAllChildren(filesToCheckStatuses,new LinkedHashSet<VirtualFile>()));
   }
+  reliablyGetUnversionedFiles(filesToCheckStatuses,myVirtualFilesToAdd,myVirtualFilesToRevert);
   askAndPerform();
 }

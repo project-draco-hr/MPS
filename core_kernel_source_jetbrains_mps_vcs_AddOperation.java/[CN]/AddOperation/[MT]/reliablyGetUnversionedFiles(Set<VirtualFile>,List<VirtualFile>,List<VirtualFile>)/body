@@ -1,0 +1,60 @@
+{
+  MPSVCSManager.getInstance(myProject).ensureVcssInitialized();
+  Map<AbstractVcs,List<VirtualFile>> vcsToFiles=new HashMap<AbstractVcs,List<VirtualFile>>();
+  for (  VirtualFile f : files) {
+    AbstractVcs vcs=myManager.getVcsFor(f);
+    if (vcs == null)     continue;
+    List<VirtualFile> filesList=vcsToFiles.get(vcs);
+    if (filesList == null) {
+      filesList=new ArrayList<VirtualFile>();
+      vcsToFiles.put(vcs,filesList);
+    }
+    filesList.add(f);
+  }
+  final List<FilePath> deletedPaths=new ArrayList<FilePath>();
+  for (  AbstractVcs vcs : vcsToFiles.keySet()) {
+    VcsDirtyScopeImpl scope=new VcsDirtyScopeImpl(vcs,myProject);
+    List<VirtualFile> currentFiles=vcsToFiles.get(vcs);
+    for (    VirtualFile f : currentFiles) {
+      scope.addDirtyFile(VcsContextFactory.SERVICE.getInstance().createFilePathOn(f));
+    }
+    ChangeProvider changeProvider=vcs.getChangeProvider();
+    if (changeProvider == null) {
+      return;
+    }
+    try {
+      changeProvider.getChanges(scope,new EmptyChangelistBuilder(){
+        @Override public void processChangeInList(        Change change,        @Nullable ChangeList changeList,        VcsKey vcsKey){
+          processChange(change);
+        }
+        @Override public void processChangeInList(        Change change,        String changeListName,        VcsKey vcsKey){
+          processChange(change);
+        }
+        public void processChange(        Change change){
+          if (change.getFileStatus().equals(FileStatus.DELETED)) {
+            ContentRevision contentRevision=change.getBeforeRevision();
+            if (contentRevision != null) {
+              deletedPaths.add(contentRevision.getFile());
+            }
+          }
+        }
+        @Override public void processUnversionedFile(        VirtualFile file){
+          if (files.contains(file)) {
+            unversioned.add(file);
+          }
+        }
+      }
+,new EmptyProgressIndicator(),new StubChangeListManagerGate());
+    }
+ catch (    VcsException e) {
+      LOG.error(e);
+    }
+  }
+  for (  FilePath path : deletedPaths) {
+    for (    VirtualFile f : files) {
+      if (f.getPresentableUrl().equals(path.getPresentableUrl())) {
+        deleted.add(f);
+      }
+    }
+  }
+}
