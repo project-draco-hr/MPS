@@ -6,13 +6,24 @@
     public void run(){
       final List<SModel> modelsToGenerate=ModelAccess.instance().runReadAction(new Computable<List<SModel>>(){
         public List<SModel> compute(){
-          return refactoring.getModelsToGenerate(refactoringContext);
+          try {
+            return refactoring.getModelsToGenerate(refactoringContext);
+          }
+ catch (          Throwable t) {
+            LOG.error("An error occured while trying to collect models to generate from refactoring " + refactoring.getUserFriendlyName() + ". No models will be generated",t);
+            return new ArrayList<SModel>();
+          }
         }
       }
 );
       ModelAccess.instance().runWriteActionInCommand(new Runnable(){
         public void run(){
-          refactoring.refactor(refactoringContext);
+          try {
+            refactoring.refactor(refactoringContext);
+          }
+ catch (          Throwable t) {
+            LOG.error("An exception occyred while trying to execute refactoring " + refactoring.getUserFriendlyName() + ". Models could have been corrupted.",t);
+          }
         }
       }
 );
@@ -40,7 +51,12 @@
       if (!modelsToGenerate.isEmpty()) {
         generateModels(modelsToGenerate,refactoringContext);
       }
-      refactoring.doWhenDone(refactoringContext);
+      try {
+        refactoring.doWhenDone(refactoringContext);
+      }
+ catch (      Throwable t) {
+        LOG.error("An error occured in doWhenDone(), refactoring: " + refactoring.getUserFriendlyName(),t);
+      }
     }
   }
 ;
