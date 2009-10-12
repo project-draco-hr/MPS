@@ -3,25 +3,37 @@
     return false;
   }
   NodeHighlightManager highlightManager=editor.getHighlightManager();
+  boolean anyMessageChanged=false;
   for (  final IEditorChecker checker : checkersToRecheck) {
     final LinkedHashSet<EditorMessage> messages=new LinkedHashSet<EditorMessage>();
     final EditorMessageOwner[] owners=new EditorMessageOwner[1];
+    final boolean[] messagesChangedContainer={false};
     Runnable runnable=new Runnable(){
       public void run(){
         SNode node=editor.getEditedNode();
         if (node == null)         return;
         owners[0]=checker.getOwner(node);
         messages.addAll(checker.createMessages(node,editor.getOperationContext(),events,wasCheckedOnce));
+        messagesChangedContainer[0]=messagesChangedContainer[0] || checker.messagesChanged();
       }
     }
 ;
     ModelAccess.instance().runReadAction(runnable);
-    EditorMessageOwner owner=owners[0];
-    if (owner != null) {
-      highlightManager.clearForOwner(owner,false);
+    boolean messagesChanged=messagesChangedContainer[0];
+    if (!messagesChanged && editor instanceof InspectorEditorComponent) {
+      if (currentEditorMessagesChanged) {
+        messagesChanged=true;
+      }
     }
-    for (    EditorMessage message : messages) {
-      highlightManager.mark(message,false);
+    if (messagesChanged) {
+      anyMessageChanged=true;
+      EditorMessageOwner owner=owners[0];
+      if (owner != null) {
+        highlightManager.clearForOwner(owner,false);
+      }
+      for (      EditorMessage message : messages) {
+        highlightManager.mark(message,false);
+      }
     }
   }
   for (  final IEditorChecker checker : checkersToRemove) {
@@ -37,7 +49,9 @@
     ModelAccess.instance().runReadAction(runnable);
     highlightManager.clearForOwner(owners[0],false);
   }
-  highlightManager.repaintAndRebuildEditorMessages();
-  editor.updateStatusBarMessage();
-  return true;
+  if (anyMessageChanged) {
+    highlightManager.repaintAndRebuildEditorMessages();
+    editor.updateStatusBarMessage();
+  }
+  return anyMessageChanged;
 }
