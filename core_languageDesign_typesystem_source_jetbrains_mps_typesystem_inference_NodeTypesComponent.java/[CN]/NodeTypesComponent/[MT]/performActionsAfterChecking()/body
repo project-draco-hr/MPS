@@ -1,11 +1,20 @@
 {
-  Map<SNode,IErrorReporter> toAdd=new HashMap<SNode,IErrorReporter>();
+  Map<SNode,List<IErrorReporter>> toAdd=new HashMap<SNode,List<IErrorReporter>>();
   for (  SNode node : myNodesToErrorsMap.keySet()) {
-    IErrorReporter iErrorReporter=myNodesToErrorsMap.get(node);
-    String errorString=iErrorReporter.reportError();
-    SimpleErrorReporter reporter=new SimpleErrorReporter(node,errorString,iErrorReporter.getRuleModel(),iErrorReporter.getRuleId(),iErrorReporter.getMessageStatus(),iErrorReporter.getErrorTarget());
-    reporter.setIntentionProvider(iErrorReporter.getIntentionProvider());
-    toAdd.put(node,reporter);
+    List<IErrorReporter> iErrorReporters=myNodesToErrorsMap.get(node);
+    if (iErrorReporters != null) {
+      for (      IErrorReporter iErrorReporter : iErrorReporters) {
+        String errorString=iErrorReporter.reportError();
+        SimpleErrorReporter reporter=new SimpleErrorReporter(node,errorString,iErrorReporter.getRuleModel(),iErrorReporter.getRuleId(),iErrorReporter.getMessageStatus(),iErrorReporter.getErrorTarget());
+        reporter.setIntentionProvider(iErrorReporter.getIntentionProvider());
+        List<IErrorReporter> errorReporterList=toAdd.get(node);
+        if (errorReporterList == null) {
+          errorReporterList=new ArrayList<IErrorReporter>();
+          toAdd.put(node,errorReporterList);
+        }
+        errorReporterList.add(iErrorReporter);
+      }
+    }
   }
   myNodesToErrorsMap.putAll(toAdd);
   myModelListenerManager.updateGCedNodes();
