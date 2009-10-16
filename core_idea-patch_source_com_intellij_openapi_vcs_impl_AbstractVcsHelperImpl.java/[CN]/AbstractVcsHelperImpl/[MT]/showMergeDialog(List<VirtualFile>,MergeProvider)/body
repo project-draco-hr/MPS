@@ -10,7 +10,7 @@
         DiffRequestFactory diffRequestFactory=DiffRequestFactory.getInstance();
         MergeRequest request=diffRequestFactory.createMergeRequest(leftText,rightText,originalText,file,myProject,ActionButtonPresentation.createApplyButton());
         try {
-          zipModel(mergeData,request.getContents(),file);
+          myBackup=zipModel(mergeData,request.getContents(),file);
         }
  catch (        IOException e) {
           LOG.error(e);
@@ -20,6 +20,18 @@
     }
     public void conflictResolvedForFile(    VirtualFile file){
       provider.conflictResolvedForFile(file);
+      if (myBackup.exists()) {
+        try {
+          File tmp=FileUtil.createTmpDir();
+          ZipUtil.extract(myBackup,tmp,null);
+          FileUtil.copyFile(new File(file.getPath()),new File(tmp + File.separator + file.getName()+ ".result"));
+          FileUtil.zip(tmp,myBackup);
+          FileUtil.delete(tmp);
+        }
+ catch (        IOException e) {
+          LOG.error(e);
+        }
+      }
     }
     public boolean isBinary(    VirtualFile file){
       return provider.isBinary(file);
