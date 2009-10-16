@@ -38,7 +38,20 @@
     }
   }
 ;
-  final MultipleFileMergeDialog fileMergeDialog=new MultipleFileMergeDialog(myProject,files,providerDecorator);
+  List<VirtualFile> toMerge=new ArrayList<VirtualFile>();
+  List<VirtualFile> alreadyResolved=new ArrayList<VirtualFile>();
+  for (  VirtualFile f : files) {
+    if (ApplicationLevelVcsManager.instance().isInConflict(VFileSystem.toIFile(f),true)) {
+      toMerge.add(f);
+    }
+ else {
+      alreadyResolved.add(f);
+    }
+  }
+  if (toMerge.isEmpty()) {
+    return alreadyResolved;
+  }
+  final MultipleFileMergeDialog fileMergeDialog=new MultipleFileMergeDialog(myProject,toMerge,providerDecorator);
   fileMergeDialog.show();
-  return fileMergeDialog.getProcessedFiles();
+  return CollectionUtil.union(fileMergeDialog.getProcessedFiles(),alreadyResolved);
 }
