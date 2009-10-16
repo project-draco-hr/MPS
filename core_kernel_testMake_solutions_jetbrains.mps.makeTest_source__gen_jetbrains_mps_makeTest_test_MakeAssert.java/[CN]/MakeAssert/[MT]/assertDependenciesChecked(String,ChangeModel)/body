@@ -1,32 +1,16 @@
 {
   final MPSProject project=launchProject();
-  final String changedModelName=modelName + '2';
-  final SModel[] model=new SModel[]{null};
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      model[0]=getModel(changedModelName).getSModel();
-    }
-  }
-);
-  step(modelName,project,new Runnable(){
-    public void run(){
-      model[0].runLoadingAction(new Runnable(){
-        public void run(){
-          changer.change(model[0]);
-        }
-      }
-);
-    }
-  }
-,STEP_TYPE_CHANGE,getFilesGenType());
+  final ChangeModelProcessor changeModelProcessor=new ChangeModelProcessor(project,modelName,changer);
+  final IGenerationType filesGenType=getFilesGenType();
+  changeModelProcessor.changeStep(filesGenType);
   final EditorGenerateType genType=new EditorGenerateType(true);
-  generate(modelName + '1',project,genType);
-  generate(modelName + '2',project,genType);
+  changeModelProcessor.generateTestModel(genType);
+  changeModelProcessor.generateModelToChange(genType);
   final Boolean[] returnValue=new Boolean[]{null};
+  final SModel testModel=changeModelProcessor.getTestModel();
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
       try {
-        SModel testModel=getModel(modelName + '1').getSModel();
         SNode test=ListSequence.fromList(SModelOperations.getRoots(testModel,null)).first();
         String className=NameUtil.nodeFQName(test);
         genType.compile(IAdaptiveProgressMonitor.NULL_PROGRESS_MONITOR);
@@ -35,13 +19,8 @@
         Method method=testClass.getMethods()[0];
         returnValue[0]=(Boolean)method.invoke(null);
         System.out.println("Test " + className + "."+ method.getName()+ " return "+ returnValue[0]);
-        step(modelName,project,new Runnable(){
-          public void run(){
-            changer.rollback(model[0]);
-          }
-        }
-,STEP_TYPE_REVERT,getFilesGenType());
-        generate(modelName + '2',project,getFilesGenType());
+        changeModelProcessor.revertStep(filesGenType);
+        changeModelProcessor.generateModelToChange(filesGenType);
       }
  catch (      Throwable t) {
         disposeProject(project);

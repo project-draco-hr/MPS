@@ -1,32 +1,11 @@
 {
   MPSProject project=launchProject();
-  final String changedModelName=modelName + '2';
-  final SModel[] model=new SModel[]{null};
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      model[0]=getModel(changedModelName).getSModel();
-    }
-  }
-);
-  boolean baseIsOk=step(modelName,project,new Runnable(){
-    public void run(){
-      model[0].runLoadingAction(new Runnable(){
-        public void run(){
-          changer.change(model[0]);
-        }
-      }
-);
-    }
-  }
-,STEP_TYPE_CHANGE,getFilesGenType());
-  boolean newIsOk=step(modelName,project,new Runnable(){
-    public void run(){
-      changer.rollback(model[0]);
-    }
-  }
-,STEP_TYPE_REVERT,getFilesGenType());
-  model[0].setLoading(false);
-  generate(changedModelName,project,getFilesGenType());
+  ChangeModelProcessor changeModelProcessor=new ChangeModelProcessor(project,modelName,changer);
+  IGenerationType genType=getFilesGenType();
+  boolean baseIsOk=changeModelProcessor.changeStep(genType);
+  boolean newIsOk=changeModelProcessor.revertStep(genType);
+  changeModelProcessor.getModelToChange().setLoading(false);
+  changeModelProcessor.generateModelToChange(genType);
   disposeProject(project);
   assertNoProblems(baseIsOk);
   assertDependenciesChecked(newIsOk);
