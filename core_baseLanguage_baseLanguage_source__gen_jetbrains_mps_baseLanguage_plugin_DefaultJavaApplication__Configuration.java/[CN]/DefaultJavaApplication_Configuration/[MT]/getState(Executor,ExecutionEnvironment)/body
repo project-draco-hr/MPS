@@ -1,7 +1,9 @@
 {
   return new RunProfileState(){
     @Nullable public ExecutionResult execute(    Executor executor,    @NotNull ProgramRunner runner) throws ExecutionException {
-      JComponent consoleComponent;
+      Project project=MPSDataKeys.PROJECT.getData(environment.getDataContext());
+      final ConsoleViewImpl consoleView=new ConsoleViewImpl(project,false);
+      JComponent consoleComponent=null;
       Runnable consoleDispose=null;
       final List<AnAction> actions=ListSequence.fromList(new ArrayList<AnAction>());
       ProcessHandler handler=null;
@@ -19,21 +21,20 @@
         if (node.value == null) {
           throw new ExecutionException("Class node does not exist");
         }
-        Project project=MPSDataKeys.PROJECT.getData(environment.getDataContext());
-        MPSProject mpsProject=project.getComponent(MPSProjectHolder.class).getMPSProject();
+        Project ideaProject=MPSDataKeys.PROJECT.getData(environment.getDataContext());
+        MPSProject mpsProject=ideaProject.getComponent(MPSProjectHolder.class).getMPSProject();
         if (DefaultJavaApplication_Configuration.this.getStateObject().parameters == null) {
           DefaultJavaApplication_Configuration.this.getStateObject().parameters=new ConfigRunParameters();
         }
         if (DefaultJavaApplication_Configuration.this.getStateObject().parameters.getMake()) {
           RunUtil.makeBeforeRun(mpsProject,Collections.singletonList(node.value));
         }
-        final RunComponent runComponent=new RunComponent(project);
-        final ClassRunner classRunner=new ClassRunner(runComponent);
-        ListSequence.fromList(actions).addSequence(ListSequence.fromList(ListSequence.fromListAndArray(new ArrayList<AnAction>(),runComponent.getConsoleView().createConsoleActions())));
-        consoleComponent=runComponent;
+        final ClassRunner classRunner=new ClassRunner();
+        ListSequence.fromList(actions).addSequence(ListSequence.fromList(ListSequence.fromListAndArray(new ArrayList<AnAction>(),consoleView.createConsoleActions())));
+        consoleComponent=consoleView.getComponent();
         consoleDispose=new Runnable(){
           public void run(){
-            runComponent.dispose();
+            Disposer.dispose(consoleView);
           }
         }
 ;
@@ -47,7 +48,7 @@
           }
         }
 );
-        handler=new BLProcessHandler(runComponent.getConsoleView(),process.value,"",Charset.defaultCharset());
+        handler=new DefaultProcessHandler(consoleView,process.value,classRunner.getCommandString());
       }
       final JComponent finalConsoleComponent=consoleComponent;
       final Runnable finalConsoleDispose=consoleDispose;
