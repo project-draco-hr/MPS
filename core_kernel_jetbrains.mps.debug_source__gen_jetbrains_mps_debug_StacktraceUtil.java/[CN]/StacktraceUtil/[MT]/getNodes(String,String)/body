@@ -1,0 +1,30 @@
+{
+  int lastDot=method.lastIndexOf(".");
+  lastDot=method.lastIndexOf(".",lastDot - 1);
+  String pkg=(lastDot == -1 ? "" : method.substring(0,lastDot));
+  List<SModelDescriptor> list=SModelRepository.getInstance().getModelDescriptorsByModelName(pkg);
+  final Wrappers._T<SModelDescriptor> descriptor=new Wrappers._T<SModelDescriptor>(null);
+  for (  SModelDescriptor modelDescriptor : ListSequence.fromList(list)) {
+    if (!(ObjectUtils.equals(modelDescriptor.getStereotype(),SModelStereotype.JAVA_STUB))) {
+      descriptor.value=modelDescriptor;
+    }
+  }
+  if (descriptor.value == null) {
+    return null;
+  }
+  final DebugInfo result=BLDebugInfoCache.getInstance().get(descriptor.value);
+  if (result == null) {
+    return null;
+  }
+  final Wrappers._T<SNode> nodeToShow=new Wrappers._T<SNode>(null);
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      String[] str=position.split(":");
+      if (str.length >= 2) {
+        nodeToShow.value=result.getNodeForLine(str[0],Integer.parseInt(str[1]),descriptor.value.getSModel());
+      }
+    }
+  }
+);
+  return nodeToShow.value;
+}
