@@ -1,23 +1,25 @@
 {
-  final String ruleID=error.getRuleId();
-  String ruleModel=error.getRuleModel();
-  SModelReference modelUID=SModelReference.fromString(ruleModel);
-  modelUID=SModelReference.fromString(modelUID.getLongName());
-  final SModelDescriptor modelDescriptor=SModelRepository.getInstance().getModelDescriptor(modelUID);
-  if (modelDescriptor == null) {
-    LOG.error("can't find rule's model " + ruleModel);
-    return;
+  final Pair<String,String> ruleModelAndId=new Pair<String,String>(error.getRuleModel(),error.getRuleId());
+  List<Pair<String,String>> additionalRulesIds=error.getAdditionalRulesIds();
+  if (additionalRulesIds.isEmpty()) {
+    goToRuleById(context,ruleModelAndId);
   }
-  Computable<SNode> c=new Computable<SNode>(){
-    public SNode compute(){
-      return modelDescriptor.getSModel().getNodeById(ruleID);
+ else {
+    JPopupMenu menu=new JPopupMenu();
+    menu.add(new AbstractAction("Go To Immediate Rule "){
+      public void actionPerformed(      ActionEvent p0){
+        goToRuleById(context,ruleModelAndId);
+      }
     }
+);
+    for (    final Pair<String,String> pair : additionalRulesIds) {
+      menu.add(new AbstractAction("Go To Rule Which Led To Immediate Rule: " + pair.o2){
+        public void actionPerformed(        ActionEvent p0){
+          goToRuleById(context,pair);
+        }
+      }
+);
+    }
+    menu.setVisible(true);
   }
-;
-  SNode rule=(ModelAccess.instance().canRead() ? c.compute() : ModelAccess.instance().runReadAction(c));
-  if (rule == null) {
-    LOG.error("can't find rule with id " + ruleID + " in the model "+ modelDescriptor);
-    return;
-  }
-  context.getComponent(MPSEditorOpener.class).openNode(rule);
 }
