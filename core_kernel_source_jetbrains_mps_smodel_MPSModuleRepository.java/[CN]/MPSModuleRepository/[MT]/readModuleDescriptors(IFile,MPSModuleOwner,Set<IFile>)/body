@@ -1,0 +1,29 @@
+{
+  assertCanWrite();
+  List<IModule> result=new ArrayList<IModule>();
+  String dirName=dir.getName();
+  if (isExcluded(dirName))   return result;
+  List<IFile> files=dir.list();
+  if (files == null) {
+    return result;
+  }
+  for (  IFile file : files) {
+    if (hasModuleExtension(file.getName())) {
+      IModule module=readModuleDescriptor_internal(file,owner,getModuleExtension(file.getName()),excludes);
+      if (module != null) {
+        result.add(module);
+      }
+    }
+  }
+  for (  IFile childDir : files) {
+    if (childDir.getName().endsWith(".svn"))     continue;
+    if (hasModuleExtension(childDir.getName()))     continue;
+    if (excludes.contains(childDir))     continue;
+    if (childDir.getName().endsWith(AbstractModule.PACKAGE_SUFFIX)) {
+      IFile dirInJar=FileSystem.getFile(childDir.getAbsolutePath() + "!/" + AbstractModule.MODULE_DIR);
+      result.addAll(readModuleDescriptors(dirInJar,owner,excludes));
+    }
+    result.addAll(readModuleDescriptors(childDir,owner,excludes));
+  }
+  return result;
+}
