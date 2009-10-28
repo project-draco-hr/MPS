@@ -1,0 +1,40 @@
+{
+  try {
+    final Wrappers._T<String> finderClass=new Wrappers._T<String>();
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        if (SNodeOperations.isInstanceOf(GoToInheritedClassifier_Action.this.classifierNode,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
+          finderClass.value="jetbrains.mps.baseLanguage.findUsages.DerivedClasses_Finder";
+        }
+ else {
+          finderClass.value="jetbrains.mps.baseLanguage.findUsages.ImplementingClasses_Finder";
+        }
+      }
+    }
+);
+    final List<SNode> nodes=new ArrayList<SNode>();
+    ProgressManager.getInstance().run(new Task.Modal(GoToInheritedClassifier_Action.this.project,"Searching...",true){
+      public void run(      @NotNull final ProgressIndicator p){
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            ListSequence.fromList(nodes).addSequence(ListSequence.fromList(FindUtils.executeFinder(finderClass.value,GoToInheritedClassifier_Action.this.classifierNode,GlobalScope.getInstance(),p)));
+          }
+        }
+);
+      }
+    }
+);
+    SwingUtilities.invokeLater(new Runnable(){
+      public void run(){
+        Rectangle cellBounds=GoToInheritedClassifier_Action.this.editorContext.getSelectedCell().getBounds();
+        Point point=new Point(((int)cellBounds.getMinX()),((int)cellBounds.getMaxY()));
+        RelativePoint relPpoint=new RelativePoint(GoToInheritedClassifier_Action.this.editorComponent,point);
+        GoToHelper.showInheritedClassesMenu(nodes,relPpoint,GoToInheritedClassifier_Action.this.project);
+      }
+    }
+);
+  }
+ catch (  Throwable t) {
+    LOG.error("User's action execute method failed. Action:" + "GoToInheritedClassifier",t);
+  }
+}
