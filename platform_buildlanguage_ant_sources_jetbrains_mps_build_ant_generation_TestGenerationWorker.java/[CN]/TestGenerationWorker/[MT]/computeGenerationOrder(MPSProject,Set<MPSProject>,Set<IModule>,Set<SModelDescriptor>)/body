@@ -1,0 +1,37 @@
+{
+  String modeString=myWhatToDo.getProperty(TestGenerationOnTeamcity.TEST_GROUPING_MODE);
+  TestModes mode=TestModes.byVisibleName(modeString);
+switch (mode) {
+case ALL:
+    final Map<IModule,List<SModelDescriptor>> moduleToModels=new LinkedHashMap<IModule,List<SModelDescriptor>>();
+  extractModels(projects,modules,models,moduleToModels);
+return Collections.singletonList((Cycle)new SimpleModuleCycle(project,modules,moduleToModels));
+case BY_CYCLES:
+return super.computeGenerationOrder(project,projects,modules,models);
+case BY_CONFIGURATIONS:
+final List<Cycle> cycles=new ArrayList<Cycle>();
+final Set<MPSProject> outsiderProjects=new HashSet<MPSProject>();
+for (final MPSProject mpsProject : projects) {
+ModelAccess.instance().runReadAction(new Runnable(){
+public void run(){
+List<BaseTestConfiguration> testConfigurationList=mpsProject.getProjectDescriptor().getTestConfigurations();
+if (testConfigurationList.isEmpty()) {
+outsiderProjects.add(mpsProject);
+}
+ else {
+for (BaseTestConfiguration config : testConfigurationList) {
+  GenParameters genParams=config.getGenParams(mpsProject,true);
+  Cycle c=new TestConfigurationCycle(mpsProject,config,genParams);
+  cycles.add(c);
+}
+}
+}
+}
+);
+}
+cycles.addAll(super.computeGenerationOrder(project,outsiderProjects,modules,models));
+return cycles;
+default :
+throw new BuildException("Unsupported grouping mode " + mode);
+}
+}
