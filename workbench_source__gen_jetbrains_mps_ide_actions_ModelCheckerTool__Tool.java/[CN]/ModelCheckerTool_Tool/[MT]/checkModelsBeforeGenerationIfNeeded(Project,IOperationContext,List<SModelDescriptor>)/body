@@ -1,0 +1,31 @@
+{
+  boolean checkModels=ApplicationManager.getApplication().getComponent(GenerationSettings.class).isCheckModelsBeforeGeneration();
+  if (!(checkModels)) {
+    return true;
+  }
+  ModelCheckerViewer viewer=ModelCheckerTool_Tool.this.checkModels(modelDescriptors,operationContext,false);
+  SearchResults<ModelCheckerIssue> issues=viewer.getSearchResults();
+  int warnings=0;
+  int errors=0;
+  for (  SearchResult<ModelCheckerIssue> issue : ListSequence.fromList(issues.getSearchResults())) {
+    String category=issue.getCategory();
+    if (ModelCheckerViewer.MyNodeRepresentator.CATEGORY_ERROR.equals(category)) {
+      errors++;
+    }
+ else     if (ModelCheckerViewer.MyNodeRepresentator.CATEGORY_WARNING.equals(category)) {
+      warnings++;
+    }
+  }
+  if (errors != 0) {
+    String dialogMessage="Model checker found " + errors + " errors and "+ warnings+ " warnings. Review them and don't generate models or ignore them?";
+    int dialogAnswer=Messages.showDialog(project,dialogMessage,"Check Before Generation",new String[]{"Review Errors","Ignore Errors"},0,null);
+    if (dialogAnswer == 0) {
+      viewer.showTabWithResults();
+      return false;
+    }
+ else     if (dialogAnswer == 1) {
+      return true;
+    }
+  }
+  return true;
+}
