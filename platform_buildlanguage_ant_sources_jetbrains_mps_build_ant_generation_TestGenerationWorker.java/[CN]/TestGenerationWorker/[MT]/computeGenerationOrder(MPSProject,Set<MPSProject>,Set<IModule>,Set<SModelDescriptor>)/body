@@ -1,11 +1,11 @@
 {
   String modeString=myWhatToDo.getProperty(TestGenerationOnTeamcity.TEST_GROUPING_MODE);
   TestModes mode=TestModes.byVisibleName(modeString);
+  final Map<IModule,List<SModelDescriptor>> moduleToModels=new LinkedHashMap<IModule,List<SModelDescriptor>>();
 switch (mode) {
 case ALL:
-    final Map<IModule,List<SModelDescriptor>> moduleToModels=new LinkedHashMap<IModule,List<SModelDescriptor>>();
-  extractModels(projects,modules,models,moduleToModels);
-return Collections.singletonList((Cycle)new SimpleModuleCycle(project,modules,moduleToModels));
+    extractModels(projects,modules,models,moduleToModels);
+  return Collections.singletonList((Cycle)new SimpleModuleCycle(project,modules,moduleToModels));
 case BY_CYCLES:
 return super.computeGenerationOrder(project,projects,modules,models);
 case BY_CONFIGURATIONS:
@@ -16,14 +16,14 @@ ModelAccess.instance().runReadAction(new Runnable(){
 public void run(){
 List<BaseTestConfiguration> testConfigurationList=mpsProject.getProjectDescriptor().getTestConfigurations();
 if (testConfigurationList.isEmpty()) {
-outsiderProjects.add(mpsProject);
+  outsiderProjects.add(mpsProject);
 }
  else {
-for (BaseTestConfiguration config : testConfigurationList) {
-  GenParameters genParams=config.getGenParams(mpsProject,true);
-  Cycle c=new TestConfigurationCycle(mpsProject,config,genParams);
-  cycles.add(c);
-}
+  for (  BaseTestConfiguration config : testConfigurationList) {
+    GenParameters genParams=config.getGenParams(mpsProject,true);
+    Cycle c=new TestConfigurationCycle(mpsProject,config,genParams);
+    cycles.add(c);
+  }
 }
 }
 }
@@ -31,6 +31,24 @@ for (BaseTestConfiguration config : testConfigurationList) {
 }
 cycles.addAll(super.computeGenerationOrder(project,outsiderProjects,modules,models));
 return cycles;
+case BY_MODELS:
+final List<Cycle> modelcycles=new ArrayList<Cycle>();
+extractModels(projects,modules,models,moduleToModels);
+for (IModule module : moduleToModels.keySet()) {
+List<SModelDescriptor> modelsForModule=moduleToModels.get(module);
+for (SModelDescriptor smodel : modelsForModule) {
+modelcycles.add(new ModelCycle(smodel,module,project));
+}
+}
+return modelcycles;
+case BY_MODULES:
+final List<Cycle> modulecycles=new ArrayList<Cycle>();
+extractModels(projects,modules,models,moduleToModels);
+for (IModule module : moduleToModels.keySet()) {
+List<SModelDescriptor> modelsForModule=moduleToModels.get(module);
+modulecycles.add(new ModuleCycle(module,modelsForModule,project));
+}
+return modulecycles;
 default :
 throw new BuildException("Unsupported grouping mode " + mode);
 }
