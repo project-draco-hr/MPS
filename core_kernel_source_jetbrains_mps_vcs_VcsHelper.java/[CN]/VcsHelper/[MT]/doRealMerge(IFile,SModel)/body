@@ -1,0 +1,33 @@
+{
+  final VirtualFile file=VFileSystem.getFile(modelFile);
+  LOG.assertLog(file != null);
+  try {
+    final SModel onDisk=ModelDiffTool.readModel(FileUtil.loadFileBytes(VFileSystem.toFile(file)),file.getPath());
+    final MergeModelsDialog dialog=ModelAccess.instance().runReadAction(new Computable<MergeModelsDialog>(){
+      public MergeModelsDialog compute(){
+        MPSProject project=ProjectManager.getInstance().getOpenProjects()[0].getComponent(MPSProjectHolder.class).getMPSProject();
+        IOperationContext context=new ModuleContext(inMemory.getModelDescriptor().getModule(),project);
+        return new MergeModelsDialog(context,inMemory,inMemory,onDisk);
+      }
+    }
+);
+    dialog.showDialog();
+    SwingUtilities.invokeLater(new Runnable(){
+      public void run(){
+        dialog.toFront();
+      }
+    }
+);
+    if (dialog.getResultModel() != null) {
+      SModel result=dialog.getResultModel();
+      byte[] bytes=modelToBytes(result);
+      replaceWithNewModel(bytes,file);
+    }
+  }
+ catch (  IOException e) {
+    LOG.error(e);
+  }
+catch (  ReadException e) {
+    LOG.error(e);
+  }
+}

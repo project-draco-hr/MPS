@@ -1,0 +1,57 @@
+{
+  if (files.isEmpty())   return Collections.emptyList();
+  MergeProvider providerDecorator=new MergeProvider(){
+    @NotNull public MergeData loadRevisions(    VirtualFile file) throws VcsException {
+      MergeData mergeData=provider.loadRevisions(file);
+      if (file.getFileType().equals(MPSFileTypeFactory.MODEL_FILE_TYPE)) {
+        String leftText=decodeContent(file,mergeData.CURRENT);
+        String rightText=decodeContent(file,mergeData.LAST);
+        String originalText=decodeContent(file,mergeData.ORIGINAL);
+        DiffRequestFactory diffRequestFactory=DiffRequestFactory.getInstance();
+        MergeRequest request=diffRequestFactory.createMergeRequest(leftText,rightText,originalText,file,myProject,ActionButtonPresentation.createApplyButton());
+        try {
+          myBackup=zipModel(mergeData,request.getContents(),file);
+        }
+ catch (        IOException e) {
+          LOG.error(e);
+        }
+      }
+      return mergeData;
+    }
+    public void conflictResolvedForFile(    VirtualFile file){
+      provider.conflictResolvedForFile(file);
+      if (myBackup.exists()) {
+        try {
+          File tmp=FileUtil.createTmpDir();
+          ZipUtil.extract(myBackup,tmp,null);
+          FileUtil.copyFile(new File(file.getPath()),new File(tmp + File.separator + file.getName()+ ".result"));
+          FileUtil.zip(tmp,myBackup);
+          FileUtil.delete(tmp);
+        }
+ catch (        IOException e) {
+          LOG.error(e);
+        }
+      }
+    }
+    public boolean isBinary(    VirtualFile file){
+      return provider.isBinary(file);
+    }
+  }
+;
+  List<VirtualFile> toMerge=new ArrayList<VirtualFile>();
+  List<VirtualFile> alreadyResolved=new ArrayList<VirtualFile>();
+  for (  VirtualFile f : files) {
+    if (!doStatusRecheck || ApplicationLevelVcsManager.instance().isInConflict(VFileSystem.toIFile(f),true)) {
+      toMerge.add(f);
+    }
+ else {
+      alreadyResolved.add(f);
+    }
+  }
+  if (toMerge.isEmpty()) {
+    return alreadyResolved;
+  }
+  final MultipleFileMergeDialog fileMergeDialog=new MultipleFileMergeDialog(myProject,toMerge,providerDecorator);
+  fileMergeDialog.show();
+  return CollectionUtil.union(fileMergeDialog.getProcessedFiles(),alreadyResolved);
+}
