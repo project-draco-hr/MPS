@@ -6,9 +6,9 @@
         if (!(checkAndUpdateIndicator(progressContext,"Checking " + SModelOperations.getModelName(model) + " for structure..."))) {
           return;
         }
-        AbstractConceptDeclaration lowLevelConcept=node.getConceptDeclarationAdapter();
-        if (lowLevelConcept == null) {
-          addIssue(results,node,"Cannot find concept \"" + node.getConceptFqName() + "\"");
+        SNode concept=SNodeOperations.getConceptDeclaration(node);
+        if (concept == null) {
+          addIssue(results,node,"Cannot find concept \"" + INamedConcept_Behavior.call_getFqName_1213877404258(concept) + "\"");
           continue;
         }
         for (        SReference ref : ListSequence.fromList(node.getReferences())) {
@@ -16,7 +16,7 @@
             addIssue(results,node,"Unresolved reference: " + ref.getResolveInfo());
           }
         }
-        for (        LinkDeclaration linkDeclaration : ListSequence.fromList(SModelSearchUtil.getLinkDeclarations(lowLevelConcept))) {
+        for (        LinkDeclaration linkDeclaration : ListSequence.fromList(SModelSearchUtil.getLinkDeclarations(((AbstractConceptDeclaration)SNodeOperations.getAdapter(concept))))) {
           LinkDeclaration link=SModelUtil_new.getGenuineLinkDeclaration(linkDeclaration);
           if (link.getSourceCardinality() == Cardinality._1 || link.getSourceCardinality() == Cardinality._1__n) {
             if (link.getMetaClass() == LinkMetaclass.aggregation) {
@@ -32,16 +32,16 @@
           }
         }
         for (        String role : SetSequence.fromSet(node.getChildRoles())) {
-          if (!(isDeclaredLink(lowLevelConcept,role,true))) {
+          if (!(isDeclaredLink(concept,role,true))) {
             addIssue(results,node,"Usage of undeclared child role \"" + role + "\"",MessageStatus.WARNING);
           }
         }
         for (        String role : SetSequence.fromSet(node.getReferenceRoles())) {
-          if (!(isDeclaredLink(lowLevelConcept,role,false))) {
-            addIssue(results,node,"Usage of undeclared child role \"" + role + "\"",MessageStatus.WARNING);
+          if (!(isDeclaredLink(concept,role,false))) {
+            addIssue(results,node,"Usage of undeclared reference role \"" + role + "\"",MessageStatus.WARNING);
           }
         }
-        ConceptAndSuperConceptsScope chs=new ConceptAndSuperConceptsScope(lowLevelConcept);
+        ConceptAndSuperConceptsScope chs=new ConceptAndSuperConceptsScope(((AbstractConceptDeclaration)SNodeOperations.getAdapter(concept)));
         List<PropertyDeclaration> props=chs.getAdapters(PropertyDeclaration.class);
         for (        PropertyDeclaration p : ListSequence.fromList(props)) {
           PropertySupport ps=PropertySupport.getPropertySupport(p);
@@ -54,12 +54,12 @@
           if (node.isRoot() && SModelTreeNode.PACK.equals(name)) {
             continue;
           }
-          if (!(isDeclaredProperty(lowLevelConcept,name))) {
+          if (!(isDeclaredProperty(concept,name))) {
             addIssue(results,node,"Usage of undeclared property \"" + name + "\"",MessageStatus.WARNING);
           }
         }
         for (        SReference ref : ListSequence.fromList(node.getReferences())) {
-          if (!(isDeclaredLink(lowLevelConcept,ref.getRole(),false))) {
+          if (!(isDeclaredLink(concept,ref.getRole(),false))) {
             continue;
           }
           SNode targetNode=ref.getTargetNode();
@@ -67,8 +67,8 @@
             continue;
           }
           try {
-            String specializedLinkRole=getRealSpecializedLinkRole(SNodeOperations.getConceptDeclaration(node),ref.getRole());
-            SearchScopeStatus status=ModelConstraintsUtil.getSearchScope(null,node,lowLevelConcept,specializedLinkRole,operationContext);
+            String specializedLinkRole=getMostSpecializedLinkRole(SNodeOperations.getConceptDeclaration(node),ref.getRole());
+            SearchScopeStatus status=ModelConstraintsUtil.getSearchScope(null,node,((AbstractConceptDeclaration)SNodeOperations.getAdapter(concept)),specializedLinkRole,operationContext);
             if (status.isOk() && !(status.isDefault())) {
               List<SNode> nodes=status.getSearchScope().getNodes();
               if (!(ListSequence.fromList(nodes).contains(targetNode))) {
