@@ -1,13 +1,23 @@
 {
   setupEnvironment();
-  com.intellij.openapi.project.Project ideaProject=ProjectManager.getInstance().getDefaultProject();
-  File projectFile=FileUtil.createTmpFile();
-  final MPSProject project=new MPSProject(projectFile,new ProjectDescriptor(),ideaProject);
-  LinkedHashSet<MPSProject> projects=new LinkedHashSet<MPSProject>();
-  LinkedHashSet<IModule> modules=new LinkedHashSet<IModule>();
-  LinkedHashSet<SModelDescriptor> models=new LinkedHashSet<SModelDescriptor>();
-  collectModelsToGenerate(projects,modules,models);
-  executeTask(project,projects,modules,models);
-  unloadLoadedStuff(projects);
+  for (  File file : myWhatToDo.getMPSProjectFiles()) {
+    if (!file.getName().endsWith(MPSExtentions.DOT_MPS_PROJECT))     continue;
+    final MPSProject p=TestMain.loadProject(file);
+    info("Loaded project " + p);
+    LinkedHashSet<MPSProject> projects=new LinkedHashSet<MPSProject>();
+    projects.add(p);
+    LinkedHashSet<IModule> modules=new LinkedHashSet<IModule>();
+    LinkedHashSet<SModelDescriptor> models=new LinkedHashSet<SModelDescriptor>();
+    collectModelsToGenerate(modules,models);
+    executeTask(p,projects,modules,models);
+    ThreadUtils.runInUIThreadAndWait(new Runnable(){
+      public void run(){
+        p.dispose();
+        IdeEventQueue.getInstance().flushQueue();
+        System.gc();
+      }
+    }
+);
+  }
   showStatistic();
 }
