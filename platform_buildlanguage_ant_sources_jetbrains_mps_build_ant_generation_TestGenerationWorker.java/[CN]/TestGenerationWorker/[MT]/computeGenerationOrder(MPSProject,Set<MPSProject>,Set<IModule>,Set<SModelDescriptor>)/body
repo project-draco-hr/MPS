@@ -1,18 +1,12 @@
 {
   final List<Cycle> cycles=new ArrayList<Cycle>();
-  for (  final MPSProject mpsProject : projects) {
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        List<BaseTestConfiguration> testConfigurationList=mpsProject.getProjectDescriptor().getTestConfigurations();
-        for (        BaseTestConfiguration config : testConfigurationList) {
-          GenParameters genParams=config.getGenParams(mpsProject,true);
-          for (          SModelDescriptor sm : genParams.getModelDescriptors()) {
-            cycles.add(new ModelCycle(sm,sm.getModule(),mpsProject));
-          }
-        }
-      }
+  final Map<IModule,List<SModelDescriptor>> moduleToModels=new LinkedHashMap<IModule,List<SModelDescriptor>>();
+  extractModels(projects,modules,models,moduleToModels);
+  for (  IModule module : moduleToModels.keySet()) {
+    List<SModelDescriptor> modelsForModule=moduleToModels.get(module);
+    for (    SModelDescriptor smodel : modelsForModule) {
+      cycles.add(new ModelCycle(smodel,module,project));
     }
-);
   }
   return cycles;
 }
