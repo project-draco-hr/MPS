@@ -1,0 +1,38 @@
+{
+  int beginLabel=label;
+  int ifTrueLabel=this.ctx.incrementLabel();
+  int ifFalseLabel=-1;
+  int nextLabel=this.calcNextLabel(ifstmt);
+  SNode sn=SLinkOperations.getTarget(ifstmt,"ifTrue",true);
+  Object data=new Integer[]{ifTrueLabel,nextLabel};
+  Values.CLOSURE_DATA.set(sn,data);
+  this.prepStatementList(genContext,SLinkOperations.getTarget(ifstmt,"ifTrue",true));
+  if (SLinkOperations.getCount(ifstmt,"elsifClauses") > 0) {
+    for (    SNode eicls : SLinkOperations.getTargets(ifstmt,"elsifClauses",true)) {
+      int tmp=this.ctx.incrementLabel();
+      SNode sn1=SLinkOperations.getTarget(eicls,"statementList",true);
+      Object data1=new Integer[]{tmp,nextLabel};
+      Values.CLOSURE_DATA.set(sn1,data1);
+      this.prepStatementList(genContext,SLinkOperations.getTarget(eicls,"statementList",true));
+      Object data2=new Integer[]{tmp};
+      Values.CLOSURE_DATA.set(eicls,data2);
+    }
+  }
+  if ((SLinkOperations.getTarget(ifstmt,"ifFalseStatement",true) != null)) {
+    if (StatementListUtil.isControlStatement(SLinkOperations.getTarget(ifstmt,"ifFalseStatement",true)) || SNodeOperations.isInstanceOf(SLinkOperations.getTarget(ifstmt,"ifFalseStatement",true),"jetbrains.mps.baseLanguage.structure.BlockStatement")) {
+      ifFalseLabel=this.ctx.incrementLabel();
+    }
+  }
+  Object data2=new Integer[]{beginLabel,ifTrueLabel,ifFalseLabel,nextLabel};
+  Values.CLOSURE_DATA.set(ifstmt,data2);
+  if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(ifstmt,"ifFalseStatement",true),"jetbrains.mps.baseLanguage.structure.BlockStatement")) {
+    SNode sn1=SLinkOperations.getTarget(SNodeOperations.cast(SLinkOperations.getTarget(ifstmt,"ifFalseStatement",true),"jetbrains.mps.baseLanguage.structure.BlockStatement"),"statements",true);
+    Object data1=new Integer[]{ifFalseLabel,nextLabel};
+    Values.CLOSURE_DATA.set(sn1,data1);
+    this.prepStatementList(genContext,SLinkOperations.getTarget(SNodeOperations.cast(SLinkOperations.getTarget(ifstmt,"ifFalseStatement",true),"jetbrains.mps.baseLanguage.structure.BlockStatement"),"statements",true));
+  }
+ else   if ((SLinkOperations.getTarget(ifstmt,"ifFalseStatement",true) != null)) {
+    this.prepStatement(genContext,SLinkOperations.getTarget(ifstmt,"ifFalseStatement",true),ifFalseLabel);
+  }
+  return nextLabel;
+}
