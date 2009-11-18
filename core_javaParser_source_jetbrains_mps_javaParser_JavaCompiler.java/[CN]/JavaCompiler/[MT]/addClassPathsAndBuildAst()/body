@@ -1,0 +1,44 @@
+{
+  boolean hasErrors=false;
+  List<String> fqNames=new ArrayList<String>();
+  for (  CompilationUnitDeclaration decl : myCompilationUnitDeclarations) {
+    if (decl.hasErrors()) {
+      hasErrors=true;
+      for (      CategorizedProblem problem : decl.compilationResult().getErrors()) {
+        if (problem.getID() == IProblem.ImportNotFound) {
+          fqNames.add(problem.getArguments()[0]);
+        }
+ else {
+          String message=problem.getMessage();
+          LOG.error(message + " (line: " + problem.getSourceLineNumber()+ ")");
+        }
+      }
+    }
+  }
+  boolean buildAstNow=true;
+  if (!fqNames.isEmpty()) {
+    int option=JOptionPane.showConfirmDialog(null,"Some imports in source code were not resolved.\nDo you want to specify classpaths for unresolved imports?");
+    if (option == JOptionPane.YES_OPTION) {
+      ArrayList<String> list=new ArrayList<String>();
+      JDialog dialog=UIComponents.createClasspathsDialog(mySourceDir,list);
+      dialog.setVisible(true);
+      if (!list.isEmpty()) {
+        for (        String classpath : list) {
+          myClassPathItem.add(new FileClassPathItem(classpath));
+        }
+        return true;
+      }
+    }
+  }
+  if (hasErrors) {
+    int option=JOptionPane.showConfirmDialog(null,"Errors were found during compilation. Are you sure you want to build MPS model?");
+    if (option != JOptionPane.YES_OPTION) {
+      buildAstNow=false;
+    }
+  }
+  if (buildAstNow) {
+    buildAST();
+    return false;
+  }
+  return false;
+}
