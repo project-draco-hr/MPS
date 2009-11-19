@@ -2,18 +2,31 @@
   JFileChooser fileChooser=new JFileChooser(sourceDir);
   fileChooser.setFileFilter(new javax.swing.filechooser.FileFilter(){
     @Override public boolean accept(    File f){
-      return f.isDirectory();
+      return f.isDirectory() || f.getName().endsWith(".jar");
     }
     @Override public String getDescription(){
-      return "Classpath directory";
+      return "Classpath directory or jar archive";
     }
   }
 );
   fileChooser.setDialogTitle("Select classpath");
-  fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+  fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
   int option=fileChooser.showOpenDialog(null);
   if (option != JFileChooser.APPROVE_OPTION) {
     return null;
   }
-  return fileChooser.getSelectedFile().getAbsolutePath();
+  File selectedFile=fileChooser.getSelectedFile();
+  if (selectedFile.isDirectory()) {
+    return new FileClassPathItem(selectedFile.getAbsolutePath());
+  }
+ else   if (selectedFile.getName().endsWith(".jar")) {
+    try {
+      return new JarFileClassPathItem(selectedFile.getAbsolutePath());
+    }
+ catch (    IOException ex) {
+      LOG.error(ex);
+      return null;
+    }
+  }
+  return null;
 }
