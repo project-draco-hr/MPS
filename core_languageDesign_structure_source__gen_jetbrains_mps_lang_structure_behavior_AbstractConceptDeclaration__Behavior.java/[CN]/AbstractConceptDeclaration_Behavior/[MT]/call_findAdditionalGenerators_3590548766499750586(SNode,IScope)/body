@@ -1,0 +1,37 @@
+{
+  List<SNode> result=new ArrayList<SNode>();
+  Language language=SModelUtil.getDeclaringLanguage(thisNode,scope);
+  if (language == null) {
+    return result;
+  }
+  for (  Generator generator : language.getGenerators()) {
+    for (    SModelDescriptor md : generator.getOwnTemplateModels()) {
+      SModel model=md.getSModel();
+      for (      SNode templateSwitch : SModelOperations.getRoots(model,"jetbrains.mps.lang.generator.structure.TemplateSwitch")) {
+        for (        SNode mappingRule : SLinkOperations.getTargets(templateSwitch,"reductionMappingRule",true)) {
+          if (SLinkOperations.getTarget(mappingRule,"applicableConcept",false) == thisNode) {
+            ListSequence.fromList(result).addElement(templateSwitch);
+            break;
+          }
+        }
+      }
+      for (      SNode mappingConfiguration : SModelOperations.getRoots(model,"jetbrains.mps.lang.generator.structure.MappingConfiguration")) {
+        for (        SNode mapConfChild : SNodeOperations.getChildren(mappingConfiguration)) {
+          if (SNodeOperations.isInstanceOf(mapConfChild,"jetbrains.mps.lang.generator.structure.BaseMappingRule")) {
+            if (SLinkOperations.getTarget(SNodeOperations.cast(mapConfChild,"jetbrains.mps.lang.generator.structure.BaseMappingRule"),"applicableConcept",false) == thisNode) {
+              ListSequence.fromList(result).addElement(mappingConfiguration);
+              break;
+            }
+          }
+ else           if (SNodeOperations.isInstanceOf(mapConfChild,"jetbrains.mps.lang.generator.structure.DropRootRule")) {
+            if (SLinkOperations.getTarget(SNodeOperations.cast(mapConfChild,"jetbrains.mps.lang.generator.structure.DropRootRule"),"applicableConcept",false) == thisNode) {
+              ListSequence.fromList(result).addElement(mappingConfiguration);
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+  return result;
+}
