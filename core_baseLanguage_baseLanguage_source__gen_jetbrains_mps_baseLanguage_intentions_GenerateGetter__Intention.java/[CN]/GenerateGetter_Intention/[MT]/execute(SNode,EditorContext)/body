@@ -1,0 +1,31 @@
+{
+  SNode classConcept=SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ClassConcept");
+  List<SNode> fields=SLinkOperations.getTargets(classConcept,"field",true);
+  if (ListSequence.fromList(fields).isEmpty()) {
+    return;
+  }
+  for (  SNode field : fields) {
+    final String getterName="get" + NameUtil.capitalize(SPropertyOperations.getString(field,"name"));
+    final Wrappers._boolean getterIsAbsent=new Wrappers._boolean(true);
+    ListSequence.fromList(SLinkOperations.getTargets(classConcept,"method",true)).visitAll(new IVisitor<SNode>(){
+      public void visit(      SNode it){
+        if (SPropertyOperations.getString(it,"name").equals(getterName) && ListSequence.fromList(SLinkOperations.getTargets(it,"parameter",true)).isEmpty()) {
+          getterIsAbsent.value=false;
+        }
+      }
+    }
+);
+    if (!(getterIsAbsent.value)) {
+      continue;
+    }
+    SNode getter=SLinkOperations.addNewChild(classConcept,"method","jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration");
+    SPropertyOperations.set(getter,"name",getterName);
+    SLinkOperations.setTarget(getter,"returnType",SNodeOperations.copyNode(SLinkOperations.getTarget(field,"type",true)),true);
+    SLinkOperations.setNewChild(getter,"body","jetbrains.mps.baseLanguage.structure.StatementList");
+    SNode returnStatement=SLinkOperations.addNewChild(SLinkOperations.getTarget(getter,"body",true),"statement","jetbrains.mps.baseLanguage.structure.ReturnStatement");
+    SNode dotExpression=SLinkOperations.setNewChild(returnStatement,"expression","jetbrains.mps.baseLanguage.structure.DotExpression");
+    SLinkOperations.setNewChild(dotExpression,"operand","jetbrains.mps.baseLanguage.structure.ThisExpression");
+    SNode fieldRef=SLinkOperations.setNewChild(dotExpression,"operation","jetbrains.mps.baseLanguage.structure.FieldReferenceOperation");
+    SLinkOperations.setTarget(fieldRef,"fieldDeclaration",field,false);
+  }
+}
