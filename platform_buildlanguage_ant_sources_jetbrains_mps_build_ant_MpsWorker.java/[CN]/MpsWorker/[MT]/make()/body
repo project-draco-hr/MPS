@@ -1,0 +1,32 @@
+{
+  final Set<IModule> toCompile=new LinkedHashSet<IModule>();
+  for (  final Library l : myCompiledLibraries) {
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        List<IModule> moduleList=MPSModuleRepository.getInstance().getAllModulesInDirectory(new File(l.getPath()));
+        for (        IModule module : moduleList) {
+          if (!module.isPackaged() && module.isCompileInMPS()) {
+            toCompile.add(module);
+          }
+        }
+      }
+    }
+);
+  }
+  if (toCompile.isEmpty())   return;
+  info("Starting compilation:");
+  StringBuffer sb=new StringBuffer();
+  for (  IModule m : toCompile) {
+    sb.append("    ");
+    sb.append(m.getModuleFqName());
+    sb.append("\n");
+  }
+  info(sb.toString());
+  CompilationResult result=ModelAccess.instance().runReadAction(new Computable<CompilationResult>(){
+    public CompilationResult compute(){
+      return new ModuleMaker().make(toCompile,new EmptyProgressIndicator());
+    }
+  }
+);
+  info(result.toString());
+}
