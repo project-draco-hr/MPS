@@ -1,18 +1,17 @@
 {
   List<SNode> fields=SLinkOperations.getTargets(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"field",true);
+  if (ListSequence.fromList(fields).isEmpty()) {
+    return false;
+  }
   boolean allGettersImplemented=true;
   for (  SNode fieldDeclaration : fields) {
-    final Wrappers._boolean hasCurrentFieldGetter=new Wrappers._boolean(false);
     final String getterName="get" + NameUtil.capitalize(SPropertyOperations.getString(fieldDeclaration,"name"));
-    ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"method",true)).visitAll(new IVisitor<SNode>(){
-      public void visit(      SNode it){
-        if (SPropertyOperations.getString(it,"name").equals(getterName) && ListSequence.fromList(SLinkOperations.getTargets(it,"parameter",true)).isEmpty()) {
-          hasCurrentFieldGetter.value=true;
-        }
+    if (ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"method",true)).any(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode method){
+        return SPropertyOperations.getString(method,"name").equals(getterName) && ListSequence.fromList(SLinkOperations.getTargets(method,"parameter",true)).isEmpty();
       }
     }
-);
-    if (!(hasCurrentFieldGetter.value)) {
+)) {
       allGettersImplemented=false;
     }
   }
