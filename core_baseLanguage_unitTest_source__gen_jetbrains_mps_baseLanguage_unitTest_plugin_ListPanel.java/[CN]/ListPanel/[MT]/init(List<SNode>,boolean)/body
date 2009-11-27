@@ -1,0 +1,52 @@
+{
+  this.isTestMethods=isTestMethods;
+  this.setLayout(new BorderLayout());
+  this.values=nodes;
+  this.list=new JList(new AbstractListModel(){
+    public Object getElementAt(    int p0){
+      return ListPanel.this.getPresentation(ListSequence.fromList(ListPanel.this.values).getElement(p0));
+    }
+    public int getSize(){
+      return ListSequence.fromList(ListPanel.this.values).count();
+    }
+  }
+);
+  AnAction add=new ListAddAction(this.list){
+    protected int doAdd(    AnActionEvent p0){
+      if (ListPanel.this.candidates == null) {
+        ListPanel.this.collectCandidates();
+      }
+      ListSequence.fromList(ListPanel.this.candidates).removeSequence(ListSequence.fromList(ListPanel.this.values));
+      final SNode resultNode=(SNode)CommonChoosers.showDialogNodeChooser(ListPanel.this,ListPanel.this.candidates);
+      if (resultNode == null) {
+        return -1;
+      }
+      ListSequence.fromList(ListPanel.this.values).addElement(resultNode);
+      if (ListPanel.this.listener != null) {
+        ListPanel.this.listener.actionPerformed(null);
+      }
+      ListPanel.this.list.updateUI();
+      return ListSequence.fromList(ListPanel.this.values).indexOf(resultNode);
+    }
+  }
+;
+  AnAction remove=new AnAction("Remove",null,Icons.REMOVE){
+    public void actionPerformed(    AnActionEvent p0){
+      for (      Object value : ListPanel.this.list.getSelectedValues()) {
+        for (        SNode node : ListPanel.this.values) {
+          if (ListPanel.this.getPresentation(node).equals(value)) {
+            ListSequence.fromList(ListPanel.this.values).removeElement(node);
+            break;
+          }
+        }
+      }
+      if (ListPanel.this.listener != null) {
+        ListPanel.this.listener.actionPerformed(null);
+      }
+      ListPanel.this.list.updateUI();
+    }
+  }
+;
+  UiListsFactory.addActionsComponentToPanel("Test",this.list,this,add,remove);
+  this.list.updateUI();
+}
