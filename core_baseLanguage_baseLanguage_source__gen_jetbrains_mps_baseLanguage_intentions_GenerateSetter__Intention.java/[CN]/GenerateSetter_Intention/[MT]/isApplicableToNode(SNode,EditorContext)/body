@@ -1,24 +1,23 @@
 {
-  SNode classConcept=SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ClassConcept");
-  List<SNode> fields=SLinkOperations.getTargets(classConcept,"field",true);
+  List<SNode> fields=SLinkOperations.getTargets(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"field",true);
   if (ListSequence.fromList(fields).isEmpty()) {
     return false;
   }
-  boolean hasAllSetters=true;
-  for (  SNode field : fields) {
+  boolean allSettersImplemented=true;
+  for (  SNode fieldDeclaration : fields) {
+    final String setterName="set" + NameUtil.capitalize(SPropertyOperations.getString(fieldDeclaration,"name"));
     boolean fieldHasSetter=false;
-    final String setterName="set" + NameUtil.capitalize(SPropertyOperations.getString(field,"name"));
-    if (ListSequence.fromList(SLinkOperations.getTargets(classConcept,"method",true)).any(new IWhereFilter<SNode>(){
+    if (ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"method",true)).any(new IWhereFilter<SNode>(){
       public boolean accept(      SNode method){
-        return setterName.equals(SPropertyOperations.getString(method,"name")) && ListSequence.fromList(SLinkOperations.getTargets(method,"parameter",true)).count() == 1;
+        return setterName.equals(SPropertyOperations.getString(method,"name"));
       }
     }
 )) {
       fieldHasSetter=true;
     }
     if (!(fieldHasSetter)) {
-      hasAllSetters=false;
+      allSettersImplemented=false;
     }
   }
-  return !(hasAllSetters);
+  return !(allSettersImplemented);
 }

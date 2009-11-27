@@ -5,18 +5,19 @@
   }
   boolean allGettersImplemented=true;
   for (  SNode fieldDeclaration : fields) {
-    final Wrappers._boolean hasCurrentFieldGetter=new Wrappers._boolean(false);
+    boolean hasCurrentFieldGetter=false;
     final String getterName="get" + NameUtil.capitalize(SPropertyOperations.getString(fieldDeclaration,"name"));
-    ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"method",true)).visitAll(new IVisitor<SNode>(){
-      public void visit(      SNode it){
-        if (getterName.equals(SPropertyOperations.getString(it,"name")) && ListSequence.fromList(SLinkOperations.getTargets(it,"parameter",true)).isEmpty()) {
-          hasCurrentFieldGetter.value=true;
-        }
+    if (ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"method",true)).any(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return getterName.equals(SPropertyOperations.getString(it,"name")) && ListSequence.fromList(SLinkOperations.getTargets(it,"parameter",true)).isEmpty();
       }
     }
-);
-    if (!(hasCurrentFieldGetter.value)) {
+)) {
+      hasCurrentFieldGetter=true;
+    }
+    if (!(hasCurrentFieldGetter)) {
       allGettersImplemented=false;
+      break;
     }
   }
   if (!(allGettersImplemented)) {
@@ -26,17 +27,18 @@
     boolean hasAllSetters=true;
     for (    SNode field : fields) {
       final String setterName="set" + NameUtil.capitalize(SPropertyOperations.getString(field,"name"));
-      final Wrappers._boolean hasCurrentFieldSetter=new Wrappers._boolean(false);
-      ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"method",true)).visitAll(new IVisitor<SNode>(){
-        public void visit(        SNode method){
-          if (setterName.equals(SPropertyOperations.getString(method,"name"))) {
-            hasCurrentFieldSetter.value=true;
-          }
+      boolean hasCurrentFieldSetter=false;
+      if (ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"method",true)).any(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return setterName.equals(SPropertyOperations.getString(it,"name")) && SNodeOperations.isInstanceOf(SLinkOperations.getTarget(it,"returnType",true),"jetbrains.mps.baseLanguage.structure.VoidType");
         }
       }
-);
-      if (!(hasCurrentFieldSetter.value)) {
+)) {
+        hasCurrentFieldSetter=true;
+      }
+      if (!(hasCurrentFieldSetter)) {
         hasAllSetters=false;
+        break;
       }
     }
     return !(hasAllSetters);
