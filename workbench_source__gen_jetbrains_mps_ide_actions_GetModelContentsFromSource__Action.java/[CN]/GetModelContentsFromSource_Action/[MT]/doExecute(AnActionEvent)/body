@@ -1,0 +1,45 @@
+{
+  try {
+    IModule module=GetModelContentsFromSource_Action.this.model.getModule();
+    TreeFileChooser treeFileChooser=new TreeFileChooser();
+    treeFileChooser.setDirectoriesAreAlwaysVisible(true);
+    treeFileChooser.setMode(TreeFileChooser.MODE_DIRECTORIES);
+    final SModel sModel=GetModelContentsFromSource_Action.this.model.getSModel();
+    treeFileChooser.setFileFilter(new IFileFilter(){
+      public boolean accept(      IFile file){
+        return JavaCompiler.checkBaseModelMatchesSourceDirectory(sModel,file.toFile());
+      }
+    }
+);
+    String generatorOutputPath=module.getGeneratorOutputPath();
+    File initial=null;
+    File output=new File(generatorOutputPath);
+    if (output.exists()) {
+      initial=output;
+      File sourceRoot=new File(initial.getParentFile(),"source");
+      if (!(sourceRoot.exists())) {
+        sourceRoot=new File(initial.getParentFile(),"src");
+      }
+      initial=sourceRoot;
+      if (sourceRoot.exists()) {
+        File modelSource=new File(sourceRoot,NameUtil.pathFromNamespace(sModel.getLongName()));
+        if (modelSource.exists()) {
+          initial=modelSource;
+        }
+      }
+    }
+    if (initial != null) {
+      treeFileChooser.setInitialFile(new FileSystemFile(initial));
+    }
+    IFile result=treeFileChooser.showDialog(GetModelContentsFromSource_Action.this.frame);
+    if (result != null) {
+      JavaCompiler javaCompiler=new JavaCompiler(module,result.toFile(),false,sModel);
+      javaCompiler.compile();
+    }
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "GetModelContentsFromSource",t);
+    }
+  }
+}
