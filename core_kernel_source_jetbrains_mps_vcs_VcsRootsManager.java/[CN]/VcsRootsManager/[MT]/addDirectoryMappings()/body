@@ -1,5 +1,4 @@
 {
-  final List<VcsDirectoryMapping> vcsMappings=new ArrayList<VcsDirectoryMapping>();
   MPSProject mpsProject=myProject.getComponent(MPSProjectHolder.class).getMPSProject();
   List<IModule> allModules=mpsProject.getModules();
   Map<AbstractVcs,Set<VirtualFile>> vcss=new HashMap<AbstractVcs,Set<VirtualFile>>();
@@ -14,25 +13,8 @@
       discoverMappingsForFile(vcss,VFileSystem.getFile(root.getPath()));
     }
   }
-  for (  AbstractVcs vcs : vcss.keySet()) {
-    Set<VirtualFile> files=vcss.get(vcs);
-    Collection<String> roots=getRoots(files);
-    for (    String path : roots) {
-      vcsMappings.add(new VcsDirectoryMapping(path,vcs.getName()));
-    }
-  }
-  for (  VcsDirectoryMapping oldMapping : myVcsManager.getDirectoryMappings()) {
-    String oldDir=oldMapping.getDirectory();
-    boolean matched=false;
-    for (    VcsDirectoryMapping newMapping : vcsMappings) {
-      if (newMapping.getDirectory().equals(oldDir)) {
-        matched=true;
-      }
-    }
-    if (!matched) {
-      vcsMappings.add(oldMapping);
-    }
-  }
+  final List<VcsDirectoryMapping> vcsMappings=createMappings(vcss);
+  mergeWithCurrentOnes(vcsMappings);
   StartupManager.getInstance(myProject).registerPostStartupActivity(new Runnable(){
     public void run(){
       myVcsManager.setDirectoryMappings(vcsMappings);
