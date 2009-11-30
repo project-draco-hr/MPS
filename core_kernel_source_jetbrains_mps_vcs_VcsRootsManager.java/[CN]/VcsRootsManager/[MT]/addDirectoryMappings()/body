@@ -1,5 +1,5 @@
 {
-  List<VcsDirectoryMapping> vcsMappings=new ArrayList<VcsDirectoryMapping>();
+  final List<VcsDirectoryMapping> vcsMappings=new ArrayList<VcsDirectoryMapping>();
   MPSProject mpsProject=myProject.getComponent(MPSProjectHolder.class).getMPSProject();
   List<IModule> allModules=mpsProject.getModules();
   Map<AbstractVcs,Set<VirtualFile>> vcss=new HashMap<AbstractVcs,Set<VirtualFile>>();
@@ -8,27 +8,11 @@
     IFile descriptor=module.getDescriptorFile();
     if (descriptor == null)     continue;
     VirtualFile file=VFileSystem.getFile(descriptor.getParent());
-    if (file == null)     continue;
-    AbstractVcs vcs=myVcsManager.findVersioningVcs(file);
-    if (vcs == null)     continue;
-    while (true) {
-      VirtualFile parent=file.getParent();
-      if (parent == null) {
-        break;
-      }
-      if (vcs.isVersionedDirectory(parent)) {
-        file=parent;
-      }
- else {
-        break;
-      }
+    discoverMappingsForFile(vcss,file);
+    List<SModelRoot> modelRoots=module.getSModelRoots();
+    for (    SModelRoot root : modelRoots) {
+      discoverMappingsForFile(vcss,VFileSystem.getFile(root.getPath()));
     }
-    Set<VirtualFile> files=vcss.get(vcs);
-    if (files == null) {
-      files=new HashSet<VirtualFile>();
-      vcss.put(vcs,files);
-    }
-    files.add(file);
   }
   for (  AbstractVcs vcs : vcss.keySet()) {
     Set<VirtualFile> files=vcss.get(vcs);
@@ -49,5 +33,10 @@
       vcsMappings.add(oldMapping);
     }
   }
-  myVcsManager.setDirectoryMappings(vcsMappings);
+  StartupManager.getInstance(myProject).registerPostStartupActivity(new Runnable(){
+    public void run(){
+      myVcsManager.setDirectoryMappings(vcsMappings);
+    }
+  }
+);
 }
