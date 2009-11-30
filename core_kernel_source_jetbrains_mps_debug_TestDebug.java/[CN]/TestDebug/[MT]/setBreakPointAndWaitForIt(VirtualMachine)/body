@@ -1,0 +1,38 @@
+{
+  machine.suspend();
+  EventRequestManager requestManager=machine.eventRequestManager();
+  List<ReferenceType> types=machine.classesByName(CLAZZ);
+  ClassPrepareRequest prepareRequest=requestManager.createClassPrepareRequest();
+  for (  ReferenceType type : types) {
+    prepareRequest.addClassFilter(type);
+    addBreakPoint(requestManager,type);
+  }
+  prepareRequest.setEnabled(true);
+  machine.resume();
+  EventQueue eventQueue=machine.eventQueue();
+  eventProcessingLoop:   while (true) {
+    EventSet events=eventQueue.remove();
+    for (    Event e : events) {
+      if (e instanceof VMDeathEvent || e instanceof VMDisconnectEvent) {
+        System.exit(1);
+      }
+ else       if (e instanceof ClassPrepareEvent) {
+        ClassPrepareEvent ce=(ClassPrepareEvent)e;
+        ReferenceType type=ce.referenceType();
+        if (type.name().equals(CLAZZ)) {
+          addBreakPoint(requestManager,type);
+        }
+      }
+ else       if (e instanceof BreakpointEvent) {
+        BreakpointEvent bpe=(BreakpointEvent)e;
+        System.out.println("BREAKPOINT WAS HEAT!");
+        printThreadInfo(bpe.thread());
+        machine.suspend();
+        break eventProcessingLoop;
+      }
+    }
+    events.resume();
+  }
+  Thread.sleep(10000);
+  machine.resume();
+}
