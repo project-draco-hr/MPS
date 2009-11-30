@@ -1,0 +1,27 @@
+{
+  try {
+    File[] backupFiles=ReRunMergeFromBackup_Action.this.getBackupFiles();
+    if (backupFiles.length == 0) {
+      Messages.showInfoMessage("Suitable Backup File For Model\n" + ReRunMergeFromBackup_Action.this.model + "\nWas Not Found","Backup File Not Found");
+      return;
+    }
+    File latestBackup=backupFiles[0];
+    for (    File backupFile : backupFiles) {
+      if (backupFile.lastModified() > latestBackup.lastModified()) {
+        latestBackup=backupFile;
+      }
+    }
+    try {
+      SModel[] models=ModelUtils.loadZippedModels(latestBackup,VcsHelper.VCS_MERGE_VERSION.values());
+      ReRunMergeFromBackup_Action.this.doMerge(models[VcsHelper.VCS_MERGE_VERSION.MINE.ordinal()],models[VcsHelper.VCS_MERGE_VERSION.BASE.ordinal()],models[VcsHelper.VCS_MERGE_VERSION.THEIRS.ordinal()]);
+    }
+ catch (    FileNotFoundException e) {
+      Messages.showErrorDialog("Backup File\n" + latestBackup.getPath() + "\nIs Invalid:\n"+ e.getMessage(),"Invalid Backup File");
+    }
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "ReRunMergeFromBackup",t);
+    }
+  }
+}

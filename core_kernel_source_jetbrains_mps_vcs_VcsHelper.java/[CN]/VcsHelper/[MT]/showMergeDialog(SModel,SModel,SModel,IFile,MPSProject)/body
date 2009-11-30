@@ -1,0 +1,25 @@
+{
+  final VirtualFile file=VFileSystem.getFile(modelFile);
+  LOG.assertLog(file != null);
+  final MergeModelsDialog dialog=ModelAccess.instance().runReadAction(new Computable<MergeModelsDialog>(){
+    public MergeModelsDialog compute(){
+      IOperationContext context=new ModuleContext(base.getModelDescriptor().getModule(),project);
+      return new MergeModelsDialog(context,base,mine,repo);
+    }
+  }
+);
+  dialog.showDialog();
+  SwingUtilities.invokeLater(new Runnable(){
+    public void run(){
+      dialog.toFront();
+    }
+  }
+);
+  if (dialog.getResultModel() != null) {
+    SModel result=dialog.getResultModel();
+    byte[] bytes=ModelUtils.modelToBytes(result);
+    ModelUtils.replaceWithNewModelFromBytes(file,bytes);
+    return false;
+  }
+  return true;
+}

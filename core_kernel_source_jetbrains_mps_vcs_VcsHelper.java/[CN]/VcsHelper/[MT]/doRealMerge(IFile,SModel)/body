@@ -1,29 +1,7 @@
 {
-  final VirtualFile file=VFileSystem.getFile(modelFile);
-  LOG.assertLog(file != null);
   try {
-    final SModel onDisk=ModelUtils.readModel(FileUtil.loadFileBytes(VFileSystem.toFile(file)),file.getPath());
-    final MergeModelsDialog dialog=ModelAccess.instance().runReadAction(new Computable<MergeModelsDialog>(){
-      public MergeModelsDialog compute(){
-        MPSProject project=ProjectManager.getInstance().getOpenProjects()[0].getComponent(MPSProjectHolder.class).getMPSProject();
-        IOperationContext context=new ModuleContext(inMemory.getModelDescriptor().getModule(),project);
-        return new MergeModelsDialog(context,inMemory,inMemory,onDisk);
-      }
-    }
-);
-    dialog.showDialog();
-    SwingUtilities.invokeLater(new Runnable(){
-      public void run(){
-        dialog.toFront();
-      }
-    }
-);
-    if (dialog.getResultModel() != null) {
-      SModel result=dialog.getResultModel();
-      byte[] bytes=ModelUtils.modelToBytes(result);
-      ModelUtils.replaceWithNewModelFromBytes(file,bytes);
-      return false;
-    }
+    final SModel onDisk=ModelUtils.readModel(FileUtil.loadFileBytes(FileSystem.toFile(modelFile)),modelFile.getPath());
+    return showMergeDialog(inMemory,inMemory,onDisk,modelFile,ProjectManager.getInstance().getOpenProjects()[0].getComponent(MPSProjectHolder.class).getMPSProject());
   }
  catch (  IOException e) {
     LOG.error(e);
