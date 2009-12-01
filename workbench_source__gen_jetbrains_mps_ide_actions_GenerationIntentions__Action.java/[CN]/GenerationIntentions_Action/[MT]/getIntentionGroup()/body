@@ -1,14 +1,7 @@
 {
   BaseGroup group=new BaseGroup("");
   List<Pair<Intention,SNode>> groupItems=new ArrayList<Pair<Intention,SNode>>();
-  SNode classConcept;
-  if (SNodeOperations.isInstanceOf(GenerationIntentions_Action.this.selectedNode,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
-    classConcept=SNodeOperations.cast(GenerationIntentions_Action.this.selectedNode,"jetbrains.mps.baseLanguage.structure.ClassConcept");
-  }
- else {
-    classConcept=SNodeOperations.getAncestor(GenerationIntentions_Action.this.selectedNode,"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false);
-  }
-  groupItems.addAll(IntentionsManager.getInstance().getAvailableIntentions(classConcept,GenerationIntentions_Action.this.editorContext,null,GenerateIntention.class));
+  groupItems.addAll(IntentionsManager.getInstance().getAvailableIntentions(GenerationIntentions_Action.this.selectedNode,GenerationIntentions_Action.this.editorContext,null,GenerateIntention.class));
   if (groupItems.isEmpty()) {
     return null;
   }
@@ -25,11 +18,11 @@
   for (  final Pair<Intention,SNode> pair : groupItems) {
     BaseAction action=new BaseAction(pair.getFirst().getDescription(pair.getSecond(),GenerationIntentions_Action.this.editorContext)){
       protected void doExecute(      AnActionEvent p0){
-        GenerateIntention generateIntention=(GenerateIntention)pair.getFirst();
+        final GenerateIntention generateIntention=(GenerateIntention)pair.getFirst();
         if (generateIntention.executeUI(pair.getSecond(),GenerationIntentions_Action.this.editorContext)) {
           ModelAccess.instance().runCommandInEDT(new Runnable(){
             public void run(){
-              pair.getFirst().execute(pair.getSecond(),GenerationIntentions_Action.this.editorContext);
+              generateIntention.execute(pair.getSecond(),GenerationIntentions_Action.this.editorContext);
             }
           }
 );
@@ -37,6 +30,7 @@
       }
     }
 ;
+    action.setExecuteOutsideCommand(true);
     group.add(action);
   }
   return group;
