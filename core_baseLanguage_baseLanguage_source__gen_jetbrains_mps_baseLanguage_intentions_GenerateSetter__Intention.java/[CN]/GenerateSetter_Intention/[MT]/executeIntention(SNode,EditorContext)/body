@@ -1,0 +1,25 @@
+{
+  SNode classConcept=SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ClassConcept");
+  List<SNode> fields=SLinkOperations.getTargets(classConcept,"field",true);
+  if (ListSequence.fromList(fields).isEmpty()) {
+    return;
+  }
+  for (  final SNode field : fields) {
+    final String setterName="set" + NameUtil.capitalize(SPropertyOperations.getString(field,"name"));
+    boolean setterIsAbsent=true;
+    if (ListSequence.fromList(SLinkOperations.getTargets(classConcept,"method",true)).any(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode method){
+        return setterName.equals(SPropertyOperations.getString(method,"name")) && ListSequence.fromList(SLinkOperations.getTargets(method,"parameter",true)).count() == 1;
+      }
+    }
+)) {
+      setterIsAbsent=false;
+    }
+    if (!(setterIsAbsent)) {
+      continue;
+    }
+    Pair<String,String> p;
+    final SNode thisExpression=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ThisExpression",null);
+    SLinkOperations.addChild(classConcept,"method",new _Quotations.QuotationClass_30().createNode(thisExpression,field,SLinkOperations.getTarget(field,"type",true),SPropertyOperations.getString(field,"name"),setterName));
+  }
+}
