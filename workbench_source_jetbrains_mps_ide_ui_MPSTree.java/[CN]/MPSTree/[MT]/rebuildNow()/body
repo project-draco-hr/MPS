@@ -2,11 +2,21 @@
   if (!ThreadUtils.isEventDispatchThread()) {
     throw new RuntimeException("Rebuild now can be only called from UI thread");
   }
-  runRebuildAction(new Runnable(){
+  Runnable r=new Runnable(){
     public void run(){
-      MPSTreeNode root=rebuild();
-      setRootNode(root);
+      runRebuildAction(new Runnable(){
+        public void run(){
+          MPSTreeNode root=rebuild();
+          setRootNode(root);
+        }
+      }
+,true);
     }
   }
-,true);
+;
+  Project project=MPSDataKeys.PROJECT.getData(DataManager.getInstance().getDataContext());
+  if (project != null && DumbService.getInstance(project).isDumb()) {
+    DumbService.getInstance(project).smartInvokeLater(r);
+  }
+  r.run();
 }
