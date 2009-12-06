@@ -1,0 +1,33 @@
+{
+  List<SearchResult<ModelCheckerIssue>> results=ListSequence.fromList(new ArrayList<SearchResult<ModelCheckerIssue>>());
+  for (  SNode node : ListSequence.fromList(SModelOperations.getNodes(model,null))) {
+    if (!(progressContext.checkAndUpdateIndicator("Checking " + SModelOperations.getModelName(model) + " for valid search scopes in references..."))) {
+      break;
+    }
+    SNode concept=SNodeOperations.getConceptDeclaration(node);
+    for (    SReference ref : ListSequence.fromList(SNodeOperations.getReferences(node)).where(new IWhereFilter<SReference>(){
+      public boolean accept(      SReference it){
+        return ModelCheckerUtils.isDeclaredLink(SLinkOperations.findLinkDeclaration(it),false) && (SLinkOperations.getTargetNode(it) != null);
+      }
+    }
+)) {
+      SNode targetNode=SLinkOperations.getTargetNode(ref);
+      try {
+        SNode genuineLinkDeclaration=LinkDeclaration_Behavior.call_getGenuineLink_1213877254523(SLinkOperations.findLinkDeclaration(ref));
+        IModule thisModelModule=model.getModelDescriptor().getModule();
+        if (checkScope(concept,node,targetNode,genuineLinkDeclaration,operationContext)) {
+        }
+ else         if (checkScope(concept,node,targetNode,genuineLinkDeclaration,new ModuleContext(thisModelModule,operationContext.getMPSProject()))) {
+        }
+ else {
+          addIssue(results,node,"Reference in role \"" + SPropertyOperations.getString(genuineLinkDeclaration,"role") + "\" is out of search scope",ModelChecker.CATEGORY_WARNING,null);
+        }
+      }
+ catch (      Exception e) {
+        e.printStackTrace();
+        addIssue(results,node,"Exception \"" + e.getMessage() + "\" during search scope checking",ModelChecker.CATEGORY_WARNING,null);
+      }
+    }
+  }
+  return results;
+}
