@@ -1,5 +1,32 @@
 {
-  SelectFieldsDialog selectFieldsDialog=new SelectFieldsDialog(editorContext,editorContext.getOperationContext().getMainFrame(),node);
+  Frame frame=editorContext.getOperationContext().getMainFrame();
+  final Wrappers._T<SNode> superclass=new Wrappers._T<SNode>(null);
+  final Wrappers._boolean needsShowConstructorsDialog=new Wrappers._boolean(false);
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      superclass.value=SNodeOperations.as(SLinkOperations.getTarget(SLinkOperations.getTarget(node,"superclass",true),"classifier",false),"jetbrains.mps.baseLanguage.structure.ClassConcept");
+      if (superclass.value == null) {
+        superclass.value=SNodeOperations.getNode("f:java_stub#java.lang(java.lang@java_stub)","~Object");
+      }
+      if (ListSequence.fromList(SLinkOperations.getTargets(superclass.value,"constructor",true)).count() > 1) {
+        needsShowConstructorsDialog.value=true;
+      }
+ else {
+        intentionContext.getContextParametersMap().put("selectedConstructors",new ArrayList<SNode>());
+        ListSequence.fromList(((List<SNode>)intentionContext.getContextParametersMap().get("selectedConstructors"))).addElement(ListSequence.fromList(SLinkOperations.getTargets(superclass.value,"constructor",true)).first());
+      }
+    }
+  }
+);
+  if (needsShowConstructorsDialog.value) {
+    SelectConstructorsDialog selectConstructorsDialog=new SelectConstructorsDialog(editorContext,frame,superclass.value);
+    selectConstructorsDialog.showDialog();
+    if (!(selectConstructorsDialog.getAnswer())) {
+      return false;
+    }
+    intentionContext.getContextParametersMap().put("selectedConstructors",selectConstructorsDialog.getSelectedMembers());
+  }
+  SelectFieldsDialog selectFieldsDialog=new SelectFieldsDialog(editorContext,frame,node);
   selectFieldsDialog.showDialog();
   intentionContext.getContextParametersMap().put("selectedFields",selectFieldsDialog.getSelectedFields());
   return selectFieldsDialog.getAnswer();
