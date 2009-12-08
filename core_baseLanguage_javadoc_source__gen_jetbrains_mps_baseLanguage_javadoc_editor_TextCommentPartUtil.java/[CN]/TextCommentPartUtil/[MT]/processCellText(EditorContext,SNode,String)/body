@@ -1,0 +1,33 @@
+{
+  final Wrappers._int index=new Wrappers._int(newText.indexOf("{@"));
+  if (index.value != -1) {
+    SNode tagPart;
+    divideLineBetweenCaret(node,index.value,index.value + 2,newText);
+    tagPart=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.javadoc.structure.InlineTagCommentLinePart",null);
+    SNodeOperations.insertNextSiblingChild(node,tagPart);
+    return;
+  }
+  index.value=newText.indexOf("{{");
+  if (index.value != -1) {
+    SNode codeSnippet;
+    SNode nextLine=divideLineBetweenCaretAndInsertNewLine(node,index.value,index.value + 2,newText);
+    codeSnippet=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.javadoc.structure.CodeSnippet",null);
+    SNodeOperations.insertPrevSiblingChild(nextLine,codeSnippet);
+    editorContext.selectWRTFocusPolicy(codeSnippet);
+    return;
+  }
+  index.value=newText.indexOf("<");
+  if (index.value != -1) {
+    final Wrappers._T<SNode> htmlElement=new Wrappers._T<SNode>();
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        divideLineBetweenCaret(node,index.value,index.value + 1,newText);
+        htmlElement.value=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.javadoc.structure.HTMLElement",null);
+        SNodeOperations.insertNextSiblingChild(node,htmlElement.value);
+      }
+    }
+);
+    editorContext.selectWRTFocusPolicy(htmlElement.value);
+    return;
+  }
+}
