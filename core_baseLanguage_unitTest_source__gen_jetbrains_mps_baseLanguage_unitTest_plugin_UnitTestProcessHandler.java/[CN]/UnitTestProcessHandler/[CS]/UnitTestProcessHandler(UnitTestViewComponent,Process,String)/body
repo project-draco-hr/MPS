@@ -1,0 +1,52 @@
+{
+  super(process,params,Charset.defaultCharset());
+  this.myConsoleView=component.getConsole();
+  this.myComponent=component;
+  this.addProcessListener(new ProcessAdapter(){
+    private StringBuffer buffer=new StringBuffer();
+    private String getLine(    String text,    StringBuffer buffer){
+      buffer.append(text);
+      if (buffer.toString().contains("\n")) {
+        int pos=buffer.toString().lastIndexOf("\n");
+        String lineToAppend=buffer.toString().substring(0,pos);
+        buffer.replace(0,pos,"");
+        return lineToAppend;
+      }
+ else {
+        return null;
+      }
+    }
+    public void onTextAvailable(    ProcessEvent event,    Key k){
+      final String className=UnitTestProcessHandler.this.myComponent.getCurrentClassName();
+      final String methodName=UnitTestProcessHandler.this.myComponent.getCurrentMethodName();
+      final boolean error=ProcessOutputTypes.STDERR.equals(k);
+      final boolean system=ProcessOutputTypes.SYSTEM.equals(k);
+      final String text=(error || system ? event.getText() : this.getLine(event.getText(),this.buffer));
+      if (text == null) {
+        return;
+      }
+      String textTrimmed=StringUtils.trim(text);
+      final String token=TestEvent.isTestEvent(textTrimmed);
+      final TestEvent testEvent=TestEvent.parse(textTrimmed);
+      if (testEvent != null) {
+        UnitTestProcessHandler.this.myComponent.testController.onTestEvent(testEvent);
+      }
+      SwingUtilities.invokeLater(new Runnable(){
+        public void run(){
+          if (token == null) {
+            component.appendWithParameters(className,methodName,text,error,system);
+          }
+ else {
+            if (testEvent == null) {
+              component.appendWithParameters(className,methodName,text,error,system);
+              return;
+            }
+          }
+        }
+      }
+);
+    }
+  }
+);
+  ProcessTerminatedListener.attach(this);
+}
