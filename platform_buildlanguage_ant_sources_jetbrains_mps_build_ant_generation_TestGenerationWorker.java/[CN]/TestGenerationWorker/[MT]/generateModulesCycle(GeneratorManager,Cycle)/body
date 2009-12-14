@@ -28,20 +28,7 @@
  else {
     compilationResult=Collections.EMPTY_LIST;
   }
-  List<TestFailure> testResults;
-  if (Boolean.parseBoolean(myWhatToDo.getProperty(TestGenerationOnTeamcity.INVOKE_TESTS)) && Boolean.parseBoolean(myWhatToDo.getProperty(GenerateTask.COMPILE))) {
-    testResults=ModelAccess.instance().runReadAction(new Computable<List<TestFailure>>(){
-      public List<TestFailure> compute(){
-        return ProjectTester.invokeTests(myGenerationType,outputModels);
-      }
-    }
-);
-  }
- else {
-    testResults=Collections.EMPTY_LIST;
-  }
-  myGenerationType.clean();
-  StringBuffer sb=createDetailedReport(compilationResult,testResults,diffReports);
+  StringBuffer sb=createDetailedReport(compilationResult,Collections.<TestFailure>emptyList(),diffReports);
   myMessageHandler.clean();
   if (sb.length() > 0) {
     myTestFailed=true;
@@ -49,4 +36,24 @@
     System.out.println("");
   }
   System.out.println(myBuildServerMessageFormat.formatTestFinish(currentTestName));
+  if (invokeTests()) {
+    final TestResult testResult=new TestResult();
+    testResult.addListener(new TestListener(){
+      @Override public void addError(      Test test,      Throwable t){
+        System.out.println(myBuildServerMessageFormat.formatTestFailure(myBuildServerMessageFormat.escapeBuildMessage(test + ""),myBuildServerMessageFormat.escapeBuildMessage(t.getMessage()),myBuildServerMessageFormat.escapeBuildMessage(MpsWorker.extractStackTrace(t))));
+      }
+      @Override public void addFailure(      Test test,      AssertionFailedError t){
+        System.out.println(myBuildServerMessageFormat.formatTestFailure(myBuildServerMessageFormat.escapeBuildMessage(test + ""),myBuildServerMessageFormat.escapeBuildMessage(t.getMessage()),myBuildServerMessageFormat.escapeBuildMessage(MpsWorker.extractStackTrace(t))));
+      }
+      @Override public void endTest(      Test test){
+        System.out.println(myBuildServerMessageFormat.formatTestFinish(myBuildServerMessageFormat.escapeBuildMessage(test + "")));
+      }
+      @Override public void startTest(      Test test){
+        System.out.println(myBuildServerMessageFormat.formatTestStart(myBuildServerMessageFormat.escapeBuildMessage(test + "")));
+      }
+    }
+);
+    ProjectTester.invokeTests(myGenerationType,outputModels,testResult);
+  }
+  myGenerationType.clean();
 }
