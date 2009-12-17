@@ -5,23 +5,28 @@
   if (!(dir.exists())) {
     dir.mkdirs();
   }
-  Language language=Language.createLanguage(myThis.getLanguageNamespace(),new FileSystemFile(descriptorFile),myThis.getProject());
-  LanguageDescriptor languageDescriptor=(LanguageDescriptor)language.getLanguageDescriptor();
-  ModuleReference devkitRef=LanguageDesign_DevKit.MODULE_REFERENCE;
-  languageDescriptor.getUsedDevkits().add(devkitRef);
-  languageDescriptor.setCompileInMPS(myThis.getCompileInMPS());
-  LanguageAspect.STRUCTURE.createNew(language,false);
-  LanguageAspect.EDITOR.createNew(language,false);
-  LanguageAspect.CONSTRAINTS.createNew(language,false);
-  LanguageAspect.TYPESYSTEM.createNew(language,false);
-  language.setLanguageDescriptor(languageDescriptor);
-  language.save();
-  myThis.getProject().addProjectLanguage(language);
-  myThis.setResult(language);
-  ApplicationManager.getApplication().invokeLater(new Runnable(){
+  final Language language=Language.createLanguage(myThis.getLanguageNamespace(),new FileSystemFile(descriptorFile),myThis.getProject());
+  ModelAccess.instance().runWriteActionInCommandAsync(new Runnable(){
     public void run(){
-      ApplicationLevelVcsManager.instance().addFileToVcs(VFileSystem.refreshAndGetFile(descriptorFile.getParentFile()),true);
+      LanguageDescriptor languageDescriptor=(LanguageDescriptor)language.getLanguageDescriptor();
+      ModuleReference devkitRef=LanguageDesign_DevKit.MODULE_REFERENCE;
+      languageDescriptor.getUsedDevkits().add(devkitRef);
+      languageDescriptor.setCompileInMPS(myThis.getCompileInMPS());
+      LanguageAspect.STRUCTURE.createNew(language,false);
+      LanguageAspect.EDITOR.createNew(language,false);
+      LanguageAspect.CONSTRAINTS.createNew(language,false);
+      LanguageAspect.TYPESYSTEM.createNew(language,false);
+      language.setLanguageDescriptor(languageDescriptor);
+      language.save();
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        public void run(){
+          ApplicationLevelVcsManager.instance().addFileToVcs(VFileSystem.refreshAndGetFile(descriptorFile.getParentFile()),true);
+        }
+      }
+,ModalityState.NON_MODAL);
     }
   }
-,ModalityState.NON_MODAL);
+);
+  myThis.setResult(language);
+  myThis.getProject().addProjectLanguage(language);
 }
