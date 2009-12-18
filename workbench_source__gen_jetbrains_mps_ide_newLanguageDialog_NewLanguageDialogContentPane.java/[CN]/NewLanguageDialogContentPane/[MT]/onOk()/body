@@ -18,10 +18,25 @@
     return;
   }
   myThis.getDialog().dispose();
+  final Wrappers._T<Language> language=new Wrappers._T<Language>(null);
   ProgressManager.getInstance().run(new Task.Modal(myThis.getProject().getComponent(Project.class),"Creating",false){
     public void run(    @NotNull ProgressIndicator indicator){
       indicator.setIndeterminate(true);
-      myThis.createNewLanguage();
+      ModelAccess.instance().runWriteAction(new Runnable(){
+        public void run(){
+          language.value=myThis.createNewLanguage();
+        }
+      }
+);
+    }
+  }
+);
+  ModelAccess.instance().runWriteActionInCommandAsync(new Runnable(){
+    public void run(){
+      LanguageAspect.STRUCTURE.createNew(language.value,false);
+      LanguageAspect.EDITOR.createNew(language.value,false);
+      LanguageAspect.CONSTRAINTS.createNew(language.value,false);
+      LanguageAspect.TYPESYSTEM.createNew(language.value,false);
     }
   }
 );
