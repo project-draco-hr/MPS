@@ -1,0 +1,39 @@
+{
+  SuspendContext suspendContext=new SuspendContext(myDebugProcess,set.suspendPolicy(),set.size(),set){
+    protected void resumeImpl(){
+      final ThreadReference thread=this.getThread();
+      if (thread != null) {
+        try {
+          if (!thread.isSuspended()) {
+            LOG.assertLog(false,"Context thread must be suspended");
+          }
+        }
+ catch (        ObjectCollectedException ignored) {
+        }
+      }
+      int attempts=5;
+      while (--attempts > 0) {
+        try {
+          set.resume();
+          break;
+        }
+ catch (        ObjectCollectedException e) {
+          LOG.info("",e);
+          continue;
+        }
+catch (        InternalException e) {
+          if (e.errorCode() == 13 && set.suspendPolicy() == EventRequest.SUSPEND_ALL) {
+            continue;
+          }
+ else {
+            LOG.error(e);
+            break;
+          }
+        }
+      }
+    }
+  }
+;
+  pushContext(suspendContext);
+  return suspendContext;
+}
