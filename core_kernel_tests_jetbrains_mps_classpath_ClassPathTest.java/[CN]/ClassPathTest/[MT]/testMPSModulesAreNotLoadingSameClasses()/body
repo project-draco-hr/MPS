@@ -1,2 +1,53 @@
 {
+  final MPSProject project=loadProject(MPS_CORE_PROJECT);
+  assertNotNull("Can't open project " + MPS_CORE_PROJECT,project);
+  final MultiMap<String,LoadEnvironment> loadedClasses=new MultiMap<String,LoadEnvironment>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      List<IModule> modulesToCheck=new ArrayList<IModule>();
+      modulesToCheck.addAll(MPSModuleRepository.getInstance().getAllLanguages());
+      modulesToCheck.addAll(MPSModuleRepository.getInstance().getAllSolutions());
+      modulesToCheck.removeAll(project.getProjectSolutions());
+      for (      IModule m : modulesToCheck) {
+        List<ClassPathEntry> classPaths=m.getModuleDescriptor().getClassPaths();
+        for (        ClassPathEntry classPath : classPaths) {
+          String path=classPath.getPath();
+          IClassPathItem pathItem=null;
+          try {
+            pathItem=AbstractClassPathItem.createFromPath(path,null);
+          }
+ catch (          IOException e) {
+            LOG.error(e);
+            continue;
+          }
+          if (pathItem instanceof JarFileClassPathItem)           continue;
+          for (          String className : getAllClasses(pathItem)) {
+            String namespace=m.getModuleNamespace();
+            if (!loadedClasses.containsKey(className)) {
+              loadedClasses.put(className,new HashSet<LoadEnvironment>(1));
+            }
+            loadedClasses.get(className).add(new LoadEnvironment(namespace,pathItem.toString()));
+          }
+        }
+      }
+    }
+  }
+);
+  waitForEDTTasksToComplete();
+  SwingUtilities.invokeAndWait(new Runnable(){
+    public void run(){
+      TestMain.closeProject(project);
+    }
+  }
+);
+  waitForEDTTasksToComplete();
+  List<Conflict> conflicts=new ArrayList<Conflict>();
+  for (  String className : loadedClasses.keySet()) {
+    Collection<LoadEnvironment> environments=loadedClasses.get(className);
+    if (environments.size() > 1) {
+      Conflict conflict=new Conflict(className);
+      conflict.addLoadEnvironments(environments);
+      conflicts.add(conflict);
+    }
+  }
 }
