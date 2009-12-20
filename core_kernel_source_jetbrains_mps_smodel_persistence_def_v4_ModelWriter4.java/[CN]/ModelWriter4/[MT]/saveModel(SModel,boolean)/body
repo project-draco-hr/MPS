@@ -1,0 +1,61 @@
+{
+  Element rootElement=new Element(ModelPersistence.MODEL);
+  rootElement.setAttribute(ModelPersistence.MODEL_UID,sourceModel.getSModelReference().toString());
+  Element persistenceElement=new Element(ModelPersistence.PERSISTENCE);
+  persistenceElement.setAttribute(ModelPersistence.PERSISTENCE_VERSION,getModelPersistenceVersion() + "");
+  rootElement.addContent(persistenceElement);
+  if (validate) {
+    sourceModel.validateLanguagesAndImports();
+  }
+  RefactoringHistory history=sourceModel.getRefactoringHistory();
+  rootElement.addContent(history.toElement());
+  Set<String> writtenAspects=new HashSet<String>();
+  for (  ModuleReference languageNamespace : sourceModel.getExplicitlyImportedLanguages()) {
+    Element languageElem=new Element(ModelPersistence.LANGUAGE);
+    languageElem.setAttribute(ModelPersistence.NAMESPACE,languageNamespace.toString());
+    rootElement.addContent(languageElem);
+  }
+  for (  ImportElement aspectElement : sourceModel.getLanguageAspectModelElements()) {
+    SModelReference modelReference=aspectElement.getModelReference();
+    if (!writtenAspects.contains(modelReference.toString())) {
+      writtenAspects.add(modelReference.toString());
+      writeAspect(sourceModel,rootElement,modelReference);
+    }
+  }
+  for (  ModuleReference languageNamespace : sourceModel.getEngagedOnGenerationLanguages()) {
+    Element languageElem=new Element(ModelPersistence.LANGUAGE_ENGAGED_ON_GENERATION);
+    languageElem.setAttribute(ModelPersistence.NAMESPACE,languageNamespace.toString());
+    rootElement.addContent(languageElem);
+  }
+  for (  ModuleReference devkitNamespace : sourceModel.getDevKitRefs()) {
+    Element devkitElem=new Element(ModelPersistence.DEVKIT);
+    devkitElem.setAttribute(ModelPersistence.NAMESPACE,devkitNamespace.toString());
+    rootElement.addContent(devkitElem);
+  }
+  Element maxRefID=new Element(ModelPersistence.MAX_IMPORT_INDEX);
+  maxRefID.setAttribute(ModelPersistence.VALUE,"" + sourceModel.getMaxImportIndex());
+  rootElement.addContent(maxRefID);
+  for (  ImportElement importElement : sourceModel.getImportElements()) {
+    Element importElem=new Element(ModelPersistence.IMPORT_ELEMENT);
+    importElem.setAttribute(ModelPersistence.MODEL_IMPORT_INDEX,"" + importElement.getReferenceID());
+    SModelReference modelReference=importElement.getModelReference();
+    importElem.setAttribute(ModelPersistence.MODEL_UID,modelReference.toString());
+    importElem.setAttribute(ModelPersistence.VERSION,"" + importElement.getUsedVersion());
+    int version=-1;
+    SModelDescriptor importedModelDescriptor=SModelRepository.getInstance().getModelDescriptor(modelReference);
+    if (importedModelDescriptor != null) {
+      version=importedModelDescriptor.getVersion();
+    }
+    if (version > -1) {
+      importElem.setAttribute(ModelPersistence.VERSION,version + "");
+    }
+    rootElement.addContent(importElem);
+  }
+  VisibleModelElements visibleModelElements=new VisibleModelElements(rootElement);
+  for (  SNode root : sourceModel.getRoots()) {
+    saveNode(rootElement,root,visibleModelElements);
+  }
+  Document document=new Document();
+  document.setRootElement(rootElement);
+  return document;
+}
