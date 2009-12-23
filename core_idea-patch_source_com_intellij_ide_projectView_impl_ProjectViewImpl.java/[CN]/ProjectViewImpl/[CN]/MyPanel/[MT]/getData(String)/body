@@ -16,6 +16,17 @@
     PsiElement[] elements=currentProjectViewPane.getSelectedPSIElements();
     return elements.length == 0 ? null : elements;
   }
+  if (DataConstants.VIRTUAL_FILE_ARRAY.equals(dataId)) {
+    PsiElement[] psiElements=(PsiElement[])getData(DataConstants.PSI_ELEMENT_ARRAY);
+    if (psiElements == null)     return null;
+    Set<VirtualFile> files=new LinkedHashSet<VirtualFile>();
+    for (    PsiElement element : psiElements) {
+      if (element instanceof PsiFileSystemItem) {
+        files.add(((PsiFileSystemItem)element).getVirtualFile());
+      }
+    }
+    return files.size() > 0 ? VfsUtil.toVirtualFileArray(files) : null;
+  }
   if (DataConstantsEx.TARGET_PSI_ELEMENT.equals(dataId)) {
     return null;
   }
@@ -62,7 +73,18 @@
   }
   if (DataConstants.MODULE_CONTEXT.equals(dataId)) {
     Object selected=getSelectedNodeElement();
-    return selected instanceof Module ? selected : null;
+    if (selected instanceof Module) {
+      return !((Module)selected).isDisposed() ? selected : null;
+    }
+ else     if (selected instanceof PsiDirectory) {
+      return moduleByContentRoot(((PsiDirectory)selected).getVirtualFile());
+    }
+ else     if (selected instanceof VirtualFile) {
+      return moduleByContentRoot((VirtualFile)selected);
+    }
+ else {
+      return null;
+    }
   }
   if (DataConstants.MODULE_CONTEXT_ARRAY.equals(dataId)) {
     return getSelectedModules();

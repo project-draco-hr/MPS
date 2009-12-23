@@ -26,6 +26,7 @@
       return Pair.create(EMPTY_EDITOR_ARRAY,EMPTY_PROVIDER_ARRAY);
     }
     newEditorCreated=true;
+    getProject().getMessageBus().syncPublisher(FileEditorManagerListener.Before.FILE_EDITOR_MANAGER).beforeFileOpened(this,file);
     editors=new FileEditor[providers.length];
     for (int i=0; i < providers.length; i++) {
       try {
@@ -33,14 +34,14 @@
         LOG.assertTrue(provider != null);
         LOG.assertTrue(provider.accept(myProject,file));
         final FileEditor editor=provider.createEditor(myProject,file);
+        LOG.assertTrue(editor != null);
+        LOG.assertTrue(editor.isValid());
+        editors[i]=editor;
+        editor.addPropertyChangeListener(myEditorPropertyChangeListener);
+        editor.putUserData(DUMB_AWARE,provider instanceof DumbAware);
         if (current && editor instanceof TextEditorImpl) {
           ((TextEditorImpl)editor).initFolding();
         }
-        editors[i]=editor;
-        LOG.assertTrue(editor != null);
-        LOG.assertTrue(editor.isValid());
-        editor.addPropertyChangeListener(myEditorPropertyChangeListener);
-        editor.putUserData(DUMB_AWARE,provider instanceof DumbAware);
       }
  catch (      Exception e) {
         LOG.error(e);
