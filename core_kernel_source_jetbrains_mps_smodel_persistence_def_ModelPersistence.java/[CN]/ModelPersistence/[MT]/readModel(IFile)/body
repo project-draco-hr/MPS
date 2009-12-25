@@ -1,24 +1,11 @@
 {
   LOG.debug("ModelPersistence readModel from :" + file.getAbsolutePath());
-  String modelName=extractModelName(file.getName());
-  String modelStereotype=extractModelStereotype(file.getName());
-  Document document=loadModelDocument(file);
-  int modelPersistenceVersion=getModelPersistenceVersion(document);
-  SModel model=modelReaders.get(modelPersistenceVersion).readModel(document,modelName,modelStereotype);
-  if (needsUpgrade(modelPersistenceVersion)) {
-    model=upgradeModelPersistence(model,modelPersistenceVersion);
-    modelPersistenceVersion=currentApplicationPersistenceVersion;
-    model.setPersistenceVersion(modelPersistenceVersion);
-    document=saveModel(model,false);
-    try {
-      JDOMUtil.writeDocument(document,file);
-    }
- catch (    IOException e) {
-      LOG.error("error while saving model after persistence upgrade " + model.getSModelReference(),e);
+  Condition<Integer> needsUpgradeCondition=new Condition<Integer>(){
+    @Override public boolean met(    Integer version){
+      return needsUpgrade(version);
     }
   }
- else {
-    model.setPersistenceVersion(modelPersistenceVersion);
-  }
+;
+  SModel model=readModelUpgradeByCondition(file,needsUpgradeCondition,getCurrentPersistenceVersion());
   return model;
 }

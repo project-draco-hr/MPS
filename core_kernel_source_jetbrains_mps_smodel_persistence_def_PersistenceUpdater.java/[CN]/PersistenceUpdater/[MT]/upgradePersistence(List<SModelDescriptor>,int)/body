@@ -1,0 +1,32 @@
+{
+  for (  final SModelDescriptor modelDescriptor : modelDescriptors) {
+    boolean wasInitialized=false;
+    final boolean[] wasUpgraded={false};
+    if (modelDescriptor.isInitialized()) {
+      wasInitialized=true;
+    }
+    IFile file=modelDescriptor.getModelFile();
+    if (file == null)     continue;
+    if (wasInitialized) {
+      ModelAccess.instance().executeCommand(new Runnable(){
+        @Override public void run(){
+          modelDescriptor.save();
+        }
+      }
+);
+    }
+    SModel newModel=ModelPersistence.readModelUpgradeByCondition(file,new Condition<Integer>(){
+      @Override public boolean met(      Integer version){
+        boolean b=version < toVersion;
+        if (b) {
+          wasUpgraded[0]=true;
+        }
+        return b;
+      }
+    }
+,toVersion);
+    if (wasUpgraded[0] && wasInitialized) {
+      modelDescriptor.reloadFromDisk();
+    }
+  }
+}
