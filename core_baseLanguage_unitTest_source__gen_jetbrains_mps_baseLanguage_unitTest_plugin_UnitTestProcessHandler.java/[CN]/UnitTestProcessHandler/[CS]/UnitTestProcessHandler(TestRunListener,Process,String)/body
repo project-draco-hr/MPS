@@ -1,0 +1,48 @@
+{
+  super(process,params,Charset.defaultCharset());
+  this.listener=listener;
+  this.addProcessListener(new ProcessAdapter(){
+    private StringBuffer buffer=new StringBuffer();
+    private String getLine(    String text,    StringBuffer buffer){
+      buffer.append(text);
+      if (buffer.toString().contains("\n")) {
+        int pos=buffer.toString().lastIndexOf("\n");
+        String lineToAppend=buffer.toString().substring(0,pos);
+        buffer.replace(0,pos,"");
+        return lineToAppend;
+      }
+ else {
+        return null;
+      }
+    }
+    private boolean isTerminatedEvent(){
+      for (      StackTraceElement element : Thread.currentThread().getStackTrace()) {
+        if (element.getClassName().equals(ProcessTerminatedListener.class.getName())) {
+          return true;
+        }
+      }
+      return false;
+    }
+    public void onTextAvailable(    ProcessEvent event,    Key k){
+      if (this.isTerminatedEvent()) {
+        UnitTestProcessHandler.this.listener.onProcessTerminated(event.getText());
+      }
+      boolean error=ProcessOutputTypes.STDERR.equals(k);
+      boolean system=ProcessOutputTypes.SYSTEM.equals(k);
+      String text=(error || system ? event.getText() : this.getLine(event.getText(),this.buffer));
+      if (text == null) {
+        return;
+      }
+      String textTrimmed=StringUtils.trim(text);
+      TestEvent testEvent=TestEvent.parse(textTrimmed);
+      if (testEvent != null) {
+        UnitTestProcessHandler.this.listener.onTestEvent(testEvent);
+      }
+ else {
+        UnitTestProcessHandler.this.listener.onSimpleTextAvailable(text,k);
+      }
+    }
+  }
+);
+  ProcessTerminatedListener.attach(this);
+}
