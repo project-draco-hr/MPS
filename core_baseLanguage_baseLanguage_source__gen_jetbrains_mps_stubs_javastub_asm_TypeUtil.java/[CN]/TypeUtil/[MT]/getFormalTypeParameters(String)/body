@@ -1,0 +1,51 @@
+{
+  final List<ASMFormalTypeParameter> result=new ArrayList<ASMFormalTypeParameter>();
+  if (signature == null) {
+    return result;
+  }
+  SignatureReader reader=new SignatureReader(signature);
+  reader.accept(new SignatureVisitorAdapter(){
+    private String name=null;
+    private TypeUtil.TypeBuilderVisitor classBoundVisitor=new TypeUtil.TypeBuilderVisitor();
+    private List<TypeUtil.TypeBuilderVisitor> interfaceBoundVisitors=new ArrayList<TypeUtil.TypeBuilderVisitor>();
+    public void visitFormalTypeParameter(    String name){
+      if (this.name != null) {
+        this.flush();
+      }
+      this.name=name;
+    }
+    public SignatureVisitor visitClassBound(){
+      this.classBoundVisitor=new TypeUtil.TypeBuilderVisitor();
+      return this.classBoundVisitor;
+    }
+    public SignatureVisitor visitInterfaceBound(){
+      TypeUtil.TypeBuilderVisitor visitor=new TypeUtil.TypeBuilderVisitor();
+      this.interfaceBoundVisitors.add(visitor);
+      return visitor;
+    }
+    public SignatureVisitor visitReturnType(){
+      if (this.name != null) {
+        this.flush();
+      }
+      return super.visitReturnType();
+    }
+    public SignatureVisitor visitSuperclass(){
+      if (this.name != null) {
+        this.flush();
+      }
+      return super.visitSuperclass();
+    }
+    private void flush(){
+      List<ASMType> interfaceBounds=new ArrayList<ASMType>(this.interfaceBoundVisitors.size());
+      for (      TypeUtil.TypeBuilderVisitor v : this.interfaceBoundVisitors) {
+        interfaceBounds.add(v.getResult());
+      }
+      result.add(new ASMFormalTypeParameter(this.name,(this.classBoundVisitor != null ? this.classBoundVisitor.getResult() : null),interfaceBounds));
+      this.name=null;
+      this.classBoundVisitor=null;
+      this.interfaceBoundVisitors.clear();
+    }
+  }
+);
+  return result;
+}
