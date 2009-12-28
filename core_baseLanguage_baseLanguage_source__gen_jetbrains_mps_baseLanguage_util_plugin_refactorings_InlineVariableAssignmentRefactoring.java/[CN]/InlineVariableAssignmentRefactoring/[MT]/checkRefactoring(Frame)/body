@@ -1,0 +1,34 @@
+{
+  final Wrappers._boolean isLocalVariable=new Wrappers._boolean();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      isLocalVariable.value=SNodeOperations.isInstanceOf(InlineVariableAssignmentRefactoring.this.myVariable,"jetbrains.mps.baseLanguage.structure.LocalVariableDeclaration");
+    }
+  }
+);
+  if (isLocalVariable.value) {
+    final Wrappers._T<List<SNode>> nodesToRafactor=new Wrappers._T<List<SNode>>();
+    final Wrappers._T<SNode> initializer=new Wrappers._T<SNode>();
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        initializer.value=SLinkOperations.getTarget(SNodeOperations.cast(InlineVariableAssignmentRefactoring.this.myVariable,"jetbrains.mps.baseLanguage.structure.LocalVariableDeclaration"),"initializer",true);
+        nodesToRafactor.value=InlineVariableAssignmentRefactoring.this.getNodesToRafactor();
+      }
+    }
+);
+    if (initializer.value == null) {
+      return false;
+    }
+    if (ListSequence.fromList(nodesToRafactor.value).isEmpty()) {
+      JOptionPane.showMessageDialog(frame,"Variable is never used","",JOptionPane.INFORMATION_MESSAGE);
+      return false;
+    }
+ else {
+      int code=JOptionPane.showConfirmDialog(frame,"Inline variable? (" + ListSequence.fromList(nodesToRafactor.value).count() + " occurrences)","",JOptionPane.YES_NO_OPTION);
+      if (code != JOptionPane.YES_OPTION) {
+        return false;
+      }
+    }
+  }
+  return true;
+}

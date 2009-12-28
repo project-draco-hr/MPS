@@ -1,0 +1,33 @@
+{
+  SNode body=SNodeOperations.copyNode(SLinkOperations.getTarget(this.myMethodDeclaration,"body",true));
+  Map<SNode,SNode> paramsMap=this.compareParameters();
+  SNode callStatement=SNodeOperations.getAncestor(this.myMethodCall,"jetbrains.mps.baseLanguage.structure.Statement",false,false);
+  SNode returnVar=null;
+  if (!(SNodeOperations.isInstanceOf(this.myReturnType,"jetbrains.mps.baseLanguage.structure.VoidType"))) {
+    this.addLastReturnStatement(body);
+  }
+  if (this.myHasManyReturns && !(SNodeOperations.isInstanceOf(this.myReturnType,"jetbrains.mps.baseLanguage.structure.VoidType"))) {
+    returnVar=this.createLocalVariableDeclaration(callStatement,"result",this.myReturnType);
+    SNode stat=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.LocalVariableDeclarationStatement",null);
+    SLinkOperations.setTarget(stat,"localVariableDeclaration",returnVar,true);
+    SNodeOperations.insertPrevSiblingChild(callStatement,stat);
+  }
+  this.replaceParameters(body,paramsMap);
+  if (this.myOperand != null) {
+    this.replaceThisByOperand(body);
+  }
+  this.replaceReturnSatements(body,returnVar,callStatement);
+  if (returnVar != null) {
+    SNode ref=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.LocalVariableReference",null);
+    SLinkOperations.setTarget(ref,"variableDeclaration",returnVar,false);
+    SNodeOperations.replaceWithAnother(this.myMethodCall,ref);
+    SNodeOperations.insertNextSiblingChild(callStatement,SNodeOperations.copyNode(callStatement));
+  }
+  if (SNodeOperations.getAncestor(this.myMethodDeclaration,"jetbrains.mps.baseLanguage.structure.Classifier",false,false) != SNodeOperations.getAncestor(this.myMethodCall,"jetbrains.mps.baseLanguage.structure.Classifier",false,false)) {
+    this.replaceLocalStaticMethodCalls(body);
+  }
+  for (  SNode statement : ListSequence.fromList(SLinkOperations.getTargets(body,"statement",true))) {
+    SNodeOperations.insertPrevSiblingChild(callStatement,statement);
+  }
+  SNodeOperations.deleteNode(callStatement);
+}
