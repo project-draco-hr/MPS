@@ -1,13 +1,17 @@
 {
   for (  final SModel model : outputModels) {
-    ClassLoader classLoader=genType.getCompiler().getClassLoader(model.getClass().getClassLoader());
     for (    final SNode outputRoot : model.getRoots()) {
-      if (ModelAccess.instance().runReadAction(new Computable<Boolean>(){
+      if (baseClassLoader == null) {
+        baseClassLoader=model.getClass().getClassLoader();
+      }
+      ClassLoader classLoader=genType.getCompiler().getClassLoader(baseClassLoader);
+      Boolean isClassConcept=ModelAccess.instance().runReadAction(new Computable<Boolean>(){
         @Override public Boolean compute(){
           return !outputRoot.isInstanceOfConcept(ClassConcept.concept);
         }
       }
-)) {
+);
+      if (isClassConcept) {
         continue;
       }
       try {
@@ -20,24 +24,28 @@
         final Class testClass=Class.forName(className,true,classLoader);
         if (testClass.getAnnotation(classLoader.loadClass(MPSLaunch.class.getName())) != null)         continue;
         List<Method> testMethods=new ArrayList<Method>();
-        boolean isTestCase=TestCase.class.isAssignableFrom(testClass);
+        Class<TestCase> testCaseClass=(Class<TestCase>)classLoader.loadClass(TestCase.class.getName());
+        boolean isTestCase=testCaseClass.isAssignableFrom(testClass);
         for (        Method method : testClass.getMethods()) {
-          if (method.getAnnotation(org.junit.Test.class) != null || (method.getName().startsWith("test") && isTestCase)) {
+          if (method.getAnnotation((Class<Annotation>)classLoader.loadClass(org.junit.Test.class.getName())) != null || (method.getName().startsWith("test") && isTestCase)) {
             testMethods.add(method);
           }
         }
         for (        Method testMethod : testMethods) {
           try {
             final Object instance=testClass.newInstance();
-            Method setName=TestCase.class.getMethod("setName",String.class);
+            Method setName=testCaseClass.getMethod("setName",String.class);
             setName.invoke(instance,testMethod.getName());
-            ((TestCase)instance).run(testResult);
+            Method runMethod=testCaseClass.getMethod("run",classLoader.loadClass(junit.framework.TestResult.class.getName()));
+            runMethod.invoke(instance,testResult);
           }
  catch (          Throwable ignored) {
+            ignored.printStackTrace();
           }
         }
       }
  catch (      Throwable ignored) {
+        ignored.printStackTrace();
       }
     }
   }
