@@ -23,9 +23,16 @@
       ListSequence.fromList(modulesForIModule).addElement(module);
     }
     List<Set<IModule>> sm=StronglyConnectedModules.getInstance().getStronglyConnectedComponents(MapSequence.fromMap(map).keySet());
+    SNode lastCycle=null;
     for (    Set<IModule> moduleSet : ListSequence.fromList(sm)) {
       SNode cycle=SConceptOperations.createNewNode("jetbrains.mps.build.packaging.structure.ModuleCycle",null);
       SLinkOperations.addChild(layout,"cycle",cycle);
+      if (lastCycle != null) {
+        SNode ref=SConceptOperations.createNewNode("jetbrains.mps.build.packaging.structure.ModuleCycleReference",null);
+        SLinkOperations.setTarget(ref,"cycle",lastCycle,false);
+        ListSequence.fromList(SLinkOperations.getTargets(cycle,"dependency",true)).addElement(ref);
+      }
+      lastCycle=cycle;
       for (      IModule imodule : SetSequence.fromSet(moduleSet)) {
         List<SNode> modulesForIModule=MapSequence.fromMap(map).get(imodule);
         for (        SNode module : ListSequence.fromList(modulesForIModule)) {
