@@ -1,0 +1,29 @@
+{
+  return new VisibleClassifiersScope(_context.getModel(),IClassifiersSearchScope.CLASSIFFIER,operationContext.getScope()){
+    @NotNull @Override public List<Classifier> getClassifiers(){
+      Set<SNode> enclosingClassifierAncestors=SetSequence.fromSet(new HashSet<SNode>());
+      SetSequence.fromSet(enclosingClassifierAncestors).addSequence(ListSequence.fromList(SNodeOperations.getAncestors(_context.getEnclosingNode(),"jetbrains.mps.baseLanguage.structure.Classifier",false)));
+      List<Classifier> result=new ArrayList();
+      for (      Classifier classifier : ListSequence.fromList(super.getClassifiers())) {
+        if (classifier.getNonStatic()) {
+          continue;
+        }
+        if (classifier instanceof AnonymousClass) {
+          continue;
+        }
+        List<SNode> ancestors=classifier.getNode().getAncestors(true);
+        if (ListSequence.fromList(ancestors).where(new IWhereFilter<SNode>(){
+          public boolean accept(          SNode it){
+            return !(SNodeOperations.isInstanceOf(it,"jetbrains.mps.baseLanguage.structure.Classifier"));
+          }
+        }
+).isNotEmpty() && ListSequence.fromList(ancestors).intersect(SetSequence.fromSet(enclosingClassifierAncestors)).isEmpty()) {
+          continue;
+        }
+        result.add(classifier);
+      }
+      return result;
+    }
+  }
+;
+}
