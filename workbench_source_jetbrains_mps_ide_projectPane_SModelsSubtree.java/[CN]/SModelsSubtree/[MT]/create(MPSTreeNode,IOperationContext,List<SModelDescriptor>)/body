@@ -1,0 +1,73 @@
+{
+  List<SModelDescriptor> regularModels=new ArrayList<SModelDescriptor>();
+  List<SModelDescriptor> tests=new ArrayList<SModelDescriptor>();
+  List<SModelDescriptor> stubs=new ArrayList<SModelDescriptor>();
+  for (  SModelDescriptor modelDescriptor : models) {
+    if (ProjectModels.isProjectModel(modelDescriptor.getSModelReference()))     continue;
+    String stereotype=modelDescriptor.getStereotype();
+    if (stereotype == null || stereotype.length() == 0) {
+      stereotype=".";
+    }
+    if (SModelStereotype.isStubModelStereotype(stereotype)) {
+      stubs.add(modelDescriptor);
+    }
+ else     if (SModelStereotype.TESTS.equals(stereotype)) {
+      tests.add(modelDescriptor);
+    }
+ else {
+      regularModels.add(modelDescriptor);
+    }
+  }
+  SModelNamespaceTreeBuilder builder;
+  List<SModelTreeNode> regularModelNodes=getRootModelTreeNodes(regularModels,operationContext,isNeedBuildChildModels(rootTreeNode));
+  if (!regularModelNodes.isEmpty()) {
+    if (rootTreeNode instanceof ProjectSolutionTreeNode) {
+      builder=new SModelNamespaceTreeBuilder();
+      for (      SModelTreeNode treeNode : regularModelNodes) {
+        builder.addNode(treeNode);
+      }
+      builder.fillNode(rootTreeNode);
+    }
+ else {
+      MPSTreeNode currentRootNode;
+      if (!isNeedBuildChildModels(rootTreeNode)) {
+        currentRootNode=rootTreeNode;
+      }
+ else {
+        IModule contextModule=operationContext.getModule();
+        List<SModelRoot> modelRoots=contextModule.getSModelRoots();
+        String namespace=(modelRoots.isEmpty()) ? "" : contextModule.getSModelRoots().get(0).getPrefix();
+        if (namespace == null || namespace.length() == 0) {
+          namespace=contextModule.getModuleNamespace();
+        }
+        currentRootNode=new NamespaceTextNode((namespace == null) ? "" : namespace,operationContext);
+      }
+      for (      SModelTreeNode treeNode : regularModelNodes) {
+        currentRootNode.add(treeNode);
+      }
+      if (!currentRootNode.equals(rootTreeNode)) {
+        rootTreeNode.add(currentRootNode);
+      }
+    }
+  }
+  if (!tests.isEmpty()) {
+    builder=new SModelNamespaceTreeBuilder();
+    List<SModelTreeNode> testNodes=getRootModelTreeNodes(tests,operationContext,isNeedBuildChildModels(rootTreeNode));
+    for (    SModelTreeNode testNode : testNodes) {
+      builder.addNode(testNode);
+    }
+    TestsTreeNode testsNode=new TestsTreeNode(operationContext);
+    builder.fillNode(testsNode);
+    rootTreeNode.add(testsNode);
+  }
+  if (!stubs.isEmpty()) {
+    builder=new SModelNamespaceTreeBuilder();
+    List<SModelTreeNode> stubNodes=getRootModelTreeNodes(stubs,operationContext,isNeedBuildChildModels(rootTreeNode));
+    for (    SModelTreeNode treeNode : stubNodes) {
+      builder.addNode(treeNode);
+    }
+    StubsTreeNode stubsNode=new StubsTreeNode(operationContext);
+    builder.fillNode(stubsNode);
+    rootTreeNode.add(stubsNode);
+  }
+}
