@@ -1,0 +1,26 @@
+{
+  SNode declContainer=SNodeOperations.getAncestor(SLinkOperations.getTarget(thisNode,"variableDeclaration",false),"jetbrains.mps.baseLanguage.structure.IStatementListContainer",false,false);
+  if (declContainer == null) {
+    return true;
+  }
+  SNode currentContainer=SNodeOperations.getAncestor(thisNode,"jetbrains.mps.baseLanguage.structure.IStatementListContainer",false,false);
+  SNode ourContainer=null;
+  SNode assignmentExpression=SNodeOperations.as(SNodeOperations.getParent(thisNode),"jetbrains.mps.baseLanguage.structure.AssignmentExpression");
+  if (SLinkOperations.getTarget(assignmentExpression,"lValue",true) != thisNode) {
+    return true;
+  }
+  while ((currentContainer != null)) {
+    if (currentContainer == declContainer) {
+      ourContainer=currentContainer;
+      break;
+    }
+    currentContainer=SNodeOperations.getAncestor(currentContainer,"jetbrains.mps.baseLanguage.structure.IStatementListContainer",false,false);
+  }
+  if ((ourContainer != null)) {
+    Program program=DataFlowManager.getInstance().buildProgramFor(ourContainer);
+    return !(DataFlow.isInitializedRewritten(program,assignmentExpression));
+  }
+ else {
+    return true;
+  }
+}
