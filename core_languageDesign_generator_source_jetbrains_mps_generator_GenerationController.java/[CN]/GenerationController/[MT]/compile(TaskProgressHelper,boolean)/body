@@ -1,0 +1,27 @@
+{
+  fireBeforeModelsCompiled(generationOK);
+  boolean compiledSuccessfully=true;
+  long compilationStart=System.currentTimeMillis();
+  boolean needToReload=false;
+  for (  Pair<IModule,List<SModelDescriptor>> moduleListPair : myModuleSequence) {
+    IModule module=moduleListPair.o1;
+    if (module != null && module.reloadClassesAfterGeneration() && myGenerationHandler.getGenType().requiresReloading()) {
+      needToReload=true;
+    }
+    boolean compilationResult=compileModule(module,progressHelper);
+    compiledSuccessfully=compiledSuccessfully && compilationResult;
+  }
+  for (  SModelDescriptor sm : myModelsToContexts.keySet()) {
+    ModelGenerationStatusManager.getInstance().invalidateData(sm);
+  }
+  if (compiledSuccessfully && needToReload && IdeMain.getTestMode() == TestMode.NO_TEST) {
+    reloadClasses(progressHelper);
+  }
+  generationOK=generationOK && compiledSuccessfully;
+  info("Compilation finished in " + (System.currentTimeMillis() - compilationStart) + " ms");
+  if (isIDEAPresent() && !myGenerationHandler.getGenType().requiresCompilationAfterGeneration()) {
+    getProjectHandler().refreshFS();
+  }
+  fireAfterModelsCompiled(generationOK);
+  return generationOK;
+}

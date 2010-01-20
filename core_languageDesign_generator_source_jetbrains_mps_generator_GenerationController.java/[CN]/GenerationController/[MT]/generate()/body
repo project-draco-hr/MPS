@@ -1,48 +1,23 @@
 {
-  long startTime=System.currentTimeMillis();
   clearMessageVew();
   myProgress.setIndeterminate(false);
   myProgress.setFraction(0);
   long totalJob=estimateGenerationTime();
   long startJobTime=System.currentTimeMillis();
-  myMesssages.handle(new Message(MessageKind.INFORMATION,GenerationController.class,myGenerationType.getStartText()));
+  info(myGenerationHandler.getGenType().getStartText());
+  TaskProgressHelper progressHelper=new TaskProgressHelper(myProgress,totalJob,startJobTime);
   try {
     boolean generationOK=true;
     for (    Pair<IModule,List<SModelDescriptor>> moduleAndDescriptors : myModuleSequence) {
-      boolean result=generateModelsInModule(moduleAndDescriptors.o1,moduleAndDescriptors.o2,totalJob,startJobTime);
+      boolean result=generateModelsInModule(moduleAndDescriptors.o1,moduleAndDescriptors.o2,progressHelper);
       generationOK=generationOK && result;
     }
     if (generationOK) {
-      fireBeforeModelsCompiled(generationOK);
-      boolean compiledSuccessfully=true;
-      long compilationStart=System.currentTimeMillis();
-      boolean needToReload=false;
-      for (      Pair<IModule,List<SModelDescriptor>> moduleListPair : myModuleSequence) {
-        IModule module=moduleListPair.o1;
-        if (module != null && module.reloadClassesAfterGeneration() && myGenerationType.requiresReloading()) {
-          needToReload=true;
-        }
-        boolean compilationResult=compileModule(module,totalJob,startJobTime);
-        compiledSuccessfully=compiledSuccessfully && compilationResult;
-      }
-      for (      SModelDescriptor sm : myModelsToContexts.keySet()) {
-        ModelGenerationStatusManager.getInstance().invalidateData(sm);
-      }
-      if (compiledSuccessfully && needToReload && IdeMain.getTestMode() == TestMode.NO_TEST) {
-        reloadClasses(totalJob,startJobTime);
-      }
-      generationOK=generationOK && compiledSuccessfully;
-      info("Compilation finished in " + (System.currentTimeMillis() - compilationStart) + " ms");
-      fireAfterModelsCompiled(generationOK);
-    }
-    if (generationOK) {
-      info("generation completed successfully in " + (System.currentTimeMillis() - startTime) + " ms");
+      info("generation completed successfully in " + (System.currentTimeMillis() - startJobTime) + " ms");
+      generationOK=compile(progressHelper,generationOK);
     }
  else {
-      error("generation completed with errors in " + (System.currentTimeMillis() - startTime) + " ms");
-    }
-    if (isIDEAPresent() && !myGenerationType.requiresCompilationAfterGeneration()) {
-      getProjectHandler().refreshFS();
+      error("generation completed with errors in " + (System.currentTimeMillis() - startJobTime) + " ms");
     }
     fireModelsGenerated(generationOK);
   }
@@ -57,7 +32,7 @@ catch (  GenerationFailureException e) {
 catch (  Throwable t) {
     LOG.error(t);
     final String text=t.toString();
-    myMesssages.handle(new Message(MessageKind.ERROR,GenerationController.class,text));
+    error(text);
   }
   return true;
 }
