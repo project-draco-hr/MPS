@@ -1,14 +1,7 @@
 {
   boolean currentGenerationOK=true;
   IOperationContext invocationContext=myModulesToContexts.get(module);
-  progressHelper.setText2("module " + module);
-  String outputFolder=module != null ? module.getGeneratorOutputPath() : null;
-  prepareOutputFolder(outputFolder);
-  if (containsTestModels(inputModels)) {
-    String testsOutputFolder=module != null ? module.getTestsGeneratorOutputPath() : null;
-    prepareOutputFolder(testsOutputFolder);
-  }
-  info("    target root folder: \"" + outputFolder + "\"");
+  myGenerationHandler.startModule(module,inputModels,getProjectHandler(),progressHelper);
   String wasLoggingThreshold=null;
   IGenerationSession generationSession=new GenerationSession(invocationContext,mySaveTransientModels,myProgress,myMessages);
   try {
@@ -19,8 +12,8 @@
     for (    SModelDescriptor inputModel : inputModels) {
       TypeChecker.getInstance().setIsGeneration(true);
       try {
-        if (!myGenerationHandler.getGenType().isApplicable(inputModel)) {
-          LOG.error("Can't apply generation type " + myGenerationHandler.getGenType() + " to "+ inputModel.getSModelFqName());
+        if (!myGenerationHandler.canHandle(inputModel)) {
+          LOG.error("Can't generate " + inputModel.getSModelFqName());
           continue;
         }
         info("");
@@ -30,19 +23,8 @@
         GenerationStatus status=generationSession.generateModel(inputModel);
         status.setOriginalInputModel(inputModel);
         currentGenerationOK=currentGenerationOK && status.isOk();
-        info("handling output...");
         checkMonitorCanceled();
-        String targetDir=module.getOutputFor(inputModel);
-        if (status.getOutputModel() != null) {
-          boolean result=myGenerationHandler.getGenType().handleOutput(status,targetDir,invocationContext,myProgress,myMessages);
-          if (!result) {
-            info("there were errors.");
-            currentGenerationOK=false;
-          }
-        }
- else         if (!(status.isCanceled() || status.isError())) {
-          myGenerationHandler.getGenType().handleEmptyOutput(status,targetDir,invocationContext,myProgress,myMessages);
-        }
+        currentGenerationOK=currentGenerationOK && myGenerationHandler.handleOutput(module,inputModel,status,invocationContext,progressHelper);
       }
   finally {
         generationSession.discardTransients();
