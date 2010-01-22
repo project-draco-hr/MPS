@@ -1,6 +1,23 @@
 {
   String modelsLongName=inputModel.getLongName();
   SModel currentInputModel=inputModel;
+  if (myReverseRoots && inputModel == mySessionContext.getOriginalInputModel()) {
+    SModel currentInputModel_clone=createTransientModel(modelsLongName);
+    addMessage(MessageKind.INFORMATION,"reversing roots '" + currentInputModel.getSModelFqName() + "' --> '"+ currentInputModel_clone.getSModelFqName()+ "'");
+    List<SNode> rrr=currentInputModel.getRoots();
+    SNode[] roots=rrr.toArray(new SNode[rrr.size()]);
+    for (int i=0; i < roots.length / 2; i++) {
+      SNode temp=roots[i];
+      roots[i]=roots[roots.length - 1 - i];
+      roots[roots.length - 1 - i]=temp;
+    }
+    for (    SNode node : roots) {
+      SNode outputNode=CloneUtil.clone(node,currentInputModel_clone,true);
+      currentInputModel_clone.addRoot(outputNode);
+    }
+    recycleWasteModel(currentInputModel);
+    currentInputModel=currentInputModel_clone;
+  }
   List<MappingScript> preMappingScripts=mySessionContext.getPreMappingScripts();
   if (!preMappingScripts.isEmpty()) {
     boolean needToCloneInputMode=!myDiscardTransients;
@@ -17,7 +34,7 @@
     if (needToCloneInputMode) {
       SModel currentInputModel_clone=createTransientModel(modelsLongName);
       addMessage(MessageKind.INFORMATION,"clone model '" + currentInputModel.getSModelFqName() + "' --> '"+ currentInputModel_clone.getSModelFqName()+ "'");
-      CloneUtil.cloneModel(currentInputModel,currentInputModel_clone,inputModel == mySessionContext.getOriginalInputModel());
+      CloneUtil.cloneModel(currentInputModel,currentInputModel_clone,currentInputModel == mySessionContext.getOriginalInputModel());
       if (!myDiscardTransients) {
         mySessionContext.getGenerationTracer().registerPreMappingScripts(currentInputModel,currentInputModel_clone,preMappingScripts);
       }
