@@ -2,8 +2,17 @@
   ModelAccess.instance().runWriteAction(new Runnable(){
     public void run(){
       info("Start " + cycle);
-      cycle.generate(gm,new GenerateFilesGenerationType(){
-        @Override public boolean requiresCompilationAfterGeneration(){
+      cycle.generate(gm,new JavaGenerationHandler(){
+        @Override public long estimateCompilationMillis(        List<Pair<IModule,List<SModelDescriptor>>> input){
+          if (requiresCompilationAfterGeneration()) {
+            return super.estimateCompilationMillis(input);
+          }
+          return ModelsProgressUtil.estimateReloadAllTimeMillis();
+        }
+        @Override protected boolean compileModule(        IModule module,        IProjectHandler projectHandler,        boolean[] ideaIsFresh,        ITaskProgressHelper progressHelper) throws RemoteException, GenerationCanceledException {
+          return requiresCompilationAfterGeneration() ? super.compileModule(module,projectHandler,ideaIsFresh,progressHelper) : true;
+        }
+        private boolean requiresCompilationAfterGeneration(){
           return Boolean.parseBoolean(myWhatToDo.getProperty(GenerateTask.COMPILE));
         }
       }

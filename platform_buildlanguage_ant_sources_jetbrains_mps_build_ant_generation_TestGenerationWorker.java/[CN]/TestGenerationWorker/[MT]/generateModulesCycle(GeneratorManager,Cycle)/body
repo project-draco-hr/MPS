@@ -1,12 +1,12 @@
 {
   String currentTestName=myBuildServerMessageFormat.escapeBuildMessage(new StringBuffer(cycle.toString())).toString();
   System.out.println(myBuildServerMessageFormat.formatTestStart(currentTestName));
-  cycle.generate(gm,myGenerationType,myMessageHandler);
+  cycle.generate(gm,myGenerationHandler,myMessageHandler);
   List<String> diffReports;
   if (Boolean.parseBoolean(myWhatToDo.getProperty(TestGenerationOnTeamcity.SHOW_DIFF))) {
     diffReports=ModelAccess.instance().runReadAction(new Computable<List<String>>(){
       public List<String> compute(){
-        return DiffReporter.createDiffReports(myGenerationType);
+        return DiffReporter.createDiffReports(myGenerationHandler);
       }
     }
 );
@@ -15,12 +15,12 @@
     diffReports=new ArrayList<String>();
   }
   final List<SModel> outputModels=new ArrayList<SModel>();
-  outputModels.addAll(myGenerationType.getOutputModels());
+  outputModels.addAll(myGenerationHandler.getOutputModels());
   List<CompilationResult> compilationResult;
   if (Boolean.parseBoolean(myWhatToDo.getProperty(GenerateTask.COMPILE))) {
     compilationResult=ModelAccess.instance().runReadAction(new Computable<List<CompilationResult>>(){
       public List<CompilationResult> compute(){
-        return myGenerationType.compile(IAdaptiveProgressMonitor.NULL_PROGRESS_MONITOR);
+        return myGenerationHandler.compile(ITaskProgressHelper.EMPTY);
       }
     }
 );
@@ -39,7 +39,7 @@
   if (invokeTests()) {
     TestResult testResult=new TestResult();
     testResult.addListener(new MyTestListener());
-    ProjectTester.invokeTests(myGenerationType,outputModels,testResult,cycle.getClassLoader());
+    ProjectTester.invokeTests(myGenerationHandler,outputModels,testResult,cycle.getClassLoader());
   }
-  myGenerationType.clean();
+  myGenerationHandler.clean();
 }
