@@ -1,34 +1,17 @@
 {
-  final OutputViewTool viewTool=OutputViewTool.getOutputViewTool(context.getMPSProject());
-  viewTool.clear();
-  List<SNode> roots=new ArrayList<SNode>(status.getOutputModel().getRoots());
-  Collections.sort(roots,new Comparator<SNode>(){
-    public int compare(    SNode o1,    SNode o2){
-      String name1=o1.getName();
-      String name2=o2.getName();
-      if (name1 == null && name2 == null) {
-        return o1.hashCode() - o2.hashCode();
-      }
-      if (name1 == null)       return -1;
-      if (name2 == null)       return 1;
-      return name1.compareTo(name2);
+  String targetDir=module.getOutputFor(inputModel);
+  List<SNode> roots=status.getOutputModel().getRoots();
+  boolean generatedOk=true;
+  for (  SNode output : ListSequence.fromList(roots)) {
+    String fileName=output.getName() + "." + TextGenManager.instance().getExtension(output);
+    TextGenerationResult result=TextGenerationUtil.generateText(ocontext,output);
+    if (result.hasErrors()) {
+      warning("cannot generate " + fileName);
+      generatedOk=false;
+    }
+ else {
+      fileGenerated(targetDir,fileName,result);
     }
   }
-);
-  boolean wereErrors=false;
-  for (  SNode root : roots) {
-    TextGenerationResult result=TextGenerationUtil.generateText(context,root);
-    wereErrors|=result.hasErrors();
-    final String nodeText=result.getText();
-    ThreadUtils.runInUIThreadNoWait(new Runnable(){
-      public void run(){
-        viewTool.append(nodeText);
-        viewTool.append("\n");
-        viewTool.append("\r\n-------------------------------------------------------------------------------\n");
-      }
-    }
-);
-  }
-  viewTool.openToolLater(true);
-  return !wereErrors;
+  return generatedOk;
 }
