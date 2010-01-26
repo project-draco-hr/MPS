@@ -1,0 +1,32 @@
+{
+  List<String> commandLine=new ArrayList<String>();
+  commandLine.add(JavaEnvUtils.getJreExecutable("java"));
+  final List<File> classPaths=new ArrayList<File>(moduleClassPath);
+  classPaths.add(new File(com.intellij.openapi.application.PathManager.getResourceRoot(getClass(),"/" + getClass().getName().replace('.','/') + ".class")).getAbsoluteFile());
+  classPaths.add(new File(PathManager.getHomePath() + File.separator + "lib"+ File.separator+ "junit4"+ File.separator+ "junit-4.1.jar"));
+  StringBuffer sb=new StringBuffer();
+  String pathSeparator=System.getProperty("path.separator");
+  for (  File cp : classPaths) {
+    sb.append(pathSeparator);
+    sb.append(cp.getAbsolutePath());
+  }
+  commandLine.add("-classpath");
+  commandLine.add(sb.toString());
+  commandLine.add(UnitTestRunner.class.getCanonicalName());
+  for (  String testClassName : getTestClassesNames(handler,outputModels,createClassLoader(moduleClassPath))) {
+    commandLine.add("-c");
+    commandLine.add(testClassName);
+  }
+  ProcessBuilder builder=new ProcessBuilder(commandLine);
+  try {
+    Process process=builder.start();
+    UnitTestOutputReader reader=new UnitTestOutputReader(process,new MyUnitTestAdapter());
+    int result=reader.start();
+    if (result != 0) {
+      error("Process Exited With Code " + result);
+    }
+  }
+ catch (  IOException e) {
+    log(e);
+  }
+}
