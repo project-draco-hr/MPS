@@ -3,7 +3,8 @@
   System.out.println(myBuildServerMessageFormat.formatTestStart(currentTestName));
   cycle.generate(gm,myGenerationHandler,myMessageHandler);
   List<String> diffReports;
-  if (Boolean.parseBoolean(myWhatToDo.getProperty(TestGenerationOnTeamcity.SHOW_DIFF))) {
+  boolean generationOk=myMessageHandler.getGenerationErrors().isEmpty();
+  if (generationOk && Boolean.parseBoolean(myWhatToDo.getProperty(TestGenerationOnTeamcity.SHOW_DIFF))) {
     diffReports=ModelAccess.instance().runReadAction(new Computable<List<String>>(){
       public List<String> compute(){
         return DiffReporter.createDiffReports(myGenerationHandler);
@@ -17,7 +18,7 @@
   final List<SModel> outputModels=new ArrayList<SModel>();
   outputModels.addAll(myGenerationHandler.getOutputModels());
   List<CompilationResult> compilationResult=null;
-  if (Boolean.parseBoolean(myWhatToDo.getProperty(GenerateTask.COMPILE))) {
+  if (generationOk && Boolean.parseBoolean(myWhatToDo.getProperty(GenerateTask.COMPILE))) {
     compilationResult=ModelAccess.instance().runReadAction(new Computable<List<CompilationResult>>(){
       public List<CompilationResult> compute(){
         return myGenerationHandler.compile(ITaskProgressHelper.EMPTY);
@@ -36,6 +37,10 @@
     System.out.println("");
   }
   System.out.println(myBuildServerMessageFormat.formatTestFinish(currentTestName));
+  if (isSaveGeneratedFilesOnDisk() && generationOk && compilationResult.isEmpty()&& !diffReports.isEmpty()) {
+    info("Saving files generated from " + cycle.toString() + " on disk.");
+    myGenerationHandler.saveGeneratedFilesOnDisk();
+  }
   if (isInvokeTestsSet() && ((ModelCycle)cycle).isUserModel()) {
     runTests(cycle.getClassPath(),myGenerationHandler,outputModels);
   }
