@@ -3,17 +3,26 @@
     final Wrappers._T<SModelDescriptor> result=new Wrappers._T<SModelDescriptor>();
     ModelAccess.instance().runWriteActionInCommand(new Runnable(){
       public void run(){
-        String namespace=NewSubTestModel_Action.this.model.getLongName();
+        String namespace=NewSubTestModel_Action.this.getNamespace();
         String name=NewSubTestModel_Action.this.getTestModelName();
         SModelFqName newModelFqName=new SModelFqName(namespace,name,SModelStereotype.TESTS);
         result.value=NewSubTestModel_Action.this.model.getModule().createModel(newModelFqName,NewSubTestModel_Action.this.model.getSModelRoot());
+        SModel createdModel=result.value.getSModel();
+        SModel sourceModel=NewSubTestModel_Action.this.model.getSModel();
+        createdModel.addImportedModel(sourceModel.getSModelReference());
+        for (        SModel.ImportElement importElement : sourceModel.getImportElements()) {
+          createdModel.addImportedModel(importElement.getModelReference());
+        }
+        for (        ModuleReference importedLanguage : sourceModel.getExplicitlyImportedLanguages()) {
+          createdModel.addLanguage(importedLanguage);
+        }
+        for (        ModuleReference devKit : sourceModel.getDevKitRefs()) {
+          createdModel.addDevKit(devKit);
+        }
       }
     }
 );
-    if (result.value != null) {
-      SModelDescriptor modelDescriptor=result.value;
-      ProjectPane.getInstance(NewSubTestModel_Action.this.ideaProject).selectModel(modelDescriptor);
-    }
+    ProjectPane.getInstance(NewSubTestModel_Action.this.ideaProject).selectModel(result.value);
   }
  catch (  Throwable t) {
     if (log.isErrorEnabled()) {
