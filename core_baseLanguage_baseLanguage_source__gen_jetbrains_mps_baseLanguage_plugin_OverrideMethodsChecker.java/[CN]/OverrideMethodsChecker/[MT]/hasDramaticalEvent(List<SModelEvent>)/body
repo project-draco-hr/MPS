@@ -1,0 +1,46 @@
+{
+  if (this.myIndexWasNotReady) {
+    return true;
+  }
+  for (  SModelEvent event : ListSequence.fromList(events)) {
+    if (event instanceof SModelRootEvent || event instanceof SModelFileChangedEvent) {
+      return true;
+    }
+    if (event instanceof SModelChildEvent) {
+      SModelChildEvent childEvent=(SModelChildEvent)event;
+      SNode child=childEvent.getChild();
+      String childRole=childEvent.getChildRole();
+      if (SNodeOperations.isInstanceOf(child,"jetbrains.mps.baseLanguage.structure.Interface") || SNodeOperations.isInstanceOf(child,"jetbrains.mps.baseLanguage.structure.ClassConcept") || SNodeOperations.isInstanceOf(child,"jetbrains.mps.baseLanguage.structure.AnonymousClass")) {
+        return true;
+      }
+      if (SNodeOperations.isInstanceOf(child,"jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration") && SPropertyOperations.getString(SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.Classifier","method"),"role").equals(childRole)) {
+        return true;
+      }
+      if (SNodeOperations.isInstanceOf(child,"jetbrains.mps.baseLanguage.structure.ClassifierType") && (SPropertyOperations.getString(SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.Interface","extendedInterface"),"role").equals(childRole) || SPropertyOperations.getString(SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.ClassConcept","superclass"),"role").equals(childRole) || SPropertyOperations.getString(SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.ClassConcept","implementedInterface"),"role").equals(childRole))) {
+        return true;
+      }
+      if (SNodeOperations.isInstanceOf(child,"jetbrains.mps.baseLanguage.structure.ParameterDeclaration") && SPropertyOperations.getString(SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration","parameter"),"role").equals(childRole)) {
+        return true;
+      }
+      if (SNodeOperations.isInstanceOf(child,"jetbrains.mps.baseLanguage.structure.Type") && this.isParameterType(child)) {
+        return true;
+      }
+    }
+    if (event instanceof SModelReferenceEvent) {
+      SModelReferenceEvent referenceEvent=(SModelReferenceEvent)event;
+      SReference reference=referenceEvent.getReference();
+      SNode sourceNode=reference.getSourceNode();
+      String referenceRole=reference.getRole();
+      if (SPropertyOperations.getString(SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.ClassifierType","classifier"),"role").equals(referenceRole) && SNodeOperations.isInstanceOf(sourceNode,"jetbrains.mps.baseLanguage.structure.ClassifierType") && (SNodeOperations.isInstanceOf(SNodeOperations.getParent(sourceNode),"jetbrains.mps.baseLanguage.structure.Classifier"))) {
+        return true;
+      }
+      if (SPropertyOperations.getString(SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.AnonymousClass","classifier"),"role").equals(referenceRole) && SNodeOperations.isInstanceOf(sourceNode,"jetbrains.mps.baseLanguage.structure.AnonymousClass")) {
+        return true;
+      }
+      if (SNodeOperations.isInstanceOf(sourceNode,"jetbrains.mps.baseLanguage.structure.Type") && this.isParameterType(sourceNode)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}

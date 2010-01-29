@@ -1,0 +1,37 @@
+{
+  Set<VirtualFile> notModifiedModelFiles=new HashSet();
+  List<ClassConcept> modifiedClasses=new ArrayList();
+  List<Interface> modifiedInterfaces=new ArrayList();
+  for (  SModelDescriptor modelDescriptor : scope.getModelDescriptors()) {
+    IFile modelFile=modelDescriptor.getModelFile();
+    if (modelFile == null) {
+      continue;
+    }
+    if (SModelRepository.getInstance().isChanged(modelDescriptor)) {
+      for (      SNode sNode : modelDescriptor.getSModel().allNodes()) {
+        BaseAdapter adapter=sNode.getAdapter();
+        if (adapter instanceof ClassConcept) {
+          modifiedClasses.add((ClassConcept)adapter);
+        }
+ else         if (adapter instanceof Interface) {
+          modifiedInterfaces.add((Interface)adapter);
+        }
+      }
+    }
+ else {
+      notModifiedModelFiles.add(modelFile.toVirtualFile());
+    }
+  }
+  List<SNode> result=new ArrayList();
+  List<SNode> superClassifiers=new ArrayList();
+  superClassifiers.add(classifier);
+  ValueProcessor valueProcessor=new ValueProcessor(result,superClassifiers);
+  ModifiedsuccessorFinder modifiedSuccessorFinder=new ModifiedsuccessorFinder(modifiedClasses,modifiedInterfaces,result,superClassifiers);
+  SearchScope searchScope=new SearchScope(notModifiedModelFiles);
+  for (int i=0; i < superClassifiers.size(); i++) {
+    SNode superClassifier=superClassifiers.get(i);
+    FileBasedIndex.getInstance().processValues(ClassifierSuccessorsIndexer.NAME,new SNodeId(superClassifier),null,valueProcessor,searchScope);
+    modifiedSuccessorFinder.process(superClassifier);
+  }
+  return result;
+}
