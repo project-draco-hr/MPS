@@ -3,26 +3,49 @@
     return myInvalidationResult;
   }
   boolean result=false;
-  Set<SNode> invalidatedNodes=new HashSet<SNode>();
-  Set<SNode> newNodesToInvalidate=new HashSet<SNode>();
-  Set<SNode> currentNodesToInvalidate=myCurrentNodesToInvalidate;
+  Set<SNode> invalidatedNodes_A=new HashSet<SNode>();
+  Set<SNode> invalidatedNodes_B=new HashSet<SNode>();
+  Set<SNode> newNodesToInvalidate_A=new HashSet<SNode>();
+  Set<SNode> newNodesToInvalidate_B=new HashSet<SNode>();
+  Set<SNode> currentNodesToInvalidate_A=myCurrentNodesToInvalidate;
+  Set<SNode> currentNodesToInvalidate_B=new HashSet<SNode>();
   if (myCacheWasCurrentlyRebuiltTypesystem) {
-    currentNodesToInvalidate.addAll(myNodesDependentOnCaches);
+    currentNodesToInvalidate_A.addAll(myNodesDependentOnCaches);
   }
-  while (!currentNodesToInvalidate.isEmpty()) {
-    for (    SNode nodeToInvalidate : currentNodesToInvalidate) {
-      if (invalidatedNodes.contains(nodeToInvalidate))       continue;
-      invalidateNodeTypesystem(nodeToInvalidate);
-      invalidatedNodes.add(nodeToInvalidate);
-      WeakSet<SNode> nodes=myNodesToDependentNodes.get(nodeToInvalidate);
+  while (!currentNodesToInvalidate_A.isEmpty() || !currentNodesToInvalidate_B.isEmpty()) {
+    for (    SNode nodeToInvalidate : currentNodesToInvalidate_A) {
+      if (invalidatedNodes_A.contains(nodeToInvalidate))       continue;
+      invalidateNodeTypesystem(nodeToInvalidate,true);
+      invalidatedNodes_A.add(nodeToInvalidate);
+      WeakSet<SNode> nodes=myNodesToDependentNodes_A.get(nodeToInvalidate);
       if (nodes != null) {
-        newNodesToInvalidate.addAll(nodes);
+        newNodesToInvalidate_A.addAll(nodes);
+      }
+      nodes=myNodesToDependentNodes_B.get(nodeToInvalidate);
+      if (nodes != null) {
+        newNodesToInvalidate_B.addAll(nodes);
       }
     }
-    currentNodesToInvalidate=newNodesToInvalidate;
-    newNodesToInvalidate=new HashSet<SNode>();
+    for (    SNode nodeToInvalidate : currentNodesToInvalidate_B) {
+      if (invalidatedNodes_A.contains(nodeToInvalidate))       continue;
+      if (invalidatedNodes_B.contains(nodeToInvalidate))       continue;
+      invalidateNodeTypesystem(nodeToInvalidate,false);
+      invalidatedNodes_B.add(nodeToInvalidate);
+      WeakSet<SNode> nodes=myNodesToDependentNodes_A.get(nodeToInvalidate);
+      if (nodes != null) {
+        newNodesToInvalidate_B.addAll(nodes);
+      }
+      nodes=myNodesToDependentNodes_B.get(nodeToInvalidate);
+      if (nodes != null) {
+        newNodesToInvalidate_B.addAll(nodes);
+      }
+    }
+    currentNodesToInvalidate_A=newNodesToInvalidate_A;
+    currentNodesToInvalidate_B=newNodesToInvalidate_B;
+    newNodesToInvalidate_A=new HashSet<SNode>();
+    newNodesToInvalidate_B=new HashSet<SNode>();
   }
-  result=!invalidatedNodes.isEmpty();
+  result=!invalidatedNodes_A.isEmpty() || !invalidatedNodes_B.isEmpty();
   myCurrentNodesToInvalidate.clear();
   myCacheWasCurrentlyRebuiltTypesystem=false;
   myInvalidationWasPerformed=true;
