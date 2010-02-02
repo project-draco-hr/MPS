@@ -23,6 +23,7 @@
   ProgressManager.getInstance().run(new Task.Modal(project,"Creating",false){
     public void run(    @NotNull ProgressIndicator indicator){
       indicator.setIndeterminate(true);
+      final Wrappers._T<Solution> sandbox=new Wrappers._T<Solution>(null);
       ModelAccess.instance().runWriteAction(new Runnable(){
         public void run(){
           language.value=myThis.createNewLanguage();
@@ -30,11 +31,22 @@
             myThis.createRuntimeSolution();
           }
           if (myThis.myNeedSandbox0.isSelected()) {
-            myThis.createSandboxSolution();
+            sandbox.value=myThis.createSandboxSolution();
           }
         }
       }
 );
+      if (sandbox.value != null) {
+        ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+          public void run(){
+            SModel createdModel=sandbox.value.getOwnModelDescriptors().get(0).getSModel();
+            for (            Language extendedLanguage : myThis.getResult().getExtendedLanguages()) {
+              createdModel.addLanguage(extendedLanguage);
+            }
+          }
+        }
+);
+      }
     }
   }
 );
