@@ -19,11 +19,11 @@
   }
   myThis.getDialog().dispose();
   final Wrappers._T<Language> language=new Wrappers._T<Language>(null);
+  final Wrappers._T<Solution> sandbox=new Wrappers._T<Solution>(null);
   Project project=myThis.getProject().getComponent(Project.class);
   ProgressManager.getInstance().run(new Task.Modal(project,"Creating",false){
     public void run(    @NotNull ProgressIndicator indicator){
       indicator.setIndeterminate(true);
-      final Wrappers._T<Solution> sandbox=new Wrappers._T<Solution>(null);
       ModelAccess.instance().runWriteAction(new Runnable(){
         public void run(){
           language.value=myThis.createNewLanguage();
@@ -36,26 +36,24 @@
         }
       }
 );
-      if (sandbox.value != null) {
-        ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-          public void run(){
-            SModel createdModel=sandbox.value.getOwnModelDescriptors().get(0).getSModel();
-            for (            Language extendedLanguage : myThis.getResult().getExtendedLanguages()) {
-              createdModel.addLanguage(extendedLanguage);
-            }
-          }
-        }
-);
-      }
     }
   }
 );
   ModelAccess.instance().runWriteActionInCommandAsync(new Runnable(){
     public void run(){
-      LanguageAspect.STRUCTURE.createNew(language.value,false);
-      LanguageAspect.EDITOR.createNew(language.value,false);
-      LanguageAspect.CONSTRAINTS.createNew(language.value,false);
-      LanguageAspect.TYPESYSTEM.createNew(language.value,false);
+      if (!(language.value.getSModelRoots().isEmpty())) {
+        LanguageAspect.STRUCTURE.createNew(language.value,false);
+        LanguageAspect.EDITOR.createNew(language.value,false);
+        LanguageAspect.CONSTRAINTS.createNew(language.value,false);
+        LanguageAspect.TYPESYSTEM.createNew(language.value,false);
+      }
+      if (sandbox.value != null) {
+        SModel createdModel=sandbox.value.getOwnModelDescriptors().get(0).getSModel();
+        createdModel.addLanguage(myThis.getResult());
+        for (        Language extendedLanguage : myThis.getResult().getExtendedLanguages()) {
+          createdModel.addLanguage(extendedLanguage);
+        }
+      }
     }
   }
 );
