@@ -2,10 +2,41 @@
   super(project);
   myFavoritesManager=manager;
   myProjectView=projectView;
+  myContext=getMPSProject().createOperationContext();
   myTree=new MPSTree(){
     protected MPSTreeNode rebuild(){
-      ProjectTreeNode projectTreeNode=new ProjectTreeNode(myProject);
-      return projectTreeNode;
+      String subId=getSubId();
+      TextTreeNode invisibleRoot=new TextTreeNode(subId,myContext);
+      List<Object> objectList=myFavoritesManager.getRoots(subId);
+      if (objectList == null)       return invisibleRoot;
+      for (      Object o : objectList) {
+        if (o instanceof SModelReference) {
+          SModelReference modelReference=(SModelReference)o;
+          SModelDescriptor modelDescriptor=GlobalScope.getInstance().getModelDescriptor(modelReference);
+          if (modelDescriptor == null)           continue;
+          SModelTreeNode modelTreeNode=new SModelTreeNode(modelDescriptor,null,myContext);
+          invisibleRoot.add(modelTreeNode);
+        }
+ else         if (o instanceof ModuleReference) {
+          ModuleReference moduleReference=(ModuleReference)o;
+          IModule module=MPSModuleRepository.getInstance().getModule(moduleReference);
+          if (module == null)           continue;
+          ProjectModuleTreeNode moduleTreeNode=ProjectModuleTreeNode.createFor(getMPSProject(),module);
+          SModelsSubtree.create(moduleTreeNode,myContext);
+          invisibleRoot.add(moduleTreeNode);
+        }
+ else         if (o instanceof Pair) {
+          Pair<SModelReference,Integer> pair=(Pair<SModelReference,Integer>)o;
+          SModelReference modelReference=pair.o1;
+          Integer indexInModel=pair.o2;
+          SModelDescriptor modelDescriptor=GlobalScope.getInstance().getModelDescriptor(modelReference);
+          if (modelDescriptor == null)           continue;
+          SNode node=modelDescriptor.getSModel().getRoots().get(indexInModel);
+          SNodeTreeNode nodeTreeNode=new SNodeTreeNode(node,myContext);
+          invisibleRoot.add(nodeTreeNode);
+        }
+      }
+      return invisibleRoot;
     }
   }
 ;
@@ -32,4 +63,5 @@
   }
 ;
   myFavoritesManager.addListener(myFavoritesListener);
+  getTree().rebuildLater();
 }
