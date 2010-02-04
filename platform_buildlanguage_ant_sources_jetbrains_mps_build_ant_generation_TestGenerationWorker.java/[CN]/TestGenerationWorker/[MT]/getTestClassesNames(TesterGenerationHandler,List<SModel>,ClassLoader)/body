@@ -1,5 +1,6 @@
 {
   List<String> testClasses=new ArrayList<String>();
+  List<String> testMpsLaunchClasses=new ArrayList<String>();
   for (  final SModel model : outputModels) {
     for (    final SNode outputRoot : model.getRoots()) {
       if (baseClassLoader == null) {
@@ -25,7 +26,7 @@
         final Class testClass=Class.forName(className,true,classLoader);
         if (Modifier.isAbstract(testClass.getModifiers()) || Modifier.isInterface(testClass.getModifiers()))         continue;
         if (Modifier.isPrivate(testClass.getModifiers()))         continue;
-        if (testClass.getAnnotation(classLoader.loadClass(MPSLaunch.class.getName())) != null)         continue;
+        boolean mpsLaunch=(testClass.getAnnotation(classLoader.loadClass(MPSLaunch.class.getName())) != null);
         Class<TestCase> testCaseClass=(Class<TestCase>)classLoader.loadClass(TestCase.class.getName());
         if (testCaseClass.isAssignableFrom(testClass)) {
           boolean hasTestMethods=false;
@@ -36,7 +37,12 @@
             }
           }
           if (hasTestMethods) {
-            testClasses.add(className);
+            if (mpsLaunch) {
+              testMpsLaunchClasses.add(className);
+            }
+ else {
+              testClasses.add(className);
+            }
           }
         }
       }
@@ -47,5 +53,5 @@ catch (      Throwable throwable) {
       }
     }
   }
-  return testClasses;
+  return new Pair<List<String>,List<String>>(testClasses,testMpsLaunchClasses);
 }
