@@ -1,0 +1,24 @@
+{
+  ThreadReference thread=event.thread();
+  LOG.assertLog(thread.isSuspended());
+  preprocessEvent(suspendContext,thread);
+  SuspendContextCommand suspendCommand=new SuspendContextCommand(suspendContext);
+  final SuspendManager suspendManager=mySuspendManager;
+  final LocatableEventRequestor requestor=(LocatableEventRequestor)getRequestManager().findRequestor(event.request());
+  boolean requestHit=false;
+  try {
+    requestHit=(requestor != null) && requestor.processLocatableEvent(suspendCommand,event);
+  }
+ catch (  Throwable t) {
+    LOG.error(t);
+  }
+  if (requestHit && requestor instanceof MPSBreakpoint) {
+    myBreakpointManager.processBreakpointHit((MPSBreakpoint)requestor);
+  }
+  if (!requestHit) {
+    suspendManager.voteResume(suspendContext);
+  }
+ else {
+    suspendManager.voteSuspend(suspendContext);
+  }
+}

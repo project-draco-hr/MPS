@@ -1,0 +1,40 @@
+{
+  final Semaphore semaphore=new Semaphore();
+  semaphore.down();
+  final boolean[] connectorIsReady={false};
+  final DebugProcessMulticaster processMulticaster=myDebugVMEventsProcessor.getMulticaster();
+  processMulticaster.addListener(new DebugProcessAdapter(){
+    public void connectorIsReady(){
+      connectorIsReady[0]=true;
+      semaphore.up();
+      processMulticaster.removeListener(this);
+    }
+  }
+);
+  VirtualMachine vm=null;
+  try {
+    final long time=System.currentTimeMillis();
+    while (System.currentTimeMillis() - time < LOCAL_START_TIMEOUT) {
+      try {
+        vm=doCreateVirtualMachine();
+        break;
+      }
+ catch (      Throwable t) {
+        LOG.error(t);
+      }
+    }
+  }
+  finally {
+    semaphore.up();
+  }
+  if (vm != null) {
+    final VirtualMachine vm1=vm;
+    executeAfterProcessStarted(new Runnable(){
+      public void run(){
+        myDebugVMEventsProcessor.commitVM(vm1);
+      }
+    }
+);
+  }
+  semaphore.waitFor();
+}
