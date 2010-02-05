@@ -14,30 +14,25 @@
 );
   }
   if (toCompile.isEmpty())   return;
-  info("Starting compilation:");
-  StringBuffer sb=new StringBuffer();
-  for (  IModule m : toCompile) {
-    sb.append("    ");
-    sb.append(m.getModuleFqName());
-    sb.append("\n");
-  }
-  info(sb.toString());
-  CompilationResult result=ModelAccess.instance().runReadAction(new Computable<CompilationResult>(){
-    public CompilationResult compute(){
-      return new ModuleMaker().make(toCompile,new InfoProgressIndicator());
+  startMake(myCompiledLibraries,toCompile);
+  CompilationResult result=null;
+  try {
+    result=ModelAccess.instance().runReadAction(new Computable<CompilationResult>(){
+      public CompilationResult compute(){
+        return new ModuleMaker().make(toCompile,new InfoProgressIndicator());
+      }
     }
-  }
 );
-  if (!result.isOk()) {
-    error(result.toString());
-    throw new RuntimeException(result.toString());
   }
- else {
-    info(result.toString());
+ catch (  Throwable t) {
+    log(t);
   }
-  if (result.isReloadingNeeded()) {
-    info("Reloading classes...");
-    ClassLoaderManager.getInstance().reloadAll(new InfoProgressIndicator());
-    info("Classes reloaded");
+  if (result != null) {
+    finishMake(myCompiledLibraries,result);
+    if (result.isReloadingNeeded()) {
+      info("Reloading classes...");
+      ClassLoaderManager.getInstance().reloadAll(new InfoProgressIndicator());
+      info("Classes reloaded");
+    }
   }
 }
