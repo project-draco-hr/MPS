@@ -11,32 +11,50 @@
     }
   }
 );
-  VirtualMachine vm=null;
-  try {
-    final long time=System.currentTimeMillis();
-    while (System.currentTimeMillis() - time < LOCAL_START_TIMEOUT) {
+  myDebuggerManagerThread.schedule(new DebuggerCommand(){
+    protected void action(){
+      VirtualMachine vm=null;
       try {
-        vm=doCreateVirtualMachine();
-        break;
+        final long time=System.currentTimeMillis();
+        while (System.currentTimeMillis() - time < LOCAL_START_TIMEOUT) {
+          try {
+            vm=doCreateVirtualMachine();
+            break;
+          }
+ catch (          Throwable t) {
+            fail();
+            LOG.error(t);
+            break;
+          }
+        }
       }
- catch (      Throwable t) {
-        fail();
-        LOG.error(t);
-        break;
-      }
-    }
-  }
   finally {
-    semaphore.up();
-  }
-  if (vm != null) {
-    final VirtualMachine vm1=vm;
-    executeAfterProcessStarted(new Runnable(){
-      public void run(){
-        myDebugVMEventsProcessor.commitVM(vm1);
+        semaphore.up();
+      }
+      if (vm != null) {
+        final VirtualMachine vm1=vm;
+        executeAfterProcessStarted(new Runnable(){
+          public void run(){
+            myDebuggerManagerThread.schedule(new DebuggerCommand(){
+              protected void action() throws Exception {
+                myDebugVMEventsProcessor.commitVM(vm1);
+              }
+            }
+);
+          }
+        }
+);
       }
     }
-);
+    protected void commandCancelled(){
+      try {
+        super.commandCancelled();
+      }
+  finally {
+        semaphore.up();
+      }
+    }
   }
+);
   semaphore.waitFor();
 }
