@@ -1,0 +1,31 @@
+{
+  if (getTree() == null)   return;
+  DefaultTreeModel treeModel=(DefaultTreeModel)getTree().getModel();
+  for (  SNode removed : removedNodes) {
+    SNodeTreeNode node=(SNodeTreeNode)myTreeNode.findDescendantWith(removed);
+    if (node == null)     continue;
+    treeModel.removeNodeFromParent(node);
+  }
+  outer:   for (  SNode added : addedNodes) {
+    if (added.isDeleted())     continue;
+    if (added.getParent() == null)     continue;
+    SNodeTreeNode parent=(SNodeTreeNode)myTreeNode.findDescendantWith(added.getParent());
+    if (parent == null)     continue;
+    if (!parent.isInitialized())     continue;
+    SNode parentNode=parent.getSNode();
+    int indexof=parentNode.getChildren().indexOf(added);
+    for (    Object childO : CollectionUtil.asIterable(parent.children())) {
+      if (childO instanceof SNodeTreeNode) {
+        SNodeTreeNode child=(SNodeTreeNode)childO;
+        SNode childNode=child.getSNode();
+        int index=parentNode.getChildren().indexOf(childNode);
+        if (index > indexof) {
+          SNodeTreeNode newTreeNode=new SNodeTreeNode(added,added.getRole_(),getOperationContext());
+          treeModel.insertNodeInto(newTreeNode,parent,treeModel.getIndexOfChild(parent,child));
+          continue outer;
+        }
+      }
+    }
+    treeModel.insertNodeInto(new SNodeTreeNode(added,added.getRole_(),getOperationContext()),parent,parent.getChildCount());
+  }
+}
