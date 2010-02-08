@@ -1,0 +1,49 @@
+{
+  SModel model=(SModel)modelInfo.getModel();
+  String pkg=modelInfo.getModel().getSModelFqName().getLongName();
+  PathItem pi=new GWTModulePathItem(location.getPath());
+  List<Tuples._3<String,String,SNode>> modlst=ListSequence.fromList(new ArrayList<Tuples._3<String,String,SNode>>());
+  SNode sample=SConceptOperations.createNewNode("jetbrains.mps.gwt.client.structure.GWTModule",null);
+  for (  String modres : ListSequence.fromList(pi.resources(pkg))) {
+    SNode module=SConceptOperations.createNewNode(NameUtil.nodeFQName(SConceptOperations.findConceptDeclaration("jetbrains.mps.gwt.client.structure.GWTModule")),sample);
+    module.setId(GWTModuleReader.createId(pi.baseName(modres)));
+    SPropertyOperations.set(module,"name",pi.baseName(modres));
+    SModelOperations.addRootNode(model,module);
+    ListSequence.fromList(modlst).addElement(MultiTuple.<String,String,SNode>from(pkg,modres,module));
+  }
+  GWTModuleReader reader=new GWTModuleReader(new GWTModuleReader.Resolver(){
+    public SModelReference stubModelReference(    String pk){
+      return GWTModuleStubs.this.javaStubRef(pk);
+    }
+  }
+,new GWTModuleReader.Resolver(){
+    public SModelReference stubModelReference(    String pk){
+      return GWTModuleStubs.this.smodelRefWithId(pk);
+    }
+  }
+);
+  for (  Tuples._3<String,String,SNode> modpair : ListSequence.fromList(modlst)) {
+    InputStream is=null;
+    try {
+      is=pi.openResource(modpair._0(),modpair._1());
+      reader.read(modpair._2(),new SAXBuilder().build(is));
+    }
+ catch (    IOException e) {
+      e.printStackTrace();
+    }
+catch (    JDOMException e) {
+      e.printStackTrace();
+    }
+catch (    GWTModuleFormatException e) {
+      e.printStackTrace();
+    }
+    if (is != null) {
+      try {
+        is.close();
+      }
+ catch (      IOException e) {
+      }
+    }
+  }
+  SNodeOperations.deleteNode(sample);
+}
