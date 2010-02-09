@@ -1,0 +1,35 @@
+{
+  List<MappingScript> preMappingScripts=mySessionContext.getPreMappingScripts();
+  if (!preMappingScripts.isEmpty()) {
+    boolean needToCloneInputMode=!myDiscardTransients;
+    if (!needToCloneInputMode) {
+      for (      MappingScript preMappingScript : preMappingScripts) {
+        if (preMappingScript.getScriptKind() == MappingScriptKind.pre_process_input_model) {
+          if (preMappingScript.getModifiesModel()) {
+            needToCloneInputMode=true;
+            break;
+          }
+        }
+      }
+    }
+    if (needToCloneInputMode) {
+      SModel currentInputModel_clone=createTransientModel();
+      info("clone model '" + currentInputModel.getSModelFqName() + "' --> '"+ currentInputModel_clone.getSModelFqName()+ "'");
+      CloneUtil.cloneModel(currentInputModel,currentInputModel_clone,currentInputModel == mySessionContext.getOriginalInputModel());
+      if (!myDiscardTransients) {
+        mySessionContext.getGenerationTracer().registerPreMappingScripts(currentInputModel,currentInputModel_clone,preMappingScripts);
+      }
+      recycleWasteModel(currentInputModel);
+      currentInputModel=currentInputModel_clone;
+    }
+  }
+  for (  MappingScript preMappingScript : preMappingScripts) {
+    if (preMappingScript.getScriptKind() != MappingScriptKind.pre_process_input_model) {
+      addMessage(MessageKind.WARNING,"skip script '" + preMappingScript + "' ("+ preMappingScript.getModel().getSModelFqName()+ ") - wrong script kind",preMappingScript.getNode());
+      continue;
+    }
+    addMessage(MessageKind.INFORMATION,"pre-process '" + preMappingScript + "' ("+ preMappingScript.getModel().getSModelFqName()+ ")",preMappingScript.getNode());
+    GeneratorUtil.executeMappingScript(preMappingScript,currentInputModel,generator);
+  }
+  return currentInputModel;
+}

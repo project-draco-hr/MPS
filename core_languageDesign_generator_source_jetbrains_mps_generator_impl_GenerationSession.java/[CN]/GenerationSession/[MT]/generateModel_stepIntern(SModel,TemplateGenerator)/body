@@ -1,0 +1,67 @@
+{
+  SModel currentInputModel=inputModel;
+  if (myReverseRoots && inputModel == mySessionContext.getOriginalInputModel()) {
+    SModel currentInputModel_clone=createTransientModel();
+    info("reversing roots '" + currentInputModel.getSModelFqName() + "' --> '"+ currentInputModel_clone.getSModelFqName()+ "'");
+    List<SNode> rrr=currentInputModel.getRoots();
+    SNode[] roots=rrr.toArray(new SNode[rrr.size()]);
+    for (int i=0; i < roots.length / 2; i++) {
+      SNode temp=roots[i];
+      roots[i]=roots[roots.length - 1 - i];
+      roots[roots.length - 1 - i]=temp;
+    }
+    for (    SNode node : roots) {
+      SNode outputNode=CloneUtil.clone(node,currentInputModel_clone,true);
+      currentInputModel_clone.addRoot(outputNode);
+    }
+    recycleWasteModel(currentInputModel);
+    currentInputModel=currentInputModel_clone;
+  }
+  currentInputModel=preProcessModel(generator,currentInputModel);
+  SModel currentOutputModel=createTransientModel();
+  mySessionContext.getGenerationTracer().startTracing(currentInputModel,currentOutputModel);
+  currentInputModel.setLoading(false);
+  boolean somethingHasBeenGenerated=generator.doMapping(true,currentInputModel,currentOutputModel);
+  if (!somethingHasBeenGenerated) {
+    currentOutputModel.validateLanguagesAndImports();
+    recycleWasteModel(currentInputModel);
+    return currentOutputModel;
+  }
+  int secondaryMappingRepeatCount=1;
+  while (true) {
+    currentOutputModel.validateLanguagesAndImports();
+    info("generating model '" + currentOutputModel.getSModelFqName() + "'");
+    mySessionContext.clearTransientObjects();
+    SModel transientModel=createTransientModel();
+    recycleWasteModel(currentInputModel);
+    currentInputModel=currentOutputModel;
+    currentInputModel.setLoading(false);
+    mySessionContext.getGenerationTracer().startTracing(currentInputModel,transientModel);
+    if (!generator.doMapping(false,currentInputModel,transientModel)) {
+      mySessionContext.getGenerationTracer().discardTracing(currentInputModel,transientModel);
+      info("remove empty model '" + transientModel.getSModelFqName() + "'");
+      SModelRepository.getInstance().removeModelDescriptor(transientModel.getModelDescriptor());
+      myTransientModelsCount--;
+      break;
+    }
+    if (++secondaryMappingRepeatCount > 10) {
+      generator.showErrorMessage(null,"failed to generate output after 10 repeated mappings");
+      if (mySessionContext.getGenerationTracer().isTracing()) {
+        LOG.error("last rules applied:");
+        List<Pair<SNode,SNode>> pairs=mySessionContext.getGenerationTracer().getAllAppiedRulesWithInputNodes(transientModel.getSModelReference());
+        for (        Pair<SNode,SNode> pair : pairs) {
+          LOG.error("rule: " + pair.o1.getDebugText(),pair.o1);
+          LOG.error("-- input: " + (pair.o2 != null ? pair.o2.getDebugText() : "n/a"),pair.o2);
+        }
+      }
+ else {
+        LOG.error("to get more diagnostic generate model with the 'save transient models' option");
+      }
+      throw new GenerationFailureException("failed to generate output after 10 repeated mappings");
+    }
+    currentOutputModel=transientModel;
+  }
+  currentOutputModel.setLoading(true);
+  currentOutputModel=postProcessModel(generator,currentOutputModel);
+  return currentOutputModel;
+}
