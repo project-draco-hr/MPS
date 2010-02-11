@@ -17,11 +17,11 @@
     recycleWasteModel(currentInputModel);
     currentInputModel=currentInputModel_clone;
   }
-  currentInputModel=preProcessModel(generator,currentInputModel);
+  currentInputModel=preProcessModel(logger,ruleManager,currentInputModel);
   SModel currentOutputModel=createTransientModel();
   mySessionContext.getGenerationTracer().startTracing(currentInputModel,currentOutputModel);
   currentInputModel.setLoading(false);
-  boolean somethingHasBeenGenerated=generator.doMapping(true,currentInputModel,currentOutputModel);
+  boolean somethingHasBeenGenerated=applyRules(currentInputModel,currentOutputModel,true,ruleManager,logger);
   if (!somethingHasBeenGenerated) {
     currentOutputModel.validateLanguagesAndImports();
     recycleWasteModel(currentInputModel);
@@ -37,7 +37,7 @@
     currentInputModel=currentOutputModel;
     currentInputModel.setLoading(false);
     mySessionContext.getGenerationTracer().startTracing(currentInputModel,transientModel);
-    if (!generator.doMapping(false,currentInputModel,transientModel)) {
+    if (!applyRules(currentInputModel,transientModel,false,ruleManager,logger)) {
       mySessionContext.getGenerationTracer().discardTracing(currentInputModel,transientModel);
       info("remove empty model '" + transientModel.getSModelFqName() + "'");
       SModelRepository.getInstance().removeModelDescriptor(transientModel.getModelDescriptor());
@@ -45,7 +45,7 @@
       break;
     }
     if (++secondaryMappingRepeatCount > 10) {
-      generator.showErrorMessage(null,"failed to generate output after 10 repeated mappings");
+      logger.showErrorMessage(null,"failed to generate output after 10 repeated mappings");
       if (mySessionContext.getGenerationTracer().isTracing()) {
         LOG.error("last rules applied:");
         List<Pair<SNode,SNode>> pairs=mySessionContext.getGenerationTracer().getAllAppiedRulesWithInputNodes(transientModel.getSModelReference());
@@ -62,6 +62,6 @@
     currentOutputModel=transientModel;
   }
   currentOutputModel.setLoading(true);
-  currentOutputModel=postProcessModel(generator,currentOutputModel);
+  currentOutputModel=postProcessModel(logger,ruleManager,currentOutputModel);
   return currentOutputModel;
 }
