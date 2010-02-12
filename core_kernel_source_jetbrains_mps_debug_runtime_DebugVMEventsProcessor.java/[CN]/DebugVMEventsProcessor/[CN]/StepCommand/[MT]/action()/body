@@ -1,2 +1,24 @@
 {
+  SuspendContext suspendContext=getSuspendContext();
+  ThreadReference stepThread=suspendContext.getThread();
+  if (stepThread == null) {
+    return;
+  }
+  LOG.debug("DO_STEP: creating step request for " + stepThread);
+  EventRequestManager requestManager=getVirtualMachine().eventRequestManager();
+  List<StepRequest> stepRequests=requestManager.stepRequests();
+  if (stepRequests.size() > 0) {
+    List<StepRequest> toDelete=new ArrayList<StepRequest>(stepRequests.size());
+    for (    StepRequest request : stepRequests) {
+      ThreadReference threadReference=request.thread();
+      if (threadReference.status() != ThreadReference.THREAD_STATUS_UNKNOWN) {
+        toDelete.add(request);
+      }
+    }
+    requestManager.deleteEventRequests(toDelete);
+  }
+  StepRequest stepRequest=requestManager.createStepRequest(stepThread,StepRequest.STEP_LINE,getStepType());
+  stepRequest.setSuspendPolicy(suspendContext.getSuspendPolicy() == EventRequest.SUSPEND_EVENT_THREAD ? EventRequest.SUSPEND_EVENT_THREAD : EventRequest.SUSPEND_ALL);
+  stepRequest.enable();
+  super.action();
 }
