@@ -1,0 +1,38 @@
+{
+  AbstractConceptDeclaration applicableConcept=rule.getApplicableConcept();
+  if (applicableConcept == null) {
+    showErrorMessage(null,null,BaseAdapter.fromAdapter(rule),"rule has no applicable concept defined");
+    return;
+  }
+  boolean includeInheritors=rule.getApplyToConceptInheritors();
+  List<SNode> inputNodes=getInputModel().getModelDescriptor().getFastNodeFinder().getNodes(applicableConcept,includeInheritors);
+  for (  SNode inputNode : inputNodes) {
+    if (getGeneratorSessionContext().isCopiedRoot(inputNode)) {
+      continue;
+    }
+    if (QueryExecutor.checkCondition(rule.getConditionFunction(),false,inputNode,rule.getNode(),this)) {
+      getGeneratorSessionContext().getGenerationTracer().pushInputNode(inputNode);
+      getGeneratorSessionContext().getGenerationTracer().pushRule(rule.getNode());
+      boolean wasChanged=isChanged();
+      try {
+        setChanged(true);
+        SNode templateNode=BaseAdapter.fromAdapter(rule.getTemplate());
+        if (templateNode != null) {
+          createRootNodeFromTemplate(GeneratorUtil.getMappingName(rule,null),templateNode,inputNode);
+        }
+ else {
+          showErrorMessage(BaseAdapter.fromAdapter(rule),"no template is defined for the rule");
+        }
+        if (inputNode.isRoot() && rule.getKeepSourceRoot() == Options_DefaultTrue.default_) {
+          addRootNotToCopy(inputNode);
+        }
+      }
+ catch (      DismissTopMappingRuleException e) {
+        setChanged(wasChanged);
+      }
+ finally {
+        getGeneratorSessionContext().getGenerationTracer().closeInputNode(inputNode);
+      }
+    }
+  }
+}

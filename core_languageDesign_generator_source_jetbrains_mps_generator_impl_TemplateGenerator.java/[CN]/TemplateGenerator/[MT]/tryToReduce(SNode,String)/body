@@ -1,0 +1,45 @@
+{
+  boolean needStopReductionBlocking=false;
+  boolean wasChanged=isChanged();
+  Reduction_MappingRule reductionRule=null;
+  try {
+    reductionRule=myRuleManager.getRuleFinder().findReductionRule(inputNode,this);
+    if (reductionRule != null) {
+      setChanged(true);
+      needStopReductionBlocking=startReductionBlockingForInput(inputNode);
+      List<SNode> outputNodes=GeneratorUtil.applyReductionRule(inputNode,reductionRule,this);
+      if (outputNodes != null && outputNodes.size() == 1) {
+        SNode reducedNode=outputNodes.get(0);
+        addOutputNodeByInputNodeAndMappingName(inputNode,mappingName,reducedNode);
+        addCopiedOutputNodeForInputNode(inputNode,reducedNode);
+        reducedNode.putUserObjects(inputNode);
+        if (inputNode.getModel() == getGeneratorSessionContext().getOriginalInputModel()) {
+          reducedNode.putUserObject(TemplateQueryContext.ORIGINAL_INPUT_NODE,inputNode);
+          reducedNode.putUserObject(TemplateQueryContext.ORIGINAL_DEBUG_NODE,inputNode);
+        }
+      }
+      return outputNodes;
+    }
+  }
+ catch (  DismissTopMappingRuleException ex) {
+    setChanged(wasChanged);
+    if (ex.isLoggingNeeded()) {
+      String messageText="-- dismissed reduction rule: " + reductionRule.getDebugText();
+      if (ex.isInfo()) {
+        showInformationMessage(reductionRule.getNode(),messageText);
+      }
+ else       if (ex.isWarning()) {
+        showWarningMessage(reductionRule.getNode(),messageText);
+      }
+ else {
+        showErrorMessage(reductionRule.getNode(),messageText);
+      }
+    }
+  }
+ finally {
+    if (needStopReductionBlocking) {
+      stopReductionBlockingForInput(inputNode);
+    }
+  }
+  return null;
+}
