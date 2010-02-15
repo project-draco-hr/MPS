@@ -1,11 +1,11 @@
 {
   Point point=dtde.getLocation();
-  Object target=myTree.getPathForLocation(point.x,point.y).getLastPathComponent();
-  if (!(target instanceof SNodeTreeNode)) {
+  TreePath treePath=myTree.getPathForLocation(point.x,point.y);
+  Object target=treePath.getLastPathComponent();
+  if (!(target instanceof MPSTreeNode)) {
     dtde.rejectDrop();
     return;
   }
-  SNode targetNode=((SNodeTreeNode)target).getSNode();
   Object source=null;
   try {
     source=dtde.getTransferable().getTransferData(myDataFlavor);
@@ -17,13 +17,28 @@
     dtde.rejectDrop();
     return;
   }
-  SNode sourceNode=(SNode)source;
-  List<SNode> nodeToMove=getNodesToMove(targetNode,Collections.singletonList(sourceNode));
+  final SNode sourceNode=(SNode)source;
+  SModelDescriptor targetModel=getTargetModel(treePath);
+  final String targetPackage=getTargetVirtualPackage(treePath);
+  List<SNode> nodeToMove=getNodesToMove(targetModel,targetPackage,Collections.singletonList(sourceNode));
   if (nodeToMove.isEmpty()) {
     dtde.rejectDrop();
     return;
   }
   Project project=(Project)DataManager.getInstance().getDataContext().getData(MPSDataKeys.PROJECT.getName());
-  JOptionPane.showConfirmDialog(WindowManager.getInstance().getFrame(project),"<html>Do you want to move node from virtual package '<b>" + getVirtualPackage(sourceNode) + "</b>' to '<b>"+ getVirtualPackage(targetNode)+ "</b>'?</html>");
+  int result=JOptionPane.showConfirmDialog(WindowManager.getInstance().getFrame(project),"<html>Do you want to move node from virtual package '<b>" + getVirtualPackage(sourceNode) + "</b>' to '<b>"+ targetPackage+ "</b>'?</html>");
+  if (result == JOptionPane.YES_OPTION) {
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        sourceNode.setProperty(SModelTreeNode.PACK,targetPackage);
+        if (SNodeOperations.isInstanceOf(sourceNode,AbstractConceptDeclaration.concept)) {
+          for (          SNode aspect : AbstractConceptDeclaration_Behavior.call_findAllAspects_7754459869734028917(sourceNode,GlobalScope.getInstance())) {
+            aspect.setProperty(SModelTreeNode.PACK,targetPackage);
+          }
+        }
+      }
+    }
+);
+  }
   dtde.acceptDrop(dtde.getDropAction());
 }
