@@ -1,0 +1,79 @@
+{
+  AbstractConceptDeclaration applicableConcept=rule.getApplicableConcept();
+  if (applicableConcept == null) {
+    myGenerator.showErrorMessage(null,rule.getNode(),"rule has no applicable concept defined");
+    return;
+  }
+  boolean includeInheritors=rule.getApplyToConceptInheritors();
+  List<SNode> nodes=myFastNodeFinder.getNodes(applicableConcept,includeInheritors);
+  for (  SNode applicableNode : nodes) {
+    if (QueryExecutor.checkCondition(rule.getConditionFunction(),false,applicableNode,rule.getNode(),myGenerator)) {
+      SNode outputContextNode=QueryExecutor.getContextNodeForWeavingingRule(applicableNode,rule,myGenerator);
+      if (outputContextNode == null) {
+        myGenerator.showErrorMessage(applicableNode,rule.getNode(),"couldn't find context node");
+        continue;
+      }
+ else {
+        SNode contextRoot=outputContextNode.getContainingRoot();
+        if (contextRoot != null) {
+          SNode inputRoot=applicableNode.getContainingRoot();
+          SNode originalContextRoot=myGenerator.getInputRootForOutput(contextRoot);
+          if (originalContextRoot == null) {
+            myGenerator.showWarningMessage(rule.getNode(),"bad context for weaving rule: unknown input for " + contextRoot);
+          }
+          originalContextRoot=originalContextRoot != null ? originalContextRoot.getContainingRoot() : null;
+          if (originalContextRoot != inputRoot && inputRoot != null && originalContextRoot != null) {
+            myGenerator.showWarningMessage(rule.getNode(),"bad context for weaving rule: " + originalContextRoot.toString() + " vs "+ inputRoot.toString());
+          }
+        }
+ else {
+          myGenerator.showWarningMessage(rule.getNode(),"bad context for weaving rule: no root for " + outputContextNode);
+        }
+      }
+      myGenerator.setChanged(true);
+      boolean someOutputGenerated=true;
+      myGenerationTracer.pushInputNode(applicableNode);
+      myGenerationTracer.pushRule(rule.getNode());
+      try {
+        RuleConsequence ruleConsequence=rule.getRuleConsequence();
+        if (ruleConsequence == null) {
+          myGenerator.showErrorMessage(applicableNode,null,rule.getNode(),"no rule consequence");
+        }
+ else {
+          myGenerationTracer.pushRuleConsequence(ruleConsequence.getNode());
+          if (ruleConsequence instanceof TemplateDeclarationReference) {
+            TemplateDeclaration template=((TemplateDeclarationReference)ruleConsequence).getTemplate();
+            weaveTemplateDeclaration(applicableNode,template,outputContextNode,rule);
+          }
+ else           if (ruleConsequence instanceof WeaveEach_RuleConsequence) {
+            WeaveEach_RuleConsequence weaveEach=(WeaveEach_RuleConsequence)ruleConsequence;
+            SourceSubstituteMacro_SourceNodesQuery query=weaveEach.getSourceNodesQuery();
+            if (query == null) {
+              myGenerator.showErrorMessage(applicableNode,rule.getNode(),"couldn't create list of source nodes");
+              break;
+            }
+            TemplateDeclaration template=weaveEach.getTemplate();
+            List<SNode> queryNodes=QueryExecutor.evaluateSourceNodesQuery(applicableNode,rule.getNode(),null,query,myGenerator);
+            if (queryNodes.isEmpty()) {
+              someOutputGenerated=false;
+            }
+            for (            SNode queryNode : queryNodes) {
+              weaveTemplateDeclaration(queryNode,template,outputContextNode,rule);
+            }
+          }
+ else {
+            myGenerator.showErrorMessage(applicableNode,null,ruleConsequence.getNode(),"unsapported rule consequence");
+          }
+        }
+      }
+  finally {
+        if (someOutputGenerated) {
+          myGenerationTracer.closeInputNode(applicableNode);
+        }
+ else {
+          myGenerationTracer.popInputNode(applicableNode);
+        }
+      }
+    }
+  }
+}
