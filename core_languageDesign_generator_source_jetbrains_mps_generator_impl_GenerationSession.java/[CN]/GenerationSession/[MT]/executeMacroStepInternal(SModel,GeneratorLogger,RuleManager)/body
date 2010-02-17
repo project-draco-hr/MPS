@@ -1,5 +1,6 @@
 {
   SModel currentInputModel=inputModel;
+  IGenerationTracer tracer=mySessionContext.getGenerationTracer();
   if (myReverseRoots && inputModel == mySessionContext.getOriginalInputModel()) {
     SModel currentInputModel_clone=createTransientModel();
     info("reversing roots '" + currentInputModel.getSModelFqName() + "' --> '"+ currentInputModel_clone.getSModelFqName()+ "'");
@@ -19,7 +20,7 @@
   }
   currentInputModel=preProcessModel(logger,ruleManager,currentInputModel);
   SModel currentOutputModel=createTransientModel();
-  mySessionContext.getGenerationTracer().startTracing(currentInputModel,currentOutputModel);
+  tracer.startTracing(currentInputModel,currentOutputModel);
   currentInputModel.setLoading(false);
   boolean somethingHasBeenGenerated=applyRules(currentInputModel,currentOutputModel,true,ruleManager,logger);
   if (!somethingHasBeenGenerated) {
@@ -36,9 +37,9 @@
     recycleWasteModel(currentInputModel);
     currentInputModel=currentOutputModel;
     currentInputModel.setLoading(false);
-    mySessionContext.getGenerationTracer().startTracing(currentInputModel,transientModel);
+    tracer.startTracing(currentInputModel,transientModel);
     if (!applyRules(currentInputModel,transientModel,false,ruleManager,logger)) {
-      mySessionContext.getGenerationTracer().discardTracing(currentInputModel,transientModel);
+      tracer.discardTracing(currentInputModel,transientModel);
       info("remove empty model '" + transientModel.getSModelFqName() + "'");
       SModelRepository.getInstance().removeModelDescriptor(transientModel.getModelDescriptor());
       myTransientModelsCount--;
@@ -46,9 +47,9 @@
     }
     if (++secondaryMappingRepeatCount > 10) {
       logger.showErrorMessage(null,"failed to generate output after 10 repeated mappings");
-      if (mySessionContext.getGenerationTracer().isTracing()) {
+      if (tracer.isTracing()) {
         LOG.error("last rules applied:");
-        List<Pair<SNode,SNode>> pairs=mySessionContext.getGenerationTracer().getAllAppiedRulesWithInputNodes(transientModel.getSModelReference());
+        List<Pair<SNode,SNode>> pairs=tracer.getAllAppiedRulesWithInputNodes(transientModel.getSModelReference());
         for (        Pair<SNode,SNode> pair : pairs) {
           LOG.error("rule: " + pair.o1.getDebugText(),pair.o1);
           LOG.error("-- input: " + (pair.o2 != null ? pair.o2.getDebugText() : "n/a"),pair.o2);
