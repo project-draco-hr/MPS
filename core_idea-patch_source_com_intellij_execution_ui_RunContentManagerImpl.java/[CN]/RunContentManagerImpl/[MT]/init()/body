@@ -1,0 +1,37 @@
+{
+  final Executor[] executors=ExecutorRegistry.getInstance().getRegisteredExecutors();
+  for (  Executor executor : executors) {
+    registerToolwindow(executor);
+  }
+  if (ToolWindowManager.getInstance(myProject) == null)   return;
+  SwingUtilities.invokeLater(new Runnable(){
+    public void run(){
+      if (myProject.isDisposed())       return;
+      ((ToolWindowManagerEx)ToolWindowManager.getInstance(myProject)).addToolWindowManagerListener(new ToolWindowManagerAdapter(){
+        @Patch public void stateChanged(){
+          if (myProject.isDisposed())           return;
+          ToolWindowManager toolWindowManager=ToolWindowManager.getInstance(myProject);
+          Set<String> currentWindows=new HashSet<String>();
+          String[] toolWindowIds=toolWindowManager.getToolWindowIds();
+          currentWindows.addAll(Arrays.asList(toolWindowIds));
+          myToolwindowIdZbuffer.retainAll(currentWindows);
+          for (          String toolWindowId : toolWindowIds) {
+            if (toolWindowId != null) {
+              ToolWindow window=toolWindowManager.getToolWindow(toolWindowId);
+              if (window != null) {
+                if (window.isActive()) {
+                  if (myToolwindowIdZbuffer.remove(toolWindowId)) {
+                    myToolwindowIdZbuffer.addFirst(toolWindowId);
+                    return;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+);
+    }
+  }
+);
+}
