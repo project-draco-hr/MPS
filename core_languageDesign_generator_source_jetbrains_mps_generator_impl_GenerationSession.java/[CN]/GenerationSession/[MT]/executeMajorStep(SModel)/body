@@ -1,39 +1,21 @@
 {
   myTransientModelsCount=0;
-  info("generating model \"" + inputModel.getSModelFqName() + "\"");
   if (myGenerationPlan.getMappingConfigurations(myMajorStep).isEmpty()) {
-    warning("skip model \"" + inputModel.getSModelFqName() + "\" : no generator available");
-    return new GenerationStatus(inputModel,null,null,false,false,false);
+    if (inputModel.getRoots().size() > 0) {
+      warning("skip model \"" + inputModel.getSModelFqName() + "\" : no generator available");
+    }
+    return inputModel;
   }
-  printGenerationStepData(inputModel);
+  if (myGenerationTracer.isTracing()) {
+    printGenerationStepData(inputModel);
+  }
   mySessionContext=new GenerationSessionContext(myInvocationContext,myGenerationTracer,inputModel,myGenerationPlan,mySessionContext);
-  GeneratorLogger logger=new GeneratorLogger(mySessionContext);
+  myLogger.setOperationContext(mySessionContext);
   RuleManager ruleManager=new RuleManager(myGenerationPlan,myMajorStep);
-  GenerationStatus status;
-  try {
-    SModel outputModel=executeMacroStepInternal(inputModel,logger,ruleManager);
-    boolean wasErrors=logger.getErrorCount() > 0;
-    boolean wasWarnigns=logger.getWarningCount() > 0;
-    status=new GenerationStatus(inputModel,outputModel,mySessionContext.getTraceMap(),wasErrors,wasWarnigns,false);
-    if (status.isError()) {
-      warning("model \"" + inputModel.getSModelFqName() + "\" has been generated with errors");
-    }
- else {
-      info("model \"" + inputModel.getSModelFqName() + "\" has been generated successfully");
-    }
+  SModel outputModel=executeMajorStepInternal(inputModel,ruleManager);
+  if (myLogger.getErrorCount() > 0) {
+    warning("model \"" + inputModel.getSModelFqName() + "\" has been generated with errors");
   }
- catch (  GenerationCanceledException gce) {
-    throw gce;
-  }
-catch (  GenerationFailureException gfe) {
-    logger.showErrorMessage(null,gfe.getMessage());
-    error("model \"" + inputModel.getSModelFqName() + "\" generation failed : "+ gfe);
-    status=new GenerationStatus.ERROR(inputModel);
-  }
-catch (  Throwable e) {
-    logger.handleException(e);
-    error("model \"" + inputModel.getSModelFqName() + "\" generation failed : "+ e);
-    status=new GenerationStatus.ERROR(inputModel);
-  }
-  return status;
+  myLogger.clearFailedRules();
+  return outputModel;
 }

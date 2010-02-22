@@ -18,11 +18,11 @@
     recycleWasteModel(currentInputModel);
     currentInputModel=currentInputModel_clone;
   }
-  currentInputModel=preProcessModel(logger,ruleManager,currentInputModel);
+  currentInputModel=preProcessModel(ruleManager,currentInputModel);
   SModel currentOutputModel=createTransientModel();
   tracer.startTracing(currentInputModel,currentOutputModel);
   currentInputModel.setLoading(false);
-  boolean somethingHasBeenGenerated=applyRules(currentInputModel,currentOutputModel,true,ruleManager,logger);
+  boolean somethingHasBeenGenerated=applyRules(currentInputModel,currentOutputModel,true,ruleManager);
   if (!somethingHasBeenGenerated) {
     currentOutputModel.validateLanguagesAndImports();
     recycleWasteModel(currentInputModel);
@@ -38,7 +38,7 @@
     currentInputModel=currentOutputModel;
     currentInputModel.setLoading(false);
     tracer.startTracing(currentInputModel,transientModel);
-    if (!applyRules(currentInputModel,transientModel,false,ruleManager,logger)) {
+    if (!applyRules(currentInputModel,transientModel,false,ruleManager)) {
       tracer.discardTracing(currentInputModel,transientModel);
       info("remove empty model '" + transientModel.getSModelFqName() + "'");
       SModelRepository.getInstance().removeModelDescriptor(transientModel.getModelDescriptor());
@@ -46,23 +46,23 @@
       break;
     }
     if (++secondaryMappingRepeatCount > 10) {
-      logger.showErrorMessage(null,"failed to generate output after 10 repeated mappings");
+      myLogger.showErrorMessage(null,"failed to generate output after 10 repeated mappings");
       if (tracer.isTracing()) {
-        logger.showErrorMessage(null,"last rules applied:");
+        myLogger.showErrorMessage(null,"last rules applied:");
         List<Pair<SNode,SNode>> pairs=tracer.getAllAppiedRulesWithInputNodes(transientModel.getSModelReference());
         for (        Pair<SNode,SNode> pair : pairs) {
-          logger.showErrorMessage(pair.o1,"rule: " + pair.o1.getDebugText());
-          logger.showErrorMessage(pair.o2,"-- input: " + (pair.o2 != null ? pair.o2.getDebugText() : "n/a"));
+          myLogger.showErrorMessage(pair.o1,"rule: " + pair.o1.getDebugText());
+          myLogger.showErrorMessage(pair.o2,"-- input: " + (pair.o2 != null ? pair.o2.getDebugText() : "n/a"));
         }
       }
  else {
-        logger.showErrorMessage(null,"to get more diagnostic generate model with the 'save transient models' option");
+        myLogger.showErrorMessage(null,"to get more diagnostic generate model with the 'save transient models' option");
       }
       throw new GenerationFailureException("failed to generate output after 10 repeated mappings");
     }
     currentOutputModel=transientModel;
   }
   currentOutputModel.setLoading(true);
-  currentOutputModel=postProcessModel(logger,ruleManager,currentOutputModel);
+  currentOutputModel=postProcessModel(ruleManager,currentOutputModel);
   return currentOutputModel;
 }

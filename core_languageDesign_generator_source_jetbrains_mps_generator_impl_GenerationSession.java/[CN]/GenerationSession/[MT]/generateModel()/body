@@ -5,30 +5,36 @@
   myGenerationPlan=new GenerationPlan(myOriginalInputModel.getSModel());
   if (!checkGenerationPlan(myGenerationPlan)) {
   }
-  GenerationStatus status;
-  boolean wasErrors=false;
-  boolean wasWarnings=false;
-  SModelDescriptor currInputModel=myOriginalInputModel;
-  do {
-    info("execute step " + (myMajorStep + 1));
-    status=executeMajorStep(currInputModel.getSModel());
-    wasErrors|=status.isError();
-    wasWarnings|=status.hasWarnings();
-    if (status.isError() || status.isCanceled()) {
-      break;
+  try {
+    SModel currInputModel=myOriginalInputModel.getSModel();
+    SModel currOutput=null;
+    for (myMajorStep=0; myMajorStep < myGenerationPlan.getStepCount(); myMajorStep++) {
+      info("executing step " + (myMajorStep + 1));
+      currOutput=executeMajorStep(currInputModel);
+      if (currOutput == null || myLogger.getErrorCount() > 0) {
+        break;
+      }
+      if (myGenerationPlan.getMappingConfigurations(myMajorStep).isEmpty()) {
+        break;
+      }
+      currInputModel=currOutput;
     }
-    if (myGenerationPlan.getMappingConfigurations(myMajorStep).isEmpty()) {
-      break;
+    if (mySessionContext != null) {
+      mySessionContext.clearTransientObjects();
     }
-    if (status.getOutputModel() == null) {
-      break;
-    }
-    currInputModel=status.getOutputModel().getModelDescriptor();
-    myMajorStep++;
+    return new GenerationStatus(myOriginalInputModel.getSModel(),currOutput,mySessionContext != null ? mySessionContext.getTraceMap() : null,myLogger.getErrorCount() > 0,myLogger.getWarningCount() > 0,false);
   }
- while (myMajorStep < myGenerationPlan.getStepCount());
-  if (mySessionContext != null) {
-    mySessionContext.clearTransientObjects();
+ catch (  GenerationCanceledException gce) {
+    throw gce;
   }
-  return new GenerationStatus(status.getInputModel(),status.getOutputModel(),status.getTraceMap(),wasErrors,wasWarnings,status.isCanceled());
+catch (  GenerationFailureException gfe) {
+    error(gfe.getMessage());
+    error("model \"" + myOriginalInputModel.getSModelFqName() + "\" generation failed : "+ gfe);
+    return new GenerationStatus.ERROR(myOriginalInputModel.getSModel());
+  }
+catch (  Throwable e) {
+    myLogger.handleException(e);
+    error("model \"" + myOriginalInputModel.getSModelFqName() + "\" generation failed : "+ e);
+    return new GenerationStatus.ERROR(myOriginalInputModel.getSModel());
+  }
 }
