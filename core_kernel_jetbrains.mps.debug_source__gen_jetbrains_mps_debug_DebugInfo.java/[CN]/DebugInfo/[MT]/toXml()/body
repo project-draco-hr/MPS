@@ -1,13 +1,22 @@
 {
   Element root=new Element(DEBUG_INFO);
-  Set<PositionInfo> noroot=MapSequence.fromMap(this.myRootToPositions).get(UNSPECIFIED_ROOT);
-  if (noroot != null) {
-    for (    PositionInfo position : noroot) {
+  Set<PositionInfo> noRoot=MapSequence.fromMap(this.myRootToPositions).get(UNSPECIFIED_ROOT);
+  if (noRoot != null) {
+    for (    PositionInfo position : noRoot) {
       Element e=new Element(NODE_INFO);
       position.saveTo(e);
       root.addContent(e);
     }
   }
+  Set<VarPositionInfo> noRootVars=MapSequence.fromMap(this.myRootToVarPositions).get(UNSPECIFIED_ROOT);
+  if (noRootVars != null) {
+    for (    PositionInfo position : noRootVars) {
+      Element e=new Element(NODE_INFO);
+      position.saveTo(e);
+      root.addContent(e);
+    }
+  }
+  Map<String,Element> rootsToElements=MapSequence.fromMap(new HashMap<String,Element>());
   for (  String rootId : SetSequence.fromSet(MapSequence.fromMap(this.myRootToPositions).keySet()).where(new IWhereFilter<String>(){
     public boolean accept(    String it){
       return !(ObjectUtils.equals(it,UNSPECIFIED_ROOT));
@@ -21,9 +30,34 @@
 ,true)) {
     Element re=new Element(ROOT);
     re.setAttribute(ROOT_ID_ATTR,rootId);
+    MapSequence.fromMap(rootsToElements).put(rootId,re);
     root.addContent(re);
     for (    PositionInfo position : MapSequence.fromMap(this.myRootToPositions).get(rootId)) {
       Element e=new Element(NODE_INFO);
+      position.saveTo(e);
+      re.addContent(e);
+    }
+  }
+  for (  String rootId : SetSequence.fromSet(MapSequence.fromMap(this.myRootToVarPositions).keySet()).where(new IWhereFilter<String>(){
+    public boolean accept(    String it){
+      return !(ObjectUtils.equals(it,UNSPECIFIED_ROOT));
+    }
+  }
+).sort(new ISelector<String,Comparable<?>>(){
+    public Comparable<?> select(    String it){
+      return it;
+    }
+  }
+,true)) {
+    Element re=MapSequence.fromMap(rootsToElements).get(rootId);
+    if (re == null) {
+      re=new Element(ROOT);
+      MapSequence.fromMap(rootsToElements).put(rootId,re);
+    }
+    re.setAttribute(ROOT_ID_ATTR,rootId);
+    root.addContent(re);
+    for (    PositionInfo position : MapSequence.fromMap(this.myRootToVarPositions).get(rootId)) {
+      Element e=new Element(VAR_INFO);
       position.saveTo(e);
       re.addContent(e);
     }
