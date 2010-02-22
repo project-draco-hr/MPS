@@ -1,4 +1,30 @@
 {
-  myThread=thread;
+  if (thread == null) {
+    myContext=null;
+    myThread=null;
+    myStackFrame=null;
+  }
+ else {
+    myThread=thread;
+    if (!myContext.suspends(thread)) {
+      SuspendContext result=null;
+      for (      SuspendContext suspendContext : myEventsProcessor.getSuspendManager().getPausedContexts()) {
+        if (suspendContext.suspends(thread)) {
+          result=suspendContext;
+          break;
+        }
+      }
+      if (result == null) {
+        SuspendContext suspendContext=myEventsProcessor.getSuspendManager().getPausedByUserContext();
+        if (suspendContext != null) {
+          if (suspendContext.suspends(thread)) {
+            result=suspendContext;
+          }
+        }
+      }
+      myContext=result;
+    }
+    updateFrame();
+  }
   DebugSession.this.fireStateChanged();
 }
