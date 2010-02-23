@@ -2,7 +2,7 @@
   clearMessageVew();
   long totalJob=estimateGenerationTime();
   long startJobTime=System.currentTimeMillis();
-  myGenerationHandler.startGeneration(myMessages);
+  myGenerationHandler.startGeneration(myLogger);
   TaskProgressHelper progressHelper=new TaskProgressHelper(myProgress,totalJob,startJobTime);
   try {
     boolean generationOK=true;
@@ -11,27 +11,27 @@
       generationOK=generationOK && result;
     }
     if (generationOK) {
-      info("generation completed successfully in " + (System.currentTimeMillis() - startJobTime) + " ms");
+      if (myLogger.needsInfo()) {
+        myLogger.info("generation completed successfully in " + (System.currentTimeMillis() - startJobTime) + " ms");
+      }
     }
  else {
-      error("generation completed with errors in " + (System.currentTimeMillis() - startJobTime) + " ms");
+      myLogger.error("generation completed with errors in " + (System.currentTimeMillis() - startJobTime) + " ms");
     }
     generationOK=compile(progressHelper,generationOK);
     fireModelsGenerated(generationOK);
     return generationOK;
   }
  catch (  GenerationCanceledException gce) {
-    warning("generation canceled");
+    myLogger.warning("generation canceled");
     return false;
   }
 catch (  GenerationFailureException e) {
-    error(e.getMessage());
+    myLogger.error(e.getMessage());
     return false;
   }
 catch (  Throwable t) {
-    LOG.error(t);
-    final String text=t.toString();
-    error(text);
+    myLogger.handleException(t);
     return false;
   }
  finally {
