@@ -2,17 +2,21 @@
   List<MappingScript> postMappingScripts=ruleManager.getPostMappingScripts();
   if (!postMappingScripts.isEmpty() && !myDiscardTransients) {
     SModel currentOutputModel_clone=createTransientModel();
-    info("clone model '" + currentOutputModel.getSModelFqName() + "' --> '"+ currentOutputModel_clone.getSModelFqName()+ "'");
+    if (myLogger.needsInfo()) {
+      myLogger.info("clone model '" + currentOutputModel.getSModelFqName() + "' --> '"+ currentOutputModel_clone.getSModelFqName()+ "'");
+    }
     CloneUtil.cloneModel(currentOutputModel,currentOutputModel_clone,false);
     mySessionContext.getGenerationTracer().registerPostMappingScripts(currentOutputModel,currentOutputModel_clone,postMappingScripts);
     currentOutputModel=currentOutputModel_clone;
   }
   for (  MappingScript postMappingScript : postMappingScripts) {
     if (postMappingScript.getScriptKind() != MappingScriptKind.post_process_output_model) {
-      addMessage(MessageKind.WARNING,"skip script '" + postMappingScript + "' ("+ postMappingScript.getModel().getSModelFqName()+ ") - wrong script kind",postMappingScript.getNode());
+      myLogger.warning(postMappingScript.getNode(),"skip script '" + postMappingScript + "' ("+ postMappingScript.getModel().getSModelFqName()+ ") - wrong script kind");
       continue;
     }
-    addMessage(MessageKind.INFORMATION,"post-process '" + postMappingScript + "' ("+ postMappingScript.getModel().getLongName()+ ")",postMappingScript.getNode());
+    if (myLogger.needsInfo()) {
+      myLogger.info(postMappingScript.getNode(),"post-process '" + postMappingScript + "' ("+ postMappingScript.getModel().getLongName()+ ")");
+    }
     ITemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,myProgressMonitor,myLogger,ruleManager,currentOutputModel,currentOutputModel,myIsStrict);
     QueryExecutor.executeMappingScript(postMappingScript,currentOutputModel,templateGenerator);
   }

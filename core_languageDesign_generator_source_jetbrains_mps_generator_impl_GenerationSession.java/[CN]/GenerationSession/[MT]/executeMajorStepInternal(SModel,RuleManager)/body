@@ -3,7 +3,9 @@
   IGenerationTracer tracer=mySessionContext.getGenerationTracer();
   if (myReverseRoots && inputModel == mySessionContext.getOriginalInputModel()) {
     SModel currentInputModel_clone=createTransientModel();
-    info("reversing roots '" + currentInputModel.getSModelFqName() + "' --> '"+ currentInputModel_clone.getSModelFqName()+ "'");
+    if (myLogger.needsInfo()) {
+      myLogger.info("reversing roots '" + currentInputModel.getSModelFqName() + "' --> '"+ currentInputModel_clone.getSModelFqName()+ "'");
+    }
     List<SNode> rrr=currentInputModel.getRoots();
     SNode[] roots=rrr.toArray(new SNode[rrr.size()]);
     for (int i=0; i < roots.length / 2; i++) {
@@ -31,7 +33,9 @@
   int secondaryMappingRepeatCount=1;
   while (true) {
     currentOutputModel.validateLanguagesAndImports();
-    info("generating model '" + currentOutputModel.getSModelFqName() + "'");
+    if (myLogger.needsInfo()) {
+      myLogger.info("generating model '" + currentOutputModel.getSModelFqName() + "'");
+    }
     mySessionContext.clearTransientObjects();
     SModel transientModel=createTransientModel();
     recycleWasteModel(currentInputModel);
@@ -40,23 +44,25 @@
     tracer.startTracing(currentInputModel,transientModel);
     if (!applyRules(currentInputModel,transientModel,false,ruleManager)) {
       tracer.discardTracing(currentInputModel,transientModel);
-      info("remove empty model '" + transientModel.getSModelFqName() + "'");
+      if (myLogger.needsInfo()) {
+        myLogger.info("remove empty model '" + transientModel.getSModelFqName() + "'");
+      }
       SModelRepository.getInstance().removeModelDescriptor(transientModel.getModelDescriptor());
       myTransientModelsCount--;
       break;
     }
     if (++secondaryMappingRepeatCount > 10) {
-      myLogger.showErrorMessage(null,"failed to generate output after 10 repeated mappings");
+      myLogger.error("failed to generate output after 10 repeated mappings");
       if (tracer.isTracing()) {
-        myLogger.showErrorMessage(null,"last rules applied:");
+        myLogger.error("last rules applied:");
         List<Pair<SNode,SNode>> pairs=tracer.getAllAppiedRulesWithInputNodes(transientModel.getSModelReference());
         for (        Pair<SNode,SNode> pair : pairs) {
-          myLogger.showErrorMessage(pair.o1,"rule: " + pair.o1.getDebugText());
-          myLogger.showErrorMessage(pair.o2,"-- input: " + (pair.o2 != null ? pair.o2.getDebugText() : "n/a"));
+          myLogger.error(pair.o1,"rule: " + pair.o1.getDebugText());
+          myLogger.error(pair.o2,"-- input: " + (pair.o2 != null ? pair.o2.getDebugText() : "n/a"));
         }
       }
  else {
-        myLogger.showErrorMessage(null,"to get more diagnostic generate model with the 'save transient models' option");
+        myLogger.error("to get more diagnostic generate model with the 'save transient models' option");
       }
       throw new GenerationFailureException("failed to generate output after 10 repeated mappings");
     }
