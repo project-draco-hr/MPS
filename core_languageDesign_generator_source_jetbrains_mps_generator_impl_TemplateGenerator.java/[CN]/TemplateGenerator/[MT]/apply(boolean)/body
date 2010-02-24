@@ -1,17 +1,22 @@
 {
   checkMonitorCanceled();
   myAreMappingsReady=false;
+  ttrace.push("reductions",false);
   if (isPrimary) {
+    ttrace.push("create root",false);
     for (    CreateRootRule rule : myRuleManager.getCreateRootRules()) {
       checkMonitorCanceled();
       applyCreateRootRule(rule);
     }
+    ttrace.pop();
   }
+  ttrace.push("root mappings",false);
   List<SNode> rootsToCopy=new ArrayList<SNode>(myInputModel.getRoots());
   for (  Root_MappingRule rule : myRuleManager.getRoot_MappingRules()) {
     checkMonitorCanceled();
     applyRoot_MappingRule(rule,rootsToCopy);
   }
+  ttrace.pop();
   checkMonitorCanceled();
   getGeneratorSessionContext().clearCopiedRootsSet();
   List<SNode> copiedOutputRoots=copyRootsFromInputModel(rootsToCopy);
@@ -24,14 +29,21 @@
     SNode inputRootNode=findInputNodeById(outputRootNode.getSNodeId());
     applyReductionRules(inputRootNode,outputRootNode);
   }
+  ttrace.pop();
   myAreMappingsReady=true;
+  ttrace.push("weavings",false);
   applyWeaving_MappingRules();
+  ttrace.pop();
+  ttrace.push("delayed mappings",false);
   myDelayedChanges.doAllChanges();
+  ttrace.pop();
+  ttrace.push("restoring references",false);
   for (  SNode copiedRoot : copiedOutputRoots) {
     checkMonitorCanceled();
     invalidateReferencesInCopiedNode(copiedRoot);
   }
   revalidateAllReferences();
+  ttrace.pop();
   checkMonitorCanceled();
   return isChanged();
 }
