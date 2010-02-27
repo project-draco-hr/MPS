@@ -1,0 +1,46 @@
+{
+  myLocation=new StubLocation(path,prefix,module);
+  SModelRepository repository=SModelRepository.getInstance();
+  for (  SModelDescriptor descriptor : getModelDescriptors(myLocation)) {
+    SModelDescriptor oldDescr=repository.getModelDescriptor(descriptor.getSModelReference());
+    if (oldDescr == null) {
+      repository.registerModelDescriptor(descriptor,module);
+      if (repository.getOwners(descriptor).size() > 1) {
+        LOG.warning("Loading the same java_stub package twice : " + descriptor.getLongName() + " from "+ repository.getOwners(descriptor));
+      }
+    }
+ else {
+      descriptor=oldDescr;
+      if (AbstractModule.USE_INCREMETAL_STUBS_RELOADING) {
+        if (descriptor instanceof BaseSModelDescriptor) {
+          BaseSModelDescriptor baseDescriptor=(BaseSModelDescriptor)descriptor;
+          if (baseDescriptor.getModelRootManager().getClass().getName().equals(this.getClass().getName())) {
+            baseDescriptor.setModelRootManager(this);
+          }
+        }
+      }
+      if (!descriptor.isInitialized()) {
+        if (!myDescriptorsWithListener.contains(descriptor)) {
+          descriptor.addModelListener(myInitializationListener);
+          myDescriptorsWithListener.add(descriptor);
+        }
+      }
+ else {
+        if (AbstractModule.USE_INCREMETAL_STUBS_RELOADING) {
+          if (descriptor instanceof BaseStubModelDescriptor) {
+            if (((BaseStubModelDescriptor)descriptor).isNeedsReloading()) {
+              updateModelInLoadingState(descriptor,descriptor.getSModel());
+              break;
+            }
+          }
+ else {
+            updateModelInLoadingState(descriptor,descriptor.getSModel());
+          }
+        }
+ else {
+          updateModelInLoadingState(descriptor,descriptor.getSModel());
+        }
+      }
+    }
+  }
+}
