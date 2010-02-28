@@ -1,9 +1,8 @@
 {
-  ApplicationManager.getApplication().assertIsDispatchThread();
   myListIsUpToDate=false;
   myAlarm.cancelAllRequests();
   myListUpdater.cancelAll();
-  cancelCalcElementsThread();
+  tryToCancel();
   ApplicationManager.getApplication().invokeLater(new Runnable(){
     public void run(){
       final String text=myTextField.getText();
@@ -22,7 +21,7 @@ synchronized (myRebuildMutex) {
                 if (myDisposedFlag) {
                   return;
                 }
-                setElementsToList(pos,elements);
+                setElementsToList(pos,elements,text);
                 myListIsUpToDate=true;
                 choosenElementMightChange();
                 if (postRunnable != null) {
@@ -32,14 +31,15 @@ synchronized (myRebuildMutex) {
             }
           }
 ;
-          cancelCalcElementsThread();
-          myCalcElementsThread=new CalcElementsThread(text,myCheckBox.isSelected(),callback,modalityState,postRunnable == null);
+          tryToCancel();
+          myCalcElementsThread=new CalcElementsThread(text,myCheckBox.isSelected(),callback,modalityState);
+          myCalcElementsThread.setCanCancel(postRunnable == null);
           ApplicationManager.getApplication().executeOnPooledThread(myCalcElementsThread);
         }
       }
 ;
       if (delay > 0) {
-        myAlarm.addRequest(request,delay,ModalityState.stateForComponent(myTextField));
+        myAlarm.addRequest(request,delay,ModalityState.current());
       }
  else {
         request.run();
