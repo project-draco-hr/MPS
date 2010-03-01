@@ -1,0 +1,64 @@
+{
+  if (updateFolding) {
+    for (Iterator<Entry<CellInfo,FoldingButton>> it=myFoldingButtons.entrySet().iterator(); it.hasNext(); ) {
+      Entry<CellInfo,FoldingButton> nextEntry=it.next();
+      if (!nextEntry.getValue().relayout()) {
+        it.remove();
+      }
+    }
+  }
+  if (myFoldingButtons.size() > 0) {
+    myLeftFoldingAreaWidth=FoldingButton.HALF_WIDTH;
+    myRightFoldingAreaWidth=FoldingButton.HALF_WIDTH;
+  }
+ else {
+    myLeftFoldingAreaWidth=0;
+    myRightFoldingAreaWidth=0;
+  }
+  if (updateBraces) {
+    for (    HighlighterBracket bracket : myBrackets.values()) {
+      bracket.relayout();
+      bracket.setX(mySeparatorLineX);
+    }
+  }
+  deleteUnresolvedBrackets();
+  myBracketEdges.clear();
+  myBracketsLayoutStack.clear();
+  for (  HighlighterBracket bracket : myBrackets.values()) {
+    myBracketEdges.add(bracket.getBeginningEdge());
+    myBracketEdges.add(bracket.getEndingEdge());
+  }
+  Collections.sort(myBracketEdges);
+  try {
+    int maxDepth=0;
+    for (int i=0; i < myBracketEdges.size(); i++) {
+      BracketEdge edge=myBracketEdges.get(i);
+      HighlighterBracket bracket=edge.myHighlighterBracket;
+      if (edge.myBeginning) {
+        myBracketsLayoutStack.push(bracket);
+      }
+ else {
+        HighlighterBracket poppedBracket=myBracketsLayoutStack.pop();
+        while (poppedBracket != bracket) {
+          myBracketEdges.remove(poppedBracket.getEndingEdge());
+          myBrackets.remove(poppedBracket.myEditorCellInfo1);
+          poppedBracket=myBracketsLayoutStack.pop();
+        }
+        int wasDepth=myBracketsLayoutStack.size() + 1;
+        maxDepth=Math.max(wasDepth,maxDepth);
+        bracket.myDepth=wasDepth;
+      }
+    }
+    myCurrentBracketsWidth=(mySeparatorLineX - maxDepth) / (2 + maxDepth);
+    for (    HighlighterBracket bracket : myBrackets.values()) {
+      int inverseDepth=maxDepth - bracket.myDepth;
+      bracket.myCurrentWidth=getCurrentBracketsWidth() * 2 + inverseDepth * (getCurrentBracketsWidth() + 1);
+      myLeftFoldingAreaWidth=Math.max(myLeftFoldingAreaWidth,bracket.myCurrentWidth);
+    }
+  }
+ catch (  EmptyStackException ex) {
+    LOG.error("brackets error");
+  }
+  myBracketsLayoutStack.clear();
+  myBracketEdges.clear();
+}
