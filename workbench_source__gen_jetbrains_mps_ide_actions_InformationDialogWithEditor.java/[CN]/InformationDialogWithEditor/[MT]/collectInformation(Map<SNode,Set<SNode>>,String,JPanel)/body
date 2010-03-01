@@ -1,0 +1,58 @@
+{
+  if (rootToChilds.isEmpty()) {
+    return;
+  }
+  this.setCaption(panel,caption);
+  final MPSTree tree=new MPSTree(){
+    protected MPSTreeNode rebuild(){
+      TextTreeNode rootTreeNode=new TextTreeNode("");
+      rootTreeNode.setIcon(new EmptyIcon(10));
+      for (      final SNode root : rootToChilds.keySet()) {
+        SNodeTreeNode nodeTreeNode=new SNodeTreeNode(root,null,InformationDialogWithEditor.this.getOperationContext(),new Condition<SNode>(){
+          public boolean met(          SNode candidate){
+            return rootToChilds.get(root).contains(candidate);
+          }
+        }
+);
+        rootTreeNode.add(nodeTreeNode);
+      }
+      return rootTreeNode;
+    }
+  }
+;
+  tree.addTreeSelectionListener(new TreeSelectionListener(){
+    public void valueChanged(    TreeSelectionEvent event){
+      if (event.getNewLeadSelectionPath() == null) {
+        return;
+      }
+      TreePath path=tree.getSelectionModel().getSelectionPath();
+      if (path == null) {
+        return;
+      }
+      Object nodeTreeNode=path.getLastPathComponent();
+      if (!(nodeTreeNode instanceof SNodeTreeNode)) {
+        return;
+      }
+      final SNode node=((SNodeTreeNode)nodeTreeNode).getSNode();
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          SNode root=node.getContainingRoot();
+          SNode copiedRoot=SNodeOperations.copyNode(root);
+          InformationDialogWithEditor.this.myEditor.setNode(copiedRoot);
+          InformationDialogWithEditor.this.setEditorNode(root);
+          InformationDialogWithEditor.this.highlightChanges(InformationDialogWithEditor.this.getCopiedNodes(rootToChilds.get(root),root,copiedRoot));
+          if (node != root) {
+            InformationDialogWithEditor.this.myEditor.selectNode(InformationDialogWithEditor.this.getCopiedNode(node,root,copiedRoot));
+          }
+        }
+      }
+);
+      if (InformationDialogWithEditor.this.myMainPanel != null) {
+        InformationDialogWithEditor.this.myMainPanel.updateUI();
+      }
+    }
+  }
+);
+  tree.rebuildLater();
+  panel.add(tree,BorderLayout.CENTER);
+}
