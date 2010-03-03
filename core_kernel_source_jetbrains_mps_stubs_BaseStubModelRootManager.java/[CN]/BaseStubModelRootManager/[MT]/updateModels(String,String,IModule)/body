@@ -1,7 +1,14 @@
 {
   myLocation=new StubLocation(path,prefix,module);
   SModelRepository repository=SModelRepository.getInstance();
-  for (  SModelDescriptor descriptor : getModelDescriptors(myLocation)) {
+  Set<BaseStubModelDescriptor> models=new HashSet<BaseStubModelDescriptor>();
+  try {
+    models=getModelDescriptors(myLocation);
+  }
+ catch (  Throwable t) {
+    LOG.error(t);
+  }
+  for (  BaseSModelDescriptor descriptor : models) {
     SModelDescriptor oldDescr=repository.getModelDescriptor(descriptor.getSModelReference());
     if (oldDescr == null) {
       repository.registerModelDescriptor(descriptor,module);
@@ -10,13 +17,11 @@
       }
     }
  else {
-      descriptor=oldDescr;
+      descriptor=(BaseStubModelDescriptor)oldDescr;
     }
-    if (descriptor instanceof BaseSModelDescriptor) {
-      BaseSModelDescriptor baseDescriptor=(BaseSModelDescriptor)descriptor;
-      if (baseDescriptor.getModelRootManager().getClass().getName().equals(this.getClass().getName())) {
-        baseDescriptor.setModelRootManager(this);
-      }
+    BaseSModelDescriptor baseDescriptor=(BaseSModelDescriptor)descriptor;
+    if (baseDescriptor.getModelRootManager().getClass().getName().equals(this.getClass().getName())) {
+      baseDescriptor.setModelRootManager(this);
     }
     if (!descriptor.isInitialized()) {
       if (!myDescriptorsWithListener.contains(descriptor)) {
