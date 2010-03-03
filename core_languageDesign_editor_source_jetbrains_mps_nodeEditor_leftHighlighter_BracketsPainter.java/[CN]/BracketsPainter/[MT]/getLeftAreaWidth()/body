@@ -1,0 +1,48 @@
+{
+  List<BracketEdge> bracketEdges=new ArrayList<BracketEdge>();
+  for (  HighlighterBracket bracket : myBrackets.values()) {
+    bracket.setLevel(1);
+    bracketEdges.add(bracket.getBeginningEdge());
+    bracketEdges.add(bracket.getEndingEdge());
+  }
+  Collections.sort(bracketEdges);
+  int maxLevel=0;
+  Stack<HighlighterBracket> myBracketsLayoutStack=new Stack<HighlighterBracket>();
+  for (int i=0; i < bracketEdges.size(); i++) {
+    BracketEdge edge=bracketEdges.get(i);
+    HighlighterBracket bracket=edge.getBracket();
+    if (edge.isBeggining()) {
+      myBracketsLayoutStack.push(bracket);
+    }
+ else {
+      HighlighterBracket bracketFromStack=null;
+      while (bracketFromStack != bracket) {
+        if (bracketFromStack != null) {
+          bracketEdges.remove(bracketFromStack.getEndingEdge());
+          myBrackets.remove(bracketFromStack.getCell());
+        }
+        if (!myBracketsLayoutStack.isEmpty()) {
+          HighlighterBracket newBracketFromStack=myBracketsLayoutStack.pop();
+          if (bracketFromStack != null) {
+            newBracketFromStack.setLevel(Math.max(newBracketFromStack.getLevel(),bracketFromStack.getLevel()));
+          }
+          bracketFromStack=newBracketFromStack;
+        }
+ else {
+          break;
+        }
+      }
+      if (bracketFromStack != bracket) {
+        myBrackets.remove(bracket.getCell());
+      }
+ else {
+        if (!myBracketsLayoutStack.isEmpty()) {
+          HighlighterBracket onTopOfStack=myBracketsLayoutStack.peek();
+          onTopOfStack.setLevel(Math.max(onTopOfStack.getLevel(),bracket.getLevel() + 1));
+        }
+        maxLevel=Math.max(bracket.getLevel(),maxLevel);
+      }
+    }
+  }
+  return maxLevel == 0 ? 0 : HighlighterBracket.getBracketWidth(maxLevel);
+}
