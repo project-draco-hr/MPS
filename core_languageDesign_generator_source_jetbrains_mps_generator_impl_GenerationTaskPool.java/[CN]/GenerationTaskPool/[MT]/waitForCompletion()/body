@@ -1,7 +1,30 @@
 {
-  GenerationTask next;
-  while ((next=queue.poll()) != null) {
-    next.run();
+  Throwable th=null;
+synchronized (objectLock) {
+    while (exceptions.size() == 0 && tasksInQueue.get() != 0 && !progressMonitor.isCanceled()) {
+      try {
+        objectLock.wait(1000);
+      }
+ catch (      InterruptedException e) {
+      }
+    }
+    if (exceptions.size() != 0) {
+      th=exceptions.get(0);
+    }
+ else     if (progressMonitor.isCanceled()) {
+      th=new GenerationCanceledException();
+    }
   }
-  queue.clear();
+  myExecutor.shutdownNow();
+  if (th != null) {
+    if (th instanceof GenerationCanceledException) {
+      throw (GenerationCanceledException)th;
+    }
+ else     if (th instanceof GenerationFailureException) {
+      throw (GenerationFailureException)th;
+    }
+ else     if (th instanceof RuntimeException) {
+      throw (RuntimeException)th;
+    }
+  }
 }
