@@ -1,2 +1,39 @@
 {
+  Iterable<SNode> methods=ListSequence.fromList(SLinkOperations.getTargets(container,"method",true)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return canOverride(it);
+    }
+  }
+);
+  if (Sequence.fromIterable(methods).isEmpty()) {
+    return;
+  }
+  Map<SNode,List<Tuples._2<SNode,SNode>>> overridingToOverridenMethodsMap=MapSequence.fromMap(new HashMap<SNode,List<Tuples._2<SNode,SNode>>>());
+  this.collectOverridingMethodsInClassifierHierarchy(container,methods,overridingToOverridenMethodsMap);
+  for (  SNode overridingMethod : SetSequence.fromSet(MapSequence.fromMap(overridingToOverridenMethodsMap).keySet())) {
+    StringBuffer tooltip=new StringBuffer("<html><body>");
+    int messageCounter=0;
+    boolean overrides=SPropertyOperations.getBoolean(overridingMethod,"isAbstract") || ListSequence.fromList(MapSequence.fromMap(overridingToOverridenMethodsMap).get(overridingMethod)).where(new IWhereFilter<Tuples._2<SNode,SNode>>(){
+      public boolean accept(      Tuples._2<SNode,SNode> it){
+        return !(SPropertyOperations.getBoolean(it._0(),"isAbstract"));
+      }
+    }
+).isNotEmpty();
+    for (Iterator<Tuples._2<SNode,SNode>> it=ListSequence.fromList(MapSequence.fromMap(overridingToOverridenMethodsMap).get(overridingMethod)).iterator(); it.hasNext(); ) {
+      SNode overridenClassifier=it.next()._1();
+      tooltip.append((overrides ? "Overrides" : "Implements"));
+      tooltip.append(" method in '");
+      tooltip.append(BaseConcept_Behavior.call_getPresentation_1213877396640(overridenClassifier));
+      tooltip.append("'");
+      if (it.hasNext()) {
+        tooltip.append(BR);
+        if (++messageCounter >= MAX_MESSAGE_NUMBER) {
+          tooltip.append("...");
+          break;
+        }
+      }
+    }
+    tooltip.append("</body></html>");
+    SetSequence.fromSet(messages).addElement(new OverridingMethodEditorMessage(overridingMethod,this,tooltip.toString(),overrides));
+  }
 }

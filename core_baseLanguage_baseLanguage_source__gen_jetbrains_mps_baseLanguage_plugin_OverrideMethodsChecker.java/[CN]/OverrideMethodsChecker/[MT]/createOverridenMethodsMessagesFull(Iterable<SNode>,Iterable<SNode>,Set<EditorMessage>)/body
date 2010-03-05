@@ -1,38 +1,42 @@
 {
-  Map<SNode,List<SNode>> overridingClassifiersMap=MapSequence.fromMap(new HashMap<SNode,List<SNode>>());
+  Map<SNode,List<SNode>> overridenMethodsToOverridingClassifiersMap=MapSequence.fromMap(new HashMap<SNode,List<SNode>>());
   for (  SNode derivedClassifier : Sequence.fromIterable(derivedClassifiers)) {
-    for (    SNode derivedClassifierMethod : ListSequence.fromList(SLinkOperations.getTargets(derivedClassifier,"method",true))) {
-      if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(derivedClassifierMethod,"visibility",true),"jetbrains.mps.baseLanguage.structure.PrivateVisibility")) {
-        continue;
+    for (    SNode derivedClassifierMethod : ListSequence.fromList(SLinkOperations.getTargets(derivedClassifier,"method",true)).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return canOverride(it);
       }
+    }
+)) {
       for (      SNode method : Sequence.fromIterable(methods)) {
         if (BaseMethodDeclaration_Behavior.call_hasSameSignature_1213877350435(derivedClassifierMethod,method)) {
-          List<SNode> overridingMethods=MapSequence.fromMap(overridingClassifiersMap).get(method);
-          if (overridingMethods == null) {
-            overridingMethods=new ArrayList<SNode>();
-            MapSequence.fromMap(overridingClassifiersMap).put(method,overridingMethods);
+          List<SNode> overridingClassifiers=MapSequence.fromMap(overridenMethodsToOverridingClassifiersMap).get(method);
+          if (overridingClassifiers == null) {
+            overridingClassifiers=new ArrayList<SNode>();
+            MapSequence.fromMap(overridenMethodsToOverridingClassifiersMap).put(method,overridingClassifiers);
           }
-          ListSequence.fromList(overridingMethods).addElement(derivedClassifier);
+          ListSequence.fromList(overridingClassifiers).addElement(derivedClassifier);
           break;
         }
       }
     }
   }
-  for (  SNode overridenMethod : SetSequence.fromSet(MapSequence.fromMap(overridingClassifiersMap).keySet())) {
+  for (  SNode overridenMethod : SetSequence.fromSet(MapSequence.fromMap(overridenMethodsToOverridingClassifiersMap).keySet())) {
+    boolean overriden=!(SPropertyOperations.getBoolean(overridenMethod,"isAbstract"));
     StringBuffer tooltip=new StringBuffer("<html><body>Is ");
-    tooltip.append((SPropertyOperations.getBoolean(overridenMethod,"isAbstract") ? "implemented" : "overriden"));
+    tooltip.append((overriden ? "overriden" : "implemented"));
     tooltip.append(" in");
     int messageCounter=0;
-    for (    SNode overridingClassifier : ListSequence.fromList(MapSequence.fromMap(overridingClassifiersMap).get(overridenMethod))) {
+    for (Iterator<SNode> it=ListSequence.fromList(MapSequence.fromMap(overridenMethodsToOverridingClassifiersMap).get(overridenMethod)).iterator(); it.hasNext(); ) {
+      SNode overridingClassifier=it.next();
       tooltip.append(TOOLTIP_INDENT);
       tooltip.append(BaseConcept_Behavior.call_getPresentation_1213877396640(overridingClassifier));
-      if (++messageCounter >= MAX_MESSAGE_NUMBER) {
+      if (++messageCounter >= MAX_MESSAGE_NUMBER && it.hasNext()) {
         tooltip.append(TOOLTIP_INDENT);
         tooltip.append("...");
         break;
       }
     }
     tooltip.append("</body></html>");
-    SetSequence.fromSet(messages).addElement(new OverrideEditorMessage(overridenMethod,this,tooltip.toString()));
+    SetSequence.fromSet(messages).addElement(new OverridenMethodEditorMessage(overridenMethod,this,tooltip.toString(),overriden));
   }
 }
