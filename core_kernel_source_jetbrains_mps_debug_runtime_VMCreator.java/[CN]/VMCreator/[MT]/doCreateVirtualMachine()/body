@@ -3,27 +3,10 @@
     if (myArguments != null) {
       throw new IOException("debugger already listening");
     }
-    final String address=myConnectionSettings.getPort();
+    final String port=myConnectionSettings.getPort();
     if (myConnectionSettings.isServerMode()) {
       ListeningConnector connector=(ListeningConnector)findConnector(myConnectionSettings.isUseSockets() ? SOCKET_LISTENING_CONNECTOR_NAME : SHMEM_LISTENING_CONNECTOR_NAME);
-      if (connector == null) {
-        throw new RunFailedException("debug connector not found");
-      }
-      myArguments=connector.defaultArguments();
-      if (myArguments == null) {
-        throw new RunFailedException("no debug listen port");
-      }
-      if (address == null) {
-        throw new RunFailedException("no debug listen port");
-      }
-      final Connector.Argument portArg=myConnectionSettings.isUseSockets() ? myArguments.get("port") : myArguments.get("name");
-      if (portArg != null) {
-        portArg.setValue(address);
-      }
-      final Connector.Argument timeoutArg=myArguments.get("timeout");
-      if (timeoutArg != null) {
-        timeoutArg.setValue("0");
-      }
+      fillConnectorArguments(connector,port);
       connector.startListening(myArguments);
       myDebugVMEventsProcessor.getMulticaster().connectorIsReady();
       try {
@@ -46,7 +29,15 @@ catch (          IllegalConnectorArgumentsException e) {
       }
     }
  else {
-      throw new UnsupportedOperationException("not implemented");
+      AttachingConnector connector=(AttachingConnector)findConnector(myConnectionSettings.isUseSockets() ? SOCKET_ATTACHING_CONNECTOR_NAME : SHMEM_ATTACHING_CONNECTOR_NAME);
+      fillConnectorArguments(connector,port);
+      try {
+        return connector.attach(myArguments);
+      }
+ catch (      IOException ex) {
+        LOG.error(ex);
+        throw new RunFailedException(ex);
+      }
     }
   }
  catch (  IOException e) {
