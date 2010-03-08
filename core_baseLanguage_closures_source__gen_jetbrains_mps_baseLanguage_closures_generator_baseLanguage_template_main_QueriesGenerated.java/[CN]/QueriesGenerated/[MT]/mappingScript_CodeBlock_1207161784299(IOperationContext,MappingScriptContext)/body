@@ -4,33 +4,20 @@
     if ((SLinkOperations.getTarget(te,"classConcept",false) == null)) {
       SNode cl=SNodeOperations.getAncestor(te,"jetbrains.mps.baseLanguage.closures.structure.ClosureLiteral",false,false);
       SNode thisCC=SNodeOperations.getAncestor(te,"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false);
-      if ((cl != null)) {
-        for (        SNode cc : SNodeOperations.getAncestors(cl,"jetbrains.mps.baseLanguage.structure.ClassConcept",false)) {
-          if (cc == thisCC) {
-            if (SNodeOperations.isInstanceOf(thisCC,"jetbrains.mps.baseLanguage.structure.AnonymousClass")) {
-              SNode parent=SNodeOperations.getParent(te);
-              if (SNodeOperations.isInstanceOf(parent,"jetbrains.mps.baseLanguage.structure.DotExpression")) {
-                SNode op=SLinkOperations.getTarget(SNodeOperations.cast(parent,"jetbrains.mps.baseLanguage.structure.DotExpression"),"operation",true);
-                if (SNodeOperations.isInstanceOf(op,"jetbrains.mps.baseLanguage.structure.FieldReferenceOperation")) {
-                  SNode ifr=SNodeOperations.replaceWithNewChild(parent,"jetbrains.mps.baseLanguageInternal.structure.InternalPartialFieldReference");
-                  SLinkOperations.setNewChild(ifr,"instance","jetbrains.mps.baseLanguageInternal.structure.InternalThisExpression");
-                  SPropertyOperations.set(ifr,"fieldName",SPropertyOperations.getString(SLinkOperations.getTarget(SNodeOperations.cast(op,"jetbrains.mps.baseLanguage.structure.FieldReferenceOperation"),"fieldDeclaration",false),"name"));
-                  SLinkOperations.setTarget(ifr,"fieldType",SNodeOperations.copyNode(SLinkOperations.getTarget(SLinkOperations.getTarget(SNodeOperations.cast(op,"jetbrains.mps.baseLanguage.structure.FieldReferenceOperation"),"fieldDeclaration",false),"type",true)),true);
-                }
- else                 if (SNodeOperations.isInstanceOf(op,"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation")) {
-                  _context.showErrorMessage(te,"'this' expression coulnd't be removed");
-                }
-              }
-            }
+      if (SNodeOperations.isInstanceOf(thisCC,"jetbrains.mps.baseLanguage.structure.AnonymousClass") && SNodeOperations.getAncestor(cl,"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false) == thisCC) {
+        SNode parent=SNodeOperations.getParent(te);
+        if (SNodeOperations.isInstanceOf(parent,"jetbrains.mps.baseLanguage.structure.DotExpression")) {
+          SNode op=SLinkOperations.getTarget(SNodeOperations.cast(parent,"jetbrains.mps.baseLanguage.structure.DotExpression"),"operation",true);
+          if (SNodeOperations.isInstanceOf(op,"jetbrains.mps.baseLanguage.structure.FieldReferenceOperation")) {
+            Flags.REMOVE_THIS.flag(op);
+          }
+ else           if (SNodeOperations.isInstanceOf(op,"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation")) {
+            Flags.REMOVE_THIS.flag(op);
+          }
  else {
-              SLinkOperations.setTarget(te,"classConcept",thisCC,false);
-            }
-            break;
+            _context.showErrorMessage(te,"'this' expression coulnd't be removed");
           }
         }
-      }
- else       if (thisCC == null) {
-        _context.showWarningMessage(te,"Could not find the class concept");
       }
     }
   }
