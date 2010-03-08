@@ -1,15 +1,14 @@
 {
-  if (myFirstReload) {
-    myFirstReload=false;
-    List<SModelDescriptor> models=SModelRepository.getInstance().getModelDescriptors();
-    for (    SModelDescriptor m : new ArrayList<SModelDescriptor>(models)) {
-      if (!(m instanceof BaseStubModelDescriptor))       continue;
-      ((BaseStubModelDescriptor)m).markReload();
-    }
+  Set<StubPath> newStubs=new HashSet<StubPath>();
+  for (  AbstractModule module : getAllModules()) {
+    List<StubPath> moduleStubs=module.areJavaStubsEnabled() ? module.getAllStubPaths() : module.getStubPaths();
+    newStubs.addAll(moduleStubs);
   }
- else {
-    for (    IModule m : MPSModuleRepository.getInstance().getAllModules()) {
-      markOldStubModels((AbstractModule)m);
-    }
+  List<StubPath> stubPathList=computeNotChangedStubPaths(myLoadedStubPaths.getAllStubPaths(),newStubs);
+  for (  SModelDescriptor sm : SModelRepository.getInstance().getModelDescriptors()) {
+    if (!SModelStereotype.isStubModelStereotype(sm.getStereotype()))     continue;
+    BaseStubModelDescriptor baseDescriptor=(BaseStubModelDescriptor)sm;
+    if (notChanged(stubPathList,baseDescriptor))     continue;
+    baseDescriptor.markReload();
   }
 }
