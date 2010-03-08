@@ -1,9 +1,24 @@
 {
-  runWriteAction(new Computable<Object>(){
-    public Object compute(){
-      r.run();
-      return null;
+  if (canWrite()) {
+    r.run();
+    return;
+  }
+  Runnable runnable=new Runnable(){
+    public void run(){
+      getWriteLock().lock();
+      try {
+        r.run();
+      }
+  finally {
+        getWriteLock().unlock();
+      }
     }
   }
-);
+;
+  if (ThreadUtils.isEventDispatchThread()) {
+    ApplicationManager.getApplication().runWriteAction(runnable);
+  }
+ else {
+    ApplicationManager.getApplication().runReadAction(runnable);
+  }
 }
