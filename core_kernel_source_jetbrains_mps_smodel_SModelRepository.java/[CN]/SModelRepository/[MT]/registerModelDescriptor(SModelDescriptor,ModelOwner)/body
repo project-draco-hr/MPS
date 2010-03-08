@@ -2,21 +2,23 @@
   SModelReference modelReference=modelDescriptor.getSModelReference();
   SModelDescriptor registeredModel=getModelDescriptor(modelReference);
   LOG.assertLog(registeredModel == null || registeredModel == modelDescriptor,"Another model \"" + modelReference + "\" is already registered!");
-  SModelDescriptor modelDescByName=myFqNameToModelDescriptorMap.get(modelReference.getSModelFqName());
+  SModelDescriptor modelDescByName=getModelDescriptor(modelReference.getSModelFqName());
   if (modelDescByName != null && modelDescByName != modelDescriptor) {
     LOG.error("can't register model descriptor " + modelReference + "model with the same fq name but different id is already registered: id = "+ modelDescByName.getSModelReference().getSModelId());
     registerModelDescriptor(modelDescByName,owner);
   }
-  Set<ModelOwner> owners=myModelsToOwners.getByFirst(modelDescriptor);
-  LOG.assertLog(owners == null || !owners.contains(owner),"Another model \"" + modelReference + "\" is already registered!");
-  myModelsToOwners.addLink(modelDescriptor,owner);
-  if (modelReference.getSModelId() != null) {
-    myIdToModelDescriptorMap.put(modelReference.getSModelId(),modelDescriptor);
+synchronized (myModelsLock) {
+    Set<ModelOwner> owners=myModelsToOwners.getByFirst(modelDescriptor);
+    LOG.assertLog(owners == null || !owners.contains(owner),"Another model \"" + modelReference + "\" is already registered!");
+    myModelsToOwners.addLink(modelDescriptor,owner);
+    if (modelReference.getSModelId() != null) {
+      myIdToModelDescriptorMap.put(modelReference.getSModelId(),modelDescriptor);
+    }
+    myFqNameToModelDescriptorMap.put(modelReference.getSModelFqName(),modelDescriptor);
+    myModelDescriptors.add(modelDescriptor);
+    addModelToFileCache(modelDescriptor);
+    myModelsWithNoOwners.remove(modelDescriptor);
+    addListeners(modelDescriptor);
   }
-  myFqNameToModelDescriptorMap.put(modelReference.getSModelFqName(),modelDescriptor);
-  myModelDescriptors.add(modelDescriptor);
-  addModelToFileCache(modelDescriptor);
-  myModelsWithNoOwners.remove(modelDescriptor);
-  addListeners(modelDescriptor);
   fireModelAdded(modelDescriptor);
 }
