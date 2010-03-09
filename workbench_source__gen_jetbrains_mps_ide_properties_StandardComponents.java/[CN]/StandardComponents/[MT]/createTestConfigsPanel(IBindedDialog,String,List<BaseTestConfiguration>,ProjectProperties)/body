@@ -1,0 +1,49 @@
+{
+  final JList myList=new JList();
+  final ListAddAction add=new ListAddAction(myList){
+    protected int doAdd(    AnActionEvent e){
+      TestConfigurationDialog dialog=new TestConfigurationDialog(owner.getOperationContext().getMPSProject(),null);
+      dialog.showDialog();
+      BaseTestConfiguration config=dialog.getResult();
+      if (config == null) {
+        return -1;
+      }
+      properties.testConfigsChanged();
+      list.add(config);
+      return list.indexOf(config);
+    }
+  }
+;
+  final ListRemoveAction remove=new ListRemoveAction(myList){
+    protected void doRemove(    AnActionEvent e){
+      for (      Object value : myList.getSelectedValues()) {
+        properties.testConfigsChanged();
+        list.remove((BaseTestConfiguration)value);
+      }
+    }
+  }
+;
+  final ListEditAction edit=new ListEditAction(myList){
+    public void doEdit(){
+      Object value=myList.getSelectedValue();
+      if (value == null) {
+        return;
+      }
+      TestConfigurationDialog dialog=new TestConfigurationDialog(owner.getOperationContext().getMPSProject(),(BaseTestConfiguration)value);
+      dialog.showDialog();
+      BaseTestConfiguration config=dialog.getResult();
+      if (config == null) {
+        return;
+      }
+      properties.getTestConfigurations().remove((BaseTestConfiguration)value);
+      properties.getTestConfigurations().add(config);
+      properties.testConfigsChanged();
+    }
+  }
+;
+  BoundListPanel result=new BoundListPanel(owner,caption,list);
+  result.setCellRenderer(new TestConfigListCellRenderer());
+  result.setChooseActions(add,remove,edit);
+  result.init();
+  return result;
+}
