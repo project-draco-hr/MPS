@@ -1,0 +1,56 @@
+{
+  Rectangle rect=g.getClipBounds();
+  int column=0;
+  boolean drawn=false;
+  int draggedColumnIndex=-1;
+  Rectangle draggedCellRect=null;
+  Dimension spacing=this.table.getIntercellSpacing();
+  JTableHeader header=this.table.getTableHeader();
+  Rectangle cellRect=new Rectangle();
+  cellRect.height=((DiffRowTable)this.table).getRowHeight(row) + spacing.height;
+  cellRect.y=0;
+  for (int i=0; i < row; i++) {
+    cellRect.y+=((DiffRowTable)this.table).getRowHeight(i) + spacing.height;
+  }
+  Enumeration enumeration=this.table.getColumnModel().getColumns();
+  while (enumeration.hasMoreElements()) {
+    TableColumn aColumn=(TableColumn)enumeration.nextElement();
+    cellRect.width=aColumn.getWidth() + spacing.width;
+    if (cellRect.intersects(rect)) {
+      drawn=true;
+      if ((header == null) || (aColumn != header.getDraggedColumn())) {
+        this.paintCell(g,cellRect,row,column);
+      }
+ else {
+        g.setColor(this.table.getParent().getBackground());
+        g.fillRect(cellRect.x,cellRect.y,cellRect.width,cellRect.height);
+        draggedCellRect=new Rectangle(cellRect);
+        draggedColumnIndex=column;
+      }
+    }
+ else {
+      if (drawn) {
+        break;
+      }
+    }
+    cellRect.x+=cellRect.width;
+    column++;
+  }
+  if (draggedColumnIndex != -1 && draggedCellRect != null) {
+    draggedCellRect.x+=header.getDraggedDistance();
+    g.setColor(this.table.getBackground());
+    g.fillRect(draggedCellRect.x,draggedCellRect.y,draggedCellRect.width,draggedCellRect.height);
+    g.setColor(this.table.getGridColor());
+    int x1=draggedCellRect.x;
+    int y1=draggedCellRect.y;
+    int x2=x1 + draggedCellRect.width - 1;
+    int y2=y1 + draggedCellRect.height - 1;
+    if (this.table.getShowVerticalLines()) {
+      g.drawLine(x2,y1,x2,y2);
+    }
+    if (this.table.getShowHorizontalLines()) {
+      g.drawLine(x1,y2,x2,y2);
+    }
+    this.paintCell(g,draggedCellRect,row,draggedColumnIndex);
+  }
+}

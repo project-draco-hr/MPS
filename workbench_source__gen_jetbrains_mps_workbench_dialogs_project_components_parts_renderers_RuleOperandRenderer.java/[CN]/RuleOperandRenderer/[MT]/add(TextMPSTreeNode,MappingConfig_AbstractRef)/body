@@ -1,0 +1,70 @@
+{
+  if (ref == null) {
+    return false;
+  }
+  if (ref instanceof MappingConfig_RefAllLocal) {
+    root.add(new TextMPSTreeNode("*",null));
+    return true;
+  }
+ else   if (ref instanceof MappingConfig_RefAllGlobal) {
+    root.add(new TextMPSTreeNode("*.*",null));
+    return true;
+  }
+ else   if (ref instanceof MappingConfig_SimpleRef) {
+    MappingConfig_SimpleRef refC=(MappingConfig_SimpleRef)ref;
+    SModelReference modelRef=SModelReference.fromString(refC.getModelUID());
+    String nodeName="";
+    if (refC.getNodeID().equals("*")) {
+      nodeName=modelRef.getShortName() + ".*";
+    }
+ else {
+      final SNodePointer p=new SNodePointer(refC.getModelUID(),refC.getNodeID());
+      nodeName=ModelAccess.instance().runReadAction(new Computable<String>(){
+        public String compute(){
+          SModelDescriptor model=p.getModel();
+          SNode node=p.getNode();
+          if (model == null || node == null) {
+            return null;
+          }
+          return model.getName() + "." + node.getName();
+        }
+      }
+);
+      if (nodeName == null) {
+        String nodeString=p.getModelReference().getSModelFqName().toString() + ":" + p.getNodeId().toString();
+        root.add(new TextMPSTreeNode("NOT FOUND: " + nodeString,null));
+        return false;
+      }
+    }
+    root.add(new TextMPSTreeNode(nodeName,null));
+    return true;
+  }
+ else   if (ref instanceof MappingConfig_ExternalRef) {
+    MappingConfig_ExternalRef refC=(MappingConfig_ExternalRef)ref;
+    ModuleReference generatorReference=refC.getGenerator();
+    if (generatorReference == null) {
+      root.add(new TextMPSTreeNode("NOT FOUND: <bad generator reference>",null));
+      return false;
+    }
+    ModuleReference moduleRef=generatorReference;
+    Generator generator=(Generator)MPSModuleRepository.getInstance().getModule(moduleRef);
+    if (generator == null) {
+      String genString=generatorReference.getModuleFqName();
+      root.add(new TextMPSTreeNode("NOT FOUND: " + genString,null));
+      return false;
+    }
+    TextMPSTreeNode child=new TextMPSTreeNode(generator.getAlias(),null);
+    root.add(child);
+    return this.add(child,refC.getMappingConfig());
+  }
+ else   if (ref instanceof MappingConfig_RefSet) {
+    boolean complete=true;
+    for (    MappingConfig_AbstractRef mappingRef : ((MappingConfig_RefSet)ref).getMappingConfigs()) {
+      if (!(this.add(root,mappingRef))) {
+        complete=false;
+      }
+    }
+    return complete;
+  }
+  return false;
+}
