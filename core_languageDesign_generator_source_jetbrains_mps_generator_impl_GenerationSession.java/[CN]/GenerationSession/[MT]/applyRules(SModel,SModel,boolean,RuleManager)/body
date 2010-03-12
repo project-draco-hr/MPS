@@ -1,4 +1,14 @@
 {
-  TemplateGenerator tg=myIsStrict && myParallelGeneration && !mySessionContext.getGenerationTracer().isTracing()&& ParallelTemplateGenerator.PARALLELING_ENABLED ? new ParallelTemplateGenerator(mySessionContext,myProgressMonitor,myLogger,ruleManager,currentInputModel,currentOutputModel,myIsStrict,ttrace) : new TemplateGenerator(mySessionContext,myProgressMonitor,myLogger,ruleManager,currentInputModel,currentOutputModel,myIsStrict,ttrace);
-  return tg.apply(isPrimary);
+  final TemplateGenerator tg=myIsStrict && myParallelGeneration && !mySessionContext.getGenerationTracer().isTracing()&& ParallelTemplateGenerator.PARALLELING_ENABLED ? new ParallelTemplateGenerator(mySessionContext,myProgressMonitor,myLogger,ruleManager,currentInputModel,currentOutputModel,myIsStrict,ttrace) : new TemplateGenerator(mySessionContext,myProgressMonitor,myLogger,ruleManager,currentInputModel,currentOutputModel,myIsStrict,ttrace);
+  if (tg instanceof ParallelTemplateGenerator) {
+    return GeneratorUtil.runReadInWrite(new GenerationComputable<Boolean>(){
+      @Override public Boolean compute() throws GenerationCanceledException, GenerationFailureException {
+        return tg.apply(isPrimary);
+      }
+    }
+);
+  }
+ else {
+    return tg.apply(isPrimary);
+  }
 }
