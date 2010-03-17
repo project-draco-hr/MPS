@@ -1,0 +1,43 @@
+{
+  if (SNodeOperations.isInstanceOf(classifier,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
+    SNode clazz=SNodeOperations.cast(classifier,"jetbrains.mps.baseLanguage.structure.ClassConcept");
+    SNode superClassifier=SLinkOperations.getTarget(SLinkOperations.getTarget(clazz,"superclass",true),"classifier",false);
+    if (addIfNotContains(visitedClassifiers,superClassifier)) {
+      this.collectOverridingMethods(superClassifier,methods,overridingToOverridenMethodsMap,visitedClassifiers);
+    }
+    ListSequence.fromList(SLinkOperations.getTargets(clazz,"implementedInterface",true)).select(new ISelector<SNode,SNode>(){
+      public SNode select(      SNode it){
+        return SLinkOperations.getTarget(it,"classifier",false);
+      }
+    }
+).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return addIfNotContains(visitedClassifiers,it);
+      }
+    }
+).visitAll(new IVisitor<SNode>(){
+      public void visit(      SNode it){
+        OverrideMethodsChecker.this.collectOverridingMethods(it,methods,overridingToOverridenMethodsMap,visitedClassifiers);
+      }
+    }
+);
+  }
+ else   if (SNodeOperations.isInstanceOf(classifier,"jetbrains.mps.baseLanguage.structure.Interface")) {
+    ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(classifier,"jetbrains.mps.baseLanguage.structure.Interface"),"extendedInterface",true)).select(new ISelector<SNode,SNode>(){
+      public SNode select(      SNode it){
+        return SLinkOperations.getTarget(it,"classifier",false);
+      }
+    }
+).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return addIfNotContains(visitedClassifiers,it);
+      }
+    }
+).visitAll(new IVisitor<SNode>(){
+      public void visit(      SNode it){
+        OverrideMethodsChecker.this.collectOverridingMethods(it,methods,overridingToOverridenMethodsMap,visitedClassifiers);
+      }
+    }
+);
+  }
+}
