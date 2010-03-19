@@ -1,0 +1,69 @@
+{
+  List<BaseMethodDeclaration> allMethods=new ArrayList<BaseMethodDeclaration>();
+  List<Classifier> classifiers=((ClassifierAndSuperClassifiersCache)this.getOwnerCache()).getClassifiers();
+  for (  Classifier classifier : classifiers) {
+    allMethods.addAll(classifier.getMethods());
+    if (classifier instanceof ClassConcept) {
+      allMethods.addAll(((ClassConcept)classifier).getStaticMethods());
+    }
+  }
+  this.myMethodsByName=new HashMap<String,List<BaseMethodDeclaration>>();
+  this.myOverriddenMethods=new HashMap<BaseMethodDeclaration,List<BaseMethodDeclaration>>();
+  forEachInAllMethods:   for (  BaseMethodDeclaration currMethod : allMethods) {
+    if (currMethod instanceof PlaceholderMethodDeclaration) {
+      continue;
+    }
+    String name=currMethod.getName();
+    if (name == null) {
+      name="";
+    }
+    if (!(this.myMethodsByName.containsKey(name))) {
+      List<BaseMethodDeclaration> methods=new ArrayList<BaseMethodDeclaration>(3);
+      methods.add(currMethod);
+      this.myMethodsByName.put(name,methods);
+      this.myOverriddenMethods.put(currMethod,new ArrayList<BaseMethodDeclaration>(3));
+    }
+ else {
+      int currMethodParmCount=currMethod.getParametersCount();
+      List<BaseMethodDeclaration> equalParmCountMethods=new ArrayList<BaseMethodDeclaration>(3);
+      List<BaseMethodDeclaration> methods=this.myMethodsByName.get(name);
+      for (      BaseMethodDeclaration method : methods) {
+        if ((currMethod.getParent().getNode() != method.getParent().getNode()) && method.getParametersCount() == currMethodParmCount) {
+          equalParmCountMethods.add(method);
+        }
+      }
+      if (equalParmCountMethods.size() > 0) {
+        if (currMethodParmCount == 0) {
+          this.myOverriddenMethods.get(equalParmCountMethods.get(0)).add(currMethod);
+          continue forEachInAllMethods;
+        }
+        Map<TypeVariableDeclaration,Type> typeByTypeVar=((ClassifierAndSuperClassifiersCache)this.getOwnerCache()).getTypeByTypeVariableMap();
+        String currentParms=this.createMethodParameterTypesString(currMethod,typeByTypeVar);
+        for (        BaseMethodDeclaration otherMethod : equalParmCountMethods) {
+          String otherParms=this.createMethodParameterTypesString(otherMethod,typeByTypeVar);
+          if (otherParms.equals(currentParms)) {
+            this.myOverriddenMethods.get(otherMethod).add(currMethod);
+            continue forEachInAllMethods;
+          }
+        }
+      }
+      this.myMethodsByName.get(name).add(currMethod);
+      this.myOverriddenMethods.put(currMethod,new ArrayList<BaseMethodDeclaration>(3));
+    }
+  }
+  this.myDependsOnNodes=new HashSet<SNode>();
+  for (  Classifier classifier : classifiers) {
+    this.myDependsOnNodes.add(classifier.getNode());
+  }
+  for (  BaseMethodDeclaration method : allMethods) {
+    this.myDependsOnNodes.add(method.getNode());
+    for (    ParameterDeclaration parm : method.getParameters()) {
+      Type type=parm.getType();
+      if (type == null) {
+        continue;
+      }
+      this.myDependsOnNodes.add(type.getNode());
+      this.myDependsOnNodes.addAll(type.getNode().getDescendants());
+    }
+  }
+}

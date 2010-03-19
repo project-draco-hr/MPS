@@ -1,0 +1,44 @@
+{
+  if (classifier == null) {
+    return;
+  }
+  if (result.contains(classifier)) {
+    return;
+  }
+  result.add(classifier);
+  if (typeParms != null && typeParms.size() > 0) {
+    Iterator<TypeVariableDeclaration> typeVars=classifier.typeVariableDeclarations();
+    for (    Type typeParm : typeParms) {
+      if (!(typeVars.hasNext())) {
+        break;
+      }
+      TypeVariableDeclaration typeVar=typeVars.next();
+      typeByTypeVar.put(typeVar,typeParm);
+    }
+  }
+  if (classifier instanceof AnonymousClass) {
+    AnonymousClass cls=(AnonymousClass)classifier;
+    ClassifierAndSuperClassifiersCache.ClassifiersDataSet.collectImplementedAndExtended(cls.getClassifier(),result,cls.getTypeParameters(),typeByTypeVar);
+  }
+ else   if (classifier instanceof ClassConcept) {
+    ClassifierType classifierType0=((ClassConcept)classifier).getSuperclass();
+    if (classifierType0 != null) {
+      ClassifierAndSuperClassifiersCache.ClassifiersDataSet.collectImplementedAndExtended(classifierType0.getClassifier(),result,classifierType0.getParameters(),typeByTypeVar);
+    }
+    for (    ClassifierType classifierType1 : ((ClassConcept)classifier).getImplementedInterfaces()) {
+      ClassifierAndSuperClassifiersCache.ClassifiersDataSet.collectImplementedAndExtended(classifierType1.getClassifier(),result,classifierType1.getParameters(),typeByTypeVar);
+    }
+    if (classifier instanceof EnumClass) {
+      SNode enumClassNode=JavaModelUtil_new.findClassifier("java.lang","Enum",true);
+      if (enumClassNode != null) {
+        Classifier enumClassifier=(Classifier)enumClassNode.getAdapter();
+        ClassifierAndSuperClassifiersCache.ClassifiersDataSet.collectImplementedAndExtended(enumClassifier,result,null,typeByTypeVar);
+      }
+    }
+  }
+ else   if (classifier instanceof Interface) {
+    for (    ClassifierType classifierType : ((Interface)classifier).getExtendedInterfaces()) {
+      ClassifierAndSuperClassifiersCache.ClassifiersDataSet.collectImplementedAndExtended(classifierType.getClassifier(),result,classifierType.getParameters(),typeByTypeVar);
+    }
+  }
+}

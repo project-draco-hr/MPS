@@ -1,0 +1,59 @@
+{
+  List<BaseMethodDeclaration> result=new ArrayList<BaseMethodDeclaration>(candidates.size());
+  StructuralNodeMap<Set<BaseMethodDeclaration>> typesOfParamToMethods=new StructuralNodeMap<Set<BaseMethodDeclaration>>();
+  SubtypingManager subtypingManager=TypeChecker.getInstance().getSubtypingManager();
+  for (  BaseMethodDeclaration candidate : candidates) {
+    boolean varArg=false;
+    List<ParameterDeclaration> params=candidate.getParameters();
+    Type type=params.get(params.size() - 1).getType();
+    if (type instanceof VariableArityType) {
+      if (params.size() - 1 <= indexOfArg) {
+        varArg=true;
+      }
+    }
+ else {
+      if (params.size() <= indexOfArg) {
+        continue;
+      }
+    }
+    List<TypeVariableDeclaration> methodTypeVariableDecls=candidate.getTypeVariableDeclarations();
+    for (    TypeVariableDeclaration tvd : methodTypeVariableDecls) {
+      typeByTypeVar.put(tvd,WildCardType.newInstance(AuxilaryRuntimeModel.getDescriptor().getSModel()));
+    }
+    Type typeOfParam;
+    if (varArg) {
+      VariableArityType variableArityType=(VariableArityType)type;
+      typeOfParam=variableArityType.getComponentType();
+    }
+ else {
+      ParameterDeclaration parameter=params.get(indexOfArg);
+      typeOfParam=parameter.getType();
+    }
+    if (typeOfParam == null) {
+      continue;
+    }
+    typeOfParam=GenericTypesUtil.getTypeWithResolvedTypeVars(typeOfParam,typeByTypeVar);
+    for (    TypeVariableDeclaration tvd : methodTypeVariableDecls) {
+      typeByTypeVar.remove(tvd);
+    }
+    if (subtypingManager.isSubtype(typeOfArg,typeOfParam.getNode())) {
+      Set<BaseMethodDeclaration> methods=typesOfParamToMethods.get(typeOfParam.getNode());
+      if (methods == null) {
+        methods=new HashSet<BaseMethodDeclaration>();
+        typesOfParamToMethods.put(typeOfParam.getNode(),methods);
+      }
+      methods.add(candidate);
+      result.add(candidate);
+    }
+  }
+  if (mostSpecific) {
+    Set<SNode> goodParamTypes=typesOfParamToMethods.keySet();
+    Set<SNode> mostSpecificTypes=subtypingManager.mostSpecificTypes(goodParamTypes);
+    if (!((mostSpecificTypes.isEmpty()))) {
+      SNode mostSpecificType=mostSpecificTypes.iterator().next();
+      result=new ArrayList<BaseMethodDeclaration>();
+      result.addAll(typesOfParamToMethods.get(mostSpecificType));
+    }
+  }
+  return result;
+}
