@@ -1,3 +1,51 @@
 {
-  return VisibilityUtil.isVisible(BaseAdapter.fromNode(contextNode),(IVisible)BaseAdapter.fromNode(memberNode));
+  if (contextNode == null) {
+    return true;
+  }
+  if (SNodeOperations.isInstanceOf(member,"jetbrains.mps.baseLanguage.structure.EnumConstantDeclaration")) {
+    return true;
+  }
+  SNode visibility=SLinkOperations.getTarget(member,"visibility",true);
+  if (SNodeOperations.isInstanceOf(visibility,"jetbrains.mps.baseLanguage.structure.PublicVisibility")) {
+    return true;
+  }
+  if (visibility == null) {
+    return SNodeOperations.getModel(member).getSModelFqName().getNamespace().equals(SNodeOperations.getModel(contextNode).getSModelFqName().getNamespace());
+  }
+  if (SNodeOperations.isInstanceOf(visibility,"jetbrains.mps.baseLanguage.structure.ProtectedVisibility") && SNodeOperations.getModel(member).getSModelFqName().getNamespace().equals(SNodeOperations.getModel(contextNode).getSModelFqName().getNamespace())) {
+    return true;
+  }
+  if (!(SNodeOperations.isInstanceOf(member,"jetbrains.mps.baseLanguage.structure.ClassifierMember"))) {
+    return true;
+  }
+  SNode memberClassifier=SNodeOperations.getAncestor(member,"jetbrains.mps.baseLanguage.structure.Classifier",true,false);
+  if (memberClassifier == null) {
+    return true;
+  }
+  SNode contextClassifier=SNodeOperations.getAncestor(contextNode,"jetbrains.mps.baseLanguage.structure.Classifier",true,false);
+  while (contextClassifier != null) {
+    if (memberClassifier == contextClassifier) {
+      return true;
+    }
+    if (SNodeOperations.isInstanceOf(visibility,"jetbrains.mps.baseLanguage.structure.ProtectedVisibility")) {
+      if (BaseLanguageUtil.isAssignable(((Classifier)SNodeOperations.getAdapter(contextClassifier)),((Classifier)SNodeOperations.getAdapter(memberClassifier)))) {
+        return true;
+      }
+    }
+    SNode parent=SNodeOperations.getAncestor(contextClassifier,"jetbrains.mps.baseLanguage.structure.Classifier",false,false);
+    if (parent == null) {
+      break;
+    }
+    contextClassifier=parent;
+  }
+  while (memberClassifier != null) {
+    SNode parent=SNodeOperations.getAncestor(memberClassifier,"jetbrains.mps.baseLanguage.structure.Classifier",false,false);
+    if (parent == null) {
+      if (memberClassifier == contextClassifier) {
+        return true;
+      }
+    }
+    memberClassifier=parent;
+  }
+  return false;
 }
