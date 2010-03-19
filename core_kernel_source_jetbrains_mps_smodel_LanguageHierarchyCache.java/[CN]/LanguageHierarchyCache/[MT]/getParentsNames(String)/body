@@ -1,38 +1,39 @@
 {
   fireReadAccessPerformed();
-  if (myParentsNamesMap.containsKey(conceptFqName)) {
-    return Collections.unmodifiableSet(myParentsNamesMap.get(conceptFqName));
-  }
- else {
-    return NodeReadAccessCasterInEditor.runReadTransparentAction(new Computable<Set<String>>(){
-      public Set<String> compute(){
-        Set<String> result=new LinkedHashSet<String>();
-        AbstractConceptDeclaration declaration=SModelUtil_new.findConceptDeclaration(conceptFqName,GlobalScope.getInstance());
-        if (declaration == null) {
+synchronized (myParentsNamesLock) {
+    Set<String> result=myParentsNamesMap.get(conceptFqName);
+    if (result == null) {
+      result=NodeReadAccessCasterInEditor.runReadTransparentAction(new Computable<Set<String>>(){
+        public Set<String> compute(){
+          AbstractConceptDeclaration declaration=SModelUtil_new.findConceptDeclaration(conceptFqName,GlobalScope.getInstance());
+          if (declaration == null) {
+            return Collections.emptySet();
+          }
+          Set<String> result=new LinkedHashSet<String>();
+          if (declaration instanceof ConceptDeclaration) {
+            ConceptDeclaration cd=(ConceptDeclaration)declaration;
+            if (cd.getExtends() != null) {
+              result.add(NameUtil.nodeFQName(cd.getExtends()));
+            }
+ else             if (!BaseConcept.concept.equals(NameUtil.nodeFQName(cd))) {
+              result.add(BaseConcept.concept);
+            }
+            for (            InterfaceConceptReference icr : cd.getImplementses()) {
+              result.add(NameUtil.nodeFQName(icr.getIntfc()));
+            }
+          }
+          if (declaration instanceof InterfaceConceptDeclaration) {
+            InterfaceConceptDeclaration icd=(InterfaceConceptDeclaration)declaration;
+            for (            InterfaceConceptReference icr : icd.getExtendses()) {
+              result.add(NameUtil.nodeFQName(icr.getIntfc()));
+            }
+          }
           return result;
         }
-        if (declaration instanceof ConceptDeclaration) {
-          ConceptDeclaration cd=(ConceptDeclaration)declaration;
-          if (cd.getExtends() != null) {
-            result.add(NameUtil.nodeFQName(cd.getExtends()));
-          }
- else           if (!BaseConcept.concept.equals(NameUtil.nodeFQName(cd))) {
-            result.add(BaseConcept.concept);
-          }
-          for (          InterfaceConceptReference icr : cd.getImplementses()) {
-            result.add(NameUtil.nodeFQName(icr.getIntfc()));
-          }
-        }
-        if (declaration instanceof InterfaceConceptDeclaration) {
-          InterfaceConceptDeclaration icd=(InterfaceConceptDeclaration)declaration;
-          for (          InterfaceConceptReference icr : icd.getExtendses()) {
-            result.add(NameUtil.nodeFQName(icr.getIntfc()));
-          }
-        }
-        myParentsNamesMap.put(conceptFqName,result);
-        return Collections.unmodifiableSet(result);
       }
-    }
 );
+      myParentsNamesMap.put(conceptFqName,result);
+    }
+    return Collections.unmodifiableSet(result);
   }
 }
