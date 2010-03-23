@@ -1,0 +1,56 @@
+{
+  super(context.getMainFrame(),"Evaluate");
+  this.myContext=context;
+  this.myUiState=uiState;
+  this.setSize(new Dimension(500,500));
+  this.setModal(false);
+  StackFrame stackFrame=uiState.getStackFrame();
+  if (stackFrame != null) {
+    try {
+      for (      LocalVariable localVariable : stackFrame.visibleVariables()) {
+        Location location=stackFrame.location();
+        SNode snode=StacktraceUtil.getNodeOrVar(location.declaringType().name(),location.sourceName(),location.lineNumber(),localVariable.name());
+        if (snode != null) {
+          List<LocalVariable> varsList=this.myNodesToVarsMap.get(snode);
+          if (varsList == null) {
+            varsList=new ArrayList<LocalVariable>();
+            this.myNodesToVarsMap.put(snode,varsList);
+          }
+          varsList.add(localVariable);
+        }
+      }
+    }
+ catch (    Throwable t) {
+      LOG.error(t);
+      return;
+    }
+  }
+  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+    public void run(){
+      SNode evaluatorConcept=SConceptOperations.createNewNode("jetbrains.mps.debug.evaluation.structure.EvaluatorConcept",null);
+      SPropertyOperations.set(evaluatorConcept,"isRuntime","" + true);
+      EvaluationDialog.this.myNode=evaluatorConcept;
+      EvaluationDialog.this.myAuxModule=new EvaluationAuxModule(EvaluationDialog.this.myContext.getProject());
+      EvaluationDialog.this.myAuxModule.setInvocationContext(EvaluationDialog.this.myContext.getModule());
+      EvaluationDialog.this.myEditor=new EmbeddableEditor(new ModuleContext(EvaluationDialog.this.myAuxModule,EvaluationDialog.this.myAuxModule.getMPSProject()),EvaluationDialog.this.myAuxModule,EvaluationDialog.this.myNode);
+      Language evalLang=MPSModuleRepository.getInstance().getLanguage("jetbrains.mps.debug.evaluation");
+      EvaluationDialog.this.myLanguages.add(evalLang);
+      SLinkOperations.setNewChild(evaluatorConcept,"evaluatedExpression","jetbrains.mps.baseLanguage.structure.NullLiteral");
+      for (      SNode varSNode : EvaluationDialog.this.myNodesToVarsMap.keySet()) {
+        SNode varNode=varSNode;
+        SNode highLevelVariable=SLinkOperations.addNewChild(evaluatorConcept,"variables","jetbrains.mps.debug.evaluation.structure.HighLevelVariable");
+        SLinkOperations.setTarget(highLevelVariable,"variable",SNodeOperations.copyNode(varNode),true);
+        SLinkOperations.setTarget(highLevelVariable,"deducedType",SNodeOperations.copyNode(TypeChecker.getInstance().getTypeOf(varNode)),true);
+        Language l=varSNode.getNodeLanguage();
+        EvaluationDialog.this.myLanguages.add(l);
+      }
+    }
+  }
+);
+  for (  Language language : this.myLanguages) {
+    this.myEditor.addLanguage(language);
+  }
+  this.myPanel.add(this.myEditor.getComponenet(),BorderLayout.NORTH);
+  this.myTree=new EvaluationDialog.MyTree();
+  this.myPanel.add(new JScrollPane(this.myTree),BorderLayout.CENTER);
+}
