@@ -1,0 +1,71 @@
+{
+  this.myProject=project;
+  this.setLayout(new BorderLayout());
+  this.myModelsList=new JList();
+  this.myModelsList.setCellRenderer(new DefaultListCellRenderer(){
+    public Component getListCellRendererComponent(    JList list,    Object value,    int index,    boolean isSelected,    boolean cellHasFocus){
+      final SModelReference model=(SModelReference)value;
+      final DefaultListCellRenderer ren=this;
+      String modelName=model.getLongName();
+      if (modelName == null) {
+        modelName="<no name>";
+      }
+      Component result=super.getListCellRendererComponent(list,modelName,index,isSelected,cellHasFocus);
+      if (isSelected) {
+        return result;
+      }
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          boolean inProject=false;
+          for (          SModelDescriptor projectModel : ModelsPanel.this.myProject.getProjectModels()) {
+            if (model.equals(projectModel.getSModelReference())) {
+              inProject=true;
+              break;
+            }
+          }
+          if (inProject) {
+            ren.setForeground(Color.BLACK);
+          }
+ else           if (SModelRepository.getInstance().getModelDescriptor(model) != null) {
+            ren.setForeground(new Color(128,0,128));
+          }
+ else {
+            ren.setForeground(Color.RED);
+          }
+        }
+      }
+);
+      return result;
+    }
+  }
+);
+  JScrollPane scroller=new JScrollPane(this.myModelsList);
+  this.add(scroller,BorderLayout.CENTER);
+  ListAddAction addAction=new ListAddAction(this.myModelsList){
+    @Override protected int doAdd(    AnActionEvent e){
+      List<SModelDescriptor> models=ModelsPanel.this.myProject.getProjectModels();
+      SModelDescriptor sModelDescriptor=CommonChoosers.showDialogModelChooser(ModelsPanel.this,models,SModelRepository.getInstance().getModelDescriptors());
+      if (sModelDescriptor == null) {
+        return -1;
+      }
+      SModelReference modelRef=sModelDescriptor.getSModelReference();
+      ModelsPanel.this.myModels.add(modelRef);
+      if (!(TestConfigurationDialog.this.myNamePanel.isConfigNameSet())) {
+        TestConfigurationDialog.this.myNamePanel.setConfigName(sModelDescriptor.getName());
+      }
+      return ModelsPanel.this.myModels.indexOf(modelRef);
+    }
+  }
+;
+  ListRemoveAction removeAction=new ListRemoveAction(this.myModelsList){
+    @Override protected void doRemove(    AnActionEvent e){
+      for (      Object o : ModelsPanel.this.myModelsList.getSelectedValues()) {
+        SModelReference model=(SModelReference)o;
+        ModelsPanel.this.myModels.remove(model);
+      }
+    }
+  }
+;
+  this.add(this.createToolbar(new AnAction[]{addAction,removeAction}),BorderLayout.EAST);
+  this.bind();
+}
