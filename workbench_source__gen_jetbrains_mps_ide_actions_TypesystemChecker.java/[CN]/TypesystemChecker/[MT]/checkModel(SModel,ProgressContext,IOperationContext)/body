@@ -1,14 +1,12 @@
 {
   List<SearchResult<ModelCheckerIssue>> results=ListSequence.fromList(new ArrayList<SearchResult<ModelCheckerIssue>>());
-  TypeChecker tc=TypeChecker.getInstance();
   for (  SNode rootNode : ListSequence.fromList(SModelOperations.getRoots(model,null))) {
     if (!(progressContext.checkAndUpdateIndicator("Checking " + SModelOperations.getModelName(model) + " for typesystem rules..."))) {
       break;
     }
-    tc.checkRoot(rootNode);
-    TypeCheckingContext typeCheckingContext=NodeTypesComponentsRepository.getInstance().getTypeCheckingContext(rootNode);
-    NodeTypesComponent nodeTypesComponent=typeCheckingContext.getBaseNodeTypesComponent();
-    for (    Pair<SNode,List<IErrorReporter>> nodeErrorReporters : SetSequence.fromSet(nodeTypesComponent.getNodesWithErrors())) {
+    TypeCheckingContext typeCheckingContext=NodeTypesComponentsRepository.getInstance().createTypeCheckingContext(rootNode);
+    Set<Pair<SNode,List<IErrorReporter>>> nodeWithErrors=typeCheckingContext.checkRootAndGetErrors(false);
+    for (    Pair<SNode,List<IErrorReporter>> nodeErrorReporters : SetSequence.fromSet(nodeWithErrors)) {
       SNode node=nodeErrorReporters.o1;
       for (      IErrorReporter errorReporter : ListSequence.fromList(nodeErrorReporters.o2)) {
         addIssue(results,node,errorReporter.reportError(),getResultCategory(errorReporter.getMessageStatus()),"type system",null);
