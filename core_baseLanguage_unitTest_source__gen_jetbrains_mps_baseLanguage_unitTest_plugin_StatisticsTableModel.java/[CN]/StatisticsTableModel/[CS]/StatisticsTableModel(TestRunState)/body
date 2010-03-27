@@ -1,0 +1,47 @@
+{
+  this.myState=state;
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      StatisticsTableModel.this.setTests(state.getTestsMap());
+    }
+  }
+);
+  this.myState.addListener(new TestStateListener(){
+    public void onTestStart(    TestEvent event){
+      TestMethodRow row=this.findRowForEvent(event);
+      if (row != null) {
+        row.setStartTime(event.getTime());
+        row.setUsageBefore(event.getMemoryUsage());
+      }
+    }
+    @Nullable private TestMethodRow findRowForEvent(    TestEvent event){
+      return StatisticsTableModel.this.getRow(event.getTestCaseName(),event.getTestMethodName());
+    }
+    public void onTestEnd(    TestEvent event){
+      TestMethodRow row=this.findRowForEvent(event);
+      if (row != null) {
+        row.setFinishTime(event.getTime());
+        row.setUsageAfter(event.getMemoryUsage());
+      }
+    }
+    public void onTestError(    TestEvent event){
+      TestMethodRow row=this.findRowForEvent(event);
+      if (row != null) {
+        row.getErrored();
+      }
+    }
+    public void onTestFailure(    TestEvent event){
+      TestMethodRow row=this.findRowForEvent(event);
+      if (row != null) {
+        row.getFailed();
+      }
+    }
+    public void onLooseTest(    String className,    String methodName){
+      TestMethodRow row=StatisticsTableModel.this.getRow(className,methodName);
+      if (row != null) {
+        row.getErrored();
+      }
+    }
+  }
+);
+}
