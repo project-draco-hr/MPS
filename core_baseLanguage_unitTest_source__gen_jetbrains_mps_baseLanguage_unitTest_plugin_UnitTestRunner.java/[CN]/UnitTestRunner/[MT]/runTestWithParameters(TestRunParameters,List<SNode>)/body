@@ -1,38 +1,42 @@
 {
-  List<String> params=ListSequence.fromList(new ArrayList<String>());
-  String workingDir=null;
-  String programParams=null;
-  String vmParams=null;
-  if (this.myConfigParameter != null) {
-    workingDir=this.myConfigParameter.getWorkingDirectory();
-    programParams=this.myConfigParameter.getProgramParameters();
-    vmParams=this.myConfigParameter.getVMParameters();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      List<String> params=ListSequence.fromList(new ArrayList<String>());
+      String workingDir=null;
+      String programParams=null;
+      String vmParams=null;
+      if (UnitTestRunner.this.myConfigParameter != null) {
+        workingDir=UnitTestRunner.this.myConfigParameter.getWorkingDirectory();
+        programParams=UnitTestRunner.this.myConfigParameter.getProgramParameters();
+        vmParams=UnitTestRunner.this.myConfigParameter.getVMParameters();
+      }
+      UnitTestRunner.this.addJavaCommand(params);
+      ListSequence.fromList(params).addSequence(ListSequence.fromList(parameters.getVmParameters()));
+      if (vmParams != null && StringUtils.isNotEmpty(vmParams)) {
+        String[] paramList=UnitTestRunner.this.splitParams(vmParams);
+        ListSequence.fromList(params).addSequence(Sequence.fromIterable(Sequence.fromArray(paramList)));
+      }
+      UnitTestRunner.this.addClassPath(params,UnitTestRunner.this.getClasspathString(tests,parameters.getClassPath()));
+      ListSequence.fromList(params).addElement(parameters.getTestRunner());
+      for (      SNode test : ListSequence.fromList(tests)) {
+        ListSequence.fromList(params).addSequence(ListSequence.fromList(ITestable_Behavior.call_getParametersPart_1215620460293(test)));
+      }
+      if (programParams != null && StringUtils.isNotEmpty(programParams)) {
+        String[] paramList=UnitTestRunner.this.splitParams(programParams);
+        ListSequence.fromList(params).addSequence(Sequence.fromIterable(Sequence.fromArray(paramList)));
+      }
+      UnitTestRunner.this.myProcessBuilder=new ProcessBuilder(params);
+      if (workingDir != null && StringUtils.isNotEmpty(workingDir)) {
+        UnitTestRunner.this.myProcessBuilder.directory(new File(workingDir));
+      }
+    }
   }
-  this.addJavaCommand(params);
-  ListSequence.fromList(params).addSequence(ListSequence.fromList(parameters.getVmParameters()));
-  if (vmParams != null && StringUtils.isNotEmpty(vmParams)) {
-    String[] paramList=this.splitParams(vmParams);
-    ListSequence.fromList(params).addSequence(Sequence.fromIterable(Sequence.fromArray(paramList)));
-  }
-  this.addClassPath(params,this.getClasspathString(tests,parameters.getClassPath()));
-  ListSequence.fromList(params).addElement(parameters.getTestRunner());
-  for (  SNode test : ListSequence.fromList(tests)) {
-    ListSequence.fromList(params).addSequence(ListSequence.fromList(ITestable_Behavior.call_getParametersPart_1215620460293(test)));
-  }
-  if (programParams != null && StringUtils.isNotEmpty(programParams)) {
-    String[] paramList=this.splitParams(programParams);
-    ListSequence.fromList(params).addSequence(Sequence.fromIterable(Sequence.fromArray(paramList)));
-  }
-  this.myProcessBuilder=new ProcessBuilder(params);
-  if (workingDir != null && StringUtils.isNotEmpty(workingDir)) {
-    this.myProcessBuilder.directory(new File(workingDir));
-  }
+);
   try {
-    Process result=this.myProcessBuilder.start();
-    return result;
+    return this.myProcessBuilder.start();
   }
- catch (  Exception e) {
-    Logger.getLogger(UnitTestRunner.class).error("Can't run tests",e);
-    return null;
+ catch (  Throwable e) {
+    LOG.error("Can't run tests: " + e.getMessage(),e);
+    throw new ProcessNotCreatedException(e.getMessage(),e,this.getCommandLine());
   }
 }
