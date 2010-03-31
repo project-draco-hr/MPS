@@ -1,0 +1,31 @@
+{
+  if (getSettings().OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT) {
+    Collection<File> affectedFiles=myPanel.getFiles();
+    final List<SModelDescriptor> affectedModels=new ArrayList<SModelDescriptor>();
+    SModelRepository modelRepository=SModelRepository.getInstance();
+    for (    File file : affectedFiles) {
+      SModelDescriptor model=modelRepository.findModel(new FileSystemFile(file));
+      if (model != null) {
+        affectedModels.add(model);
+      }
+    }
+    MPSProject mpsProject=this.myProject.getComponent(MPSProjectHolder.class).getMPSProject();
+    final IOperationContext operationContext=mpsProject.createOperationContext();
+    ThreadUtils.assertLogIsEDT();
+    try {
+      ModelAccess.instance().runCommandInEDT(new Runnable(){
+        @Override public void run(){
+          new OptimizeImportsHelper(operationContext).optimizeModelsImports(affectedModels);
+          for (          SModelDescriptor affectedModel : affectedModels) {
+            affectedModel.save();
+          }
+        }
+      }
+);
+    }
+ catch (    Throwable e) {
+      LOG.error("Couldn't optimize imports before commit",e);
+    }
+  }
+  return CheckinHandler.ReturnResult.COMMIT;
+}
