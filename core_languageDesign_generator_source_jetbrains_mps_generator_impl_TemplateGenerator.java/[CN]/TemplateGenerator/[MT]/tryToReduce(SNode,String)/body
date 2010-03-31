@@ -1,11 +1,34 @@
 {
   boolean needStopReductionBlocking=false;
   ReductionRule reductionRule=null;
+  GeneratedMatchingPattern pattern=null;
   try {
-    reductionRule=myRuleManager.getRuleFinder().findReductionRule(inputNode,this);
+    ReductionRule[] conceptRules=myRuleManager.getRuleFinder().findReductionRules(inputNode);
+    if (conceptRules == null) {
+      return null;
+    }
+    for (    ReductionRule rule : conceptRules) {
+      if (!getBlockedReductionsData().isReductionBlocked(inputNode,rule)) {
+        if (rule instanceof Reduction_MappingRule) {
+          if (getExecutor().checkCondition(((Reduction_MappingRule)rule).getConditionFunction(),false,inputNode,rule.getNode())) {
+            getBlockedReductionsData().registerInputReduction(inputNode,rule);
+            reductionRule=rule;
+            break;
+          }
+        }
+ else         if (rule instanceof PatternReduction_MappingRule) {
+          pattern=getExecutor().checkIfApplicable((PatternReduction_MappingRule)rule,inputNode);
+          if (pattern != null) {
+            getBlockedReductionsData().registerInputReduction(inputNode,rule);
+            reductionRule=rule;
+            break;
+          }
+        }
+      }
+    }
     if (reductionRule != null) {
       needStopReductionBlocking=startReductionBlockingForInput(inputNode);
-      List<SNode> outputNodes=applyReductionRule(inputNode,reductionRule);
+      List<SNode> outputNodes=applyReductionRule(inputNode,reductionRule,pattern);
       if (outputNodes != null && outputNodes.size() == 1) {
         SNode reducedNode=outputNodes.get(0);
         getMappings().addOutputNodeByInputNodeAndMappingName(inputNode,mappingName,reducedNode);
