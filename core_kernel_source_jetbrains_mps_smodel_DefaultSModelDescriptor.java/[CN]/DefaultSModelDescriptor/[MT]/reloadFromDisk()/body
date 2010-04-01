@@ -1,28 +1,28 @@
 {
+  ModelAccess.assertLegalWrite();
   if (!isInitialized()) {
     return;
   }
-  final SModel newModel=loadModel();
-  Runnable runnable=new Runnable(){
+  SModel newModel=loadModel();
+  final SModel oldModel=mySModel;
+  oldModel.setModelDescritor(null);
+  mySModel=newModel;
+  mySModel.setModelDescritor(this);
+  updateLastChange();
+  doPostLoadStuff();
+  SModelRepository.getInstance().markChanged(DefaultSModelDescriptor.this,false);
+  MPSModuleRepository.getInstance().invalidateCaches();
+  Runnable modelReplacer=new Runnable(){
     @Override public void run(){
-      mySModel.fireBeforeModelReloaded();
-      addListenersFromSModel();
-      SModel oldModel=mySModel;
-      mySModel=newModel;
-      updateLastChange();
-      doPostLoadStuff();
-      SModelRepository.getInstance().markChanged(DefaultSModelDescriptor.this,false);
-      MPSModuleRepository.getInstance().invalidateCaches();
-      mySModel.fireModelReloaded();
+      fireModelReplaced();
       oldModel.dispose();
     }
   }
 ;
   if (ModelAccess.instance().isInEDT()) {
-    ModelAccess.assertLegalWrite();
-    runnable.run();
+    modelReplacer.run();
   }
  else {
-    ModelAccess.instance().runWriteInEDT(runnable);
+    ModelAccess.instance().runReadInEDT(modelReplacer);
   }
 }

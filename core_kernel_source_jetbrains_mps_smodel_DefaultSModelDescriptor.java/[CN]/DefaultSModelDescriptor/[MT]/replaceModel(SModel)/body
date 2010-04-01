@@ -1,13 +1,29 @@
 {
   ModelAccess.assertLegalWrite();
   if (newModel == mySModel)   return;
+  final SModel oldSModel=mySModel;
   if (isInitialized()) {
-    addListenersFromSModel();
-    mySModel.dispose();
+    oldSModel.setModelDescritor(null);
   }
   mySModel=newModel;
   if (mySModel != null) {
-    addListenersToSModel();
+    mySModel.setModelDescritor(DefaultSModelDescriptor.this);
   }
-  SModelRepository.getInstance().markChanged(this,true);
+  SModelRepository.getInstance().markChanged(DefaultSModelDescriptor.this,true);
+  MPSModuleRepository.getInstance().invalidateCaches();
+  Runnable modelReplacedNotifier=new Runnable(){
+    @Override public void run(){
+      fireModelReplaced();
+      if (oldSModel != null) {
+        oldSModel.dispose();
+      }
+    }
+  }
+;
+  if (ModelAccess.instance().isInEDT()) {
+    modelReplacedNotifier.run();
+  }
+ else {
+    ModelAccess.instance().runReadInEDT(modelReplacedNotifier);
+  }
 }
