@@ -1,0 +1,23 @@
+{
+  if (IdeMain.getTestMode() == TestMode.CORE_TEST)   return;
+  JFrame projectFrame=WindowManager.getInstance().getFrame(project);
+  boolean save=true;
+  if (!GeneralSettings.getInstance().isSaveOnFrameDeactivation() && !GeneralSettings.getInstance().isAutoSaveIfInactive() && !SModelRepository.getInstance().getChangedModels().isEmpty()) {
+    String message="You have unsaved models:\n\n";
+    for (    SModelDescriptor sm : SModelRepository.getInstance().getChangedModels()) {
+      message+=sm.getSModelReference().getSModelFqName().toString() + "\n";
+    }
+    message+="\nDo you want to save them?";
+    ScrollingConfirmDialog dialog=new ScrollingConfirmDialog(projectFrame,"Save models",message);
+    dialog.showDialog();
+    save=(dialog.getResult() == Result.YES);
+  }
+  if (save) {
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        SModelRepository.getInstance().saveAll();
+      }
+    }
+);
+  }
+}
