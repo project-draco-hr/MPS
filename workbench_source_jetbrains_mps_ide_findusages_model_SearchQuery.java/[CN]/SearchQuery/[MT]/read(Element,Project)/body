@@ -1,0 +1,47 @@
+{
+  Element scopeXML=element.getChild(SCOPE);
+  String scopeType=scopeXML.getAttribute(SCOPE_TYPE).getValue();
+  if (scopeType.equals(SCOPE_TYPE_GLOBAL)) {
+    myScope=GlobalScopeMinusTransient.getInstance();
+  }
+ else   if (scopeType.equals(SCOPE_TYPE_PROJECT)) {
+    myScope=project.getComponent(ProjectScope.class);
+  }
+ else   if (scopeType.equals(SCOPE_TYPE_MODULE)) {
+    String moduleUID=scopeXML.getAttribute(MODULE_ID).getValue();
+    myScope=null;
+    for (    IModule module : MPSModuleRepository.getInstance().getAllModules()) {
+      if (module.getModuleUID().equals(moduleUID)) {
+        myScope=module.getScope();
+      }
+    }
+    if (myScope == null) {
+      LOG.warning("module scope not found for module  " + moduleUID);
+      throw new CantLoadSomethingException("module scope not found for module  " + moduleUID);
+    }
+  }
+ else   if (scopeType.equals(SCOPE_TYPE_MODELS)) {
+    Element modelsXML=scopeXML.getChild(MODELS);
+    List<SModelDescriptor> models=new ArrayList<SModelDescriptor>();
+    for (    Element modelXML : (List<Element>)modelsXML.getChildren(MODEL)) {
+      String modelUID=modelXML.getAttribute(MODEL_ID).getValue();
+      SModelDescriptor sModelDescriptor=project.getComponent(ProjectScope.class).getModelDescriptor(SModelReference.fromString(modelUID));
+      if (sModelDescriptor == null) {
+        LOG.warning("model scope not found for model " + modelUID);
+        throw new CantLoadSomethingException("model scope not found for model " + modelUID);
+      }
+    }
+    myScope=new ModelsScope(models.toArray(new SModelDescriptor[models.size()]));
+  }
+  if (scopeType.equals(SCOPE_TYPE_BOOTSTRAP)) {
+    myScope=BootstrapScope.getInstance();
+  }
+  Element holderXML=element.getChild(HOLDER);
+  String holderClass=holderXML.getAttributeValue(HOLDER_CLASS);
+  try {
+    myObjectHolder=(IHolder)Class.forName(holderClass).getConstructor(Element.class,Project.class).newInstance(holderXML,project);
+  }
+ catch (  Exception e) {
+    throw new CantLoadSomethingException(e);
+  }
+}
