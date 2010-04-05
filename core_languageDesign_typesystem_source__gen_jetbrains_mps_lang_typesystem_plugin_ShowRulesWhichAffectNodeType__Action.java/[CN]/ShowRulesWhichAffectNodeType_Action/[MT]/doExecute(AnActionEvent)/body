@@ -1,36 +1,15 @@
 {
   try {
-    NodeTypesComponent component=NodeTypesComponentsRepository.getInstance().getNodeTypesComponent(SNodeOperations.getContainingRoot(ShowRulesWhichAffectNodeType_Action.this.node));
-    if (component == null) {
-      return;
-    }
-    Set<Pair<String,String>> rulesIds=component.getRulesWhichAffectNodeType(ShowRulesWhichAffectNodeType_Action.this.node);
-    if (rulesIds == null) {
-      return;
-    }
-    List<SNode> rules=ListSequence.fromList(new ArrayList<SNode>());
-    for (    Pair<String,String> ruleId : SetSequence.fromSet(rulesIds)) {
-      SModelDescriptor modelDescriptor=SModelRepository.getInstance().getModelDescriptor(SModelReference.fromString(ruleId.o1));
-      if (modelDescriptor == null) {
-        continue;
-      }
-      SNode rule=modelDescriptor.getSModel().getNodeById(ruleId.o2);
-      if (rule != null) {
-        ListSequence.fromList(rules).addElement(rule);
+    final Wrappers._T<SearchQuery> query=new Wrappers._T<SearchQuery>();
+    final Wrappers._T<IResultProvider> provider=new Wrappers._T<IResultProvider>();
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        query.value=new SearchQuery(ShowRulesWhichAffectNodeType_Action.this.node,ShowRulesWhichAffectNodeType_Action.this.operationContext.getScope());
+        provider.value=FindUtils.makeProvider(new AffectingRulesFinder());
       }
     }
-    if (ListSequence.fromList(rules).count() == 1) {
-      ShowRulesWhichAffectNodeType_Action.this.operationContext.getComponent(MPSEditorOpener.class).openNode(ListSequence.fromList(rules).getElement(0));
-      return;
-    }
-    MyMenu m=new MyMenu(rules,ShowRulesWhichAffectNodeType_Action.this.operationContext);
-    int x=0;
-    int y=0;
-    if (ShowRulesWhichAffectNodeType_Action.this.cell != null) {
-      x=ShowRulesWhichAffectNodeType_Action.this.cell.getX();
-      y=ShowRulesWhichAffectNodeType_Action.this.cell.getY();
-    }
-    m.show(ShowRulesWhichAffectNodeType_Action.this.frame,x,y);
+);
+    ShowRulesWhichAffectNodeType_Action.this.operationContext.getComponent(UsagesViewTool.class).findUsages(provider.value,query.value,false,true,false,"no rules found");
   }
  catch (  Throwable t) {
     LOG.error("User's action execute method failed. Action:" + "ShowRulesWhichAffectNodeType",t);
