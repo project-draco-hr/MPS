@@ -1,0 +1,29 @@
+{
+  int cores=Runtime.getRuntime().availableProcessors();
+  if (cores < 2) {
+    return;
+  }
+  long amountFor2secs=get2SecsOperation();
+  System.out.println("Work amount: " + amountFor2secs + " ticks");
+  long start=System.currentTimeMillis();
+  GenerationTaskPool pool=new GenerationTaskPool(new EmptyProgressIndicator());
+  final CustomTask[] generationTasks=createTasks(amountFor2secs,4);
+  for (  GenerationTask t : generationTasks) {
+    pool.addTask(t);
+  }
+  try {
+    pool.waitForCompletion();
+  }
+ catch (  GenerationCanceledException e) {
+    Assert.fail();
+  }
+catch (  GenerationFailureException e) {
+    Assert.fail();
+  }
+  long end=System.currentTimeMillis();
+  for (  CustomTask t : generationTasks) {
+    Assert.assertTrue(t.isFinished());
+  }
+  System.out.println("Total " + (end - start) / 1000. + " seconds to complete 4 x 2secs tasks");
+  Assert.assertTrue((end - start) < 4500);
+}

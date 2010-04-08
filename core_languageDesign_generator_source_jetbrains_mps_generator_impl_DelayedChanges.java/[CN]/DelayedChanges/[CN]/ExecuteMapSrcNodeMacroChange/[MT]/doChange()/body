@@ -1,13 +1,12 @@
 {
-  Map<String,SNode> old=myGenerator.setPreviousInputNodesByMappingName(myInputNodesByMappingName);
   try {
-    SNode child=myGenerator.getExecutor().executeMapSrcNodeMacro(myInputNode,myMapSrcMacro,myChildToReplace.getParent(),myContext);
+    SNode child=myGenerator.getExecutor().executeMapSrcNodeMacro(myContext.getInput(),myMapSrcMacro,myChildToReplace.getParent(),myContext);
     if (child != null) {
       Language childLang=child.getNodeLanguage();
       if (!myGenerator.getGeneratorSessionContext().getGenerationPlan().isCountedLanguage(childLang)) {
         if (!childLang.getGenerators().isEmpty()) {
           myLogger.error(child,"language of output node is '" + childLang.getNamespace() + "' - this language did not show up when computing generation steps!");
-          myLogger.describeError(myInputNode,"was input: " + myInputNode.getDebugText());
+          myLogger.describeError(myContext.getInput(),"was input: " + myContext.getInput().getDebugText());
           myLogger.describeError(myMapSrcMacro,"was template: " + myMapSrcMacro.getDebugText());
           myLogger.describeError(null,"workaround: add the language '" + childLang.getNamespace() + "' to list of 'Languages Engaged On Generation' in model '"+ myGenerator.getGeneratorSessionContext().getOriginalInputModel().getSModelFqName()+ "'");
         }
@@ -26,20 +25,17 @@
  else {
         String childRole=parent.getRoleOf(myChildToReplace);
         if (!GeneratorUtil.checkChild(parent,childRole,child)) {
-          myLogger.describeWarning(myInputNode,"was input: " + myInputNode.getDebugText());
+          myLogger.describeWarning(myContext.getInput(),"was input: " + myContext.getInput().getDebugText());
           myLogger.describeWarning(myMapSrcMacro,"was template: " + myMapSrcMacro.getDebugText());
         }
         parent.replaceChild(myChildToReplace,child);
       }
       myGenerator.getGeneratorSessionContext().getGenerationTracer().replaceOutputNode(myChildToReplace,child);
-      addExecuteMapSrcNodeMacroPostProcChange((NodeMacro)myMapSrcMacro.getAdapter(),child,myInputNode,myInputNodesByMappingName,myContext);
+      addExecuteMapSrcNodeMacroPostProcChange((NodeMacro)myMapSrcMacro.getAdapter(),child,myContext);
     }
   }
  catch (  Throwable t) {
-    myGenerator.showErrorMessage(myInputNode,myMapSrcMacro,"mapping failed: '" + t.getMessage() + "'");
+    myGenerator.showErrorMessage(myContext.getInput(),myMapSrcMacro,"mapping failed: '" + t.getMessage() + "'");
     myLogger.handleException(t);
-  }
- finally {
-    myGenerator.setPreviousInputNodesByMappingName(old);
   }
 }

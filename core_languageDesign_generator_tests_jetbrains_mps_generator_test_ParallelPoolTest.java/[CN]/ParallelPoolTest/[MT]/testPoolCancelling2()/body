@@ -1,0 +1,34 @@
+{
+  int cores=Runtime.getRuntime().availableProcessors();
+  if (cores < 2) {
+    return;
+  }
+  long amountFor2secs=get2SecsOperation();
+  final long start=System.currentTimeMillis();
+  GenerationTaskPool pool=new GenerationTaskPool(new EmptyProgressIndicator(){
+    @Override public boolean isCanceled(){
+      return (System.currentTimeMillis() - start > 1600);
+    }
+  }
+);
+  final CustomTask[] generationTasks=createTasks(amountFor2secs * 4,4);
+  for (  GenerationTask t : generationTasks) {
+    pool.addTask(t);
+  }
+  boolean canceledExc=false;
+  try {
+    pool.waitForCompletion();
+  }
+ catch (  GenerationCanceledException e) {
+    canceledExc=true;
+  }
+catch (  GenerationFailureException e) {
+  }
+  Assert.assertTrue(canceledExc);
+  long end=System.currentTimeMillis();
+  for (  CustomTask t : generationTasks) {
+    Assert.assertFalse(t.isFinished());
+  }
+  System.out.println("Total " + (end - start) / 1000. + " seconds (should be 2 secs), when cancelled after 1.6 secs");
+  Assert.assertTrue((end - start) < 2300 && (end - start) > 1700);
+}
