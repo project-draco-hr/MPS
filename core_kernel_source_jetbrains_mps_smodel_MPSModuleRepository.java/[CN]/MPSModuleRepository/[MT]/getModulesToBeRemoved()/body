@@ -2,12 +2,10 @@
   Set<MPSModuleOwner> rootOwners=new HashSet<MPSModuleOwner>();
   for (  IModule m : myModules) {
     for (    MPSModuleOwner owner : myModuleToOwners.getByFirst(m)) {
-      if (!(owner instanceof IModule)) {
-        rootOwners.add(owner);
-      }
+      if (owner instanceof IModule)       continue;
+      rootOwners.add(owner);
     }
   }
-  rootOwners.removeAll(willBeReleased);
   Set<IModule> visibleModules=new HashSet<IModule>();
   for (  IModule m : myModules) {
     if (m instanceof Solution && ((Solution)m).isStub()) {
@@ -20,20 +18,19 @@
       }
     }
   }
-  boolean hasModulesToProcess=true;
-  while (hasModulesToProcess) {
-    Set<IModule> toAdd=new HashSet<IModule>();
+  Set<IModule> toAdd;
+  do {
+    toAdd=new HashSet<IModule>();
     for (    IModule m : myModules) {
       if (visibleModules.contains(m))       continue;
       for (      IModule v : visibleModules) {
-        if (myModuleToOwners.contains(m,v)) {
-          toAdd.add(m);
-        }
+        if (!myModuleToOwners.contains(m,v))         continue;
+        toAdd.add(m);
       }
     }
-    hasModulesToProcess=!toAdd.isEmpty();
     visibleModules.addAll(toAdd);
   }
+ while (!toAdd.isEmpty());
   Set<IModule> toBeRemoved=new HashSet<IModule>(myModules);
   toBeRemoved.removeAll(visibleModules);
   return toBeRemoved;
