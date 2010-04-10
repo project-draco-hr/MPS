@@ -6,8 +6,8 @@
       Runnable consoleDispose=null;
       final List<AnAction> actions=ListSequence.fromList(new ArrayList<AnAction>());
       ProcessHandler handler=null;
-      final Project project=MPSDataKeys.PROJECT.getData(environment.getDataContext());
-      final IOperationContext context=MPSDataKeys.OPERATION_CONTEXT.getData(environment.getDataContext());
+      Project project=MPSDataKeys.PROJECT.getData(environment.getDataContext());
+      IOperationContext context=MPSDataKeys.OPERATION_CONTEXT.getData(environment.getDataContext());
       final ConfigRunParameters javaRunParameters=DefaultBuildLanguageApplication_Configuration.this.getStateObject().myJavaRunParameters.copy();
       final SNode node=DefaultBuildLanguageApplication_Configuration.this.getNodeForExecution(environment.getProject(),(javaRunParameters).getMake());
 {
@@ -32,8 +32,15 @@
           public Object invoke(){
             try {
               AntScriptRunner runner=new AntScriptRunner(javaRunParameters);
-              File file=DefaultBuildLanguageApplication_Configuration.this.generate(node,project,context);
-              Process process=runner.run(file);
+              final Wrappers._T<File> file=new Wrappers._T<File>();
+              ModelAccess.instance().runReadAction(new Runnable(){
+                public void run(){
+                  file.value=FileGenerationUtil.getDefaultOutputDir(SNodeOperations.getModel(node),new File(SNodeOperations.getModel(node).getModelDescriptor().getModule().getGeneratorOutputPath()));
+                  file.value=new File(file.value,Project_Behavior.call_getFileName_1213877351819(node));
+                }
+              }
+);
+              Process process=runner.run(file.value);
               return new DefaultProcessHandler(consoleView,process,runner.getCommandString());
             }
  catch (            ExecutionException e) {
