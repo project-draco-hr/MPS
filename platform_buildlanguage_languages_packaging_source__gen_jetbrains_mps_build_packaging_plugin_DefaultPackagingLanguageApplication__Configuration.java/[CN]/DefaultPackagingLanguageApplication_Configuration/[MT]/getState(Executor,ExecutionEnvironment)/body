@@ -6,7 +6,6 @@
       Runnable consoleDispose=null;
       final List<AnAction> actions=ListSequence.fromList(new ArrayList<AnAction>());
       ProcessHandler handler=null;
-      final SModelDescriptor currentModel=MPSDataKeys.CONTEXT_MODEL.getData(environment.getDataContext());
       final IOperationContext context=MPSDataKeys.OPERATION_CONTEXT.getData(environment.getDataContext());
       final Project project=MPSDataKeys.PROJECT.getData(environment.getDataContext());
       final ConfigRunParameters javaRunParameters=DefaultPackagingLanguageApplication_Configuration.this.getStateObject().myJavaRunParameters.copy();
@@ -32,22 +31,18 @@
         handler=(ProcessHandler)new _FunctionTypes._return_P0_E2<Object,ExecutionException,ExecutionException>(){
           public Object invoke() throws ExecutionException, ExecutionException {
             try {
-              final Wrappers._T<SNode> configuration=new Wrappers._T<SNode>();
-              final Wrappers._boolean isSelectedByUser=new Wrappers._boolean();
+              SNode configuration=DefaultPackagingLanguageApplication_Configuration.this.getConfiguration(node);
+              if (configuration == null) {
+                throw new ExecutionException("Configuration is not selected.");
+              }
+              final Wrappers._T<SModelDescriptor> model=new Wrappers._T<SModelDescriptor>();
               ModelAccess.instance().runReadAction(new Runnable(){
                 public void run(){
-                  configuration.value=ListSequence.fromList(SLinkOperations.getTargets(node,"configuration",true)).first();
-                  isSelectedByUser.value=ListSequence.fromList(SLinkOperations.getTargets(node,"configuration",true)).count() > 1;
+                  model.value=SNodeOperations.getModel(node).getModelDescriptor();
                 }
               }
 );
-              if (isSelectedByUser.value) {
-                configuration.value=ConfigurationChooser.chooseConfiguration(node,configuration.value);
-              }
-              if (configuration.value == null) {
-                throw new ExecutionException("Configuration is not selected.");
-              }
-              File file=GenerateTextFromBuild.generate(configuration.value,currentModel,context,project,true);
+              File file=GenerateTextFromBuild.generate(configuration,model.value,context,project,true);
               if (file == null) {
                 throw new ExecutionException("No executable file were generated.");
               }
