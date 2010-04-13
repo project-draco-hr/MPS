@@ -17,8 +17,26 @@
     LOG.error("Loading module " + languageDescriptor.getNamespace() + " for the second time");
     return repository.getLanguage(languageDescriptor.getModuleReference());
   }
+  List<SolutionDescriptor> solutionDescriptors=createStubSolutionDescriptors(languageDescriptor);
+  for (  SolutionDescriptor sd : solutionDescriptors) {
+    List<Dependency> dependencies=languageDescriptor.getDependencies();
+    boolean hasDependency=false;
+    for (    Dependency ld : dependencies) {
+      if (EqualUtil.equals(ld.getModuleRef(),sd.getModuleReference())) {
+        hasDependency=true;
+        break;
+      }
+    }
+    if (hasDependency)     continue;
+    Dependency dep=new Dependency();
+    dep.setModuleRef(sd.getModuleReference());
+    dep.setReexport(true);
+    dependencies.add(dep);
+  }
   language.setLanguageDescriptor(languageDescriptor,false);
   repository.addModule(language,moduleOwner);
-  revalidateStubSolutions(languageDescriptor,language);
+  for (  SolutionDescriptor sd : solutionDescriptors) {
+    Solution.newInstance(sd,language);
+  }
   return language;
 }
