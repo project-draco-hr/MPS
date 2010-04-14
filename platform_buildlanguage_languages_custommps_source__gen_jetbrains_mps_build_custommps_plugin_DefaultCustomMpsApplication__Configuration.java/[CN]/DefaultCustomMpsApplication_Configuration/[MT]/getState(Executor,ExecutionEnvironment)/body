@@ -1,0 +1,117 @@
+{
+  return new BaseRunProfileState(){
+    @Nullable public ExecutionResult execute(    Executor executor,    @NotNull ProgramRunner runner) throws ExecutionException {
+      final ConsoleViewImpl consoleView=StacktraceUtil.createConsoleView(MPSDataKeys.PROJECT.getData(environment.getDataContext()));
+      JComponent consoleComponent=null;
+      Runnable consoleDispose=null;
+      final List<AnAction> actions=ListSequence.fromList(new ArrayList<AnAction>());
+      ProcessHandler handler=null;
+      final IOperationContext context=MPSDataKeys.OPERATION_CONTEXT.getData(environment.getDataContext());
+      final Project project=MPSDataKeys.PROJECT.getData(environment.getDataContext());
+      final ConfigRunParameters javaRunParameters=DefaultCustomMpsApplication_Configuration.this.getStateObject().myJavaRunParameters.copy();
+      final SNode node=DefaultCustomMpsApplication_Configuration.this.getNodeForExecution(environment.getProject(),(javaRunParameters).getMake());
+{
+        ListSequence.fromList(actions).addSequence(ListSequence.fromList(new _FunctionTypes._return_P0_E0<List<AnAction>>(){
+          public List<AnAction> invoke(){
+{
+              final List<AnAction> actionsList=ListSequence.fromListAndArray(new ArrayList<AnAction>(),consoleView.createConsoleActions());
+              return actionsList;
+            }
+          }
+        }
+.invoke()));
+        consoleComponent=consoleView.getComponent();
+        consoleDispose=new Runnable(){
+          public void run(){
+            Disposer.dispose(consoleView);
+          }
+        }
+;
+        final Wrappers._T<ExecutionException> ex=new Wrappers._T<ExecutionException>(null);
+        handler=(ProcessHandler)new _FunctionTypes._return_P0_E2<Object,ExecutionException,ExecutionException>(){
+          public Object invoke() throws ExecutionException, ExecutionException {
+            try {
+              final SNode configuration=DefaultCustomMpsApplication_Configuration.this.getConfiguration(node);
+              if (configuration == null) {
+                throw new ExecutionException("Configuration is not selected.");
+              }
+              final Wrappers._boolean isMPSBuildIncluded=new Wrappers._boolean();
+              ModelAccess.instance().runReadAction(new Runnable(){
+                public void run(){
+                  isMPSBuildIncluded.value=AbstractProjectComponent_Behavior.call_included_1213877333807(ListSequence.fromList(SNodeOperations.getDescendants(node,"jetbrains.mps.build.custommps.structure.MPSBuild",false,new String[]{})).first(),configuration);
+                }
+              }
+);
+              final Wrappers._T<SModelDescriptor> model=new Wrappers._T<SModelDescriptor>();
+              ModelAccess.instance().runReadAction(new Runnable(){
+                public void run(){
+                  model.value=SNodeOperations.getModel(node).getModelDescriptor();
+                }
+              }
+);
+              File file=GenerateTextFromBuild.generate(configuration,model.value,context,project,true);
+              if (file == null) {
+                throw new ExecutionException("No executable file were generated.");
+              }
+              if (isMPSBuildIncluded.value) {
+                String path=file.getAbsolutePath();
+                String suffix=".xml";
+                file=new File(path.substring(0,path.length() - suffix.length()) + DistribConfiguration_Behavior.getSuffix_1240229578757() + suffix);
+              }
+              AntScriptRunner runner=new AntScriptRunner(javaRunParameters);
+              Process process=runner.run(file);
+              return new DefaultProcessHandler(consoleView,process,runner.getCommandString());
+            }
+ catch (            ExecutionException e) {
+              ex.value=e;
+              return null;
+            }
+          }
+        }
+.invoke();
+        if (ex.value != null) {
+          throw ex.value;
+        }
+      }
+      final JComponent finalConsoleComponent=consoleComponent;
+      final Runnable finalConsoleDispose=consoleDispose;
+      final ProcessHandler finalHandler=handler;
+      if (finalHandler == null) {
+        return null;
+      }
+      return new ExecutionResult(){
+        public ExecutionConsole getExecutionConsole(){
+          return new ExecutionConsole(){
+            public void dispose(){
+              if (finalConsoleDispose == null) {
+                return;
+              }
+              finalConsoleDispose.run();
+            }
+            public JComponent getComponent(){
+              return finalConsoleComponent;
+            }
+            public JComponent getPreferredFocusableComponent(){
+              return finalConsoleComponent;
+            }
+          }
+;
+        }
+        public AnAction[] getActions(){
+          return ListSequence.fromList(actions).toGenericArray(AnAction.class);
+        }
+        public ProcessHandler getProcessHandler(){
+          return finalHandler;
+        }
+      }
+;
+    }
+    public RunnerSettings getRunnerSettings(){
+      return null;
+    }
+    public ConfigurationPerRunnerSettings getConfigurationSettings(){
+      return null;
+    }
+  }
+;
+}
