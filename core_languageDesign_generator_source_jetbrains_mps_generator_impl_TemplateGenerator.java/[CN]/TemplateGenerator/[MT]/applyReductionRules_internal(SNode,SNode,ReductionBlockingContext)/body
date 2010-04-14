@@ -1,0 +1,29 @@
+{
+  if (clonedOutputNode.getParent() != null) {
+    List<SNode> outputNodes=tryToReduce(inputNode,null,blockingContext);
+    if (outputNodes != null) {
+      SNode parent=clonedOutputNode.getParent();
+      String childRole=parent.getRoleOf(clonedOutputNode);
+      for (      SNode outputNode : outputNodes) {
+        if (!GeneratorUtil.checkChild(parent,childRole,outputNode)) {
+          showWarningMessage(inputNode," -- was input: " + inputNode.getDebugText());
+        }
+      }
+synchronized (this) {
+        parent.replaceChild(clonedOutputNode,outputNodes);
+        setChanged(true);
+      }
+      return;
+    }
+  }
+  blockReductionsForCopiedNode(inputNode,clonedOutputNode,blockingContext);
+  myGenerationTracer.pushCopyOperation();
+  for (  SNode childInputNode : inputNode.getChildren()) {
+    SNode childOutputNode;
+synchronized (this) {
+      childOutputNode=findOutputNodeById(childInputNode.getSNodeId());
+    }
+    applyReductionRules(childInputNode,childOutputNode,blockingContext);
+  }
+  myGenerationTracer.pushOutputNode(clonedOutputNode);
+}
