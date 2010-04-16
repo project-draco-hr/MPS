@@ -1,23 +1,26 @@
 {
   final DebugManagerComponent debugManager=DebugManagerComponent.getInstance(myProject);
-  final DebugSession session=debugManager.getDebugSession(this);
-  final DebugProcessAdapter listener=new DebugProcessAdapter(){
-    @Override public void processDetached(    @NotNull DebugVMEventsProcessor process,    boolean closedByUser){
-      if (process == debugManager.getDebugVMEventsProcessor(session)) {
-        debugManager.removeAllProcessListener(this);
-        notifyProcessDetached();
+  final AbstractDebugSession abstractSession=debugManager.getDebugSession(this);
+  if (abstractSession instanceof DebugSession) {
+    final DebugSession session=(DebugSession)abstractSession;
+    final DebugProcessAdapter listener=new DebugProcessAdapter(){
+      @Override public void processDetached(      @NotNull DebugVMEventsProcessor process,      boolean closedByUser){
+        if (process == debugManager.getDebugVMEventsProcessor(session)) {
+          debugManager.removeAllProcessListener(this);
+          notifyProcessDetached();
+        }
       }
     }
-  }
 ;
-  debugManager.addAllProcessListener(listener);
-  try {
-    super.startNotify();
-  }
+    debugManager.addAllProcessListener(listener);
+    try {
+      super.startNotify();
+    }
   finally {
-    if (session.isStopped()) {
-      debugManager.removeAllProcessListener(listener);
-      notifyProcessDetached();
+      if (session.isStopped()) {
+        debugManager.removeAllProcessListener(listener);
+        notifyProcessDetached();
+      }
     }
   }
 }
