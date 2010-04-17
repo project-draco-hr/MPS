@@ -1,19 +1,19 @@
 {
   System.err.println("preparing arguments for refactoring");
-  SafeDeleteLink safeDeleteLink=new SafeDeleteLink();
-  final RefactoringContext refactoringContext=new RefactoringContext(OldRefactoringAdapter.createAdapterFor(safeDeleteLink));
-  refactoringContext.setCurrentOperationContext(ProjectOperationContext.get(project.getProject()));
-  final String[] linkName=new String[]{null};
+  RenameProperty renameProperty=new RenameProperty();
+  final RefactoringContext refactoringContext=new RefactoringContext(OldRefactoringAdapter.createAdapterFor(renameProperty));
+  refactoringContext.setCurrentOperationContext(ProjectOperationContext.get(project));
+  final String newPropertyName="niceProperty";
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
       SModelDescriptor structureModelDescriptor=testRefactoringLanguage.getStructureModelDescriptor();
-      SNode node=structureModelDescriptor.getSModel().getRootByName("MyVeryGoodConcept1");
+      SNode node=structureModelDescriptor.getSModel().getRootByName("YetAnotherGoodConcept");
       ConceptDeclaration concept=(ConceptDeclaration)BaseAdapter.fromNode(node);
-      SNode link=concept.getLinkDeclarations().get(0).getNode();
-      linkName[0]=link.getProperty("role");
-      refactoringContext.setSelectedMPSProject(project);
-      refactoringContext.setSelectedNode(link);
+      SNode property=concept.getPropertyDeclarations().get(0).getNode();
+      refactoringContext.setSelectedProject(project);
+      refactoringContext.setSelectedNode(property);
       refactoringContext.setSelectedModel(structureModelDescriptor);
+      refactoringContext.setParameter(RenameProperty.newName,newPropertyName);
     }
   }
 );
@@ -33,8 +33,9 @@
             }
             SModel sModel=sandbox1.getSModel();
             SNode root=sModel.getRoots().get(0);
-            SReference reference=root.getReference(linkName[0]);
-            result[0]=(reference == null);
+            SNode firstChild=root.getChildren("anotherGoodConcept").get(0);
+            String propertyValue=firstChild.getProperty(newPropertyName);
+            result[0]="cat".equals(propertyValue);
           }
  catch (          Throwable t) {
             t.printStackTrace();

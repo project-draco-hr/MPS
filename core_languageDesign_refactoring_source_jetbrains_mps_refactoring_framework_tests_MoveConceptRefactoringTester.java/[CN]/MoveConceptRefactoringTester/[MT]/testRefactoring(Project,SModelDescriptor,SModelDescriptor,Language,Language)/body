@@ -1,19 +1,20 @@
 {
   System.err.println("preparing arguments for refactoring");
-  RenameProperty renameProperty=new RenameProperty();
-  final RefactoringContext refactoringContext=new RefactoringContext(OldRefactoringAdapter.createAdapterFor(renameProperty));
-  refactoringContext.setCurrentOperationContext(ProjectOperationContext.get(project.getProject()));
-  final String newPropertyName="niceProperty";
+  final String conceptName="MyVeryGoodConcept1";
+  MoveConcepts moveConcepts=new MoveConcepts();
+  final RefactoringContext refactoringContext=new RefactoringContext(OldRefactoringAdapter.createAdapterFor(moveConcepts));
+  refactoringContext.setCurrentOperationContext(ProjectOperationContext.get(project));
+  final SModelDescriptor targetStructureModelDescriptor[]=new SModelDescriptor[]{null};
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
       SModelDescriptor structureModelDescriptor=testRefactoringLanguage.getStructureModelDescriptor();
-      SNode node=structureModelDescriptor.getSModel().getRootByName("YetAnotherGoodConcept");
-      ConceptDeclaration concept=(ConceptDeclaration)BaseAdapter.fromNode(node);
-      SNode property=concept.getPropertyDeclarations().get(0).getNode();
-      refactoringContext.setSelectedMPSProject(project);
-      refactoringContext.setSelectedNode(property);
+      targetStructureModelDescriptor[0]=testRefactoringTargetLanguage.getStructureModelDescriptor();
+      SNode concept=structureModelDescriptor.getSModel().getRootByName(conceptName);
+      refactoringContext.setSelectedProject(project);
+      refactoringContext.setSelectedNode(concept);
+      refactoringContext.setSelectedNodes(CollectionUtil.list(concept));
       refactoringContext.setSelectedModel(structureModelDescriptor);
-      refactoringContext.setParameter(RenameProperty.newName,newPropertyName);
+      refactoringContext.setParameter(MoveConcepts.targetModel,targetStructureModelDescriptor[0]);
     }
   }
 );
@@ -32,10 +33,7 @@
               return;
             }
             SModel sModel=sandbox1.getSModel();
-            SNode root=sModel.getRoots().get(0);
-            SNode firstChild=root.getChildren("anotherGoodConcept").get(0);
-            String propertyValue=firstChild.getProperty(newPropertyName);
-            result[0]="cat".equals(propertyValue);
+            result[0]=sModel.getRoots().get(0).getConceptFqName().equals(targetStructureModelDescriptor[0].getSModelFqName() + "." + conceptName);
           }
  catch (          Throwable t) {
             t.printStackTrace();
