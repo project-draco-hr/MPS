@@ -2,6 +2,18 @@
   MPSVCSManager manager=context.getProject().getComponent(MPSVCSManager.class);
   manager.addFilesToVcs(new ArrayList<File>(generatedFiles),false,false);
   refreshGeneratedFiles(generatedFiles);
+  final List<VirtualFile> generatedVirtualFiles=new ArrayList<VirtualFile>();
+  for (  File generatedFile : generatedFiles) {
+    generatedVirtualFiles.add(LocalFileSystem.getInstance().findFileByIoFile(generatedFile));
+  }
+  RefreshSession session=RefreshQueue.getInstance().createSession(true,true,new Runnable(){
+    @Override public void run(){
+      VcsDirtyScopeManager.getInstance(context.getProject()).filesDirty(generatedVirtualFiles,null);
+    }
+  }
+);
+  session.addAllFiles(generatedVirtualFiles);
+  session.launch();
   if (cleanUp) {
     cleanUp(status.getInputModel(),context,outputRoot,generatedFiles);
   }
