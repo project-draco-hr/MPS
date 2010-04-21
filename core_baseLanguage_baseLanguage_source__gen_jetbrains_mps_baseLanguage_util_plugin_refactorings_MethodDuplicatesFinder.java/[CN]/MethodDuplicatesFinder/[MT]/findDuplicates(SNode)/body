@@ -1,18 +1,28 @@
 {
   List<MethodMatch> found=new ArrayList<MethodMatch>();
-  if (ListSequence.fromList(this.myNodesToFind).count() == 1) {
-    for (    SNode node : ListSequence.fromList(SNodeOperations.getDescendants(root,"jetbrains.mps.lang.core.structure.BaseConcept",false,new String[]{}))) {
-      if (ListSequence.fromList(this.myNodesToFind).contains(node)) {
-        continue;
+  for (  SNode node : ListSequence.fromList(SNodeOperations.getDescendants(root,"jetbrains.mps.lang.core.structure.BaseConcept",false,new String[]{}))) {
+    SNode current=node;
+    MethodDuplicatesFinder.MethodMatchModifier modifier=new MethodDuplicatesFinder.MethodMatchModifier();
+    Iterator<SNode> iterator=ListSequence.fromList(this.myNodesToFind).iterator();
+    boolean hasNoErrors=true;
+    while (iterator.hasNext() && hasNoErrors) {
+      if ((current == null) || SetSequence.fromSet(this.myUsedNodes).contains(current)) {
+        hasNoErrors=false;
       }
-      MethodDuplicatesFinder.MethodMatchModifier modifier=new MethodDuplicatesFinder.MethodMatchModifier();
-      modifier.getMatch().putNode(node);
-      if (MatchingUtil.matchNodes(node,ListSequence.fromList(this.myNodesToFind).first(),modifier,true)) {
-        MethodMatch resultMatch=modifier.getMatch();
-        if (resultMatch.checkMapping()) {
-          found.add(resultMatch);
+ else {
+        modifier.getMatch().putNode(current);
+        if (!(MatchingUtil.matchNodes(current,iterator.next(),modifier,true))) {
+          hasNoErrors=false;
         }
+        current=SNodeOperations.getNextSibling(current);
       }
+    }
+    MethodMatch resultMatch=modifier.getMatch();
+    if (hasNoErrors && resultMatch.checkMapping()) {
+      for (      SNode resultNode : ListSequence.fromList(resultMatch.getNodes())) {
+        SetSequence.fromSet(this.myUsedNodes).addElement(resultNode);
+      }
+      found.add(resultMatch);
     }
   }
   return found;
