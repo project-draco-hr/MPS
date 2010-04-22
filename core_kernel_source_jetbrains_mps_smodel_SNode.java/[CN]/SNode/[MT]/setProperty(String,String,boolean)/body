@@ -3,20 +3,21 @@
   ModelChange.assertLegalNodeChange(this);
   propertyValue=InternUtil.intern(propertyValue);
   if (usePropertySetter) {
-    if (!ourPropertySettersInProgress.contains(new Pair<SNode,String>(this,propertyName)) && !myModel.isLoading()) {
+    Set<Pair<SNode,String>> threadSet=ourPropertySettersInProgress.get();
+    Pair<SNode,String> pair=new Pair<SNode,String>(this,propertyName);
+    if (!threadSet.contains(pair) && !myModel.isLoading()) {
       INodePropertySetter setter=CONSTRAINTS_MANAGER.getNodePropertySetter(this,propertyName);
       if (setter != null) {
-        ourPropertySettersInProgress=new HashSet<Pair<SNode,String>>(1);
-        ourPropertySettersInProgress.add(new Pair<SNode,String>(this,propertyName));
+        threadSet.add(pair);
         try {
           setter.execPropertySet(this,propertyName,propertyValue,GlobalScope.getInstance());
           return;
         }
- catch (        Throwable t) {
+ catch (        Exception t) {
           LOG.error(t);
         }
  finally {
-          ourPropertySettersInProgress.remove(new Pair<SNode,String>(this,propertyName));
+          threadSet.remove(pair);
         }
       }
     }

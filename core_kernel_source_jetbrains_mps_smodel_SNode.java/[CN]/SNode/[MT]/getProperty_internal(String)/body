@@ -4,16 +4,18 @@
   if (propertyValue != null) {
     return propertyValue;
   }
-  if (!ourPropertyGettersInProgress.contains(new Pair<SNode,String>(this,propertyName))) {
+  Set<Pair<SNode,String>> threadSet=ourPropertyGettersInProgress.get();
+  Pair<SNode,String> pair=new Pair<SNode,String>(this,propertyName);
+  if (!threadSet.contains(pair)) {
     INodePropertyGetter getter=CONSTRAINTS_MANAGER.getNodePropertyGetter(this,propertyName);
     if (getter != null) {
-      ourPropertyGettersInProgress.add(new Pair<SNode,String>(this,propertyName));
+      threadSet.add(pair);
       try {
         Object getterValue=getter.execPropertyGet(this,propertyName,GlobalScope.getInstance());
         propertyValue=getterValue == null ? null : String.valueOf(getterValue);
       }
   finally {
-        ourPropertyGettersInProgress.remove(new Pair<SNode,String>(this,propertyName));
+        threadSet.remove(pair);
       }
     }
   }
