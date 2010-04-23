@@ -8,8 +8,9 @@
       wasLoggingThreshold=Logger.setThreshold("ERROR");
     }
     for (    SModelDescriptor inputModel : inputModels) {
-      TypeChecker.getInstance().setIsGeneration(true);
-      GenerationSession generationSession=new GenerationSession(inputModel,invocationContext,myGenerationTracer,mySaveTransientModels,myProgress,myLogger,mySettings.isUseNewGenerator(),mySettings.isStrictMode());
+      IPerformanceTracer ttrace=mySettings.isStrictMode() ? new PerformanceTracer("model " + NameUtil.shortNameFromLongName(inputModel.getLongName())) : new NullPerformanceTracer();
+      TypeChecker.getInstance().setIsGeneration(true,mySettings.isUseNewGenerator() ? null : ttrace);
+      GenerationSession generationSession=new GenerationSession(inputModel,invocationContext,myGenerationTracer,mySaveTransientModels,myProgress,myLogger,mySettings.isUseNewGenerator(),mySettings.isStrictMode(),ttrace);
       try {
         Logger.addLoggingHandler(generationSession.getLoggingHandler());
         if (!myGenerationHandler.canHandle(inputModel)) {
@@ -33,6 +34,10 @@
         progressHelper.finishTask();
         TypeChecker.getInstance().setIsGeneration(false);
         progressHelper.setText2("");
+      }
+      String report=ttrace.report();
+      if (report != null) {
+        myLogger.trace(report);
       }
     }
   }
