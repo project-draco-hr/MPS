@@ -1,2 +1,27 @@
 {
+  if (node == null) {
+    return;
+  }
+  AbstractConceptDeclaration concept=node.getConceptDeclarationAdapter();
+  Language language=node.getLanguage(GlobalScope.getInstance());
+  String conceptFqName=NameUtil.nodeFQName(concept);
+  List<Method> methodsToCall;
+synchronized (myConstructors) {
+    methodsToCall=myConstructors.get(conceptFqName);
+    if (methodsToCall == null) {
+      methodsToCall=calculateConstructors(concept,language);
+      myConstructors.put(conceptFqName,methodsToCall);
+    }
+  }
+  for (int i=methodsToCall.size() - 1; i >= 0; i--) {
+    try {
+      methodsToCall.get(i).invoke(null,node);
+    }
+ catch (    IllegalAccessException e) {
+      LOG.error(e);
+    }
+catch (    InvocationTargetException e) {
+      e.printStackTrace();
+    }
+  }
 }
