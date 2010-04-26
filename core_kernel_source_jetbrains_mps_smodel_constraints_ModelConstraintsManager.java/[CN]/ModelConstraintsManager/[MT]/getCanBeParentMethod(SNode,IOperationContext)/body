@@ -1,27 +1,22 @@
 {
-  IScope scope=context.getScope();
-  String fqName=parentNode.getConceptFqName();
-  String constraintsClass=constraintsClassByConceptFqName(fqName);
-  String namespace=NameUtil.namespaceFromConceptFQName(fqName);
-  Language language=scope.getLanguage(namespace);
-  if (language != null) {
-    Class cls=language.getClass(constraintsClass);
-    if (cls != null) {
-      try {
-        Method m;
-        if (myCanBeParentMethods.containsKey(fqName)) {
-          m=myCanBeParentMethods.get(fqName);
+  final String fqName=parentNode.getConceptFqName();
+synchronized (myCanBeParentMethods) {
+    Method result=myCanBeParentMethods.get(fqName);
+    if (result != null || myCanBeParentMethods.containsKey(fqName)) {
+      return result;
+    }
+    Language language=context.getScope().getLanguage(NameUtil.namespaceFromConceptFQName(fqName));
+    if (language != null) {
+      Class behaviorClass=language.getClass(constraintsClassByConceptFqName(fqName));
+      if (behaviorClass != null) {
+        try {
+          result=behaviorClass.getMethod(BehaviorConstants.CAN_BE_A_PARENT_METHOD_NAME,IOperationContext.class,CanBeAParentContext.class);
         }
- else {
-          m=cls.getMethod(BehaviorConstants.CAN_BE_A_PARENT_METHOD_NAME,IOperationContext.class,CanBeAParentContext.class);
-          myCanBeParentMethods.put(fqName,m);
+ catch (        NoSuchMethodException e) {
         }
-        return m;
-      }
- catch (      NoSuchMethodException e) {
-        myCanBeParentMethods.put(fqName,null);
       }
     }
+    myCanBeParentMethods.put(fqName,result);
+    return result;
   }
-  return null;
 }
