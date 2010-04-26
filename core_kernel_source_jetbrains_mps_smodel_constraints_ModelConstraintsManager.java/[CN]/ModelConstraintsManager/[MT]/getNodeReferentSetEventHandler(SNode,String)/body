@@ -1,20 +1,22 @@
 {
   String nodeConceptFqName=node.getConceptFqName();
   String originalKey=nodeConceptFqName + "#" + referentRole;
-  if (myNodeReferentSetEventHandlersMap.containsKey(originalKey)) {
-    return myNodeReferentSetEventHandlersMap.get(originalKey);
-  }
-  List<AbstractConceptDeclaration> hierarchy=SModelUtil_new.getConceptAndSuperConcepts(node.getConceptDeclarationAdapter());
-  for (  AbstractConceptDeclaration concept : hierarchy) {
-    Language l=SModelUtil_new.getDeclaringLanguage(concept,GlobalScope.getInstance());
-    ensureLanguageAdded(l);
-    String conceptFqName=NameUtil.nodeFQName(concept);
-    INodeReferentSetEventHandler result=myNodeReferentSetEventHandlersMap.get(conceptFqName + "#" + referentRole);
-    if (result != null) {
-      myNodeReferentSetEventHandlersMap.put(originalKey,result);
+synchronized (myLock) {
+    INodeReferentSetEventHandler result=myNodeReferentSetEventHandlersMap.get(originalKey);
+    if (result != null || myNodeReferentSetEventHandlersMap.containsKey(originalKey)) {
       return result;
     }
+    List<AbstractConceptDeclaration> hierarchy=SModelUtil_new.getConceptAndSuperConcepts(node.getConceptDeclarationAdapter());
+    for (    AbstractConceptDeclaration concept : hierarchy) {
+      Language l=SModelUtil_new.getDeclaringLanguage(concept,GlobalScope.getInstance());
+      ensureLanguageAdded(l);
+      String conceptFqName=NameUtil.nodeFQName(concept);
+      result=myNodeReferentSetEventHandlersMap.get(conceptFqName + "#" + referentRole);
+      if (result != null) {
+        break;
+      }
+    }
+    myNodeReferentSetEventHandlersMap.put(originalKey,result);
+    return result;
   }
-  myNodeReferentSetEventHandlersMap.put(originalKey,null);
-  return null;
 }
