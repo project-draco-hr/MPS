@@ -2,10 +2,10 @@
   this.findDuplicates();
   SNode newDeclaration;
   if (this.myFieldInitialization == FieldInitializationPlace.FIELD) {
-    newDeclaration=new IntroduceFieldRefactoring.QuotationClass_baxqxe_a0a0a2a1().createNode(SNodeOperations.copyNode(this.getExpressionType()),SNodeOperations.copyNode(this.getExpression()),this.getName());
+    newDeclaration=new IntroduceFieldRefactoring.QuotationClass_baxqxe_a0a0a2a1().createNode(myVisibilityLevel.getNode(),SNodeOperations.copyNode(this.getExpressionType()),SNodeOperations.copyNode(this.getExpression()),this.getName());
   }
  else {
-    newDeclaration=new IntroduceFieldRefactoring.QuotationClass_baxqxe_a0a0a0c0b().createNode(SNodeOperations.copyNode(this.getExpressionType()),this.getName());
+    newDeclaration=new IntroduceFieldRefactoring.QuotationClass_baxqxe_a0a0a0c0b().createNode(myVisibilityLevel.getNode(),SNodeOperations.copyNode(this.getExpressionType()),this.getName());
   }
   SNode classConcept=SNodeOperations.getAncestor(this.getExpression(),"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false);
   ListSequence.fromList(SLinkOperations.getTargets(classConcept,"field",true)).addElement(newDeclaration);
@@ -16,9 +16,20 @@
   if (this.myFieldInitialization == FieldInitializationPlace.CONSTRUCTOR) {
     SNode declaration=SNodeOperations.getAncestor(this.getExpression(),"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false);
     for (    SNode constructor : ListSequence.fromList(SLinkOperations.getTargets(declaration,"constructor",true))) {
-      SNodeOperations.insertPrevSiblingChild(ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(constructor,"body",true),"statement",true)).first(),SNodeOperations.copyNode(assignStatement));
+      List<SNode> statement=SLinkOperations.getTargets(SLinkOperations.getTarget(constructor,"body",true),"statement",true);
+      if (ListSequence.fromList(statement).isNotEmpty()) {
+        SNodeOperations.insertPrevSiblingChild(ListSequence.fromList(statement).first(),SNodeOperations.copyNode(assignStatement));
+      }
+ else {
+        ListSequence.fromList(statement).addElement(SNodeOperations.copyNode(assignStatement));
+      }
     }
   }
-  SNodeOperations.replaceWithAnother(this.getExpression(),new IntroduceFieldRefactoring.QuotationClass_baxqxe_a0a0i0b().createNode(newDeclaration));
+  replaceNode(this.getExpression(),newDeclaration);
+  if (myIsReplacingAll) {
+    for (    SNode duplicate : ListSequence.fromList(myDuplicates)) {
+      replaceNode(duplicate,newDeclaration);
+    }
+  }
   return newDeclaration;
 }
