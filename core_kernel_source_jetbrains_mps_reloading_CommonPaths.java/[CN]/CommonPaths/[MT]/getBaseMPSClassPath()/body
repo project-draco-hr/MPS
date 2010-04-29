@@ -1,10 +1,25 @@
 {
   String path=getBaseMPSPath();
-  if (path != null)   return AbstractClassPathItem.createFromPath(path);
-  File file=new File(PathManager.getResourceRoot(ClassLoaderManager.class,"/" + ClassLoaderManager.class.getName().replace('.','/') + ".class"));
-  if (!file.exists()) {
-    LOG.error("Can't find mps classpath");
-    return null;
+  if (path != null) {
+    if (path.endsWith(".jar")) {
+      if (ourMPSJar == null) {
+        try {
+          ourMPSJar=new JarFileClassPathItem(path);
+        }
+ catch (        Throwable e) {
+          LOG.error(e);
+        }
+      }
+      return ourMPSJar;
+    }
+ else {
+      return new FileClassPathItem(path);
+    }
   }
-  return AbstractClassPathItem.createFromPath(file.getAbsolutePath());
+  File file=new File(PathManager.getResourceRoot(ClassLoaderManager.class,"/" + ClassLoaderManager.class.getName().replace('.','/') + ".class"));
+  if (file.exists()) {
+    return new FileClassPathItem(file.getAbsolutePath());
+  }
+  LOG.error("Can't find mps classpath");
+  return null;
 }
