@@ -9,15 +9,18 @@
       String workingDir=dir.getAbsolutePath();
       gdbProcess.inputWithFlush("-environment-cd " + workingDir + "\n");
       gdbProcess.inputWithFlush("-file-exec-and-symbols " + myCommand.replace(File.separatorChar,'/') + "\n");
-      gdbProcess.inputWithFlush("-break-insert main\n");
+      myDebugSession.getGDBRequestManager().createRequest(new BreakpointRequestor("main"){
+        @Override public void onRequestFulfilled(        ResultAnswer answer){
+          System.err.println("WOW!");
+        }
+      }
+);
       gdbProcess.inputWithFlush("-exec-run\n");
       final GDBEventsHandler eventsHandler=myDebugSession.getGDBEventsHandler();
-      eventsHandler.addEventListener(new GDBEventsListener(){
-        @Override public void breakpointHit(        GDBAnswer answer){
+      eventsHandler.addEventListener(new GDBEventsAdapter(){
+        @Override public void breakpointHit(        AsyncAnswer answer,        SimpleConsoleProcessHandler gdbProcess){
           eventsHandler.removeEventListener(this);
           connectedToDebuggee(gdbProcess);
-        }
-        @Override public void processTerminated(        SimpleConsoleProcessHandler gdbProcess){
         }
       }
 );
