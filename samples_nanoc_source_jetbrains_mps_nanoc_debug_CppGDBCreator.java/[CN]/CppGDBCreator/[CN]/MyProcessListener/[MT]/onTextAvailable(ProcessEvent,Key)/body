@@ -11,16 +11,15 @@
       gdbProcess.inputWithFlush("-file-exec-and-symbols " + myCommand.replace(File.separatorChar,'/') + "\n");
       myDebugSession.getGDBRequestManager().createRequest(new BreakpointRequestor("main"){
         @Override public void onRequestFulfilled(        ResultAnswer answer){
-          System.err.println("WOW!");
-        }
-      }
+          final GDBEventsHandler eventsHandler=myDebugSession.getGDBEventsHandler();
+          eventsHandler.addEventListener(new GDBEventsAdapter(){
+            @Override public void breakpointHit(            AsyncAnswer answer,            SimpleConsoleProcessHandler gdbProcess){
+              eventsHandler.removeEventListener(this);
+              connectedToDebuggee(gdbProcess);
+            }
+          }
 );
-      gdbProcess.inputWithFlush("-exec-run\n");
-      final GDBEventsHandler eventsHandler=myDebugSession.getGDBEventsHandler();
-      eventsHandler.addEventListener(new GDBEventsAdapter(){
-        @Override public void breakpointHit(        AsyncAnswer answer,        SimpleConsoleProcessHandler gdbProcess){
-          eventsHandler.removeEventListener(this);
-          connectedToDebuggee(gdbProcess);
+          gdbProcess.inputWithFlush("-exec-run\n");
         }
       }
 );
