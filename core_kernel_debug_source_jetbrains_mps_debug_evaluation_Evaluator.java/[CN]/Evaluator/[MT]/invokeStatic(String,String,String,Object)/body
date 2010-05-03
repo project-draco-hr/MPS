@@ -1,0 +1,24 @@
+{
+  List<ReferenceType> classes=getVM().classesByName(className);
+  if (classes.size() == 0) {
+    LOG.error("could not find class " + className);
+    return null;
+  }
+  ClassType referenceType=(ClassType)classes.get(0);
+  List<Method> methods=referenceType.methodsByName(name,jniSignature);
+  if (methods.size() == 0) {
+    LOG.error("could not find method " + name + " with signature "+ jniSignature+ " in "+ className);
+    return null;
+  }
+  Method method=methods.get(0);
+  List<Value> argValues=MirrorUtil.getValues(getThreadReference(),args);
+  Value result;
+  try {
+    result=referenceType.invokeMethod(getThreadReference(),method,argValues,0);
+  }
+ catch (  Throwable t) {
+    LOG.error("method invocation failed",t);
+    return null;
+  }
+  return MirrorUtil.getValueProxy(result,getThreadReference());
+}

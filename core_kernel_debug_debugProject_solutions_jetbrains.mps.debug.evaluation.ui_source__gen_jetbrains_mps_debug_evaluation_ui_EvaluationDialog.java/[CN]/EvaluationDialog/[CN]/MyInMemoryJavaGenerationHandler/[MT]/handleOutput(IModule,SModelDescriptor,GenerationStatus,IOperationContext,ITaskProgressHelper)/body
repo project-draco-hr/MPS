@@ -1,0 +1,43 @@
+{
+  SModel model=status.getOutputModel();
+  if (model != null) {
+    final SNode evaluator=model.getRootByName(EvaluationDialog.EVALUATOR_NAME);
+    if (evaluator != null) {
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          try {
+            TransformationUtil.transform(evaluator);
+          }
+ catch (          Throwable t) {
+            EvaluationDialog.LOG.error(t);
+          }
+        }
+      }
+);
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        public void run(){
+          if (EvaluationDialog.this.myResultEditor == null) {
+            ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+              public void run(){
+                EvaluationDialog.this.myResultEditor=new EmbeddableEditor(new ModuleContext(EvaluationDialog.this.myAuxModule,EvaluationDialog.this.myAuxModule.getMPSProject()),EvaluationDialog.this.myAuxModule,evaluator,evaluator,false);
+              }
+            }
+);
+            EvaluationDialog.this.myTabbedPane.add("Generated Result",EvaluationDialog.this.myResultEditor.getComponenet());
+            EvaluationDialog.this.myTabbedPane.validate();
+          }
+ else {
+            ModelAccess.instance().runReadAction(new Runnable(){
+              public void run(){
+                EvaluationDialog.this.myResultEditor.setNode(evaluator);
+              }
+            }
+);
+          }
+        }
+      }
+,ModalityState.NON_MODAL);
+    }
+  }
+  return super.handleOutput(module,inputModel,status,context,helper);
+}
