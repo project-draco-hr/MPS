@@ -1,34 +1,35 @@
 {
-  normalizeAllDotExpressions(evaluator);
-  final Set<SNode> processedCalls=SetSequence.fromSet(new HashSet<SNode>());
-  boolean finished=false;
   SNode evaluateMethod=findEvaluateMethod(evaluator);
+  normalizeAllDotExpressions(evaluateMethod);
+  for (  SNode localStaticMethodCall : ListSequence.fromList(SNodeOperations.getDescendants(evaluateMethod,"jetbrains.mps.baseLanguage.structure.LocalStaticMethodCall",false,new String[]{}))) {
+    SNode staticMethodCall=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StaticMethodCall",null);
+    SLinkOperations.setTarget(staticMethodCall,"classConcept",SNodeOperations.cast(SNodeOperations.getParent(SLinkOperations.getTarget(localStaticMethodCall,"baseMethodDeclaration",false)),"jetbrains.mps.baseLanguage.structure.ClassConcept"),false);
+    SLinkOperations.setTarget(staticMethodCall,"baseMethodDeclaration",SLinkOperations.getTarget(localStaticMethodCall,"baseMethodDeclaration",false),false);
+    ListSequence.fromList(SLinkOperations.getTargets(staticMethodCall,"actualArgument",true)).addSequence(ListSequence.fromList(SLinkOperations.getTargets(localStaticMethodCall,"actualArgument",true)));
+    SNodeOperations.replaceWithAnother(localStaticMethodCall,staticMethodCall);
+  }
+  for (  SNode localInstanceMethodCall : ListSequence.fromList(SNodeOperations.getDescendants(evaluateMethod,"jetbrains.mps.baseLanguage.structure.LocalInstanceMethodCall",false,new String[]{}))) {
+    SNode instanceMethodCall=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation",null);
+    SLinkOperations.setTarget(instanceMethodCall,"baseMethodDeclaration",SLinkOperations.getTarget(localInstanceMethodCall,"baseMethodDeclaration",false),false);
+    ListSequence.fromList(SLinkOperations.getTargets(instanceMethodCall,"actualArgument",true)).addSequence(ListSequence.fromList(SLinkOperations.getTargets(localInstanceMethodCall,"actualArgument",true)));
+    SNode dotExpression=new TransformationUtil.QuotationClass_crriw5_a0a3a9a9().createNode(instanceMethodCall,createThisNodeReplacement());
+    SNodeOperations.replaceWithAnother(localInstanceMethodCall,dotExpression);
+  }
+  boolean finished=false;
   while (!(finished)) {
     finished=true;
-    Iterable<SNode> methodCallOperations=ListSequence.fromList(SNodeOperations.getDescendants(evaluator,"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation",false,new String[]{})).where(new IWhereFilter<SNode>(){
-      public boolean accept(      SNode it){
-        return !(SetSequence.fromSet(processedCalls).contains(it));
-      }
-    }
-);
-    for (    SNode methodCall : Sequence.fromIterable(methodCallOperations)) {
+    for (    SNode methodCall : ListSequence.fromList(SNodeOperations.getDescendants(evaluateMethod,"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation",false,new String[]{}))) {
       if (TransformationUtil.needsToBeReplacedWithInvoke(methodCall)) {
-        SNode invokeMethodCall=new TransformationUtil.QuotationClass_crriw5_a0a2a0a2a7a8().createNode();
-        SNode invokeMethod=SLinkOperations.getTarget(invokeMethodCall,"baseMethodDeclaration",false);
         SNode originalMethodDeclaration=SLinkOperations.getTarget(methodCall,"baseMethodDeclaration",false);
-        SLinkOperations.setTarget(methodCall,"baseMethodDeclaration",invokeMethod,false);
-        ListSequence.fromList(SLinkOperations.getTargets(methodCall,"actualArgument",true)).insertElement(0,TransformationUtil.createStringLiteral(getJniSignature(originalMethodDeclaration)));
-        ListSequence.fromList(SLinkOperations.getTargets(methodCall,"actualArgument",true)).insertElement(0,TransformationUtil.createStringLiteral(SPropertyOperations.getString(originalMethodDeclaration,"name")));
-        SetSequence.fromSet(processedCalls).addElement(methodCall);
+        SNode invokeMethodCall=new TransformationUtil.QuotationClass_crriw5_a0a2a0a3a51a9().createNode(createStringLiteral(SPropertyOperations.getString(originalMethodDeclaration,"name")),createStringLiteral(getJniSignature(originalMethodDeclaration)));
+        ListSequence.fromList(SLinkOperations.getTargets(invokeMethodCall,"actualArgument",true)).addSequence(ListSequence.fromList(SLinkOperations.getTargets(methodCall,"actualArgument",true)));
+        SNodeOperations.replaceWithAnother(methodCall,invokeMethodCall);
         finished=false;
       }
     }
-    for (    SNode staticMethodCall : ListSequence.fromList(SNodeOperations.getDescendants(evaluator,"jetbrains.mps.baseLanguage.structure.StaticMethodCall",false,new String[]{}))) {
+    for (    SNode staticMethodCall : ListSequence.fromList(SNodeOperations.getDescendants(evaluateMethod,"jetbrains.mps.baseLanguage.structure.StaticMethodCall",false,new String[]{}))) {
       if (TransformationUtil.needsToBeReplacedWithInvokeStatic(staticMethodCall)) {
-        SNode invokeStaticMethodCall=new TransformationUtil.QuotationClass_crriw5_a0a1a0a3a7a8().createNode();
-        ListSequence.fromList(SLinkOperations.getTargets(invokeStaticMethodCall,"actualArgument",true)).addElement(createStringLiteral(INamedConcept_Behavior.call_getFqName_1213877404258(SLinkOperations.getTarget(staticMethodCall,"classConcept",false))));
-        ListSequence.fromList(SLinkOperations.getTargets(invokeStaticMethodCall,"actualArgument",true)).addElement(createStringLiteral(SPropertyOperations.getString(SLinkOperations.getTarget(staticMethodCall,"baseMethodDeclaration",false),"name")));
-        ListSequence.fromList(SLinkOperations.getTargets(invokeStaticMethodCall,"actualArgument",true)).addElement(createStringLiteral(getJniSignature(SLinkOperations.getTarget(staticMethodCall,"baseMethodDeclaration",false))));
+        SNode invokeStaticMethodCall=new TransformationUtil.QuotationClass_crriw5_a0a1a0a5a51a9().createNode(createStringLiteral(INamedConcept_Behavior.call_getFqName_1213877404258(SLinkOperations.getTarget(staticMethodCall,"classConcept",false))),createStringLiteral(SPropertyOperations.getString(SLinkOperations.getTarget(staticMethodCall,"baseMethodDeclaration",false),"name")),createStringLiteral(getJniSignature(SLinkOperations.getTarget(staticMethodCall,"baseMethodDeclaration",false))));
         ListSequence.fromList(SLinkOperations.getTargets(invokeStaticMethodCall,"actualArgument",true)).addSequence(ListSequence.fromList(SLinkOperations.getTargets(staticMethodCall,"actualArgument",true)));
         SNodeOperations.replaceWithAnother(staticMethodCall,invokeStaticMethodCall);
         finished=false;
@@ -36,15 +37,6 @@
     }
     if (!(replaceArrayOperations(evaluateMethod))) {
       finished=false;
-    }
-    for (    SNode localStaticMethodCall : ListSequence.fromList(SNodeOperations.getDescendants(evaluateMethod,"jetbrains.mps.baseLanguage.structure.LocalStaticMethodCall",false,new String[]{}))) {
-      SNode returnType=getValueProxyTypeFromType(SLinkOperations.getTarget(SLinkOperations.getTarget(localStaticMethodCall,"baseMethodDeclaration",false),"returnType",true));
-      SNode newCall=new TransformationUtil.QuotationClass_crriw5_a0a2a6a7a8().createNode(returnType);
-      ListSequence.fromList(SLinkOperations.getTargets(newCall,"actualArgument",true)).addElement(createStringLiteral(INamedConcept_Behavior.call_getFqName_1213877404258(SNodeOperations.cast(SNodeOperations.getParent(SLinkOperations.getTarget(localStaticMethodCall,"baseMethodDeclaration",false)),"jetbrains.mps.baseLanguage.structure.Classifier"))));
-      ListSequence.fromList(SLinkOperations.getTargets(newCall,"actualArgument",true)).addElement(createStringLiteral(SPropertyOperations.getString(SLinkOperations.getTarget(localStaticMethodCall,"baseMethodDeclaration",false),"name")));
-      ListSequence.fromList(SLinkOperations.getTargets(newCall,"actualArgument",true)).addElement(createStringLiteral(getJniSignature(SLinkOperations.getTarget(localStaticMethodCall,"baseMethodDeclaration",false))));
-      ListSequence.fromList(SLinkOperations.getTargets(newCall,"actualArgument",true)).addSequence(ListSequence.fromList(SLinkOperations.getTargets(localStaticMethodCall,"actualArgument",true)));
-      SNodeOperations.replaceWithAnother(localStaticMethodCall,new TransformationUtil.QuotationClass_crriw5_a0a0i0g0h0i().createNode(returnType,newCall));
     }
   }
 }
