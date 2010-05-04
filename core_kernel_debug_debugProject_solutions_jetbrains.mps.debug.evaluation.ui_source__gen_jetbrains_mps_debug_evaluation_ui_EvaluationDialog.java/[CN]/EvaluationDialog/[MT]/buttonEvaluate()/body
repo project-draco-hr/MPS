@@ -1,43 +1,16 @@
 {
   try {
-    final Set<IClassPathItem> classpaths=new HashSet<IClassPathItem>();
-    for (    Language language : this.myLanguages) {
-      IClassPathItem item=language.getClassPathItem();
-      classpaths.add(item);
-    }
-    String path=PathManager.getHomePath() + NameUtil.pathFromNamespace(".lib.tools.") + "tools.jar";
-    classpaths.add(ClassPathFactory.getInstance().createFromPath(path));
-    GeneratorManager manager=new GeneratorManager(EvaluationDialog.this.myContext.getProject(),new GenerationSettings()){
-      protected boolean generateRequirements(){
-        return false;
-      }
-    }
-;
-    InMemoryJavaGenerationHandler handler=new EvaluationDialog.MyInMemoryJavaGenerationHandler(false,true,classpaths);
-    DefaultMessageHandler messageHandler=new DefaultMessageHandler(this.myAuxModule.getMPSProject().getProject());
-    boolean successful=manager.generateModels(ListSequence.fromListAndArray(new ArrayList<SModelDescriptor>(),this.myEditor.getModel()),this.myContext,handler,new EmptyProgressIndicator(),messageHandler,true);
-    String fullClassName=this.myEditor.getModel().getLongName() + "." + EVALUATOR_NAME;
-    String source=handler.getSources().get(fullClassName);
-    if (successful || StringUtils.isNotEmpty(source)) {
-      System.err.println(source);
-      try {
-        ClassLoader loader=handler.getCompiler().getClassLoader(this.myUiState.getClass().getClassLoader());
-        Class clazz=Class.forName(fullClassName,true,loader);
-        Evaluator evaluator=(Evaluator)clazz.getConstructor(JavaUiState.class).newInstance(this.myUiState);
-        ValueProxy value=evaluator.evaluate();
-        this.myUiState=this.myDebugSession.refresh();
-        this.myTree.setResultProxy(value);
-      }
- catch (      Throwable t) {
-        myTree.setUnsuccessful(t.getMessage());
-      }
+    ValueProxy evaluatedValue=myEvaluationData.evaluate();
+    if (evaluatedValue != null) {
+      myTree.setResultProxy(evaluatedValue);
     }
  else {
-      this.myTree.setUnsuccessful("Errors during generation.");
+      myTree.setUnsuccessful("Evaluation returned null.");
     }
-    this.myTree.rebuildNow();
   }
- catch (  Throwable t) {
-    LOG.error(t);
+ catch (  BaseEvaluationException e) {
+    myTree.setUnsuccessful(e.getMessage());
+    LOG.error(e);
   }
+  myTree.rebuildLater();
 }
