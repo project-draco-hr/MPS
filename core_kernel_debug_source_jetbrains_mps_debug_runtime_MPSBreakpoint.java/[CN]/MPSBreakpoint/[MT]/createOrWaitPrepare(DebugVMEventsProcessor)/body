@@ -1,9 +1,28 @@
 {
-  String fileName=getFileName();
-  if (fileName.endsWith(".java")) {
-    fileName=fileName.substring(0,fileName.length() - ".java".length());
+  String className=ModelAccess.instance().runReadAction(new Computable<String>(){
+    @Override public String compute(){
+      List<SNode> list=SNodeOperations.getAncestors(myNodePointer.getNode(),"jetbrains.mps.baseLanguage.structure.Classifier",false);
+      if (list.isEmpty()) {
+        return null;
+      }
+      SNode enclosingClassNode=list.get(0);
+      String anonymousConceptFqName="jetbrains.mps.baseLanguage.structure.AnonymousClass";
+      if (enclosingClassNode.isInstanceOfConcept(anonymousConceptFqName)) {
+        return AnonymousClass_Behavior.call_getJavaName_2977939203456914071(enclosingClassNode);
+      }
+ else {
+        return Classifier_Behavior.virtual_getFqName_1213877404258(enclosingClassNode);
+      }
+    }
   }
-  String className=myNodePointer.getModelReference().getLongName() + "." + fileName;
+);
+  if (className == null) {
+    String fileName=getFileName();
+    if (fileName.endsWith(".java")) {
+      fileName=fileName.substring(0,fileName.length() - ".java".length());
+    }
+    className=myNodePointer.getModelReference().getLongName() + "." + fileName;
+  }
   System.err.println("BP creating prepare request for class " + className);
   debugProcess.getRequestManager().callbackOnPrepareClasses(this,className);
   List<ReferenceType> list=debugProcess.getVirtualMachine().classesByName(className);
