@@ -7,6 +7,9 @@
   SModel currentOutputModel=createTransientModel();
   tracer.startTracing(currentInputModel,currentOutputModel);
   currentInputModel.setLoading(false);
+  if (myLogger.needsInfo()) {
+    myLogger.info("generating model '" + currentInputModel.getSModelFqName() + "' --> '"+ currentOutputModel.getSModelFqName()+ "'");
+  }
   boolean somethingHasBeenGenerated=applyRules(currentInputModel,currentOutputModel,true,ruleManager);
   if (!somethingHasBeenGenerated) {
     currentOutputModel.validateLanguagesAndImports();
@@ -16,23 +19,23 @@
   int secondaryMappingRepeatCount=1;
   while (true) {
     currentOutputModel.validateLanguagesAndImports();
-    if (myLogger.needsInfo()) {
-      myLogger.info("generating model '" + currentOutputModel.getSModelFqName() + "'");
-    }
     mySessionContext.clearTransientObjects();
     recycleWasteModel(currentInputModel);
     currentInputModel=currentOutputModel;
     currentInputModel.setLoading(false);
     currentInputModel.disposeFastNodeFinder();
     SModel transientModel=createTransientModel();
+    if (myLogger.needsInfo()) {
+      myLogger.info("next minor step '" + currentInputModel.getSModelFqName().getStereotype() + "' --> '"+ transientModel.getSModelFqName().getStereotype()+ "'");
+    }
     tracer.startTracing(currentInputModel,transientModel);
     if (!applyRules(currentInputModel,transientModel,false,ruleManager)) {
       tracer.discardTracing(currentInputModel,transientModel);
-      if (myLogger.needsInfo()) {
-        myLogger.info("remove empty model '" + transientModel.getSModelFqName() + "'");
-      }
       SModelRepository.getInstance().removeModelDescriptor(transientModel.getModelDescriptor());
       myTransientModelsCount--;
+      if (myLogger.needsInfo()) {
+        myLogger.info("unchanged, empty model '" + transientModel.getSModelFqName().getStereotype() + "' removed");
+      }
       break;
     }
     if (++secondaryMappingRepeatCount > 10) {
