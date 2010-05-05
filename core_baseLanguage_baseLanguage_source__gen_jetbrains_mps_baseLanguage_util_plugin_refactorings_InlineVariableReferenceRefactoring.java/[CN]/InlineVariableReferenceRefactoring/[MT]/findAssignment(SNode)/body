@@ -1,0 +1,19 @@
+{
+  SNode variable=SLinkOperations.getTarget(node,"variableDeclaration",false);
+  myAssignment=null;
+  SNode currentList=SNodeOperations.getAncestor(node,"jetbrains.mps.baseLanguage.structure.StatementList",false,false);
+  SNode currentStatement;
+  while ((myAssignment == null) && (currentList != null)) {
+    currentStatement=getParentStatement(node,currentList);
+    Program program=DataFlowManager.getInstance().buildProgramFor(currentList);
+    AnalysisResult<Set<WriteInstruction>> definitions=program.analyze(new ReachingDefinitionsAnalyzer());
+    for (    Instruction nodeInstruction : ListSequence.fromList(program.getInstructionsFor(currentStatement))) {
+      for (      WriteInstruction instruction : SetSequence.fromSet(definitions.get(nodeInstruction))) {
+        if (instruction.getVariable() == variable) {
+          myAssignment=((SNode)instruction.getSource());
+        }
+      }
+    }
+    currentList=SNodeOperations.getAncestor(currentList,"jetbrains.mps.baseLanguage.structure.StatementList",false,false);
+  }
+}
