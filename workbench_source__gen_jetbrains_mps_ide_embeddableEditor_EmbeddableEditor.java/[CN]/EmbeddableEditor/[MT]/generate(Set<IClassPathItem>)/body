@@ -1,3 +1,26 @@
 {
-  return this.generate(createHandler(additionalClasspath,false));
+  if (this.myRootNode == null) {
+    return null;
+  }
+  InMemoryJavaGenerationHandler handler=new InMemoryJavaGenerationHandler(false,false){
+    @Override public boolean canHandle(    SModelDescriptor inputModel){
+      return inputModel != null;
+    }
+    @Override protected CompositeClassPathItem getClassPath(    Set<IModule> contextModules){
+      CompositeClassPathItem result=super.getClassPath(contextModules);
+      for (      IClassPathItem item : additionalClasspath) {
+        result.add(item);
+      }
+      return result;
+    }
+  }
+;
+  GeneratorManager manager=new GeneratorManager(EmbeddableEditor.this.myContext.getProject(),new GenerationSettings()){
+    protected boolean generateRequirements(){
+      return false;
+    }
+  }
+;
+  boolean successful=manager.generateModelsWithProgressWindow(ListSequence.fromListAndArray(new ArrayList<SModelDescriptor>(),this.myModel),this.myContext,handler,false);
+  return new GenerationResult(this.myRootNode,this.myContext,this.myModel,handler,successful);
 }
