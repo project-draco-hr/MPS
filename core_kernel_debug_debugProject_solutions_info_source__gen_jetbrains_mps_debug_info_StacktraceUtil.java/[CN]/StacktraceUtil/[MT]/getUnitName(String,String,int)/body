@@ -1,0 +1,25 @@
+{
+  int lastDot=className.lastIndexOf(".");
+  String pkg=(lastDot == -1 ? "" : className.substring(0,lastDot));
+  List<SModelDescriptor> list=SModelRepository.getInstance().getModelDescriptorsByModelName(pkg);
+  for (  final SModelDescriptor descriptor : ListSequence.fromList(list)) {
+    if (SModelStereotype.isStubModelStereotype(descriptor.getStereotype())) {
+      continue;
+    }
+    final DebugInfo result=BLDebugInfoCache.getInstance().get(descriptor);
+    if (result == null) {
+      continue;
+    }
+    final Wrappers._T<String> unitName=new Wrappers._T<String>();
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        unitName.value=result.getUnitNameForLine(file,position,descriptor.getSModel());
+      }
+    }
+);
+    if (unitName.value != null) {
+      return unitName.value;
+    }
+  }
+  return null;
+}
