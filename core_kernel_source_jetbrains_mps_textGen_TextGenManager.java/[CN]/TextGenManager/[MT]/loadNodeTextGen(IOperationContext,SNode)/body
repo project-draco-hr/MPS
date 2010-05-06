@@ -1,27 +1,20 @@
 {
-  SNode cd=node.getConceptDeclarationNode();
-  SNode baseConcept=SModelUtil.getBaseConcept();
-  while (cd != baseConcept) {
-    Language l=SModelUtil.getDeclaringLanguage(cd,GlobalScope.getInstance());
-    String packageName=NameUtil.namespaceFromConceptFQName(NameUtil.nodeFQName(cd));
-    String className=cd.getName();
-    String textgenClassname=packageName + ".textGen." + className+ "_TextGen";
-    try {
-      Class textgenClass=l.getClass(textgenClassname);
-      if (textgenClass != null) {
-        SNodeTextGen result=(SNodeTextGen)textgenClass.newInstance();
-        result.setContext(context);
-        return result;
-      }
-    }
- catch (    InstantiationException e) {
-      LOG.error(e,node);
-    }
-catch (    IllegalAccessException e) {
-      LOG.error(e,node);
-    }
-    cd=cd.getReferent(ConceptDeclaration.EXTENDS);
-    if (cd == null)     cd=baseConcept;
+  String nodeConcept=node.getConceptFqName();
+  Class<SNodeTextGen> textgenClass=myClassesCache == null ? loadTextGenClass(node.getConceptDeclarationNode()) : myClassesCache.get(nodeConcept);
+  if (textgenClass == null) {
+    textgenClass=loadTextGenClass(node.getConceptDeclarationNode());
+    myClassesCache.put(nodeConcept,textgenClass);
+  }
+  try {
+    SNodeTextGen result=(SNodeTextGen)textgenClass.newInstance();
+    result.setContext(context);
+    return result;
+  }
+ catch (  InstantiationException e) {
+    LOG.error(e,node);
+  }
+catch (  IllegalAccessException e) {
+    LOG.error(e,node);
   }
   DefaultTextGen result=new DefaultTextGen();
   result.setContext(context);
