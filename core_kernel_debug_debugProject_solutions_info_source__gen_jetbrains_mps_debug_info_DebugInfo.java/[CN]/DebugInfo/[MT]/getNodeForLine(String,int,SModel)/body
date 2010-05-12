@@ -16,10 +16,34 @@
     }
   }
 ,true);
-  PositionInfo firstPositionInfo=Sequence.fromIterable(sorted).first();
+  final PositionInfo firstPositionInfo=Sequence.fromIterable(sorted).first();
   String nodeId=firstPositionInfo.getNodeId();
   if (Sequence.fromIterable(sorted).count() > 1 && firstPositionInfo.getStartLine() == line && firstPositionInfo.getLineDistance() > 0) {
     nodeId=ListSequence.fromList(Sequence.fromIterable(sorted).toListSequence()).getElement(1).getNodeId();
+  }
+  if (Sequence.fromIterable(sorted).count() > 1) {
+    Iterable<PositionInfo> sameSpacePositions=Sequence.fromIterable(sorted).where(new IWhereFilter<PositionInfo>(){
+      public boolean accept(      PositionInfo it){
+        return firstPositionInfo.isOccupyTheSameSpace(it);
+      }
+    }
+);
+    if (Sequence.fromIterable(sameSpacePositions).count() > 1) {
+      SNode currentNode=model.getNodeById(firstPositionInfo.getNodeId());
+      boolean finished=false;
+      while (!(finished)) {
+        finished=true;
+        for (        PositionInfo otherPos : Sequence.fromIterable(sameSpacePositions)) {
+          SNode otherNode=model.getNodeById(otherPos.getNodeId());
+          if ((otherNode != null) && otherNode.isDescendantOf(currentNode,false)) {
+            currentNode=otherNode;
+            finished=false;
+            break;
+          }
+        }
+      }
+      return currentNode;
+    }
   }
   return model.getNodeById(nodeId);
 }
