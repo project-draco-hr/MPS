@@ -1,0 +1,27 @@
+{
+  if (toImport.isEmpty()) {
+    return;
+  }
+  List<ClassInfo> toImportLater=new LinkedList<ClassInfo>();
+  for (  ClassInfo ci : toImport) {
+    T declaration=this.myMap.get(ci.getDeclarationClass());
+    Class parentClass=ci.getParentClass();
+    if ((parentClass != null) && !(parentClass.getName().equals(Object.class.getName()))) {
+      Importer.this.getDeclarationOrCreateItIfMissing(parentClass,builder,toImportLater);
+      builder.addParent(declaration,this.myMap.get(parentClass));
+    }
+    for (    Class in : ci.getInterfaces()) {
+      Importer.this.getDeclarationOrCreateItIfMissing(in,builder,toImportLater);
+      builder.addInterface(declaration,this.myMap.get(in));
+    }
+    for (    Object attr : ci.getAttributes()) {
+      builder.addAttribute(declaration,(ClassInfo.MyAttribute)attr);
+    }
+    for (    Object n : ci.getNesteds()) {
+      Class<?> nestedClass=((ClassInfo.Nested)n).getNestedClass();
+      Importer.this.getDeclarationOrCreateItIfMissing(nestedClass,builder,toImportLater);
+      builder.addNested(declaration,this.myMap.get(nestedClass),(ClassInfo.Nested)n);
+    }
+  }
+  Importer.this.importDeclarations(toImportLater,builder);
+}

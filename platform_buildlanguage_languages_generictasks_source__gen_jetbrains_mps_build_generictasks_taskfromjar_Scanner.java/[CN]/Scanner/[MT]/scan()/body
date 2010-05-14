@@ -1,0 +1,25 @@
+{
+  this.myClassLoader=Scanner.createClassLoader(this.myAntPath,this.mySrcJars.toArray(new String[this.mySrcJars.size()]));
+  JarFile antJar=new JarFile(this.myAntPath + Scanner.LIB_ANT_JAR);
+  this.getNamesMap(antJar);
+  for (  String srcJar : this.mySrcJars) {
+    JarFile jarFile=new JarFile(srcJar);
+    this.myJarFiles.add(jarFile);
+    this.getNamesMap(jarFile);
+  }
+  Class<Task> taskClass=(Class<Task>)this.myClassLoader.loadClass(Task.class.getName());
+  Class<DataType> datatypeClass=(Class<DataType>)this.myClassLoader.loadClass(DataType.class.getName());
+  this.myRoots.add(new ClassInfo(taskClass));
+  this.myRoots.add(new ClassInfo(datatypeClass));
+  List<ClassInfo> toImport=new LinkedList<ClassInfo>();
+  for (  JarFile srcJar : this.myJarFiles) {
+    Set<ClassInfo<? extends Task>> taskClasses=Scanner.getTaskClasses(srcJar,this.myClassLoader,taskClass);
+    if (antJar.equals(srcJar)) {
+      taskClasses.add(new ClassInfo(this.myClassLoader.loadClass(ConditionTask.class.getName())));
+    }
+    Set<ClassInfo<? extends DataType>> datatypeClasses=Scanner.getTaskClasses(srcJar,this.myClassLoader,datatypeClass);
+    toImport.addAll(taskClasses);
+    toImport.addAll(datatypeClasses);
+  }
+  return toImport;
+}
