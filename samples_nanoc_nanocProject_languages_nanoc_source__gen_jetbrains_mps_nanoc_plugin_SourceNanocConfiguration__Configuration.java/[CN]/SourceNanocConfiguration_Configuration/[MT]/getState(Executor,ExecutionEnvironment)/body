@@ -1,0 +1,154 @@
+{
+  return new BaseRunProfileState(){
+    @Nullable public ExecutionResult execute(    Executor executor,    @NotNull ProgramRunner runner) throws ExecutionException {
+      final ConsoleViewImpl consoleView_22042010=StacktraceUtil.createConsoleView(MPSDataKeys.PROJECT.getData(environment.getDataContext()));
+      JComponent consoleComponent_22042010=null;
+      Runnable consoleDispose_22042010=null;
+      final List<AnAction> actions_22042010=ListSequence.fromList(new ArrayList<AnAction>());
+      ProcessHandler handler_22042010=null;
+      try {
+{
+          ListSequence.fromList(actions_22042010).addSequence(ListSequence.fromList(new _FunctionTypes._return_P0_E0<List<AnAction>>(){
+            public List<AnAction> invoke(){
+{
+                final List<AnAction> actionsList=ListSequence.fromListAndArray(new ArrayList<AnAction>(),consoleView_22042010.createConsoleActions());
+                return actionsList;
+              }
+            }
+          }
+.invoke()));
+          consoleComponent_22042010=consoleView_22042010.getComponent();
+          consoleDispose_22042010=new Runnable(){
+            public void run(){
+              Disposer.dispose(consoleView_22042010);
+            }
+          }
+;
+          final Wrappers._T<ExecutionException> ex=new Wrappers._T<ExecutionException>(null);
+          handler_22042010=(ProcessHandler)new _FunctionTypes._return_P0_E6<ProcessHandler,ExecutionException,ExecutionException,ExecutionException,ExecutionException,ExecutionException,ExecutionException>(){
+            public ProcessHandler invoke() throws ExecutionException, ExecutionException, ExecutionException, ExecutionException, ExecutionException, ExecutionException {
+              try {
+                SModelDescriptor descriptor=SModelRepository.getInstance().getModelDescriptor(SModelReference.fromString(SourceNanocConfiguration_Configuration.this.getStateObject().modelRef));
+                SNode node=descriptor.getSModel().getNodeById(SourceNanocConfiguration_Configuration.this.getStateObject().nodeId);
+                final SNode sourceFileNode=SNodeOperations.cast(node,"jetbrains.mps.nanoc.structure.File");
+                IModule module=descriptor.getModule();
+                String folder=module.getGeneratorOutputPath();
+                final Wrappers._T<String> sourceFileName=new Wrappers._T<String>();
+                ModelAccess.instance().runReadAction(new Runnable(){
+                  public void run(){
+                    sourceFileName.value=SPropertyOperations.getString(sourceFileNode,"name");
+                  }
+                }
+);
+                String packageName=NameUtil.pathFromNamespace(descriptor.getLongName());
+                File modelFolder=new File(folder + File.separator + packageName);
+                File f=new File(modelFolder,sourceFileName.value + ".c");
+                if (!(f.exists())) {
+                  throw new ExecutionException("node is not generated");
+                }
+                File gcc=new File(ProgramsLocationUtil.getGccLocation());
+                if (!(gcc.exists())) {
+                  throw new ExecutionException("no GCC found");
+                }
+                ProcessBuilder processBuilder=new ProcessBuilder();
+                processBuilder.command(gcc.getAbsolutePath(),f.getAbsolutePath(),"-g","-x c");
+                processBuilder.directory(f.getParentFile());
+                try {
+                  Process compileProcess=processBuilder.start();
+                  try {
+                    compileProcess.waitFor();
+                  }
+ catch (                  InterruptedException ex) {
+                    throw new ExecutionException("waiting for gcc compiler interrupted",ex);
+                  }
+                }
+ catch (                IOException ioException) {
+                  throw new ExecutionException("error executing gcc compiler",ioException);
+                }
+                String outputExtension=".exe";
+                File executableFile=new File(folder,sourceFileName.value + outputExtension);
+                if (!(executableFile.exists())) {
+                  throw new ExecutionException("executable file not found");
+                }
+                List<String> params=new ArrayList<String>();
+                params.add(executableFile.getAbsolutePath());
+                File workingDir=executableFile.getParentFile();
+                ProcessBuilder executableProcessBuilder=new ProcessBuilder();
+                executableProcessBuilder.directory(workingDir);
+                executableProcessBuilder.command(params);
+                Process process;
+                try {
+                  process=executableProcessBuilder.start();
+                }
+ catch (                IOException e) {
+                  throw new ExecutionException("",e);
+                }
+                ProcessHandler handler=new SimpleConsoleProcessHandler(consoleView_22042010,process,params.get(0));
+                return handler;
+              }
+ catch (              ExecutionException e) {
+                ex.value=e;
+                return null;
+              }
+            }
+          }
+.invoke();
+          if (ex.value != null) {
+            throw ex.value;
+          }
+        }
+      }
+ catch (      Throwable t) {
+        if (t instanceof ExecutionException) {
+          throw (ExecutionException)t;
+        }
+ else {
+          Logger.getLogger(SourceNanocConfiguration_Configuration.class).error(t);
+          throw new ExecutionException("Execution code threw an exception: " + t.getMessage(),t);
+        }
+      }
+      final JComponent finalConsoleComponent=consoleComponent_22042010;
+      final Runnable finalConsoleDispose=consoleDispose_22042010;
+      final ProcessHandler finalHandler=handler_22042010;
+      if (finalHandler == null) {
+        return null;
+      }
+      return new ExecutionResult(){
+        public ExecutionConsole getExecutionConsole(){
+          return new ExecutionConsole(){
+            public void dispose(){
+              if (finalConsoleDispose == null) {
+                return;
+              }
+              finalConsoleDispose.run();
+            }
+            public JComponent getComponent(){
+              return finalConsoleComponent;
+            }
+            public JComponent getPreferredFocusableComponent(){
+              return finalConsoleComponent;
+            }
+          }
+;
+        }
+        public AnAction[] getActions(){
+          return ListSequence.fromList(actions_22042010).toGenericArray(AnAction.class);
+        }
+        public ProcessHandler getProcessHandler(){
+          return finalHandler;
+        }
+      }
+;
+    }
+    public AbstractDebugSessionCreator createDebugSessionCreator(    Project p){
+      return null;
+    }
+    public RunnerSettings getRunnerSettings(){
+      return null;
+    }
+    public ConfigurationPerRunnerSettings getConfigurationSettings(){
+      return null;
+    }
+  }
+;
+}
