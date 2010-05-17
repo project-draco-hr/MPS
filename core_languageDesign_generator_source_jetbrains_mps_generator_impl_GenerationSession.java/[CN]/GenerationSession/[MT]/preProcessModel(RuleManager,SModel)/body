@@ -1,31 +1,33 @@
 {
   List<MappingScript> preMappingScripts=ruleManager.getPreMappingScripts();
-  if (!preMappingScripts.isEmpty()) {
-    boolean needToCloneInputMode=!myDiscardTransients;
-    if (!needToCloneInputMode) {
-      for (      MappingScript preMappingScript : preMappingScripts) {
-        if (preMappingScript.getScriptKind() == MappingScriptKind.pre_process_input_model) {
-          if (preMappingScript.getModifiesModel()) {
-            needToCloneInputMode=true;
-            break;
-          }
+  if (preMappingScripts.isEmpty()) {
+    return currentInputModel;
+  }
+  boolean needToCloneInputMode=!myDiscardTransients;
+  if (!needToCloneInputMode) {
+    for (    MappingScript preMappingScript : preMappingScripts) {
+      if (preMappingScript.getScriptKind() == MappingScriptKind.pre_process_input_model) {
+        if (preMappingScript.getModifiesModel()) {
+          needToCloneInputMode=true;
+          break;
         }
       }
     }
-    if (needToCloneInputMode) {
-      ttrace.push("model clone",false);
-      SModel currentInputModel_clone=createTransientModel();
-      if (myLogger.needsInfo()) {
-        myLogger.info("clone model '" + currentInputModel.getSModelFqName() + "' --> '"+ currentInputModel_clone.getSModelFqName()+ "'");
-      }
-      CloneUtil.cloneModel(currentInputModel,currentInputModel_clone,currentInputModel == mySessionContext.getOriginalInputModel());
-      ttrace.pop();
-      if (!myDiscardTransients) {
-        mySessionContext.getGenerationTracer().registerPreMappingScripts(currentInputModel,currentInputModel_clone,preMappingScripts);
-      }
-      recycleWasteModel(currentInputModel);
-      currentInputModel=currentInputModel_clone;
+  }
+  SModel toRecycle=null;
+  if (needToCloneInputMode) {
+    ttrace.push("model clone",false);
+    SModel currentInputModel_clone=createTransientModel();
+    if (myLogger.needsInfo()) {
+      myLogger.info("clone model '" + currentInputModel.getSModelFqName() + "' --> '"+ currentInputModel_clone.getSModelFqName()+ "'");
     }
+    CloneUtil.cloneModel(currentInputModel,currentInputModel_clone,currentInputModel == mySessionContext.getOriginalInputModel());
+    ttrace.pop();
+    if (!myDiscardTransients) {
+      mySessionContext.getGenerationTracer().registerPreMappingScripts(currentInputModel,currentInputModel_clone,preMappingScripts);
+    }
+    toRecycle=currentInputModel;
+    currentInputModel=currentInputModel_clone;
   }
   boolean preProcessed=false;
   for (  MappingScript preMappingScript : preMappingScripts) {
@@ -36,9 +38,13 @@
     if (myLogger.needsInfo()) {
       myLogger.info(preMappingScript.getNode(),"pre-process '" + preMappingScript + "' ("+ preMappingScript.getModel().getSModelFqName()+ ")");
     }
-    ITemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,myProgressMonitor,myLogger,ruleManager,currentInputModel,currentInputModel,myGenerationContext,ttrace);
-    templateGenerator.getExecutor().executeMappingScript(preMappingScript,currentInputModel);
+    TemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,myProgressMonitor,myLogger,ruleManager,currentInputModel,currentInputModel,myGenerationContext,myDependenciesData,ttrace);
+    templateGenerator.getDefaultExecutor().executeMappingScript(preMappingScript,currentInputModel);
     preProcessed=true;
+  }
+  if (needToCloneInputMode) {
+    myDependenciesData.scriptApplied(currentInputModel);
+    recycleWasteModel(toRecycle);
   }
   if (myLogger.needsInfo() && preProcessed) {
     myLogger.info("pre-processing finished");
