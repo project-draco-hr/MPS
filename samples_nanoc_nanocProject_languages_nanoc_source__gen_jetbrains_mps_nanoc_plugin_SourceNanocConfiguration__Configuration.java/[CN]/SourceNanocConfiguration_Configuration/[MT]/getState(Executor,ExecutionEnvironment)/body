@@ -25,63 +25,10 @@
           }
 ;
           final Wrappers._T<ExecutionException> ex=new Wrappers._T<ExecutionException>(null);
-          handler_22042010=(ProcessHandler)new _FunctionTypes._return_P0_E5<ProcessHandler,ExecutionException,ExecutionException,ExecutionException,ExecutionException,ExecutionException>(){
-            public ProcessHandler invoke() throws ExecutionException, ExecutionException, ExecutionException, ExecutionException, ExecutionException {
+          handler_22042010=(ProcessHandler)new _FunctionTypes._return_P0_E1<ProcessHandler,ExecutionException>(){
+            public ProcessHandler invoke() throws ExecutionException {
               try {
-                SModelDescriptor descriptor=SModelRepository.getInstance().getModelDescriptor(SModelReference.fromString(SourceNanocConfiguration_Configuration.this.getStateObject().modelRef));
-                SNode node=descriptor.getSModel().getNodeById(SourceNanocConfiguration_Configuration.this.getStateObject().nodeId);
-                final SNode sourceFileNode=SNodeOperations.cast(node,"jetbrains.mps.nanoc.structure.File");
-                IModule module=descriptor.getModule();
-                String folder=module.getGeneratorOutputPath();
-                final Wrappers._T<String> sourceFileName=new Wrappers._T<String>();
-                ModelAccess.instance().runReadAction(new Runnable(){
-                  public void run(){
-                    sourceFileName.value=SPropertyOperations.getString(sourceFileNode,"name");
-                  }
-                }
-);
-                String packageName=NameUtil.pathFromNamespace(descriptor.getLongName());
-                File modelSourceFolder=new File(module.getGeneratorOutputPath() + File.separator + packageName);
-                File modelClassesFolder=new File(module.getClassesGen().getAbsolutePath() + File.separator + packageName);
-                File f=new File(modelSourceFolder,sourceFileName.value + ".c");
-                if (!(f.exists())) {
-                  throw new ExecutionException("node is not generated");
-                }
-                File gcc=new File(ProgramsLocationUtil.getGccLocation());
-                if (!(gcc.exists())) {
-                  throw new ExecutionException("no GCC found");
-                }
-                ProcessBuilder processBuilder=new ProcessBuilder();
-                String outputExtension=".exe";
-                File executableFile=new File(modelClassesFolder,sourceFileName.value + outputExtension);
-                processBuilder.command(gcc.getAbsolutePath(),f.getAbsolutePath(),"-o" + executableFile.getAbsolutePath(),"-g","-xc");
-                processBuilder.directory(f.getParentFile());
-                Process compileProcess;
-                try {
-                  compileProcess=processBuilder.start();
-                }
- catch (                IOException ioException) {
-                  throw new ExecutionException("error executing gcc compiler",ioException);
-                }
-                int timeout=5000;
-                int current=100;
-                boolean success=false;
-                while (current < timeout) {
-                  try {
-                    Thread.sleep(100);
-                  }
- catch (                  InterruptedException ignored) {
-                  }
-                  if (executableFile.exists()) {
-                    success=true;
-                    break;
-                  }
-                  current+=100;
-                }
-                if (!(success)) {
-                  compileProcess.destroy();
-                  throw new ExecutionException("executable file not found");
-                }
+                File executableFile=NanocConfigRunPreparationUtil.prepare(SourceNanocConfiguration_Configuration.this.getStateObject().nodeId,SourceNanocConfiguration_Configuration.this.getStateObject().modelRef);
                 List<String> params=new ArrayList<String>();
                 params.add(executableFile.getAbsolutePath());
                 File workingDir=executableFile.getParentFile();
@@ -125,7 +72,7 @@
       return new SourceNanocConfiguration_Configuration.MyExecutionResult(handler_22042010,ListSequence.fromList(actions_22042010).toGenericArray(AnAction.class),new SourceNanocConfiguration_Configuration.MyExecutionConsole(consoleComponent_22042010,consoleDispose_22042010));
     }
     public AbstractDebugSessionCreator createDebugSessionCreator(    Project p){
-      return null;
+      return new CppGDBCreator(SourceNanocConfiguration_Configuration.this.getStateObject().nodeId,SourceNanocConfiguration_Configuration.this.getStateObject().modelRef);
     }
     public RunnerSettings getRunnerSettings(){
       return null;
