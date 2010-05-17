@@ -1,0 +1,62 @@
+{
+  myCommandQueue.runTask(new Runnable(){
+    public void run(){
+      updateModelHighlighting(model.getModelDescriptor());
+      final SNodeId affectedNodeId=change.getAffectedNodeId();
+      if (affectedNodeId == null) {
+        return;
+      }
+      SNode node=model.getNodeById(affectedNodeId);
+      final Wrappers._T<SNode> nodeToIncrement=new Wrappers._T<SNode>(node);
+      if (nodeToIncrement.value == null) {
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            nodeToIncrement.value=findNearestBaseAncestor(affectedNodeId,model);
+          }
+        }
+);
+      }
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          for (          SNode ancestor : ListSequence.fromList(SNodeOperations.getAncestors(nodeToIncrement.value,null,true))) {
+            myChangeCountForNode.increment(ancestor);
+          }
+        }
+      }
+);
+      if (node == null) {
+        return;
+      }
+      if (change instanceof SetPropertyChange) {
+        myPropertyChangeCountForNode.increment(node);
+      }
+ else       if (change instanceof SetReferenceChange) {
+        myReferenceChangeCountForNode.increment(node);
+      }
+      if (change instanceof NewNodeChange) {
+        for (        SNodeTreeNode treeNode : ListSequence.fromList(MapSequence.fromMap(mySNodesToTreeNodes).get(node))) {
+          highlightTreeNodeWithMessage(treeNode,new ProjectTreeChangesHighlighter.PrimaryMessage(getColor(change,myChangesManager.getModelChangesManager(model).getFileStatus())));
+        }
+      }
+ else       if (change instanceof SetPropertyChange) {
+        String propertyName=((SetPropertyChange)change).getProperty();
+        for (        SNodeTreeNode treeNode : ListSequence.fromList(MapSequence.fromMap(mySNodesToTreeNodes).get(node))) {
+          PropertyTreeNode propertyTreeNode=MPSTreeUtils.findPropertyTreeNode(treeNode,propertyName);
+          if (propertyTreeNode != null) {
+            highlightTreeNodeWithMessage(propertyTreeNode,new ProjectTreeChangesHighlighter.PrimaryMessage(getColor(change)));
+          }
+        }
+      }
+ else       if (change instanceof SetReferenceChange) {
+        String role=((SetReferenceChange)change).getRole();
+        for (        SNodeTreeNode treeNode : ListSequence.fromList(MapSequence.fromMap(mySNodesToTreeNodes).get(node))) {
+          ReferenceTreeNode referenceTreeNode=MPSTreeUtils.findReferenceTreeNode(treeNode,role);
+          if (referenceTreeNode != null) {
+            highlightTreeNodeWithMessage(referenceTreeNode,new ProjectTreeChangesHighlighter.PrimaryMessage(getColor(change)));
+          }
+        }
+      }
+    }
+  }
+);
+}
