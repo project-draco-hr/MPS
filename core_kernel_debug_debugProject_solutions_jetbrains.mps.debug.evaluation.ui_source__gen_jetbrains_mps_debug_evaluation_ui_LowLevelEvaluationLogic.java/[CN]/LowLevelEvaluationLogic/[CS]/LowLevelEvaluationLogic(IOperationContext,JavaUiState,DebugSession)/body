@@ -1,0 +1,43 @@
+{
+  super(context,state,debugSession);
+  final Wrappers._T<AbstractClassifiersScope> scope=new Wrappers._T<AbstractClassifiersScope>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      scope.value=new ReachableClassifiersScope(SNodeOperations.getModel(getLocationNode()),IClassifiersSearchScope.CLASSIFFIER,context.getScope());
+    }
+  }
+);
+  myScope=scope.value;
+  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+    public void run(){
+      SLinkOperations.setNewChild(myEvaluator,"evaluatedStatement","jetbrains.mps.baseLanguage.structure.BlockStatement");
+      SLinkOperations.setNewChild(SLinkOperations.getTarget(myEvaluator,"evaluatedStatement",true),AttributesRolesUtil.childRoleFromAttributeRole("toEvaluateAnnotation"),"jetbrains.mps.debug.evaluation.structure.ToEvaluateAnnotation");
+      JavaStackFrame javaStackFrame=myUiState.getStackFrame();
+      if (javaStackFrame != null) {
+        StackFrame stackFrame=javaStackFrame.getStackFrame();
+        if (stackFrame != null) {
+          try {
+            List<LocalVariable> variables=stackFrame.visibleVariables();
+            for (            LocalVariable variable : ListSequence.fromList(variables)) {
+              try {
+                SNode lowLevelVarNode=SConceptOperations.createNewNode("jetbrains.mps.debug.evaluation.structure.LowLevelVariable",null);
+                SPropertyOperations.set(lowLevelVarNode,"name",((LocalVariable)variable).name());
+                SLinkOperations.setTarget(lowLevelVarNode,"type",getMpsTypeFromJdiType(((LocalVariable)variable).type()),true);
+                ListSequence.fromList(SLinkOperations.getTargets(myEvaluator,"variables",true)).addElement(lowLevelVarNode);
+              }
+ catch (              ClassNotLoadedException cne) {
+                LOG.error(cne);
+              }
+            }
+            SLinkOperations.setTarget(myEvaluator,"staticContextType",createStaticContextType(),true);
+            SLinkOperations.setTarget(myEvaluator,"thisType",createThisClassifierType(),true);
+          }
+ catch (          AbsentInformationException e) {
+            LOG.error(e);
+          }
+        }
+      }
+    }
+  }
+);
+}
