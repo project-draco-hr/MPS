@@ -1,3 +1,57 @@
 {
-  return new JScrollPane(myTree);
+  if (myScrollPane != null) {
+    return myScrollPane;
+  }
+  myTree=new MPSTree(){
+    protected MPSTreeNode rebuild(){
+      MPSTreeNode node;
+      if (myProject != null && !myProject.isDisposed() && (myProject.getBaseDir() != null)) {
+        node=createRoot(myProject);
+      }
+ else {
+        node=new TextTreeNode("No Project");
+      }
+      return node;
+    }
+  }
+;
+  myTree.addKeyListener(new KeyAdapter(){
+    @Override public void keyPressed(    KeyEvent e){
+      if (e.getKeyCode() == KeyEvent.VK_ENTER && e.getModifiers() == 0) {
+        openEditor();
+        e.consume();
+      }
+    }
+  }
+);
+  myTree.addMouseListener(new MouseAdapter(){
+    @Override public void mouseClicked(    MouseEvent e){
+      if (e.getClickCount() >= 2) {
+        openEditor();
+        e.consume();
+      }
+    }
+  }
+);
+  myTimer=new Timer(DELAY,new ActionListener(){
+    public void actionPerformed(    ActionEvent e){
+      ModelAccess.instance().runCommandInEDT(new Runnable(){
+        public void run(){
+          getTree().rebuildNow();
+        }
+      }
+);
+    }
+  }
+);
+  myTimer.setRepeats(false);
+  myTimer.setInitialDelay(DELAY);
+  myFileStatusListener=new FileStatusChangeListener();
+  myFileListener=new FileChangesListener();
+  myVirtualFileManagerListener=new RefreshListener();
+  myChangeListListener=new ChangeListUpdateListener();
+  initComponent();
+  projectOpened();
+  myScrollPane=new JScrollPane(myTree);
+  return myScrollPane;
 }
