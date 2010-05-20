@@ -2,42 +2,29 @@
   if (!isPackaged())   return;
   ModuleDescriptor descriptor=getModuleDescriptor();
   if (descriptor != null) {
-    Set<String> visited=new HashSet<String>();
-    List<ClassPathEntry> remove=new ArrayList<ClassPathEntry>();
-    for (    ClassPathEntry entry : descriptor.getClassPaths()) {
-      IFile cp=FileSystem.getFile(entry.getPath());
-      if ((!cp.exists()) || cp.isDirectory() || visited.contains(cp.getAbsolutePath())) {
-        remove.add(entry);
-      }
-      visited.add(entry.getPath());
-    }
-    descriptor.getClassPaths().removeAll(remove);
-    File bundleHomeFile=getBundleHome();
-    if (bundleHomeFile == null)     return;
-    String bundleHomePath=bundleHomeFile.getPath();
-    if (!visited.contains(bundleHomePath)) {
-      ClassPathEntry bundleHome=new ClassPathEntry();
-      descriptor.getClassPaths().add(bundleHome);
-      bundleHome.setPath(bundleHomePath);
-    }
-  }
-  if (descriptor != null) {
     Set<StubModelsEntry> visited=new HashSet<StubModelsEntry>();
     List<StubModelsEntry> remove=new ArrayList<StubModelsEntry>();
     for (    StubModelsEntry entry : descriptor.getStubModelEntries()) {
       IFile cp=FileSystem.getFile(entry.getPath());
-      if ((!cp.exists()) || cp.isDirectory()) {
+      if ((!cp.exists()) || cp.isDirectory() || visited.contains(entry)) {
         remove.add(entry);
-      }
-      for (      StubModelsEntry ve : visited) {
-        boolean eqManager=ObjectUtils.equals(ve.getManager(),entry.getManager());
-        boolean eqPath=ObjectUtils.equals(cp.getAbsolutePath(),ve.getPath());
-        if (eqManager && eqPath) {
-          remove.add(entry);
-        }
       }
       visited.add(entry);
     }
     descriptor.getStubModelEntries().removeAll(remove);
+    File bundleHomeFile=getBundleHome();
+    if (bundleHomeFile == null)     return;
+    String bundleHomePath=bundleHomeFile.getPath();
+    boolean contains=false;
+    for (    StubModelsEntry v : visited) {
+      if (EqualUtil.equals(v.getPath(),bundleHomePath)) {
+        contains=true;
+      }
+    }
+    if (!contains) {
+      ClassPathEntry bundleHome=new ClassPathEntry();
+      bundleHome.setPath(bundleHomePath);
+      descriptor.getStubModelEntries().add(StubModelsEntry.fromClassPathEntry(bundleHome));
+    }
   }
 }
