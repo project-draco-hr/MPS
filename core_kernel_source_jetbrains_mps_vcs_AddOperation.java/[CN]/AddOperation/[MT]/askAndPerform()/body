@@ -6,13 +6,18 @@
     return;
   }
  else {
-    Collection<VirtualFile> filesToProcess=null;
-    List<VirtualFile> virtualFileList=CollectionUtil.union(myVirtualFilesToAdd,myVirtualFilesToRevert);
+    final Collection<VirtualFile> filesToProcess=new ArrayList<VirtualFile>();
+    final List<VirtualFile> virtualFileList=CollectionUtil.union(myVirtualFilesToAdd,myVirtualFilesToRevert);
     if (!virtualFileList.isEmpty()) {
       final AbstractVcsHelper helper=AbstractVcsHelper.getInstance(myProject);
-      filesToProcess=helper.selectFilesToProcess(virtualFileList,"Add Files To Vcs",null,"Add File To Vcs","Do you want to add the following file to Vcs?\n{0}\n\nIf you say NO, you can still add it later manually.",myConfirmationOption);
+      ThreadUtils.runInUIThreadAndWait(new Runnable(){
+        @Override public void run(){
+          filesToProcess.addAll(helper.selectFilesToProcess(virtualFileList,"Add Files To Vcs",null,"Add File To Vcs","Do you want to add the following file to Vcs?\n{0}\n\nIf you say NO, you can still add it later manually.",myConfirmationOption));
+        }
+      }
+);
     }
-    if (filesToProcess != null) {
+    if (!filesToProcess.isEmpty()) {
       reallyPerform(CollectionUtil.intersect(myVirtualFilesToRevert,filesToProcess),CollectionUtil.intersect(myVirtualFilesToAdd,filesToProcess));
     }
   }
