@@ -1,0 +1,33 @@
+{
+  JavaStackFrame javaStackFrame=myUiState.getStackFrame();
+  if (javaStackFrame != null) {
+    StackFrame stackFrame=javaStackFrame.getStackFrame();
+    if (stackFrame != null) {
+      try {
+        List<LocalVariable> variables=stackFrame.visibleVariables();
+        for (        LocalVariable variable : ListSequence.fromList(variables)) {
+          try {
+            SNode lowLevelVarNode=SConceptOperations.createNewNode("jetbrains.mps.debug.evaluation.structure.LowLevelVariable",null);
+            String name=((LocalVariable)variable).name();
+            SPropertyOperations.set(lowLevelVarNode,"name",name);
+            SNode deducedType=getMpsTypeFromJdiType(((LocalVariable)variable).type());
+            if (deducedType == null) {
+              LOG.warning("Could not deduce type for variable" + name);
+              continue;
+            }
+            SLinkOperations.setTarget(lowLevelVarNode,"type",deducedType,true);
+            ListSequence.fromList(SLinkOperations.getTargets(myEvaluator,"variables",true)).addElement(lowLevelVarNode);
+          }
+ catch (          ClassNotLoadedException cne) {
+            LOG.error(cne);
+          }
+        }
+        SLinkOperations.setTarget(myEvaluator,"staticContextType",createStaticContextType(),true);
+        SLinkOperations.setTarget(myEvaluator,"thisType",createThisClassifierType(),true);
+      }
+ catch (      AbsentInformationException e) {
+        LOG.error(e);
+      }
+    }
+  }
+}
