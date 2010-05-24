@@ -1,30 +1,17 @@
 {
   try {
     final Language language=((Language)NewAccessoryModel_Action.this.module);
-    final List<SModelDescriptor> models=ListSequence.fromList(new ArrayList<SModelDescriptor>());
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        ListSequence.fromList(models).addSequence(ListSequence.fromList(GlobalScope.getInstance().getModelDescriptors()));
-      }
-    }
-);
-    final SModelDescriptor result=CommonChoosers.showDialogModelChooser(NewAccessoryModel_Action.this.frame,models,null);
+    NewModelDialog d=new NewModelDialog(NewAccessoryModel_Action.this.module,language.getModuleFqName() + ".",NewAccessoryModel_Action.this.context,SModelStereotype.NONE,true);
+    d.showDialog();
+    final SModelDescriptor result=d.getResult();
     if (result == null) {
       return;
     }
     ModelAccess.instance().runWriteActionInCommand(new Runnable(){
       public void run(){
-        LanguageDescriptor descriptor;
-        descriptor=language.getLanguageDescriptor();
+        LanguageDescriptor descriptor=language.getLanguageDescriptor();
         descriptor.getAccessoryModels().add(result.getSModelReference());
         language.setLanguageDescriptor(descriptor);
-        IScope scope=language.getScope();
-        if (scope.getModelDescriptor(result.getSModelReference()) == null) {
-          int res=JOptionPane.showConfirmDialog(NewAccessoryModel_Action.this.frame,"<html>Model <b>" + result.getLongName() + "</b> is added to accessories</html>\n\n"+ "Do you want to automatically the module add to dependency?","Add Dependency",JOptionPane.YES_NO_OPTION);
-          if (res == JOptionPane.YES_OPTION) {
-            language.addDependency(result.getModule().getModuleReference(),false);
-          }
-        }
         language.save();
       }
     }
