@@ -7,20 +7,31 @@
     }
   }
 );
-  ModelAccess.instance().runWriteAction(new Runnable(){
+  ProgressManager.getInstance().runProcessWithProgressSynchronously(new Runnable(){
     public void run(){
-      IClassPathItem cpItem=getLocationModel().getModelDescriptor().getModule().getClassPathItem();
-      cpItem.accept(new EachClassPathItemVisitor(){
-        @Override public void visit(        JarFileClassPathItem item){
-          getModule().addStubPath(item.getFile().getAbsolutePath());
-        }
-        @Override public void visit(        FileClassPathItem item){
-          getModule().addStubPath(item.getClassPath());
+      final ProgressIndicator indicator=ProgressManager.getInstance().getProgressIndicator();
+      ModelAccess.instance().runWriteAction(new Runnable(){
+        public void run(){
+          IClassPathItem cpItem=getLocationModel().getModelDescriptor().getModule().getClassPathItem();
+          cpItem.accept(new EachClassPathItemVisitor(){
+            @Override public void visit(            JarFileClassPathItem item){
+              String path=item.getFile().getAbsolutePath();
+              getModule().addStubPath(path);
+              indicator.setText2("Added " + path);
+            }
+            @Override public void visit(            FileClassPathItem item){
+              String path=item.getClassPath();
+              getModule().addStubPath(path);
+              indicator.setText2("Added " + path);
+            }
+          }
+);
+          indicator.setText2("Reloading stubs...");
+          StubReloadManager.getInstance().reload();
         }
       }
 );
-      StubReloadManager.getInstance().reload();
     }
   }
-);
+,"Loading stubs",false,myContext.getProject());
 }
