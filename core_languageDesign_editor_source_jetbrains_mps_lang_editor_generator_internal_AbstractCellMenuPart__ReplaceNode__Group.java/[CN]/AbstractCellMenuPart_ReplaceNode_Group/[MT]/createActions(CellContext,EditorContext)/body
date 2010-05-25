@@ -1,2 +1,32 @@
 {
+  final SNode node=(SNode)cellContext.get(BasicCellContext.EDITED_NODE);
+  final SNode parent=node.getParent();
+  if (parent == null) {
+    return new LinkedList<INodeSubstituteAction>();
+  }
+  final IOperationContext context=editorContext.getOperationContext();
+  List parameterObjects=createParameterObjects(node,context.getScope(),context);
+  if (parameterObjects == null) {
+    return new LinkedList<INodeSubstituteAction>();
+  }
+  List<INodeSubstituteAction> actions=new LinkedList<INodeSubstituteAction>();
+  for (  final Object parameterObject : parameterObjects) {
+    actions.add(new AbstractNodeSubstituteAction(null,null,node){
+      public String getMatchingText(      String pattern,      boolean referent_presentation,      boolean visible){
+        return AbstractCellMenuPart_ReplaceNode_Group.this.getMatchingText(parameterObject);
+      }
+      public String getDescriptionText(      String pattern){
+        return AbstractCellMenuPart_ReplaceNode_Group.this.getDescriptionText(parameterObject);
+      }
+      public SNode doSubstitute(      String pattern){
+        SNode newNode=createReplacementNode(parameterObject,node,node.getModel(),context.getScope(),context);
+        if (newNode != node) {
+          parent.replaceChild(node,newNode);
+        }
+        return newNode;
+      }
+    }
+);
+  }
+  return actions;
 }
