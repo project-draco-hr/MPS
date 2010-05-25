@@ -1,0 +1,28 @@
+{
+synchronized (myBreakpoints) {
+    myBreakpoints.remove(breakpoint);
+    SNode node=breakpoint.getSNode();
+    if (node != null) {
+      SNode root=node.getContainingRoot();
+      if (root != null) {
+        SNodePointer rootPointer=new SNodePointer(root);
+        Set<AbstractMPSBreakpoint> breakpointsForRoot=myRootsToBreakpointsMap.get(rootPointer);
+        if (breakpointsForRoot != null) {
+          breakpointsForRoot.remove(breakpoint);
+        }
+        for (        IEditor editor : myEditorsProvider.getSelectedEditors()) {
+          SNode editedNode=editor.getEditedNode();
+          if (root == editedNode) {
+            EditorComponent editorComponent=editor.getCurrentEditorComponent();
+            if (editorComponent != null) {
+              editorComponent.removeAdditionalPainterByItem(breakpoint);
+              editorComponent.getLeftEditorHighlighter().removeIconRenderer(breakpoint.getSNode(),BreakpointIconRenderer.TYPE);
+              editorComponent.repaint();
+            }
+          }
+        }
+      }
+    }
+    breakpoint.removeFromRunningSessions();
+  }
+}

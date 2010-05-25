@@ -1,0 +1,40 @@
+{
+  myStackFramesListModel=new StackFramesListModel();
+  myFramesList=new JList(myStackFramesListModel);
+  myFramesList.addListSelectionListener(new ListSelectionListener(){
+    @Override public void valueChanged(    ListSelectionEvent e){
+      if (!e.getValueIsAdjusting()) {
+        myStackFramesListModel.selected(myFramesList.getSelectedIndex());
+      }
+    }
+  }
+);
+  myFramesList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+  myFramesList.setCellRenderer(new DefaultListCellRenderer(){
+    @Override public Component getListCellRendererComponent(    JList list,    Object value,    int index,    boolean isSelected,    boolean cellHasFocus){
+      Component defaultComponent=super.getListCellRendererComponent(list,value,index,isSelected,cellHasFocus);
+      if (value != null) {
+        IStackFrame frame=(IStackFrame)value;
+        ILocation location=frame.getLocation();
+        String framePresentation;
+        if (location instanceof NullLocation) {
+          framePresentation="null";
+        }
+ else {
+          String typename=location.getUnitName();
+          int lastDot=typename.lastIndexOf(".");
+          String className=typename.substring(lastDot + 1);
+          String pckgName=lastDot > 0 ? typename.substring(0,lastDot) : "";
+          framePresentation=location.getRoutineName() + "():" + location.getLineNumber()+ " "+ className+ "("+ pckgName+ ")";
+        }
+        setText(framePresentation);
+        if (!myDebugSession.getDebuggableFramesSelector().isDebuggableFrame(frame)) {
+          setForeground(Color.gray);
+        }
+      }
+      return defaultComponent;
+    }
+  }
+);
+  return new JScrollPane(myFramesList);
+}

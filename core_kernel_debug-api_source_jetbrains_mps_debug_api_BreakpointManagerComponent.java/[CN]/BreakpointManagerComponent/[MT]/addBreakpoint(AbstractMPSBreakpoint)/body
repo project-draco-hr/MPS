@@ -1,0 +1,30 @@
+{
+synchronized (myBreakpoints) {
+    SNode node=breakpoint.getSNode();
+    if (node != null) {
+      SNode root=node.getContainingRoot();
+      if (root != null) {
+        myBreakpoints.add(breakpoint);
+        SNodePointer rootPointer=new SNodePointer(root);
+        Set<AbstractMPSBreakpoint> breakpointsForRoot=myRootsToBreakpointsMap.get(rootPointer);
+        if (breakpointsForRoot == null) {
+          breakpointsForRoot=new HashSet<AbstractMPSBreakpoint>();
+          myRootsToBreakpointsMap.put(rootPointer,breakpointsForRoot);
+        }
+        breakpointsForRoot.add(breakpoint);
+        for (        IEditor editor : myEditorsProvider.getSelectedEditors()) {
+          SNode editedNode=editor.getEditedNode();
+          if (root == editedNode) {
+            EditorComponent editorComponent=editor.getCurrentEditorComponent();
+            if (editorComponent != null) {
+              editorComponent.addAdditionalPainter(new MPSBreakpointPainter(breakpoint));
+              editorComponent.getLeftEditorHighlighter().addIconRenderer(new BreakpointIconRenderer(breakpoint));
+              editorComponent.repaint();
+            }
+          }
+        }
+        breakpoint.addToRunningSessions();
+      }
+    }
+  }
+}
