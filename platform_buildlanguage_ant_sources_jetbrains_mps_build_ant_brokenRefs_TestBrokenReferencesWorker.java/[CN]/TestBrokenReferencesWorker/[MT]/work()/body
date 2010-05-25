@@ -1,9 +1,15 @@
 {
   setupEnvironment();
-  File file=new File(PathManager.getHomePath() + File.separator + "core"+ File.separator+ "baseLanguage"+ File.separator+ "baseLanguage"+ File.separator+ "baseLanguage.mpr");
-  if (!file.getName().endsWith(MPSExtentions.DOT_MPS_PROJECT))   throw new IllegalArgumentException(file.getPath());
-  final MPSProject p=TestMain.loadProject(file);
-  info("Loaded project " + p);
+  ModelAccess.instance().runWriteAction(new Runnable(){
+    public void run(){
+      EmptyProgressIndicator indicator=new EmptyProgressIndicator();
+      ClassLoaderManager.getInstance().updateClassPath();
+      ModuleMaker maker=new ModuleMaker();
+      maker.make(new LinkedHashSet<IModule>(MPSModuleRepository.getInstance().getAllModules()),indicator);
+      ClassLoaderManager.getInstance().reloadAll(indicator);
+    }
+  }
+);
   com.intellij.openapi.project.Project ideaProject=ProjectManager.getInstance().getDefaultProject();
   File projectFile=FileUtil.createTmpFile();
   final MPSProject project=new MPSProject(ideaProject);
@@ -11,6 +17,5 @@
   ObjectsToProcess go=new ObjectsToProcess();
   collectModelsToGenerate(go);
   executeTask(project,go);
-  disposeProject(p);
   dispose();
 }
