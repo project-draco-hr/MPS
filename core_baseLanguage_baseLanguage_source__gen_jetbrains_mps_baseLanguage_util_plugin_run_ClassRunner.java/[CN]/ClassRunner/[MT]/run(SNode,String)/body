@@ -1,3 +1,25 @@
 {
-  return this.run(node,classname,this.myRunParameters.getProgramParameters(),this.myRunParameters.getVMParameters(),this.myRunParameters.getWorkingDirectory());
+  final List<String> params=ListSequence.fromList(new ArrayList<String>());
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      addJavaCommand(params);
+      addClassPath(params,node);
+      addVmOptions(params);
+      ListSequence.fromList(params).addElement(className);
+      addProgramParameters(params);
+      ClassRunner.this.myProcessBuilder=new ProcessBuilder(params);
+      String workingDir=myRunParameters.getWorkingDirectory();
+      if (workingDir != null && StringUtils.isNotEmpty(workingDir)) {
+        ClassRunner.this.myProcessBuilder.directory(new File(workingDir));
+      }
+    }
+  }
+);
+  try {
+    return this.myProcessBuilder.start();
+  }
+ catch (  IOException e) {
+    LOG.error("Can't run class " + className + ": "+ e.getMessage(),e);
+    throw new ProcessNotCreatedException(e.getMessage(),e,this.getCommandLine());
+  }
 }
