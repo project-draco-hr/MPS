@@ -1,0 +1,37 @@
+{
+  Icon icon=IntentionType.getLowestPriorityType().getIcon();
+  final DefaultActionGroup intentionActionGroup=new DefaultActionGroup(intention.getDescription(node,myEditor.getEditorContext()),true){
+    @Override public boolean canBePerformed(){
+      return true;
+    }
+    @Override public void actionPerformed(    AnActionEvent e){
+      ModelAccess.instance().runCommandInEDT(new Runnable(){
+        public void run(){
+          intention.execute(node,myEditor.getEditorContext());
+        }
+      }
+);
+    }
+  }
+;
+  intentionActionGroup.add(new BaseAction("Go to Intention Declaration","Go to declaration of this intention",icon){
+    @Override protected void doExecute(    AnActionEvent e){
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          SNode intentionNode=IntentionsManager.getInstance().getNodeByIntention(intention);
+          if (intentionNode == null) {
+            Messages.showErrorDialog(myEditor.getOperationContext().getProject(),"Could not find declaration for " + intention.getClass().getSimpleName() + " intention ("+ intention.getClass().getName()+ ")","Intention Declaration");
+          }
+ else {
+            myEditor.getOperationContext().getComponent(MPSEditorOpener.class).editNode(intentionNode,myEditor.getOperationContext());
+            ProjectPane.getInstance(myEditor.getOperationContext().getProject()).selectNode(intentionNode);
+          }
+        }
+      }
+);
+    }
+  }
+);
+  intentionActionGroup.getTemplatePresentation().setIcon(icon);
+  return intentionActionGroup;
+}
