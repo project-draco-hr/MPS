@@ -1,29 +1,40 @@
 {
-  SNode classifier=SNodeOperations.getAncestor(name,"jetbrains.mps.baseLanguage.structure.Classifier",false,false);
-  if ((classifier == null)) {
-    return SNodeOperations.isInstanceOf(SLinkOperations.getTarget(name,"visibility",true),"jetbrains.mps.baseLanguage.structure.PublicVisibility") || packageName(context).equals(packageName(name));
+  if (SNodeOperations.isInstanceOf(name,"jetbrains.mps.baseLanguage.structure.Classifier")) {
+    return isClassifierAccessible(context,SNodeOperations.cast(name,"jetbrains.mps.baseLanguage.structure.Classifier"));
   }
-  if (!(isAccessible(context,classifier))) {
-    return false;
-  }
-  if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(name,"visibility",true),"jetbrains.mps.baseLanguage.structure.PublicVisibility")) {
+  if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(name,"visibility",true),"jetbrains.mps.baseLanguage.structure.PublicVisibility") || SNodeOperations.isInstanceOf(name,"jetbrains.mps.baseLanguage.structure.EnumConstantDeclaration")) {
     return true;
   }
   if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(name,"visibility",true),"jetbrains.mps.baseLanguage.structure.PrivateVisibility")) {
     return topClassifier(context) == topClassifier(name);
   }
-  if (packageName(context).equals(packageName(name))) {
+  if (packageName(context) == packageName(name)) {
     return true;
   }
   if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(name,"visibility",true),"jetbrains.mps.baseLanguage.structure.ProtectedVisibility")) {
-    for (    SNode cls : ListSequence.fromList(SNodeOperations.getAncestors(context,"jetbrains.mps.baseLanguage.structure.Classifier",false))) {
+    SNode classifier=SNodeOperations.getAncestor(name,"jetbrains.mps.baseLanguage.structure.Classifier",false,false);
+    SNode qualifier=null;
+    if (SNodeOperations.isInstanceOf(name,"jetbrains.mps.baseLanguage.structure.ClassifierMember")) {
+      if (SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.DotExpression")) {
+        qualifier=SLinkOperations.getTarget(SNodeOperations.cast(context,"jetbrains.mps.baseLanguage.structure.DotExpression"),"operand",true);
+      }
+ else       if (SNodeOperations.isInstanceOf(SNodeOperations.getParent(context),"jetbrains.mps.baseLanguage.structure.DotExpression") && !(SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.LocalInstanceFieldReference") || SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.LocalInstanceMethodCall") || SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.LocalStaticFieldReference")|| SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.LocalStaticMethodCall"))) {
+        qualifier=SLinkOperations.getTarget(SNodeOperations.cast(SNodeOperations.getParent(context),"jetbrains.mps.baseLanguage.structure.DotExpression"),"operand",true);
+      }
+    }
+    for (    SNode cls : ListSequence.fromList(SNodeOperations.getAncestors(context,"jetbrains.mps.baseLanguage.structure.Classifier",true))) {
       if (BaseLanguageUtil.isAssignable(((Classifier)SNodeOperations.getAdapter(cls)),((Classifier)SNodeOperations.getAdapter(classifier)))) {
         if (SNodeOperations.isInstanceOf(name,"jetbrains.mps.baseLanguage.structure.FieldDeclaration") || SNodeOperations.isInstanceOf(name,"jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration")) {
+          if ((qualifier == null) || TypeChecker.getInstance().getSubtypingManager().isSubtype(TypeChecker.getInstance().getTypeOf(qualifier),new VisibilityUtil.QuotationClass_v8uv56_a1a0a1a0a0a5a6a4().createNode(cls))) {
+            return true;
+          }
         }
-        if (SNodeOperations.isInstanceOf(name,"jetbrains.mps.baseLanguage.structure.ConstructorDeclaration")) {
+ else         if (SNodeOperations.isInstanceOf(name,"jetbrains.mps.baseLanguage.structure.ConstructorDeclaration")) {
           return SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.SuperConstructorInvocation") || SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.AnonymousClass") || SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.AnonymousClassCreator");
         }
-        return true;
+ else {
+          return true;
+        }
       }
     }
   }
