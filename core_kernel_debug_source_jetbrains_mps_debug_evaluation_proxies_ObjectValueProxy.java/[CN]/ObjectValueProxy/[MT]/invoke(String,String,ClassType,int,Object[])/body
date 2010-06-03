@@ -1,17 +1,14 @@
 {
-  Method method=classType.concreteMethodByName(name,jniSignature);
+  final Method method=classType.concreteMethodByName(name,jniSignature);
   if (method == null) {
-    LOG.error("Concrete method " + name + " with signature "+ jniSignature+ " not found in "+ classType+ ".");
-    return null;
+    throw new InvalidEvaluatedExpressionException("Concrete method " + name + " with signature "+ jniSignature+ " not found in "+ classType+ ".");
   }
-  List<Value> argValues=MirrorUtil.getValues(myThreadReference,args);
-  Value result;
-  try {
-    result=getObjectValue().invokeMethod(myThreadReference,method,argValues,options);
+  final List<Value> argValues=MirrorUtil.getValues(myThreadReference,args);
+  return handleInvocationExceptions(new Invocatable<IValueProxy>(){
+    @Override public IValueProxy invoke() throws InvocationException, InvalidTypeException, ClassNotLoadedException, IncompatibleThreadStateException {
+      Value result=getObjectValue().invokeMethod(myThreadReference,method,argValues,options);
+      return MirrorUtil.getValueProxy(result,myThreadReference);
+    }
   }
- catch (  Throwable t) {
-    LOG.error("Method invocation failed.",t);
-    return null;
-  }
-  return MirrorUtil.getValueProxy(result,myThreadReference);
+);
 }
