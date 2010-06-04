@@ -1,51 +1,42 @@
 {
-  if (contextNode == null) {
+  if (SNodeOperations.isInstanceOf(name,"jetbrains.mps.baseLanguage.structure.Classifier")) {
+    return isClassifierAccessible(context,SNodeOperations.cast(name,"jetbrains.mps.baseLanguage.structure.Classifier"));
+  }
+  if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(name,"visibility",true),"jetbrains.mps.baseLanguage.structure.PublicVisibility") || SNodeOperations.isInstanceOf(name,"jetbrains.mps.baseLanguage.structure.EnumConstantDeclaration")) {
     return true;
   }
-  if (SNodeOperations.isInstanceOf(member,"jetbrains.mps.baseLanguage.structure.EnumConstantDeclaration")) {
+  if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(name,"visibility",true),"jetbrains.mps.baseLanguage.structure.PrivateVisibility")) {
+    return topClassifier(context) == topClassifier(name);
+  }
+  if (packageName(context) == packageName(name)) {
     return true;
   }
-  SNode visibility=SLinkOperations.getTarget(member,"visibility",true);
-  if (SNodeOperations.isInstanceOf(visibility,"jetbrains.mps.baseLanguage.structure.PublicVisibility")) {
-    return true;
-  }
-  if (visibility == null) {
-    return SNodeOperations.getModel(member).getSModelFqName().getNamespace().equals(SNodeOperations.getModel(contextNode).getSModelFqName().getNamespace());
-  }
-  if (SNodeOperations.isInstanceOf(visibility,"jetbrains.mps.baseLanguage.structure.ProtectedVisibility") && SNodeOperations.getModel(member).getSModelFqName().getNamespace().equals(SNodeOperations.getModel(contextNode).getSModelFqName().getNamespace())) {
-    return true;
-  }
-  if (!(SNodeOperations.isInstanceOf(member,"jetbrains.mps.baseLanguage.structure.ClassifierMember"))) {
-    return true;
-  }
-  SNode memberClassifier=SNodeOperations.getAncestor(member,"jetbrains.mps.baseLanguage.structure.Classifier",true,false);
-  if (memberClassifier == null) {
-    return true;
-  }
-  SNode contextClassifier=SNodeOperations.getAncestor(contextNode,"jetbrains.mps.baseLanguage.structure.Classifier",true,false);
-  while (contextClassifier != null) {
-    if (memberClassifier == contextClassifier) {
-      return true;
-    }
-    if (SNodeOperations.isInstanceOf(visibility,"jetbrains.mps.baseLanguage.structure.ProtectedVisibility")) {
-      if (BaseLanguageUtil.isAssignable(((Classifier)SNodeOperations.getAdapter(contextClassifier)),((Classifier)SNodeOperations.getAdapter(memberClassifier)))) {
-        return true;
+  if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(name,"visibility",true),"jetbrains.mps.baseLanguage.structure.ProtectedVisibility")) {
+    SNode classifier=SNodeOperations.getAncestor(name,"jetbrains.mps.baseLanguage.structure.Classifier",false,false);
+    SNode qualifier=null;
+    if (SNodeOperations.isInstanceOf(name,"jetbrains.mps.baseLanguage.structure.ClassifierMember")) {
+      if (SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.DotExpression")) {
+        qualifier=SLinkOperations.getTarget(SNodeOperations.cast(context,"jetbrains.mps.baseLanguage.structure.DotExpression"),"operand",true);
+      }
+ else       if (SNodeOperations.isInstanceOf(SNodeOperations.getParent(context),"jetbrains.mps.baseLanguage.structure.DotExpression") && !(SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.LocalInstanceFieldReference") || SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.LocalInstanceMethodCall") || SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.LocalStaticFieldReference")|| SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.LocalStaticMethodCall"))) {
+        qualifier=SLinkOperations.getTarget(SNodeOperations.cast(SNodeOperations.getParent(context),"jetbrains.mps.baseLanguage.structure.DotExpression"),"operand",true);
       }
     }
-    SNode parent=SNodeOperations.getAncestor(contextClassifier,"jetbrains.mps.baseLanguage.structure.Classifier",false,false);
-    if (parent == null) {
-      break;
-    }
-    contextClassifier=parent;
-  }
-  while (memberClassifier != null) {
-    SNode parent=SNodeOperations.getAncestor(memberClassifier,"jetbrains.mps.baseLanguage.structure.Classifier",false,false);
-    if (parent == null) {
-      if (memberClassifier == contextClassifier) {
-        return true;
+    for (    SNode cls : ListSequence.fromList(SNodeOperations.getAncestors(context,"jetbrains.mps.baseLanguage.structure.Classifier",true))) {
+      if (BaseLanguageUtil.isAssignable(((Classifier)SNodeOperations.getAdapter(cls)),((Classifier)SNodeOperations.getAdapter(classifier)))) {
+        if (SNodeOperations.isInstanceOf(name,"jetbrains.mps.baseLanguage.structure.FieldDeclaration") || SNodeOperations.isInstanceOf(name,"jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration")) {
+          if ((qualifier == null) || TypeChecker.getInstance().getSubtypingManager().isSubtype(TypeChecker.getInstance().getTypeOf(qualifier),new VisibilityUtil.QuotationClass_v8uv56_a1a0a1a0a0a5a6a0().createNode(cls))) {
+            return true;
+          }
+        }
+ else         if (SNodeOperations.isInstanceOf(name,"jetbrains.mps.baseLanguage.structure.ConstructorDeclaration")) {
+          return SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.SuperConstructorInvocation") || SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.AnonymousClass") || SNodeOperations.isInstanceOf(context,"jetbrains.mps.baseLanguage.structure.AnonymousClassCreator");
+        }
+ else {
+          return true;
+        }
       }
     }
-    memberClassifier=parent;
   }
   return false;
 }
