@@ -1,0 +1,30 @@
+{
+  assertCanRunWriteAction();
+  ActivityTracker.getInstance().inc();
+  fireBeforeWriteActionStart(action);
+  LOG.assertTrue(myActionsLock.isWriteLockAcquired(Thread.currentThread()) || !Thread.holdsLock(PsiLock.LOCK),"Thread must not hold PsiLock while performing writeAction");
+  try {
+    myActionsLock.writeLock().acquire();
+  }
+ catch (  InterruptedException e) {
+    throw new RuntimeInterruptedException(e);
+  }
+  try {
+synchronized (myWriteActionsStack) {
+      myWriteActionsStack.push(action);
+    }
+    fireWriteActionStarted(action);
+    action.run();
+  }
+  finally {
+    try {
+      fireWriteActionFinished(action);
+synchronized (myWriteActionsStack) {
+        myWriteActionsStack.pop();
+      }
+    }
+  finally {
+      myActionsLock.writeLock().release();
+    }
+  }
+}
