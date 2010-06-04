@@ -1,0 +1,49 @@
+{
+  final List<SNode> rootsList=myModel.getSModel().getRoots();
+  Map<String,SNode> rootById=new HashMap<String,SNode>();
+  myUnchangedRoots=new HashSet<SNode>();
+  for (  SNode root : rootsList) {
+    String id=root.getId();
+    GenerationRootDependencies rd=dependencies.getDependenciesFor(id);
+    String oldHash;
+    if (rd == null || (oldHash=rd.getHash()) == null) {
+      continue;
+    }
+    String newHash=myGenerationHashes.get(id);
+    if (newHash == null || !newHash.equals(oldHash)) {
+      continue;
+    }
+    myUnchangedRoots.add(root);
+  }
+  if (myUnchangedRoots.size() == 0) {
+    return;
+  }
+  for (  SNode root : rootsList) {
+    rootById.put(root.getId(),root);
+  }
+  Map<String,Set<String>> dep=getDependenciesWithoutOrientation(dependencies,myUnchangedRoots);
+  boolean changed=true;
+  while (changed) {
+    changed=false;
+    Iterator<SNode> it=myUnchangedRoots.iterator();
+    while (it.hasNext()) {
+      SNode root=it.next();
+      Set<String> rootDeps=dep.get(root.getId());
+      boolean unchanged=true;
+      for (      String localRootId : rootDeps) {
+        if (!dep.containsKey(localRootId)) {
+          unchanged=false;
+          break;
+        }
+      }
+      if (!unchanged) {
+        it.remove();
+        dep.remove(root.getId());
+        changed=true;
+      }
+    }
+  }
+  if (myUnchangedRoots.size() == 0) {
+    return;
+  }
+}

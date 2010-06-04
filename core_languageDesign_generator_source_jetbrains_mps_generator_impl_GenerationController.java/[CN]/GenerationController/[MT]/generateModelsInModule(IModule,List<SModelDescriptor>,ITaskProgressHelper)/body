@@ -8,43 +8,7 @@
       wasLoggingThreshold=Logger.setThreshold("ERROR");
     }
     for (    SModelDescriptor inputModel : inputModels) {
-      IPerformanceTracer ttrace=myGenerationContext.getTracingMode() != GenerationSettings.TRACE_OFF ? new PerformanceTracer("model " + NameUtil.shortNameFromLongName(inputModel.getLongName())) : new NullPerformanceTracer();
-      boolean traceTypes=myGenerationContext.getTracingMode() == GenerationSettings.TRACE_TYPES;
-      TypeChecker.getInstance().setIsGeneration(true,traceTypes ? ttrace : null);
-      GenerationSession generationSession=new GenerationSession(inputModel,invocationContext,myProgress,myLogger,ttrace,myGenerationContext);
-      try {
-        Logger.addLoggingHandler(generationSession.getLoggingHandler());
-        if (!myGenerationHandler.canHandle(inputModel)) {
-          LOG.error("Can't generate " + inputModel.getSModelFqName());
-          continue;
-        }
-        if (myLogger.needsInfo()) {
-          myLogger.info("");
-        }
-        String taskName=ModelsProgressUtil.generationModelTaskName(inputModel);
-        progressHelper.setText2("model " + inputModel.getSModelFqName());
-        progressHelper.startLeafTask(taskName);
-        if (myLogger.needsInfo()) {
-          myLogger.info("[model " + inputModel.getSModelFqName() + (myGenerationContext.isGenerateInParallel() ? ", using " + myGenerationContext.getNumberOfThreads() + " threads]" : "]"));
-        }
-        GenerationStatus status=generationSession.generateModel();
-        status.setOriginalInputModel(inputModel);
-        currentGenerationOK=currentGenerationOK && status.isOk();
-        checkMonitorCanceled();
-        currentGenerationOK=currentGenerationOK && myGenerationHandler.handleOutput(module,inputModel,status,invocationContext,progressHelper);
-      }
-  finally {
-        Logger.removeLoggingHandler(generationSession.getLoggingHandler());
-        generationSession.discardTransients();
-        CleanupManager.getInstance().cleanup();
-        progressHelper.finishTask();
-        TypeChecker.getInstance().setIsGeneration(false);
-        progressHelper.setText2("");
-      }
-      String report=ttrace.report();
-      if (report != null) {
-        myLogger.trace(report);
-      }
+      currentGenerationOK=currentGenerationOK && generateModel(inputModel,module,invocationContext,progressHelper);
     }
   }
   finally {
