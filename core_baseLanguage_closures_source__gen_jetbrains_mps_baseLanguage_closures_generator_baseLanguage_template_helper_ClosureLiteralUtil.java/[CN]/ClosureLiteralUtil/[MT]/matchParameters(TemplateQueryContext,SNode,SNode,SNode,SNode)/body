@@ -26,8 +26,8 @@
   }
   Values.TYPE_MAP.set(genContext,ctNoParams,map);
   if ((absRetCT != null)) {
-    SNode ftResCT=SNodeOperations.cast(FunctionTypeUtil.unmeet(FunctionType_Behavior.call_getNormalizedReturnType_1213877405252(ft)),"jetbrains.mps.baseLanguage.structure.ClassifierType");
-    String adapterName=JavaNameUtil.shortName(SPropertyOperations.getString(SLinkOperations.getTarget(absRetCT,"classifier",false),"name")) + JavaNameUtil.shortName(SPropertyOperations.getString(SLinkOperations.getTarget(ftResCT,"classifier",false),"name")) + "Adapter";
+    SNode ftResCT=FunctionTypeUtil.unmeet(FunctionType_Behavior.call_getNormalizedReturnType_1213877405252(ft));
+    String adapterName=JavaNameUtil.shortName(SPropertyOperations.getString(SLinkOperations.getTarget(absRetCT,"classifier",false),"name")) + JavaNameUtil.shortName(SPropertyOperations.getString(SLinkOperations.getTarget(SNodeOperations.cast(FunctionTypeUtil.unbound(ftResCT),"jetbrains.mps.baseLanguage.structure.ClassifierType"),"classifier",false),"name")) + "Adapter";
     for (    SNode cls : SModelOperations.getNodes(SNodeOperations.getModel(SLinkOperations.getTarget(absRetCT,"classifier",false)),"jetbrains.mps.baseLanguage.structure.Classifier")) {
       if (adapterName.equals(JavaNameUtil.shortName(SPropertyOperations.getString(cls,"name")))) {
         SNode newRetCT=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ClassifierType",null);
@@ -40,17 +40,18 @@
   List<SNode> varDecls=SLinkOperations.getTargets(SLinkOperations.getTarget(origCT,"classifier",false),"typeVariableDeclaration",true);
   int idx=0;
   for (  SNode p : SLinkOperations.getTargets(origCT,"parameter",true)) {
-    if (SNodeOperations.isInstanceOf(p,"jetbrains.mps.baseLanguage.structure.UpperBoundType") || SNodeOperations.isInstanceOf(p,"jetbrains.mps.baseLanguage.structure.LowerBoundType")) {
-      p=(SNodeOperations.isInstanceOf(p,"jetbrains.mps.baseLanguage.structure.UpperBoundType") ? SLinkOperations.getTarget(SNodeOperations.cast(p,"jetbrains.mps.baseLanguage.structure.UpperBoundType"),"bound",true) : SLinkOperations.getTarget(SNodeOperations.cast(p,"jetbrains.mps.baseLanguage.structure.LowerBoundType"),"bound",true));
-    }
-    if (SNodeOperations.isInstanceOf(p,"jetbrains.mps.baseLanguage.structure.TypeVariableReference")) {
-      if (idx < ListSequence.fromList(varDecls).count()) {
-        SNode tvd=ListSequence.fromList(varDecls).getElement(idx);
-        ListSequence.fromList(SLinkOperations.getTargets(ctNoParams,"parameter",true)).addElement((map != null ? MapSequence.fromMap(map).get(SPropertyOperations.getString(tvd,"name")) : null));
+    SNode c=ListSequence.fromList(SLinkOperations.getTargets(ctNoParams,"parameter",true)).addElement(SNodeOperations.copyNode(p));
+    List<SNode> queue=ListSequence.fromListAndArray(new LinkedList<SNode>(),c);
+    while (!(ListSequence.fromList(queue).isEmpty())) {
+      SNode n=ListSequence.fromList(queue).removeElementAt(0);
+      if (SNodeOperations.isInstanceOf(n,"jetbrains.mps.baseLanguage.structure.TypeVariableReference")) {
+        if (idx < ListSequence.fromList(varDecls).count()) {
+          n=SNodeOperations.replaceWithAnother(n,(map != null ? MapSequence.fromMap(map).get(SPropertyOperations.getString(ListSequence.fromList(varDecls).getElement(idx),"name")) : null));
+        }
       }
-    }
- else {
-      ListSequence.fromList(SLinkOperations.getTargets(ctNoParams,"parameter",true)).addElement(SNodeOperations.copyNode(p));
+      if (n != null) {
+        ListSequence.fromList(queue).addSequence(ListSequence.fromList(SNodeOperations.getChildren(n)));
+      }
     }
     idx++;
   }
