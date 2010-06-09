@@ -15,7 +15,7 @@
     }
     myUnchangedRoots.add(root);
   }
-  if (myUnchangedRoots.size() == 0) {
+  if (myUnchangedRoots.isEmpty()) {
     return;
   }
   for (  SNode root : rootsList) {
@@ -29,21 +29,40 @@
     while (it.hasNext()) {
       SNode root=it.next();
       Set<String> rootDeps=dep.get(root.getId());
-      boolean unchanged=true;
+      boolean dirty=false;
       for (      String localRootId : rootDeps) {
         if (!dep.containsKey(localRootId)) {
-          unchanged=false;
+          dirty=true;
           break;
         }
       }
-      if (!unchanged) {
+      if (dirty) {
         it.remove();
         dep.remove(root.getId());
         changed=true;
       }
     }
   }
-  if (myUnchangedRoots.size() == 0) {
+  if (myUnchangedRoots.isEmpty()) {
     return;
+  }
+  ConnectedComponentPartitioner partitioner=new ConnectedComponentPartitioner(rootsList);
+  List<SNode[]> components=partitioner.partition();
+  for (  SNode[] component : components) {
+    boolean hasUnchanged=false;
+    boolean hasChanged=false;
+    for (    SNode n : component) {
+      if (myUnchangedRoots.contains(n)) {
+        hasUnchanged=true;
+      }
+ else {
+        hasChanged=true;
+      }
+    }
+    if (hasUnchanged && hasChanged) {
+      for (      SNode n : component) {
+        myUnchangedRoots.remove(n);
+      }
+    }
   }
 }
