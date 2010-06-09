@@ -1,5 +1,16 @@
 {
-  final List<SNode> rootsList=myModel.getSModel().getRoots();
+  GenerationRootDependencies commonDeps=dependencies.getDependenciesFor(ModelDigestUtil.HEADER);
+  if (commonDeps == null) {
+    return;
+  }
+{
+    String oldHash=commonDeps.getHash();
+    String newHash=myGenerationHashes.get(ModelDigestUtil.HEADER);
+    if (oldHash == null || newHash == null || !newHash.equals(oldHash)) {
+      return;
+    }
+  }
+  List<SNode> rootsList=myModel.getSModel().getRoots();
   Map<String,SNode> rootById=new HashMap<String,SNode>();
   myUnchangedRoots=new HashSet<SNode>();
   for (  SNode root : rootsList) {
@@ -21,6 +32,7 @@
   for (  SNode root : rootsList) {
     rootById.put(root.getId(),root);
   }
+  myConditionalsUnchanged=true;
   Map<String,Set<String>> dep=getDependenciesWithoutOrientation(dependencies,myUnchangedRoots);
   boolean changed=true;
   while (changed) {
@@ -40,6 +52,17 @@
         it.remove();
         dep.remove(root.getId());
         changed=true;
+      }
+    }
+    if (myConditionalsUnchanged) {
+      Set<String> conditionalsDeps=dep.get(CONDITIONALS_ID);
+      for (      String localRootId : conditionalsDeps) {
+        if (!dep.containsKey(localRootId)) {
+          dep.remove(CONDITIONALS_ID);
+          myConditionalsUnchanged=false;
+          changed=true;
+          break;
+        }
       }
     }
   }
