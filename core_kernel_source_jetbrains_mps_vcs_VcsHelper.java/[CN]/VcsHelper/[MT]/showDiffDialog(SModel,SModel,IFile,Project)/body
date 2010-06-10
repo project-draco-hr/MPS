@@ -1,0 +1,33 @@
+{
+  final VirtualFile file=VFileSystem.getFile(modelFile);
+  LOG.assertLog(file != null);
+  final ModelDifferenceDialog dialog=ModelAccess.instance().runReadAction(new Computable<ModelDifferenceDialog>(){
+    public ModelDifferenceDialog compute(){
+      SModelDescriptor modelDescriptor=diskModel.getModelDescriptor();
+      if (modelDescriptor == null) {
+        modelDescriptor=memoryModel.getModelDescriptor();
+        if (modelDescriptor == null) {
+          modelDescriptor=SModelRepository.getInstance().getModelDescriptor(diskModel.getSModelFqName());
+        }
+      }
+      IOperationContext context;
+      if (modelDescriptor == null) {
+        context=new GlobalOperationContext();
+      }
+ else {
+        context=new ModuleContext(modelDescriptor.getModule(),project);
+      }
+      JFrame frame=WindowManager.getInstance().getFrame(project);
+      return new ModelDifferenceDialog(context,frame,diskModel,memoryModel,"Disk Memory Diff",true,new String[]{"Filesystem version (read-only)","Memory version"});
+    }
+  }
+);
+  dialog.showDialog();
+  SwingUtilities.invokeLater(new Runnable(){
+    public void run(){
+      dialog.toFront();
+    }
+  }
+);
+  return true;
+}
