@@ -1,2 +1,20 @@
 {
+  if (!myGenerationContext.isGenerateDependencies()) {
+    return new NullDependenciesBuilder();
+  }
+  DefaultDependenciesBuilder result=new DefaultDependenciesBuilder(myModel.getSModel(),myGenerationHashes);
+  if (myUnchangedRoots.isEmpty() && myConditionalsUnchanged == false) {
+    return result;
+  }
+  Map<String,SNode> rootById=new HashMap<String,SNode>();
+  for (  SNode root : myModel.getSModel().getRoots()) {
+    rootById.put(root.getId(),root);
+  }
+  for (  SNode root : myUnchangedRoots) {
+    propagateDependencies(rootById,result.getListener(root),mySavedDependencies.getDependenciesFor(root.getId()));
+  }
+  if (myConditionalsUnchanged) {
+    propagateDependencies(rootById,result.getListener(null),mySavedDependencies.getDependenciesFor(ModelDigestUtil.HEADER));
+  }
+  return result;
 }
