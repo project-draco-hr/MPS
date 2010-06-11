@@ -1,0 +1,35 @@
+{
+  Set<Edge> reverted=myReverter.revertEdges(graph);
+  NodeLayers layers=myLayerer.computeLayers(graph);
+  final int numRealVertices=graph.getNumNodes();
+  Map<Edge,List<Edge>> substituteEdgeMap=insertDummyNodes(graph,layers);
+  NodeLayeredOrder order=mySorter.sortNodes(graph,layers);
+  Map<Node,Point> nodeCoordinates=myPlacer.placeCoordinates(graph,order);
+  GraphLayout graphLayout=new GraphLayout(graph);
+  for (  Edge deletedEdge : SetSequence.fromSet(MapSequence.fromMap(substituteEdgeMap).keySet())) {
+    List<Point> edgeLayout=ListSequence.fromList(new ArrayList<Point>());
+    ListSequence.fromList(edgeLayout).addElement(MapSequence.fromMap(nodeCoordinates).get(deletedEdge.getSource()));
+    for (    Edge newEdge : ListSequence.fromList(MapSequence.fromMap(substituteEdgeMap).get(deletedEdge))) {
+      ListSequence.fromList(edgeLayout).addElement(MapSequence.fromMap(nodeCoordinates).get(newEdge.getTarget()));
+      newEdge.removeFromGraph();
+    }
+    graphLayout.setLayoutFor(deletedEdge,edgeLayout);
+    graph.addEdge(deletedEdge);
+  }
+  ListSequence.fromList(graph.getNodes()).removeWhere(new IWhereFilter<Node>(){
+    public boolean accept(    Node it){
+      return it.getIndex() >= numRealVertices;
+    }
+  }
+);
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    graphLayout.setLayoutFor(node,MapSequence.fromMap(nodeCoordinates).get(node));
+    for (    Edge edge : ListSequence.fromList(node.getOutEdges())) {
+      if (MapSequence.fromMap(substituteEdgeMap).containsKey(edge)) {
+        continue;
+      }
+      graphLayout.setLayoutFor(edge,ListSequence.fromListAndArray(new ArrayList<Point>(),MapSequence.fromMap(nodeCoordinates).get(edge.getSource()),MapSequence.fromMap(nodeCoordinates).get(edge.getTarget())));
+    }
+  }
+  return graphLayout;
+}
