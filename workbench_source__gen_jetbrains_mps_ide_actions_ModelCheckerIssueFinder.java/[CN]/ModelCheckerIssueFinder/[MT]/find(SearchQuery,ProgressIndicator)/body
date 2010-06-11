@@ -1,2 +1,46 @@
 {
+  IHolder objectHolder=searchQuery.getObjectHolder();
+  IOperationContext operationContext;
+  List<SModelDescriptor> modelDescriptors;
+  List<IModule> modules=null;
+  if (objectHolder instanceof ModelsHolder) {
+    ModelsHolder modelsHolder=(ModelsHolder)objectHolder;
+    operationContext=modelsHolder.getOperationContext();
+    modelDescriptors=modelsHolder.getObject();
+  }
+ else   if (objectHolder instanceof ModulesHolder) {
+    ModulesHolder modulesHolder=(ModulesHolder)objectHolder;
+    operationContext=modulesHolder.getOperationContext();
+    modelDescriptors=ModelCheckerUtils.getModelDescriptors(modulesHolder.getObject());
+    modules=modulesHolder.getObject();
+  }
+ else {
+    throw new IllegalArgumentException();
+  }
+  ProgressContext progressContext=new ProgressContext(indicator,ListSequence.fromList(modelDescriptors).select(new ISelector<SModelDescriptor,String>(){
+    public String select(    SModelDescriptor md){
+      return getTaskName(md);
+    }
+  }
+));
+  if (modules != null) {
+    ModuleChecker moduleChecker=new ModuleChecker(progressContext);
+    indicator.setIndeterminate(true);
+    for (    IModule module : ListSequence.fromList(modules)) {
+      moduleChecker.checkModule(module);
+      if (moduleChecker.isCancelled()) {
+        break;
+      }
+    }
+  }
+  ModelChecker modelChecker=new ModelChecker(operationContext,progressContext);
+  for (  SModelDescriptor modelDescriptor : ListSequence.fromList(modelDescriptors)) {
+    long modelStartTime=System.currentTimeMillis();
+    modelChecker.checkModel(modelDescriptor);
+    if (modelChecker.isCancelled()) {
+      break;
+    }
+    progressContext.saveEstimatedTime(modelStartTime);
+  }
+  return modelChecker.getSearchResults();
 }
