@@ -1,23 +1,31 @@
 {
   try {
-    File[] backupFiles=ReRunMergeFromBackup_Action.this.getBackupFiles();
-    if (backupFiles.length == 0) {
-      Messages.showInfoMessage("Suitable backup file for model\n" + ReRunMergeFromBackup_Action.this.model + "\nwas not found.","Backup File Not Found");
-      return;
-    }
-    File latestBackup=backupFiles[0];
-    for (    File backupFile : backupFiles) {
-      if (backupFile.lastModified() > latestBackup.lastModified()) {
-        latestBackup=backupFile;
+    Iterable<File> backupFiles=Sequence.fromIterable(Sequence.fromArray(ReRunMergeFromBackup_Action.this.getBackupFiles())).sort(new ISelector<File,Comparable<?>>(){
+      public Comparable<?> select(      File f){
+        return f.lastModified();
       }
     }
-    try {
-      SModel[] models=ModelUtils.loadZippedModels(latestBackup,VcsHelper.VcsMergeVersion.values());
-      ReRunMergeFromBackup_Action.this.doMerge(models[VcsHelper.VcsMergeVersion.MINE.ordinal()],models[VcsHelper.VcsMergeVersion.BASE.ordinal()],models[VcsHelper.VcsMergeVersion.THEIRS.ordinal()]);
+,false);
+    for (    File backupFile : Sequence.fromIterable(backupFiles)) {
+      try {
+        SModel[] models=ModelUtils.loadZippedModels(backupFile,VcsHelper.VcsMergeVersion.values());
+        ReRunMergeFromBackup_Action.this.doMerge(models[VcsHelper.VcsMergeVersion.MINE.ordinal()],models[VcsHelper.VcsMergeVersion.BASE.ordinal()],models[VcsHelper.VcsMergeVersion.REPOSITORY.ordinal()]);
+        return;
+      }
+ catch (      IOException e) {
+        if (log.isWarnEnabled()) {
+          log.warn("",e);
+        }
+        continue;
+      }
+catch (      ModelDiffTool.ReadException e) {
+        if (log.isWarnEnabled()) {
+          log.warn("",e);
+        }
+        continue;
+      }
     }
- catch (    FileNotFoundException e) {
-      Messages.showErrorDialog("Backup File\n" + latestBackup.getPath() + "\nIs Invalid:\n"+ e.getMessage(),"Invalid Backup File");
-    }
+    Messages.showInfoMessage("No suitable backup files for " + ReRunMergeFromBackup_Action.this.model.getSModelFqName() + "was not found.","No Backup Files Found");
   }
  catch (  Throwable t) {
     if (log.isErrorEnabled()) {
