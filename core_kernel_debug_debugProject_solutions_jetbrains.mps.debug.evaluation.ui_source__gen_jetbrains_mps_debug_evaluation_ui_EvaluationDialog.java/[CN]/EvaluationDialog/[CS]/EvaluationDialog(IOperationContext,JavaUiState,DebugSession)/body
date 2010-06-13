@@ -3,9 +3,11 @@
   this.myContext=context;
   this.setSize(new Dimension(500,500));
   this.setModal(false);
-  this.myEvaluationData=AbstractEvaluationLogic.createInstance(context,uiState,debugSession);
-  if (myEvaluationData.isDeveloperMode()) {
-    myEvaluationData.addGenerationListener(new _FunctionTypes._void_P1_E0<SNode>(){
+  mySessionChangeListener=new EvaluationDialog.MySessionChangeListener();
+  debugSession.addChangeListener(mySessionChangeListener);
+  this.myEvaluationLogic=AbstractEvaluationLogic.createInstance(context,uiState,debugSession);
+  if (myEvaluationLogic.isDeveloperMode()) {
+    myEvaluationLogic.addGenerationListener(new _FunctionTypes._void_P1_E0<SNode>(){
       public void invoke(      SNode result){
         EvaluationDialog.this.updateGenerationResultTab(result);
       }
@@ -14,8 +16,8 @@
   }
   ModelAccess.instance().runWriteActionInCommand(new Runnable(){
     public void run(){
-      EvaluationDialog.this.myEditor=new EmbeddableEditor(new ModuleContext(EvaluationDialog.this.myEvaluationData.getModule(),EvaluationDialog.this.myEvaluationData.getModule().getMPSProject()),EvaluationDialog.this.myEvaluationData.getModule(),EvaluationDialog.this.myEvaluationData.getRootToShow(),myEvaluationData.getNodeToShow(),true);
-      for (      Language language : EvaluationDialog.this.myEvaluationData.getRequiredLanguages()) {
+      EvaluationDialog.this.myEditor=new EmbeddableEditor(new ModuleContext(EvaluationDialog.this.myEvaluationLogic.getModule(),EvaluationDialog.this.myEvaluationLogic.getModule().getMPSProject()),EvaluationDialog.this.myEvaluationLogic.getModule(),EvaluationDialog.this.myEvaluationLogic.getRootToShow(),myEvaluationLogic.getNodeToShow(),true);
+      for (      Language language : EvaluationDialog.this.myEvaluationLogic.getRequiredLanguages()) {
         EvaluationDialog.this.myEditor.addLanguage(language);
       }
     }
@@ -28,17 +30,18 @@
     }
   }
 );
-  myEvaluationData.setModel(d.value);
+  myEvaluationLogic.setModel(d.value);
   myPanel.add(this.myEditor.getComponenet(),BorderLayout.NORTH);
   myTree=new EvaluationDialog.MyTree();
   myPanel.add(new JScrollPane(myTree),BorderLayout.CENTER);
-  if (myEvaluationData.isDeveloperMode()) {
+  if (myEvaluationLogic.isDeveloperMode()) {
     this.myTabbedPane.addTab("Main",myPanel);
   }
   addWindowListener(new WindowAdapter(){
     @Override public void windowClosed(    WindowEvent event){
+      debugSession.removeChangeListener(mySessionChangeListener);
       EvaluationDialog.this.myEditor.disposeEditor();
-      EvaluationDialog.this.myEvaluationData.getModule().dispose();
+      EvaluationDialog.this.myEvaluationLogic.getModule().dispose();
     }
   }
 );
