@@ -4,24 +4,39 @@
     StackFrame stackFrame=javaStackFrame.getStackFrame();
     if (stackFrame != null) {
       try {
+        final Set<SNode> foundVars=SetSequence.fromSet(new HashSet<SNode>());
         List<LocalVariable> variables=stackFrame.visibleVariables();
         for (        LocalVariable variable : ListSequence.fromList(variables)) {
           try {
-            SNode lowLevelVarNode=SConceptOperations.createNewNode("jetbrains.mps.debug.evaluation.structure.LowLevelVariable",null);
-            String name=((LocalVariable)variable).name();
-            SPropertyOperations.set(lowLevelVarNode,"name",name);
+            String name=variable.name();
+            SNode lowLevelVarNode;
+            if (!(MapSequence.fromMap(myUsedVars).containsKey(name))) {
+              lowLevelVarNode=SConceptOperations.createNewNode("jetbrains.mps.debug.evaluation.structure.LowLevelVariable",null);
+              SPropertyOperations.set(lowLevelVarNode,"name",name);
+              ListSequence.fromList(SLinkOperations.getTargets(myEvaluator,"variables",true)).addElement(lowLevelVarNode);
+              MapSequence.fromMap(myUsedVars).put(name,lowLevelVarNode);
+            }
+ else {
+              lowLevelVarNode=MapSequence.fromMap(myUsedVars).get(name);
+            }
             SNode deducedType=getMpsTypeFromJdiType(((LocalVariable)variable).type());
             if (deducedType == null) {
               LOG.warning("Could not deduce type for variable " + name);
               continue;
             }
             SLinkOperations.setTarget(lowLevelVarNode,"type",deducedType,true);
-            ListSequence.fromList(SLinkOperations.getTargets(myEvaluator,"variables",true)).addElement(lowLevelVarNode);
+            SetSequence.fromSet(foundVars).addElement(lowLevelVarNode);
           }
  catch (          ClassNotLoadedException cne) {
             LOG.error(cne);
           }
         }
+        Sequence.fromIterable(MapSequence.fromMap(myUsedVars).values()).visitAll(new IVisitor<SNode>(){
+          public void visit(          SNode it){
+            SPropertyOperations.set(it,"isOutOfScope","" + (!(SetSequence.fromSet(foundVars).contains(it))));
+          }
+        }
+);
         SLinkOperations.setTarget(myEvaluator,"staticContextType",createStaticContextType(),true);
         SLinkOperations.setTarget(myEvaluator,"thisType",createThisClassifierType(),true);
       }
