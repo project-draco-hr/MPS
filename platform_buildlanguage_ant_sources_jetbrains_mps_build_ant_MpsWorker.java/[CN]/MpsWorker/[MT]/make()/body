@@ -1,43 +1,12 @@
 {
-  final Set<IModule> toCompile=new LinkedHashSet<IModule>();
-  for (  final Library l : myCompiledLibraries) {
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        List<IModule> moduleList=MPSModuleRepository.getInstance().getAllModulesInDirectory(new File(l.getPath()));
-        for (        IModule module : moduleList) {
-          if (!module.isPackaged() && module.isCompileInMPS()) {
-            toCompile.add(module);
-          }
-        }
-      }
-    }
-);
-  }
-  if (toCompile.isEmpty())   return;
-  startMake(myCompiledLibraries,toCompile);
-  CompilationResult result=null;
-  try {
-    result=ModelAccess.instance().runReadAction(new Computable<CompilationResult>(){
-      public CompilationResult compute(){
-        return new ModuleMaker().make(toCompile,new InfoProgressIndicator());
-      }
-    }
-);
-  }
- catch (  Throwable t) {
-    log(t);
-  }
-  if (result != null) {
-    finishMake(myCompiledLibraries,result);
-    if (result.isReloadingNeeded()) {
-      info("Reloading classes...");
-      ModelAccess.instance().runWriteAction(new Runnable(){
-        @Override public void run(){
-          ClassLoaderManager.getInstance().reloadAll(new InfoProgressIndicator());
-        }
-      }
-);
-      info("Classes reloaded");
+  ModelAccess.instance().runWriteAction(new Runnable(){
+    public void run(){
+      EmptyProgressIndicator indicator=new EmptyProgressIndicator();
+      ClassLoaderManager.getInstance().updateClassPath();
+      ModuleMaker maker=new ModuleMaker();
+      maker.make(new LinkedHashSet<IModule>(MPSModuleRepository.getInstance().getAllModules()),indicator);
+      ClassLoaderManager.getInstance().reloadAll(indicator);
     }
   }
+);
 }
