@@ -10,6 +10,28 @@
       return;
     }
   }
+  Set<String> changedModels=new HashSet<String>();
+  Map<String,String> externalHashes=dependencies.getExternalHashes();
+  for (  Entry<String,String> entry : externalHashes.entrySet()) {
+    String modelReference=entry.getKey();
+    SModelDescriptor sm=SModelRepository.getInstance().getModelDescriptor(SModelReference.fromString(modelReference));
+    if (sm == null) {
+      changedModels.add(modelReference);
+      continue;
+    }
+    String oldHash=entry.getValue();
+    if (oldHash == null) {
+      if (!sm.isPackaged() && !SModelStereotype.isStubModelStereotype(sm.getStereotype())) {
+        changedModels.add(modelReference);
+      }
+      continue;
+    }
+    Map<String,String> map=ModelDigestUtil.getGenerationHashes(sm,myProject);
+    String newHash=map != null ? map.get(ModelDigestUtil.FILE) : null;
+    if (newHash == null || !oldHash.equals(newHash)) {
+      changedModels.add(modelReference);
+    }
+  }
   List<SNode> rootsList=myModel.getSModel().getRoots();
   Map<String,SNode> rootById=new HashMap<String,SNode>();
   myUnchangedRoots=new HashSet<SNode>();
@@ -24,7 +46,16 @@
     if (newHash == null || !newHash.equals(oldHash)) {
       continue;
     }
-    myUnchangedRoots.add(root);
+    boolean isDirty=false;
+    for (    String m : rd.getExternal()) {
+      if (changedModels.contains(m)) {
+        isDirty=true;
+        break;
+      }
+    }
+    if (!isDirty) {
+      myUnchangedRoots.add(root);
+    }
   }
   if (myUnchangedRoots.isEmpty()) {
     return;
