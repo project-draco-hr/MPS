@@ -1,29 +1,46 @@
 {
-  List<Node> fixedLayer;
+  final Graph graph=nodeLayeredOrder.getGraph();
+  List<Integer> fixedLayer;
   if (dir == Edge.Direction.FRONT) {
-    fixedLayer=nodeOrder.getOrder(layerToSort + 1);
+    fixedLayer=nodeLayeredOrder.getIntOrder(layerToSort + 1);
   }
  else {
-    fixedLayer=nodeOrder.getOrder(layerToSort - 1);
+    fixedLayer=nodeLayeredOrder.getIntOrder(layerToSort - 1);
   }
-  Map<Node,Integer> nodesOrder=MapSequence.fromMap(new HashMap<Node,Integer>());
+  Map<Integer,Integer> nodesOrder=MapSequence.fromMap(new HashMap<Integer,Integer>());
   for (int i=0; i < ListSequence.fromList(fixedLayer).count(); i++) {
     MapSequence.fromMap(nodesOrder).put(ListSequence.fromList(fixedLayer).getElement(i),i);
   }
-  final Map<Node,Integer> median=MapSequence.fromMap(new HashMap<Node,Integer>());
-  List<Node> layerOrder=nodeOrder.getOrder(layerToSort);
-  for (  Node node : ListSequence.fromList(layerOrder)) {
-    MapSequence.fromMap(median).put(node,computeMedian(node,nodesOrder,dir));
+  final Map<Integer,Integer> median=MapSequence.fromMap(new HashMap<Integer,Integer>());
+  final Map<Integer,Double> barycenter=MapSequence.fromMap(new HashMap<Integer,Double>());
+  List<Integer> layerOrder=nodeLayeredOrder.getIntOrder(layerToSort);
+  for (  int index : ListSequence.fromList(layerOrder)) {
+    Node node=graph.getNode(index);
+    MapSequence.fromMap(median).put(index,computeMedian(node,nodesOrder,dir));
+    MapSequence.fromMap(barycenter).put(index,computeBarycenter(node,nodesOrder,dir));
   }
-  layerOrder=ListSequence.fromList(layerOrder).sort(new Comparator<Node>(){
-    public int compare(    Node a,    Node b){
+  layerOrder=ListSequence.fromList(layerOrder).sort(new Comparator<Integer>(){
+    public int compare(    Integer a,    Integer b){
       int ma=MapSequence.fromMap(median).get(a);
       int mb=MapSequence.fromMap(median).get(b);
       if (ma != mb) {
         return ma - mb;
       }
-      return ListSequence.fromList(b.getEdges(dir)).count() % 2 - ListSequence.fromList(a.getEdges(dir)).count() % 2;
+      double d=MapSequence.fromMap(barycenter).get(a) - MapSequence.fromMap(barycenter).get(b);
+      if (d < 0) {
+        return -1;
+      }
+      if (d > 0) {
+        return 1;
+      }
+      return 0;
     }
   }
 ,true).toListSequence();
+  nodeLayeredOrder.setLayer(ListSequence.fromList(layerOrder).select(new ISelector<Integer,Node>(){
+    public Node select(    Integer it){
+      return graph.getNode(it);
+    }
+  }
+).toListSequence(),layerToSort);
 }
