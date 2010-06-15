@@ -7,8 +7,14 @@
   }
   GenerationFilter filter=new GenerationFilter(myOriginalInputModel,myInvocationContext.getProject(),myGenerationContext);
   myDependenciesBuilder=filter.createDependenciesBuilder();
-  if (!filter.getUnchangedRoots().isEmpty()) {
-    myLogger.info(filter.getUnchangedRoots().size() + " roots are unchanged");
+  if (!filter.getUnchangedRoots().isEmpty() || !filter.areConditionalsDirty()) {
+    int unchanged=filter.getUnchangedRoots().size();
+    int total=filter.getRootsCount();
+    myLogger.info((filter.areConditionalsDirty() ? "" : "descriptors and ") + unchanged + " of "+ total+ " roots are unchanged");
+    if (total > 0 && unchanged == total && !filter.areConditionalsDirty()) {
+      myLogger.info("generated files are up-to-date");
+      return new GenerationStatus(myOriginalInputModel.getSModel(),null,myDependenciesBuilder.getResult(myInvocationContext.getProject()),false,false,false);
+    }
   }
   try {
     SModel currInputModel=myOriginalInputModel.getSModel();
