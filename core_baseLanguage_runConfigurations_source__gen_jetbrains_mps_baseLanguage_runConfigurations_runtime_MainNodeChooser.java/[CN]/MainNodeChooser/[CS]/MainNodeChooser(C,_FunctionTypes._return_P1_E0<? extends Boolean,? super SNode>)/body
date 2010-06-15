@@ -2,6 +2,7 @@
   super();
   this.myTargetConcept=targetConcept;
   this.myAcceptor=acceptor;
+  myScope=GlobalFileteredScope.getInstance();
   this.init(new ActionListener(){
     public void actionPerformed(    ActionEvent p0){
       final FindUsagesManager findUsegesManager=FindUsagesManager.getInstance();
@@ -9,7 +10,7 @@
       final Wrappers._T<List<SNode>> toChooseFrom=new Wrappers._T<List<SNode>>();
       ModelAccess.instance().runReadAction(new Runnable(){
         public void run(){
-          Set<SNode> instances=findUsegesManager.findInstances(((AbstractConceptDeclaration)SNodeOperations.getAdapter(MainNodeChooser.this.myTargetConcept)),GlobalFileteredScope.getInstance(),progressAdapter,false);
+          Set<SNode> instances=findUsegesManager.findInstances(((AbstractConceptDeclaration)SNodeOperations.getAdapter(MainNodeChooser.this.myTargetConcept)),myScope,progressAdapter,false);
           if (MainNodeChooser.this.myAcceptor == null) {
             toChooseFrom.value=ListSequence.fromList(ListSequence.fromListWithValues(new ArrayList<SNode>(),instances)).toListSequence();
           }
@@ -26,6 +27,53 @@
 );
       SNode selectedNode=CommonChoosers.showDialogNodeChooser(MainNodeChooser.this,toChooseFrom.value);
       MainNodeChooser.this.setNode(selectedNode);
+    }
+  }
+);
+  addActionListener(new ActionListener(){
+    public void actionPerformed(    ActionEvent event){
+      final String text=getText();
+      if (StringUtils.isEmpty(text)) {
+        setNode(null);
+        return;
+      }
+      int lastDot=text.lastIndexOf(".");
+      if (lastDot <= 0) {
+        setNode(null);
+        return;
+      }
+      List<SModelDescriptor> descriptors=myScope.getModelDescriptors(text.substring(0,lastDot));
+      ListSequence.fromList(descriptors).visitAll(new IVisitor<SModelDescriptor>(){
+        public void visit(        final SModelDescriptor descriptor){
+          ModelAccess.instance().runReadAction(new Runnable(){
+            public void run(){
+              SModel smodel=descriptor.getSModel();
+              Iterable<SNode> nodes=ListSequence.fromList(SModelOperations.getNodes(smodel,null)).where(new IWhereFilter<SNode>(){
+                public boolean accept(                SNode it){
+                  if (!(it.isInstanceOfConcept(((AbstractConceptDeclaration)SNodeOperations.getAdapter(MainNodeChooser.this.myTargetConcept))))) {
+                    return false;
+                  }
+                  if (myAcceptor == null) {
+                    return getFqName(it).equals(text);
+                  }
+ else {
+                    return myAcceptor.invoke(it) && getFqName(it).equals(text);
+                  }
+                }
+              }
+);
+              if (Sequence.fromIterable(nodes).isEmpty()) {
+                setNode(null);
+              }
+ else {
+                setNode(Sequence.fromIterable(nodes).first());
+              }
+            }
+          }
+);
+        }
+      }
+);
     }
   }
 );
