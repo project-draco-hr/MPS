@@ -8,43 +8,40 @@
     public void run(){
       try {
         Thread.sleep(IntentionsSupport.INTENTION_SHOW_DELAY);
-        final boolean[] finished=new boolean[1];
-        final boolean[] enabledPresent=new boolean[1];
-        ModelAccess.instance().runReadAction(new Runnable(){
-          public void run(){
-            if (isInconsistentEditor() || myEditor.isReadOnly()) {
-              finished[0]=false;
-              return;
-            }
-            enabledPresent[0]=!getEnabledIntentions().isEmpty();
-            finished[0]=true;
+        boolean show=ModelAccess.instance().runReadAction(new Computable<Boolean>(){
+          public Boolean compute(){
+            if (isInconsistentEditor() || myEditor.isReadOnly())             return false;
+            return !getEnabledIntentions(false).isEmpty();
           }
         }
 );
-        if (!finished[0])         return;
+        if (!show)         return;
         if (interrupted())         return;
         ModelAccess.instance().runReadInEDT(new Runnable(){
           public void run(){
-            if (isInconsistentEditor())             return;
-            if (myEditor.getSelectedCell() == null || !enabledPresent[0]) {
+            if (isInconsistentEditor() || myEditor.isReadOnly())             return;
+            if (myEditor.getSelectedCell() == null) {
               hideLightBulb();
-              return;
             }
-            adjustLightBulbLocation();
-            showLightBulb(new Computable<Boolean>(){
-              public Boolean compute(){
-                return interrupted();
+ else {
+              adjustLightBulbLocation();
+              showLightBulb(new Computable<Boolean>(){
+                public Boolean compute(){
+                  return interrupted();
+                }
               }
-            }
 );
+            }
           }
         }
 );
-        myShowIntentionsThread.compareAndSet(this,null);
       }
  catch (      InterruptedException e) {
       }
 catch (      RuntimeInterruptedException e) {
+      }
+ finally {
+        myShowIntentionsThread.compareAndSet(this,null);
       }
     }
   }
