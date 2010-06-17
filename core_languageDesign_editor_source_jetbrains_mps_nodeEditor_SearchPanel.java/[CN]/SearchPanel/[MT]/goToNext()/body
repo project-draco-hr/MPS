@@ -1,20 +1,31 @@
 {
-  if (myCells.size() == 0)   return;
+  if (mySearchEntries.size() == 0)   return;
   addToHistory();
-  int index=Math.max(0,myCells.indexOf(myEditor.getSelectedCell()));
-  if (index >= myCells.size() - 1) {
-    index=0;
+  EditorCell selectedCell=myEditor.getDeepestSelectedCell();
+  int selectionEnd=-1;
+  if (selectedCell instanceof EditorCell_Label) {
+    EditorCell_Label labelCell=(EditorCell_Label)selectedCell;
+    selectionEnd=labelCell.getSelectionEnd();
   }
+  SearchEntry entryToSelect=null;
+  for (ListIterator<SearchEntry> it=mySearchEntries.listIterator(); it.hasNext() && entryToSelect == null; ) {
+    SearchEntry currentEntry=it.next();
+    if (currentEntry.getStartLabel().equals(selectedCell)) {
+      while (entryToSelect == null) {
+        if (!currentEntry.getStartLabel().equals(selectedCell) || selectionEnd <= currentEntry.getFirstRange().getStartPosition()) {
+          entryToSelect=currentEntry;
+        }
+        if (it.hasNext()) {
+          currentEntry=it.next();
+        }
  else {
-    while (myCells.get(index).equals(myEditor.getSelectedCell())) {
-      if (index >= myCells.size() - 1) {
-        index=0;
-        break;
-      }
- else {
-        index++;
+          break;
+        }
       }
     }
   }
-  changeSelection(index);
+  if (entryToSelect == null) {
+    entryToSelect=mySearchEntries.get(0);
+  }
+  entryToSelect.select();
 }
