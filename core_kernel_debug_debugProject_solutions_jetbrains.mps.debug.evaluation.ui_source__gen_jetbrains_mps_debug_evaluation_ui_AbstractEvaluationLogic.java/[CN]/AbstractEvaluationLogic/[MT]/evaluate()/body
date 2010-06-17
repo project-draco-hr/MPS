@@ -27,7 +27,14 @@
       }
       ClassLoader loader=handler.getCompiler().getClassLoader(this.myUiState.getClass().getClassLoader());
       Class clazz=Class.forName(fullClassName,true,loader);
-      Evaluator evaluator=(Evaluator)clazz.getConstructor(JavaUiState.class).newInstance(this.myUiState);
+      Evaluator evaluator;
+      try {
+        evaluator=(Evaluator)clazz.getConstructor(JavaUiState.class).newInstance(this.myUiState);
+      }
+ catch (      InvocationTargetException e) {
+        myUiState=myDebugSession.refresh();
+        evaluator=(Evaluator)clazz.getConstructor(JavaUiState.class).newInstance(this.myUiState);
+      }
       IValueProxy value=evaluator.evaluate();
       return value;
     }
@@ -35,7 +42,10 @@
       throw new EvaluationException("Errors during generation.");
     }
   }
- catch (  EvaluationException e) {
+ catch (  InvocationTargetException e) {
+    throw new InvocationTargetEvaluationException(e.getCause());
+  }
+catch (  EvaluationException e) {
     throw e;
   }
 catch (  Throwable t) {
