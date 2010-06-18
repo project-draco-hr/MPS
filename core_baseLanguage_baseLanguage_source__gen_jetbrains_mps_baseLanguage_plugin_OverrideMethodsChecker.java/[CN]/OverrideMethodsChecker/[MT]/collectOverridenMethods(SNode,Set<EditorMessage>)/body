@@ -23,7 +23,13 @@
     superClassifierTooltip.append((isInterface ? "Is implemented by" : "Is subclassed by"));
     for (    SNode subClassifier : Sequence.fromIterable(derivedClassifiers)) {
       superClassifierTooltip.append(TOOLTIP_INDENT);
-      superClassifierTooltip.append(getPresentation(subClassifier));
+      superClassifierTooltip.append(getClassifierPresentation(subClassifier));
+      if (SNodeOperations.isInstanceOf(subClassifier,"jetbrains.mps.baseLanguage.structure.EnumClass")) {
+        for (        SNode enumConstant : ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(subClassifier,"jetbrains.mps.baseLanguage.structure.EnumClass"),"enumConstant",true))) {
+          superClassifierTooltip.append(TOOLTIP_INDENT);
+          superClassifierTooltip.append(getEnumConstantPresentation(enumConstant));
+        }
+      }
     }
   }
   SetSequence.fromSet(messages).addElement(new SubclassedClassifierEditorMessage(container,this,superClassifierTooltip.toString(),isInterface));
@@ -39,17 +45,17 @@
   if (MapSequence.fromMap(nameToMethodsMap).isEmpty()) {
     return;
   }
-  Map<SNode,Set<Tuples._2<SNode,SNode>>> overridenToOverridingMethodsMap=createOverridenToOverridingMethodsMap(nameToMethodsMap,derivedClassifiers);
+  Map<SNode,Set<SNode>> overridenToOverridingMethodsMap=createOverridenToOverridingMethodsMap(nameToMethodsMap,derivedClassifiers);
   for (  SNode overridenMethod : SetSequence.fromSet(MapSequence.fromMap(overridenToOverridingMethodsMap).keySet())) {
     boolean overriden=!(SPropertyOperations.getBoolean(overridenMethod,"isAbstract"));
     StringBuffer tooltip=new StringBuffer("Is ");
     tooltip.append((overriden ? "overriden" : "implemented"));
     tooltip.append(" in");
     int messageCounter=0;
-    for (Iterator<Tuples._2<SNode,SNode>> it=SetSequence.fromSet(MapSequence.fromMap(overridenToOverridingMethodsMap).get(overridenMethod)).iterator(); it.hasNext(); ) {
-      SNode overridingClassifier=it.next()._1();
+    for (Iterator<SNode> it=SetSequence.fromSet(MapSequence.fromMap(overridenToOverridingMethodsMap).get(overridenMethod)).iterator(); it.hasNext(); ) {
+      SNode overridingMethod=it.next();
       tooltip.append(TOOLTIP_INDENT);
-      tooltip.append(getPresentation(overridingClassifier));
+      tooltip.append(getPresentation(SNodeOperations.getParent(overridingMethod)));
       if (++messageCounter == MAX_MESSAGE_NUMBER && it.hasNext()) {
         tooltip.append(TOOLTIP_INDENT);
         tooltip.append("...");
