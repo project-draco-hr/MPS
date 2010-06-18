@@ -1,13 +1,27 @@
 {
+  myGraph=blockGraph;
   BlockGraphProcessor.ClassesFinder finder=new BlockGraphProcessor.ClassesFinder();
   finder.doDfs(blockGraph);
   int curClass=1;
   myShift=new int[myMaxClass + 1];
-  myPosition=new int[blockGraph.getNumNodes()];
+  myLayers=new NodeLayers(blockGraph);
   for (  Node node : ListSequence.fromList(blockGraph.getNodes())) {
-    if (myClasses[node.getIndex()] == curClass) {
+    int index=node.getIndex();
+    if (myClasses[index] == curClass) {
+      processClass(index);
+      if (myShift[myClasses[index]] == Integer.MAX_VALUE) {
+        myShift[myClasses[index]]=0;
+      }
+      curClass++;
     }
-    curClass++;
   }
-  debugInfo();
+  int minPos=Integer.MAX_VALUE;
+  for (  Node node : ListSequence.fromList(blockGraph.getNodes())) {
+    myLayers.set(node,myLayers.get(node) + myShift[myClasses[node.getIndex()]]);
+    minPos=Math.min(minPos,myLayers.get(node));
+  }
+  for (  Node node : ListSequence.fromList(blockGraph.getNodes())) {
+    myLayers.set(node,myLayers.get(node) - minPos);
+  }
+  return myLayers;
 }
