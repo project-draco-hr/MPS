@@ -1,2 +1,23 @@
 {
+  if (sourceModels.isEmpty())   return;
+  final RefactoringNodeMembersAccessModifier modifier=new RefactoringNodeMembersAccessModifier();
+  try {
+    final List<SModelDescriptor> descriptors=new ArrayList<SModelDescriptor>();
+    ModelAccess.instance().runWriteAction(new Runnable(){
+      public void run(){
+        refactoringContext.setUpMembersAccessModifier(modifier);
+        modifier.addModelsToModify(sourceModels);
+        SNode.setNodeMemeberAccessModifier(modifier);
+        for (        SModel model : sourceModels) {
+          descriptors.add(model.getModelDescriptor());
+        }
+      }
+    }
+);
+    IOperationContext operationContext=ProjectOperationContext.get(refactoringContext.getSelectedProject());
+    new GeneratorManager(operationContext.getProject(),new GenerationSettings()).generateModelsFromDifferentModules(operationContext,descriptors,new JavaGenerationHandler());
+  }
+  finally {
+    SNode.setNodeMemeberAccessModifier(null);
+  }
 }
