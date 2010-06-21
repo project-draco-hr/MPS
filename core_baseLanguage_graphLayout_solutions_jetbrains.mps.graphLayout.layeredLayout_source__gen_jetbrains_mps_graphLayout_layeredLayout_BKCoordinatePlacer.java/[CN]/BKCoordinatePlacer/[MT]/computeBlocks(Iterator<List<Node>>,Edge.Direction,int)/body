@@ -1,0 +1,54 @@
+{
+  Map<Node,Node> roots=new NodeMap<Node>(myGraph);
+  for (  Node node : ListSequence.fromList(myGraph.getNodes())) {
+    MapSequence.fromMap(roots).put(node,node);
+  }
+  final Wrappers._T<_FunctionTypes._return_P2_E0<? extends Integer,? super Edge,? super Edge>> edgeComparator=new Wrappers._T<_FunctionTypes._return_P2_E0<? extends Integer,? super Edge,? super Edge>>();
+  int initPositionValue;
+  if (layerDirection == LEFTMOST) {
+    edgeComparator.value=new _FunctionTypes._return_P2_E0<Integer,Edge,Edge>(){
+      public Integer invoke(      Edge a,      Edge b){
+        return MapSequence.fromMap(myPosInLayer).get(a.getTarget(dir)) - MapSequence.fromMap(myPosInLayer).get(b.getTarget(dir));
+      }
+    }
+;
+    initPositionValue=-1;
+  }
+ else {
+    edgeComparator.value=new _FunctionTypes._return_P2_E0<Integer,Edge,Edge>(){
+      public Integer invoke(      Edge a,      Edge b){
+        return MapSequence.fromMap(myPosInLayer).get(b.getTarget(dir)) - MapSequence.fromMap(myPosInLayer).get(a.getTarget(dir));
+      }
+    }
+;
+    initPositionValue=Integer.MAX_VALUE;
+  }
+  layerIterator.next();
+  while (layerIterator.hasNext()) {
+    int curConnectedPos=initPositionValue;
+    Iterator<Node> nodeIterator=getListIterator(layerIterator.next(),layerDirection);
+    while (nodeIterator.hasNext()) {
+      Node node=nodeIterator.next();
+      if (ListSequence.fromList(node.getEdges(dir)).count() > 0) {
+        List<Edge> sortedByPos=ListSequence.fromList(node.getEdges(dir)).sort(new Comparator<Edge>(){
+          public int compare(          Edge a,          Edge b){
+            return edgeComparator.value.invoke(a,b);
+          }
+        }
+,true).toListSequence();
+        List<Edge> candidates=ListSequence.fromList(new ArrayList<Edge>());
+        ListSequence.fromList(candidates).addElement(ListSequence.fromList(sortedByPos).getElement((ListSequence.fromList(sortedByPos).count() - 1) / 2));
+        ListSequence.fromList(candidates).addElement(ListSequence.fromList(sortedByPos).getElement(ListSequence.fromList(sortedByPos).count() / 2));
+        if (layerDirection != LEFTMOST) {
+          candidates=ListSequence.fromList(candidates).reversedList();
+        }
+        for (        Edge candidate : ListSequence.fromList(candidates)) {
+          if (MapSequence.fromMap(roots).get(node) == node) {
+            curConnectedPos=this.tryToAddRoot(node,roots,candidate,curConnectedPos,dir,layerDirection);
+          }
+        }
+      }
+    }
+  }
+  return roots;
+}
