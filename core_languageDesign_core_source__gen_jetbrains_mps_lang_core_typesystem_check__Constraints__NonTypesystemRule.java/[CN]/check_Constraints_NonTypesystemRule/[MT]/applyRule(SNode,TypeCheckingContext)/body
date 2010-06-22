@@ -3,11 +3,9 @@
   if (operationContext == null) {
     return;
   }
-  SNode node=baseConcept;
   ModelConstraintsManager cm=ModelConstraintsManager.getInstance();
-  if (node.getParent() != null && !(node.getParent().isUnknown())) {
-    String role=node.getRole_();
-    LinkDeclaration link=node.getParent().getLinkDeclaration(role);
+  if (SNodeOperations.getParent(node) != null && !(SNodeOperations.getParent(node).isUnknown())) {
+    SNode link=SNodeOperations.getContainingLinkDeclaration(node);
     if (!(node.isAttribute())) {
       if (link == null) {
 {
@@ -18,9 +16,7 @@
         return;
       }
     }
-    SNode linkNode=(link == null ? null : link.getNode());
-    boolean canBeChild=cm.canBeChild(node.getConceptFqName(),operationContext,node.getParent(),linkNode);
-    if (!(canBeChild)) {
+    if (!(cm.canBeChild(node.getConceptFqName(),operationContext,SNodeOperations.getParent(node),link))) {
 {
         BaseIntentionProvider intentionProvider=null;
         IErrorTarget errorTarget=new NodeErrorTarget();
@@ -35,7 +31,7 @@
     }
   }
   if (node.isRoot()) {
-    boolean canBeRoot=cm.canBeRoot(operationContext,node.getConceptFqName(),node.getModel());
+    boolean canBeRoot=cm.canBeRoot(operationContext,node.getConceptFqName(),SNodeOperations.getModel(node));
     if (!(canBeRoot)) {
 {
         BaseIntentionProvider intentionProvider=null;
@@ -50,13 +46,13 @@
       }
     }
   }
-  for (  SNode child : node.getChildren()) {
-    SNode childConcept=BaseAdapter.fromAdapter(child.getConceptDeclarationAdapter());
-    LinkDeclaration link=node.getLinkDeclaration(child.getRole_());
-    if (link == null) {
+  for (  SNode child : SNodeOperations.getChildren(node)) {
+    SNode childConcept=SNodeOperations.getConceptDeclaration(child);
+    SNode childLink=SNodeOperations.getContainingLinkDeclaration(child);
+    if (childLink == null) {
       continue;
     }
-    if (!(cm.canBeParent(node,childConcept,link.getNode(),operationContext))) {
+    if (!(cm.canBeParent(node,childConcept,childLink,operationContext))) {
 {
         BaseIntentionProvider intentionProvider=null;
         IErrorTarget errorTarget=new NodeErrorTarget();
@@ -74,6 +70,42 @@
         BaseIntentionProvider intentionProvider=null;
         IErrorTarget errorTarget=new NodeErrorTarget();
         IErrorReporter _reporter_2309309498=typeCheckingContext.reportTypeError(child,"Node isn't applicable in the context","r:cec599e3-51d2-48a7-af31-989e3cbd593c(jetbrains.mps.lang.core.typesystem)","1998770035420757821",intentionProvider,errorTarget);
+      }
+    }
+  }
+  SNode concept=SNodeOperations.getConceptDeclaration(node);
+  ConceptAndSuperConceptsScope chs=new ConceptAndSuperConceptsScope(((AbstractConceptDeclaration)SNodeOperations.getAdapter(concept)));
+  List<PropertyDeclaration> props=chs.getAdapters(PropertyDeclaration.class);
+  for (  PropertyDeclaration p : ListSequence.fromList(props)) {
+    PropertySupport ps=PropertySupport.getPropertySupport(p);
+    String propertyName=p.getName();
+    if (propertyName == null) {
+      LOG.error("Property declaration has a null name, declaration id: " + p.getNode().getSNodeId() + ", model: "+ p.getModel().getSModelFqName());
+      continue;
+    }
+    String value=ps.fromInternalValue(node.getProperty(propertyName));
+    if (!(ps.canSetValue(node,p.getName(),value,operationContext.getScope(),false))) {
+{
+        BaseIntentionProvider intentionProvider=null;
+        intentionProvider=new BaseIntentionProvider("jetbrains.mps.lang.core.typesystem.RemoveUndeclaredProperty_QuickFix",false);
+        intentionProvider.putArgument("propertyName",p.getName());
+        IErrorTarget errorTarget=new NodeErrorTarget();
+        errorTarget=new PropertyErrorTarget(p.getName());
+        IErrorReporter _reporter_2309309498=typeCheckingContext.reportTypeError(node,"Property constraint violation for property \"" + p.getName() + "\"","r:cec599e3-51d2-48a7-af31-989e3cbd593c(jetbrains.mps.lang.core.typesystem)","3618120580763111372",intentionProvider,errorTarget);
+      }
+    }
+  }
+  for (  String name : SetSequence.fromSet(node.getPropertyNames())) {
+    if (node.isRoot() && SNode.PACK.equals(name)) {
+      continue;
+    }
+    if (SModelSearchUtil.findPropertyDeclaration(((AbstractConceptDeclaration)SNodeOperations.getAdapter(concept)),name) == null) {
+{
+        BaseIntentionProvider intentionProvider=null;
+        intentionProvider=new BaseIntentionProvider("jetbrains.mps.lang.core.typesystem.RemoveUndeclaredProperty_QuickFix",false);
+        intentionProvider.putArgument("propertyName",name);
+        IErrorTarget errorTarget=new NodeErrorTarget();
+        IErrorReporter _reporter_2309309498=typeCheckingContext.reportWarning(node,"Usage of undeclared property \"" + name + "\"","r:cec599e3-51d2-48a7-af31-989e3cbd593c(jetbrains.mps.lang.core.typesystem)","4049502122675887138",intentionProvider,errorTarget);
       }
     }
   }
