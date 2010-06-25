@@ -11,10 +11,21 @@
         if (EXTRA_CHECKS_ENABLED && fileStatus == FileStatus.NOT_CHANGED) {
           SModel model=modelDescriptor.getSModel();
           if (model != null && !(model.isDisposed())) {
-            for (            SNode node : Sequence.fromIterable(model.getAllNodesWithIds())) {
+            for (            final SNode node : Sequence.fromIterable(model.getAllNodesWithIds())) {
               myChangeCountForNode.zeroizeKey(node);
               myPropertyChangeCountForNode.zeroizeKey(node);
               myReferenceChangeCountForNode.zeroizeKey(node);
+              ThreadUtils.runInUIThreadNoWait(new Runnable(){
+                public void run(){
+                  ListSequence.fromList(MapSequence.fromMap(mySNodesToTreeNodes).get(node)).visitAll(new IVisitor<SNodeTreeNode>(){
+                    public void visit(                    SNodeTreeNode tn){
+                      tn.removeTreeMessages(ProjectTreeChangesHighlighter.this,true);
+                    }
+                  }
+);
+                }
+              }
+);
             }
           }
         }
