@@ -2,14 +2,28 @@
   Graph originalGraph=embeddedGraph.getGraph();
   Node newNode=originalGraph.addDummyNode();
   edge.removeFromGraph();
-  for (  Face face : ListSequence.fromList(MapSequence.fromMap(embeddedGraph.getAdjacentFacesMap()).get(edge))) {
+  List<Edge> newEdges=ListSequence.fromList(new ArrayList<Edge>());
+  ListSequence.fromList(newEdges).addElement(edge.getSource().addEdgeTo(newNode));
+  ListSequence.fromList(newEdges).addElement(newNode.addEdgeTo(edge.getTarget()));
+  List<Face> facesToProcess=ListSequence.fromList(new ArrayList<Face>());
+  ListSequence.fromList(facesToProcess).addSequence(ListSequence.fromList(MapSequence.fromMap(embeddedGraph.getAdjacentFacesMap()).get(edge)));
+  for (  Face face : ListSequence.fromList(facesToProcess)) {
     List<Dart> darts=face.getDarts();
     int pos=0;
     while (ListSequence.fromList(darts).getElement(pos).getEdge() != edge) {
       pos++;
     }
-    ListSequence.fromList(darts).setElement(pos,new Dart(edge.getSource().addEdgeTo(newNode),ListSequence.fromList(darts).getElement(pos).getDirection()));
-    ListSequence.fromList(darts).insertElement(pos + 1,new Dart(newNode.addEdgeTo(edge.getTarget()),ListSequence.fromList(darts).getElement(pos).getDirection()));
+    Dart dartToReplace=ListSequence.fromList(darts).getElement(pos);
+    for (    Edge newEdge : ListSequence.fromList(newEdges)) {
+      if (ListSequence.fromList(newEdge.getAdjacentNodes()).contains(dartToReplace.getSource())) {
+        embeddedGraph.setDart(face,pos,new Dart(newEdge,dartToReplace.getSource()));
+      }
+    }
+    for (    Edge newEdge : ListSequence.fromList(newEdges)) {
+      if (ListSequence.fromList(newEdge.getAdjacentNodes()).contains(dartToReplace.getTarget())) {
+        embeddedGraph.insertDart(face,pos + 1,new Dart(newEdge,newNode));
+      }
+    }
   }
   return newNode;
 }
