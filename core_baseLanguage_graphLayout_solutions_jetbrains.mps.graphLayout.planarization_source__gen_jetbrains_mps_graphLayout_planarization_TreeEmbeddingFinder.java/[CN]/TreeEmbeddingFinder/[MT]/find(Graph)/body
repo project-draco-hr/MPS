@@ -1,0 +1,48 @@
+{
+  EmbeddedGraph embeddedGraph=new EmbeddedGraph(graph);
+  List<Edge> removed=ListSequence.fromList(new ArrayList<Edge>());
+  Face outerFace=getOuterTreeFace(graph,removed);
+  for (  Edge edge : ListSequence.fromList(removed)) {
+    edge.removeFromGraph();
+  }
+  embeddedGraph.addFace(outerFace);
+  embeddedGraph.setOuterFace(outerFace);
+  for (  Edge removedEdge : ListSequence.fromList(removed)) {
+    DualGraph dualGraph=new DualGraph(embeddedGraph);
+    Map<Edge,List<Face>> adjacentFacesMap=embeddedGraph.getAdjacentFacesMap();
+    List<Node> newNodes=ListSequence.fromList(new ArrayList<Node>());
+    for (    Node node : ListSequence.fromList(removedEdge.getAdjacentNodes())) {
+      Node newNode=dualGraph.addDummyNode();
+      for (      Edge nodeEdge : ListSequence.fromList(node.getEdges(Edge.Direction.BOTH))) {
+        for (        Face face : ListSequence.fromList(MapSequence.fromMap(adjacentFacesMap).get(nodeEdge))) {
+          newNode.addEdgeTo(MapSequence.fromMap(dualGraph.getNodesMap()).get(face));
+        }
+      }
+      ListSequence.fromList(newNodes).addElement(newNode);
+    }
+    System.out.println("before: " + embeddedGraph);
+    System.out.println(dualGraph);
+    System.out.println("adding " + removedEdge);
+    List<Edge> path=ShortestPath.getPath(dualGraph,ListSequence.fromList(newNodes).getElement(0),ListSequence.fromList(newNodes).getElement(1),Edge.Direction.BOTH);
+    List<Node> nodePath=ListSequence.fromList(new ArrayList<Node>());
+    List<Face> facePath=ListSequence.fromList(new ArrayList<Face>());
+    ListSequence.fromList(nodePath).addElement(ListSequence.fromList(removedEdge.getAdjacentNodes()).getElement(0));
+    Node cur=ListSequence.fromList(newNodes).getElement(0);
+    for (    Edge edge : ListSequence.fromList(path)) {
+      if (MapSequence.fromMap(adjacentFacesMap).get(edge) != null) {
+        ListSequence.fromList(nodePath).addElement(split(embeddedGraph,MapSequence.fromMap(dualGraph.getEdgesMap()).get(edge)));
+      }
+      cur=edge.getOpposite(cur);
+      Face curFace=MapSequence.fromMap(dualGraph.getFacesMap()).get(cur);
+      if (curFace != null) {
+        ListSequence.fromList(facePath).addElement(curFace);
+      }
+    }
+    ListSequence.fromList(nodePath).addElement(ListSequence.fromList(removedEdge.getAdjacentNodes()).getElement(1));
+    for (int i=0; i < ListSequence.fromList(nodePath).count() - 1; i++) {
+      splitFace(embeddedGraph,ListSequence.fromList(facePath).getElement(i),ListSequence.fromListAndArray(new ArrayList<Node>(),ListSequence.fromList(nodePath).getElement(i),ListSequence.fromList(nodePath).getElement(i + 1)));
+    }
+    System.out.println("after: " + embeddedGraph);
+  }
+  return embeddedGraph;
+}
