@@ -5,25 +5,22 @@
       Method method=null;
       String fqName=NameUtil.nodeFQName(concept);
       MethodInfo mi=new MethodInfo(fqName,methodName,parameterTypes);
-synchronized (myMethods) {
-        if (myMethods.containsKey(mi)) {
-          return myMethods.get(mi);
+      Method mm=myMethods.get(mi);
+      if (mm != null)       return mm;
+      String behaviorClass=behaviorClassByConceptFqName(fqName);
+      try {
+        Class cls=l.getClass(behaviorClass);
+        if (cls != null) {
+          method=cls.getMethod(methodName,parameterTypes);
         }
-        String behaviorClass=behaviorClassByConceptFqName(fqName);
-        try {
-          Class cls=l.getClass(behaviorClass);
-          if (cls != null) {
-            method=cls.getMethod(methodName,parameterTypes);
-          }
-        }
- catch (        NoSuchMethodException e) {
-        }
-        if (method != null) {
-          method.setAccessible(true);
-        }
-        myMethods.put(mi,method);
       }
-      return method;
+ catch (      NoSuchMethodException e) {
+      }
+      if (method != null) {
+        method.setAccessible(true);
+      }
+      mm=myMethods.putIfAbsent(mi,method);
+      return mm != null ? mm : method;
     }
   }
 );
