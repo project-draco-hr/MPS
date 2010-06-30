@@ -1,10 +1,19 @@
 {
-  myCaches.put(key,cache);
   myDependsOnModels.put(key,dependsOnModels);
   ModelEventRouter eventRouter=new ModelEventRouter(cache);
   myModelEventRouters.put(cache,eventRouter);
   for (  SModelDescriptor dependsOnModel : dependsOnModels) {
     dependsOnModel.addModelListener(eventRouter);
   }
-  cache.cacheAttached();
+  AbstractCache existing=myCaches.putIfAbsent(key,cache);
+  if (existing != null) {
+    myModelEventRouters.remove(cache);
+    myDependsOnModels.remove(key);
+    for (    SModelDescriptor dependsOnModel : dependsOnModels) {
+      dependsOnModel.removeModelListener(eventRouter);
+    }
+    cache.clearCache();
+    return existing;
+  }
+  return cache;
 }
