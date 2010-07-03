@@ -1,2 +1,34 @@
 {
+  int lastDot=className.lastIndexOf(".");
+  final String pkg=(lastDot == -1 ? "" : className.substring(0,lastDot));
+  Iterable<SModelDescriptor> descritptors=Sequence.fromIterable(Sequence.fromArray(SModelStereotype.values)).select(new ISelector<String,SModelDescriptor>(){
+    public SModelDescriptor select(    String stereotype){
+      SModelDescriptor descriptor=SModelRepository.getInstance().getModelDescriptor(new SModelFqName(pkg,stereotype));
+      return descriptor;
+    }
+  }
+);
+  for (  final SModelDescriptor descriptor : Sequence.fromIterable(descritptors)) {
+    if (descriptor == null) {
+      continue;
+    }
+    if (SModelStereotype.isStubModelStereotype(descriptor.getStereotype())) {
+      continue;
+    }
+    final DebugInfo info=BLDebugInfoCache.getInstance().get(descriptor);
+    if (info == null) {
+      continue;
+    }
+    final Wrappers._T<T> result=new Wrappers._T<T>();
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        result.value=nodeGetter.invoke(info,descriptor);
+      }
+    }
+);
+    if (result.value != null) {
+      return result.value;
+    }
+  }
+  return null;
 }
