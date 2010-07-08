@@ -1,0 +1,58 @@
+{
+  Graph originalGraph=this.getGraph();
+  Face faceSToE=new Face(originalGraph);
+  Face faceEToS=new Face(originalGraph);
+  List<Dart> darts=face.getDarts();
+  int posStart=-1;
+  int posEnd=-1;
+  for (int i=0; i < ListSequence.fromList(darts).count(); i++) {
+    Dart cur=ListSequence.fromList(darts).getElement(i);
+    if (cur.getSource() == start) {
+      posStart=i;
+    }
+    if (cur.getSource() == end) {
+      posEnd=i;
+    }
+  }
+  Face succ;
+  Face split;
+  int begSucc;
+  int endSucc;
+  if (posEnd > posStart) {
+    succ=faceEToS;
+    split=faceSToE;
+    begSucc=posStart;
+    endSucc=posEnd;
+  }
+ else {
+    succ=faceSToE;
+    split=faceEToS;
+    begSucc=posEnd;
+    endSucc=posStart;
+  }
+  for (int i=begSucc; i < endSucc; i++) {
+    succ.addNext(ListSequence.fromList(darts).getElement(i));
+  }
+  for (int i=endSucc; i < ListSequence.fromList(darts).count(); i++) {
+    split.addNext(ListSequence.fromList(darts).getElement(i));
+  }
+  for (int i=0; i < begSucc; i++) {
+    split.addNext(ListSequence.fromList(darts).getElement(i));
+  }
+  Node cur=start;
+  for (  Edge edge : ListSequence.fromList(path)) {
+    faceSToE.addNext(new Dart(edge,cur));
+    cur=edge.getOpposite(cur);
+  }
+  cur=end;
+  for (  Edge edge : ListSequence.fromList(path).reversedList()) {
+    faceEToS.addNext(new Dart(edge,cur));
+    cur=edge.getOpposite(cur);
+  }
+  this.removeFace(face);
+  addFace(faceEToS);
+  addFace(faceSToE);
+  if (this.isOuterFace(face)) {
+    this.setOuterFace(split);
+  }
+}

@@ -1,0 +1,53 @@
+{
+  Set<Edge> addedEdges=BiconnectAugmentation.makeBiconnected(graph);
+  Set<Node> addedNodes=SetSequence.fromSetAndArray(new HashSet<Node>(),ListSequence.fromList(graph.getNodes()).last());
+  Map<Node,Node> graphToCopy=new NodeMap<Node>(graph);
+  Map<Node,Node> copyToGraph=new NodeMap<Node>(graph);
+  Graph copy=new Graph();
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    Node newNode=copy.addNode();
+    MapSequence.fromMap(graphToCopy).put(node,newNode);
+    MapSequence.fromMap(copyToGraph).put(newNode,node);
+  }
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    MapSequence.fromMap(graphToCopy).get(edge.getSource()).addEdgeTo(MapSequence.fromMap(graphToCopy).get(edge.getTarget()));
+  }
+  EmbeddedGraph embeddedGraph=new TreeEmbeddingFinder().find(copy);
+  List<Node> outerNodes=ListSequence.fromList(new ArrayList<Node>());
+  for (  Dart dart : ListSequence.fromList(embeddedGraph.getOuterFace().getDarts())) {
+    ListSequence.fromList(outerNodes).addElement(dart.getTarget());
+  }
+  outerNodes=ListSequence.fromList(outerNodes).where(new IWhereFilter<Node>(){
+    public boolean accept(    Node it){
+      return !(it.isDummy());
+    }
+  }
+).toListSequence();
+  Node s=ListSequence.fromList(outerNodes).getElement(0);
+  Node t=ListSequence.fromList(outerNodes).getElement((ListSequence.fromList(outerNodes).count()) / 2);
+  Map<Node,Integer> num=STNumbering.number(graph,MapSequence.fromMap(copyToGraph).get(s),MapSequence.fromMap(copyToGraph).get(t));
+  for (  Edge edgeCopy : ListSequence.fromList(copy.getEdges())) {
+    if (edgeCopy.getSource().isDummy() || edgeCopy.getTarget().isDummy()) {
+      continue;
+    }
+    Node source=MapSequence.fromMap(copyToGraph).get(edgeCopy.getSource());
+    Node target=MapSequence.fromMap(copyToGraph).get(edgeCopy.getTarget());
+    if (MapSequence.fromMap(num).get(source) > MapSequence.fromMap(num).get(target)) {
+      edgeCopy.revert();
+    }
+  }
+  for (  final Node dummyCopy : ListSequence.fromList(copy.getNodes()).where(new IWhereFilter<Node>(){
+    public boolean accept(    Node it){
+      return it.isDummy();
+    }
+  }
+)) {
+    Set<Node> adj=SetSequence.fromSet(new HashSet<Node>());
+    SetSequence.fromSet(adj).addSequence(ListSequence.fromList(dummyCopy.getEdges()).select(new ISelector<Edge,Node>(){
+      public Node select(      Edge it){
+        return it.getOpposite(dummyCopy);
+      }
+    }
+));
+  }
+}

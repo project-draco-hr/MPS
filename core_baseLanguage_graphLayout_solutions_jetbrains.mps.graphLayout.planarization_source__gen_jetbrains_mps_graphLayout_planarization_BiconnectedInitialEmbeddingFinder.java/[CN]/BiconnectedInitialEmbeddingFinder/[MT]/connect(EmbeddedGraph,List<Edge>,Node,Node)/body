@@ -1,0 +1,45 @@
+{
+  DualGraph dualGraph=new DualGraph(embeddedGraph);
+  Map<Edge,List<Face>> adjacentFacesMap=embeddedGraph.getAdjacentFacesMap();
+  Node dualStart=dualGraph.addRealNode(startPath);
+  Node dualEnd=dualGraph.addRealNode(endPath);
+  List<Edge> dualPath=ShortestPath.getPath(dualGraph,dualStart,dualEnd,Edge.Direction.BOTH);
+  List<Node> nodePath=ListSequence.fromList(new ArrayList<Node>());
+  List<Face> facePath=ListSequence.fromList(new ArrayList<Face>());
+  ListSequence.fromList(nodePath).addElement(startPath);
+  Node cur=dualStart;
+  for (  Edge edge : ListSequence.fromList(dualPath)) {
+    Edge realEdge=MapSequence.fromMap(dualGraph.getEdgesMap()).get(edge);
+    if (MapSequence.fromMap(adjacentFacesMap).get(realEdge) != null) {
+      ListSequence.fromList(nodePath).addElement(embeddedGraph.splitEdge(MapSequence.fromMap(dualGraph.getEdgesMap()).get(edge)));
+    }
+    cur=edge.getOpposite(cur);
+    Face curFace=MapSequence.fromMap(dualGraph.getFacesMap()).get(cur);
+    if (curFace != null) {
+      ListSequence.fromList(facePath).addElement(curFace);
+    }
+  }
+  ListSequence.fromList(nodePath).addElement(endPath);
+  for (int i=0; i < ListSequence.fromList(nodePath).count() - 1; i++) {
+    Node curStart=ListSequence.fromList(nodePath).getElement(i);
+    Node curEnd=ListSequence.fromList(nodePath).getElement(i + 1);
+    List<Edge> tempPath=ListSequence.fromList(new ArrayList<Edge>());
+    if (i == 0) {
+      if (endPath == ListSequence.fromList(nodePath).getElement(i)) {
+        ListSequence.fromList(tempPath).addSequence(ListSequence.fromList(path));
+      }
+ else {
+        Edge lastEdge=ListSequence.fromList(path).removeLastElement();
+        lastEdge.removeFromGraph();
+        ListSequence.fromList(tempPath).addSequence(ListSequence.fromList(path));
+        Edge newEdge=lastEdge.getOpposite(endPath).addEdgeTo(curEnd);
+        ListSequence.fromList(tempPath).addElement(newEdge);
+      }
+    }
+ else {
+      Edge newEdge=curStart.addEdgeTo(curEnd);
+      ListSequence.fromList(tempPath).addElement(newEdge);
+    }
+    embeddedGraph.splitFace(ListSequence.fromList(facePath).getElement(i),tempPath,curStart,curEnd);
+  }
+}
