@@ -11,7 +11,7 @@
     }
     filesList.add(f);
   }
-  final List<FilePath> deletedPaths=new ArrayList<FilePath>();
+  final List<Change> deletedChange=new ArrayList<Change>();
   for (  AbstractVcs vcs : vcsToFiles.keySet()) {
     VcsDirtyScopeImpl scope=new VcsDirtyScopeImpl(vcs,myProject);
     List<VirtualFile> currentFiles=vcsToFiles.get(vcs);
@@ -32,10 +32,7 @@
         }
         @Override public void processChange(        Change change,        VcsKey vcsKey){
           if (change.getFileStatus().equals(FileStatus.DELETED)) {
-            ContentRevision contentRevision=change.getBeforeRevision();
-            if (contentRevision != null) {
-              deletedPaths.add(contentRevision.getFile());
-            }
+            deletedChange.add(change);
           }
         }
         @Override public void processUnversionedFile(        VirtualFile file){
@@ -50,10 +47,14 @@
       LOG.error(e);
     }
   }
-  for (  FilePath path : deletedPaths) {
-    for (    VirtualFile f : files) {
-      if (f.getPresentableUrl().equals(path.getPresentableUrl())) {
-        deleted.add(f);
+  for (  Change change : deletedChange) {
+    ContentRevision contentRevision=change.getBeforeRevision();
+    if (contentRevision != null) {
+      FilePath path=contentRevision.getFile();
+      for (      VirtualFile f : files) {
+        if (f.getPresentableUrl().equals(path.getPresentableUrl())) {
+          deleted.put(f,change);
+        }
       }
     }
   }
