@@ -1,16 +1,28 @@
 {
-  if (vf.exists()) {
-    AbstractVcs vcs=myManager.getVcsFor(vf);
+  if (file.exists()) {
+    AbstractVcs vcs=myManager.getVcsFor(file);
     if (vcs != null) {
       RollbackEnvironment ri=vcs.getRollbackEnvironment();
       if (ri != null) {
-        FilePath path=VcsContextFactory.SERVICE.getInstance().createFilePathOn(vf);
         ArrayList<VcsException> result=new ArrayList<VcsException>();
-        ri.rollbackMissingFileDeletion(Collections.singletonList(path),result,RollbackProgressListener.EMPTY);
-        for (        VcsException e : result) {
-          LOG.error(e);
+        Change change=myVirtualFilesToRevertDeletedStatus.get(file);
+        if (change != null) {
+          try {
+            byte[] contents=file.contentsToByteArray();
+            ri.rollbackChanges(Collections.singletonList(change),result,RollbackProgressListener.EMPTY);
+            for (            VcsException e : result) {
+              LOG.error(e);
+            }
+            file.setBinaryContent(contents);
+            myVcsDirtyScopeManager.fileDirty(file);
+          }
+ catch (          IOException e) {
+            LOG.error("Could not add file " + file + ": it was scheduled for deletion.",e);
+          }
         }
-        myVcsDirtyScopeManager.fileDirty(vf);
+ else {
+          LOG.error("Could not add file " + file + ": it was scheduled for deletion.");
+        }
       }
     }
   }
