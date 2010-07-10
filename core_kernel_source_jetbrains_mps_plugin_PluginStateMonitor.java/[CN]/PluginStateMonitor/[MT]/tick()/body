@@ -1,20 +1,51 @@
 {
-  LOG.assertLog(!ThreadUtils.isEventDispatchThread());
-  if (myState == State.CONNECTED && isConnected())   return;
-  if (myState == State.DISCONNECTED) {
-    if (MPSPlugin.getInstance().checkIsConnected()) {
-      setNewState(State.CONNECTED);
-      myTimer.setNewDelay(INITIAL_DELAY);
+  LOG.assertNotInEDT();
+  if (myState == State.CONNECTED) {
+    if (isConnected()) {
+      if (canOperate()) {
+        return;
+      }
+ else {
+        setNewState(State.CONNECTED_BAD_PROJECT);
+      }
+    }
+ else {
+      setNewState(State.TRYING_TO_CONNECT);
     }
   }
- else   if (myState == State.CONNECTED) {
-    setNewState(State.TRYING_TO_CONNECT);
-    myTimer.setNewDelay(INITIAL_DELAY);
+ else   if (myState == State.CONNECTED_BAD_PROJECT) {
+    if (isConnected()) {
+      if (canOperate()) {
+        setNewState(State.CONNECTED);
+      }
+ else {
+        return;
+      }
+    }
+ else {
+      setNewState(State.TRYING_TO_CONNECT);
+    }
+  }
+ else   if (myState == State.DISCONNECTED) {
+    if (MPSPlugin.getInstance().openConnectionPresent()) {
+      if (isConnected()) {
+        if (canOperate()) {
+          setNewState(State.CONNECTED);
+        }
+ else {
+          setNewState(State.CONNECTED_BAD_PROJECT);
+        }
+      }
+    }
   }
  else   if (myState == State.TRYING_TO_CONNECT) {
     if (isConnected()) {
-      setNewState(State.CONNECTED);
-      myTimer.setNewDelay(INITIAL_DELAY);
+      if (canOperate()) {
+        setNewState(State.CONNECTED);
+      }
+ else {
+        setNewState(State.CONNECTED_BAD_PROJECT);
+      }
     }
  else {
       int newDelay=(int)(myTimer.getDelay() * DELAY_MUL);
@@ -23,7 +54,6 @@
       }
  else {
         setNewState(State.DISCONNECTED);
-        myTimer.setNewDelay(INITIAL_DELAY);
       }
     }
   }
