@@ -1,0 +1,56 @@
+{
+  Map<Edge,List<Point>> edgeLayout=layout.getEdgeLayout();
+  Rectangle rect=layout.getLayoutFor(node);
+  List<Edge> sourceEdges=ListSequence.fromList(new ArrayList<Edge>());
+  List<Edge> targetEdges=ListSequence.fromList(new ArrayList<Edge>());
+  final Map<Edge,Point> adjPoint=MapSequence.fromMap(new HashMap<Edge,Point>());
+  for (  Edge edge : ListSequence.fromList(node.getOutEdges())) {
+    List<Point> path=MapSequence.fromMap(edgeLayout).get(edge);
+    if (ListSequence.fromList(path).getElement(0).y == ListSequence.fromList(path).getElement(1).y) {
+      Point connectingPoint=ListSequence.fromList(path).first();
+      if (connectingPoint.x == xCoord) {
+        ListSequence.fromList(sourceEdges).addElement(edge);
+        MapSequence.fromMap(adjPoint).put(edge,ListSequence.fromList(path).getElement(1));
+      }
+    }
+  }
+  for (  Edge edge : ListSequence.fromList(node.getInEdges())) {
+    List<Point> path=MapSequence.fromMap(edgeLayout).get(edge);
+    int size=ListSequence.fromList(path).count();
+    if (ListSequence.fromList(path).getElement(size - 1).y == ListSequence.fromList(path).getElement(size - 2).y) {
+      Point connectingPoint=ListSequence.fromList(path).last();
+      if (connectingPoint.x == xCoord) {
+        ListSequence.fromList(targetEdges).addElement(edge);
+        MapSequence.fromMap(adjPoint).put(edge,ListSequence.fromList(path).getElement(size - 2));
+      }
+    }
+  }
+  int num=ListSequence.fromList(sourceEdges).count() + ListSequence.fromList(targetEdges).count() + 1;
+  sourceEdges=ListSequence.fromList(sourceEdges).sort(new ISelector<Edge,Comparable<?>>(){
+    public Comparable<?> select(    Edge it){
+      return Math.abs(MapSequence.fromMap(adjPoint).get(it).x - xCoord);
+    }
+  }
+,false).toListSequence();
+  targetEdges=ListSequence.fromList(targetEdges).sort(new ISelector<Edge,Comparable<?>>(){
+    public Comparable<?> select(    Edge it){
+      return Math.abs(MapSequence.fromMap(adjPoint).get(it).x - xCoord);
+    }
+  }
+,true).toListSequence();
+  int step=rect.height / num;
+  int curY=rect.y + step;
+  for (  Edge edge : ListSequence.fromList(targetEdges)) {
+    List<Point> path=MapSequence.fromMap(edgeLayout).get(edge);
+    int size=ListSequence.fromList(path).count();
+    ListSequence.fromList(path).setElement(size - 1,new Point(ListSequence.fromList(path).getElement(size - 1).x,curY));
+    ListSequence.fromList(path).setElement(size - 2,new Point(ListSequence.fromList(path).getElement(size - 2).x,curY));
+    curY+=step;
+  }
+  for (  Edge edge : ListSequence.fromList(sourceEdges)) {
+    List<Point> path=MapSequence.fromMap(edgeLayout).get(edge);
+    ListSequence.fromList(path).setElement(0,new Point(ListSequence.fromList(path).getElement(0).x,curY));
+    ListSequence.fromList(path).setElement(1,new Point(ListSequence.fromList(path).getElement(1).x,curY));
+    curY+=step;
+  }
+}

@@ -1,0 +1,34 @@
+{
+  List<Edge> oldEdges=ListSequence.fromList(new ArrayList<Edge>());
+  ListSequence.fromList(oldEdges).addSequence(ListSequence.fromList(graph.getEdges()));
+  BiconnectAugmentation.makeBiconnected(graph);
+  Node addedNode=ListSequence.fromList(graph.getNodes()).last();
+  final int maxIndex=graph.getNumNodes();
+  EmbeddedGraph embeddedGraph=new ShortestPathEmbeddingFinder(new BiconnectedInitialEmbeddingFinder()).find(graph);
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    if (!(MapSequence.fromMap(xSize).containsKey(node))) {
+      MapSequence.fromMap(xSize).put(node,myNodeSize + myEdgeDistance);
+      MapSequence.fromMap(ySize).put(node,myNodeSize);
+    }
+  }
+  List<Node> outerNodes=ListSequence.fromList(new ArrayList<Node>());
+  for (  Dart dart : ListSequence.fromList(embeddedGraph.getOuterFace().getDarts())) {
+    ListSequence.fromList(outerNodes).addElement(dart.getTarget());
+  }
+  outerNodes=ListSequence.fromList(outerNodes).where(new IWhereFilter<Node>(){
+    public boolean accept(    Node it){
+      return it.getIndex() < maxIndex;
+    }
+  }
+).toListSequence();
+  Node s=ListSequence.fromList(outerNodes).getElement(0);
+  Node t=ListSequence.fromList(outerNodes).getElement((ListSequence.fromList(outerNodes).count()) / 2);
+  GraphOrientation.orientST(graph,s,t);
+  STPlanarGraph stPlanarGraph=new STPlanarGraph(embeddedGraph,s,t);
+  NodeConstraintsSupporter supporter=new NodeConstraintsSupporter();
+  supporter.setMinEdgeDistance(myEdgeDistance,5);
+  Map<Object,Rectangle> representation=supporter.getRepresentation(stPlanarGraph,xSize,ySize);
+  GraphLayout graphLayout=this.createLayout(graph,representation,xSize,ySize);
+  this.removeTempObjects(oldEdges,embeddedGraph,graphLayout,graph,addedNode);
+  return graphLayout;
+}

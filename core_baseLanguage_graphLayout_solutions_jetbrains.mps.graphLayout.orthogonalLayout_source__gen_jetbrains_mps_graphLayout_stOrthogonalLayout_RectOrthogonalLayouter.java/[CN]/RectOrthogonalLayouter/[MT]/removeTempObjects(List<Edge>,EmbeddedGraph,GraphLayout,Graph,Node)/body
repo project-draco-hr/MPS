@@ -1,0 +1,63 @@
+{
+  Set<Node> visited=SetSequence.fromSet(new HashSet<Node>());
+  for (  Edge oldEdge : ListSequence.fromList(oldEdges)) {
+    List<Edge> history=embeddedGraph.findFullHistory(oldEdge);
+    Node cur=oldEdge.getSource();
+    if (!(ListSequence.fromList(ListSequence.fromList(history).first().getAdjacentNodes()).contains(cur))) {
+      System.out.println("botva in history");
+    }
+    if (ListSequence.fromList(history).count() > 1) {
+      List<Point> oldEdgeLayout=ListSequence.fromList(new ArrayList<Point>());
+      for (      Edge edge : ListSequence.fromList(history)) {
+        List<Point> edgeLayout=graphLayout.getLayoutFor(edge);
+        if (edge.getSource() != cur) {
+          edgeLayout=ListSequence.fromList(edgeLayout).reversedList();
+        }
+        if (cur.isDummy()) {
+          Rectangle rect=graphLayout.getLayoutFor(cur);
+          int y;
+          if (SetSequence.fromSet(visited).contains(cur)) {
+            y=rect.y + rect.height;
+            int shift=myEdgeDistance / 2;
+            ListSequence.fromList(oldEdgeLayout).getElement(ListSequence.fromList(oldEdgeLayout).count() - 1).translate(shift,0);
+            ListSequence.fromList(oldEdgeLayout).getElement(ListSequence.fromList(oldEdgeLayout).count() - 2).translate(shift,0);
+            ListSequence.fromList(edgeLayout).getElement(0).translate(shift,0);
+            ListSequence.fromList(edgeLayout).getElement(1).translate(shift,0);
+          }
+ else {
+            y=rect.y;
+            SetSequence.fromSet(visited).addElement(cur);
+          }
+          Point left=ListSequence.fromList(oldEdgeLayout).removeLastElement();
+          Point right=ListSequence.fromList(edgeLayout).removeElementAt(0);
+          ListSequence.fromList(oldEdgeLayout).addElement(new Point(left.x,y));
+          ListSequence.fromList(edgeLayout).insertElement(0,new Point(right.x,y));
+        }
+        ListSequence.fromList(oldEdgeLayout).addSequence(ListSequence.fromList(edgeLayout));
+        cur=edge.getOpposite(cur);
+      }
+      graphLayout.setLayoutFor(oldEdge,oldEdgeLayout);
+    }
+  }
+  List<Node> nodesToRemove=ListSequence.fromList(graph.getNodes()).where(new IWhereFilter<Node>(){
+    public boolean accept(    Node it){
+      return it.isDummy();
+    }
+  }
+).toListSequence();
+  ListSequence.fromList(nodesToRemove).addElement(addedNode);
+  for (  Node node : ListSequence.fromList(nodesToRemove)) {
+    MapSequence.fromMap(graphLayout.getNodeLayout()).removeKey(node);
+    for (    Edge edge : ListSequence.fromList(node.getEdges())) {
+      MapSequence.fromMap(graphLayout.getEdgeLayout()).removeKey(edge);
+    }
+  }
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(graphLayout.getEdgeLayout()).keySet())) {
+    List<Point> path=graphLayout.getLayoutFor(edge);
+    for (int i=0; i < ListSequence.fromList(path).count() - 1; i++) {
+      if (ListSequence.fromList(path).getElement(i).y > ListSequence.fromList(path).getElement(i + 1).y) {
+        System.out.println("BOtva!!!!" + edge);
+      }
+    }
+  }
+}
