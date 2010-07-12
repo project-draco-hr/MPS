@@ -1,5 +1,6 @@
 {
   Set<File> generatedFiles=new HashSet<File>();
+  Map<String,GenerationRootDependencies> dependenciesByFile=null;
   DefaultFileGenerator fileGenerator=new DefaultFileGenerator();
   for (  SNode outputRootNode : outputNodeContents.keySet()) {
     try {
@@ -7,6 +8,28 @@
       File generatedFile=fileGenerator.generateFile(outputRootNode,originalInputNode,status.getInputModel(),outputNodeContents.get(outputRootNode),outputRootDirectory);
       if (generatedFile != null) {
         generatedFiles.add(generatedFile);
+        Set<File> newfiles=fireFileGenerated(generatedFile);
+        if (newfiles != null) {
+          for (          File n : newfiles) {
+            if (generatedFiles.add(n)) {
+              GenerationDependencies dependencies=status.getDependencies();
+              if (dependencies != null) {
+                if (dependenciesByFile == null) {
+                  dependenciesByFile=new HashMap<String,GenerationRootDependencies>();
+                  for (                  GenerationRootDependencies rd : dependencies.getRootDependencies()) {
+                    for (                    String file : rd.getFiles()) {
+                      dependenciesByFile.put(file,rd);
+                    }
+                  }
+                }
+                GenerationRootDependencies rdep=dependenciesByFile.get(generatedFile.getName());
+                if (rdep != null) {
+                  rdep.addGeneratedFile(n.getName());
+                }
+              }
+            }
+          }
+        }
       }
     }
  catch (    IOException e) {
