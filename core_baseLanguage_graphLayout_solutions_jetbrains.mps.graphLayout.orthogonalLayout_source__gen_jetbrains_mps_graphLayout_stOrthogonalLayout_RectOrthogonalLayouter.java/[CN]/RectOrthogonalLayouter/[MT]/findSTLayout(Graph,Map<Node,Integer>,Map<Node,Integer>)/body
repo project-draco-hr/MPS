@@ -1,9 +1,14 @@
 {
+  if (graph.getNumNodes() == 1) {
+    GraphLayout layout=new GraphLayout(graph);
+    Node node=graph.getNode(0);
+    layout.setLayoutFor(node,new Rectangle(20,20,MapSequence.fromMap(xSize).get(node) - myEdgeDistance,MapSequence.fromMap(ySize).get(node)));
+    return layout;
+  }
   List<Edge> oldEdges=ListSequence.fromList(new ArrayList<Edge>());
   ListSequence.fromList(oldEdges).addSequence(ListSequence.fromList(graph.getEdges()));
   BiconnectAugmentation.makeBiconnected(graph);
   Node addedNode=ListSequence.fromList(graph.getNodes()).last();
-  final int maxIndex=graph.getNumNodes();
   EmbeddedGraph embeddedGraph=new ShortestPathEmbeddingFinder(new BiconnectedInitialEmbeddingFinder()).find(graph);
   for (  Node node : ListSequence.fromList(graph.getNodes())) {
     if (!(MapSequence.fromMap(xSize).containsKey(node))) {
@@ -15,20 +20,19 @@
   for (  Dart dart : ListSequence.fromList(embeddedGraph.getOuterFace().getDarts())) {
     ListSequence.fromList(outerNodes).addElement(dart.getTarget());
   }
-  outerNodes=ListSequence.fromList(outerNodes).where(new IWhereFilter<Node>(){
-    public boolean accept(    Node it){
-      return it.getIndex() < maxIndex;
-    }
-  }
-).toListSequence();
   Node s=ListSequence.fromList(outerNodes).getElement(0);
   Node t=ListSequence.fromList(outerNodes).getElement((ListSequence.fromList(outerNodes).count()) / 2);
   GraphOrientation.orientST(graph,s,t);
   STPlanarGraph stPlanarGraph=new STPlanarGraph(embeddedGraph,s,t);
   NodeConstraintsSupporter supporter=new NodeConstraintsSupporter();
-  supporter.setMinEdgeDistance(myEdgeDistance,5);
+  supporter.setMinEdgeDistance(myEdgeDistance,15);
   Map<Object,Rectangle> representation=supporter.getRepresentation(stPlanarGraph,xSize,ySize);
   GraphLayout graphLayout=this.createLayout(graph,representation,xSize,ySize);
-  this.removeTempObjects(oldEdges,embeddedGraph,graphLayout,graph,addedNode);
+  if (myLayoutLevel > 0) {
+    this.removeTempObjects(oldEdges,embeddedGraph,graphLayout,graph,addedNode);
+  }
+  if (myLayoutLevel > 1) {
+    LayoutOptimizer.optimizeEdges(graphLayout);
+  }
   return graphLayout;
 }

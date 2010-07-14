@@ -1,0 +1,52 @@
+{
+  Map<Node,Integer> components=ConnectivityComponents.getComponents(graph);
+  int maxComponent=0;
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    maxComponent=Math.max(maxComponent,MapSequence.fromMap(components).get(node));
+  }
+  Map<Node,Node> newNodes=new NodeMap<Node>(graph);
+  Map<Node,Graph> nodeSubgraphs=new NodeMap<Graph>(graph);
+  Map<Edge,Edge> newEdges=MapSequence.fromMap(new HashMap<Edge,Edge>());
+  List<Graph> subgraphs=ListSequence.fromList(new ArrayList<Graph>());
+  Map<Graph,Map<Node,Integer>> xSizes=MapSequence.fromMap(new HashMap<Graph,Map<Node,Integer>>());
+  Map<Graph,Map<Node,Integer>> ySizes=MapSequence.fromMap(new HashMap<Graph,Map<Node,Integer>>());
+  for (int i=0; i <= maxComponent; i++) {
+    Graph subgraph=ListSequence.fromList(subgraphs).addElement(new Graph());
+    MapSequence.fromMap(xSizes).put(subgraph,MapSequence.fromMap(new HashMap<Node,Integer>()));
+    MapSequence.fromMap(ySizes).put(subgraph,MapSequence.fromMap(new HashMap<Node,Integer>()));
+  }
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    Graph subgraph=ListSequence.fromList(subgraphs).getElement(MapSequence.fromMap(components).get(node));
+    Node newNode=subgraph.addNode();
+    MapSequence.fromMap(newNodes).put(node,newNode);
+    MapSequence.fromMap(nodeSubgraphs).put(node,subgraph);
+    MapSequence.fromMap(MapSequence.fromMap(xSizes).get(subgraph)).put(newNode,MapSequence.fromMap(nodeSizes).get(node).width + myEdgeDistance);
+    MapSequence.fromMap(MapSequence.fromMap(ySizes).get(subgraph)).put(newNode,MapSequence.fromMap(nodeSizes).get(node).height);
+  }
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    MapSequence.fromMap(newEdges).put(edge,MapSequence.fromMap(newNodes).get(edge.getSource()).addEdgeTo(MapSequence.fromMap(newNodes).get(edge.getTarget())));
+  }
+  Map<Graph,GraphLayout> subgraphLayouts=MapSequence.fromMap(new HashMap<Graph,GraphLayout>());
+  int shiftX=0;
+  for (  Graph subgraph : ListSequence.fromList(subgraphs)) {
+    GraphLayout curLayout=findSTLayout(subgraph,MapSequence.fromMap(xSizes).get(subgraph),MapSequence.fromMap(ySizes).get(subgraph));
+    curLayout=LayoutTransform.shift(curLayout,shiftX,0);
+    MapSequence.fromMap(subgraphLayouts).put(subgraph,curLayout);
+    shiftX=curLayout.getContainingRectangle().x + curLayout.getContainingRectangle().width + 30;
+  }
+  GraphLayout layout=new GraphLayout(graph);
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    Graph subgraph=MapSequence.fromMap(nodeSubgraphs).get(node);
+    layout.setLayoutFor(node,MapSequence.fromMap(subgraphLayouts).get(subgraph).getLayoutFor(MapSequence.fromMap(newNodes).get(node)));
+  }
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    Graph subgraph=MapSequence.fromMap(nodeSubgraphs).get(edge.getSource());
+    layout.setLayoutFor(edge,MapSequence.fromMap(subgraphLayouts).get(subgraph).getLayoutFor(MapSequence.fromMap(newEdges).get(edge)));
+  }
+  if (myLayoutLevel == 0) {
+    return MapSequence.fromMap(subgraphLayouts).get(ListSequence.fromList(subgraphs).getElement(0));
+  }
+ else {
+    return layout;
+  }
+}
