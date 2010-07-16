@@ -1,0 +1,62 @@
+{
+  if (graph.getNumNodes() == 1) {
+    GraphLayout layout=new GraphLayout(graph);
+    Node node=graph.getNode(0);
+    layout.setLayoutFor(node,new Rectangle(20,20,MapSequence.fromMap(nodeSizes).get(node).width - myEdgeDistance,MapSequence.fromMap(nodeSizes).get(node).height));
+    return layout;
+  }
+  List<Edge> oldEdges=ListSequence.fromList(new ArrayList<Edge>());
+  ListSequence.fromList(oldEdges).addSequence(ListSequence.fromList(graph.getEdges()));
+  BiconnectAugmentation.makeBiconnected(graph);
+  Node addedNode=ListSequence.fromList(graph.getNodes()).last();
+  EmbeddedGraph embeddedGraph=new ShortestPathEmbeddingFinder(new BiconnectedInitialEmbeddingFinder()).find(graph);
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    if (!(MapSequence.fromMap(nodeSizes).containsKey(node))) {
+      MapSequence.fromMap(nodeSizes).put(node,new Dimension(myNodeSize,myNodeSize));
+    }
+  }
+  Map<Edge,Dimension> newEdgeSizes=MapSequence.fromMap(new HashMap<Edge,Dimension>());
+  Set<Edge> hasLabel=SetSequence.fromSet(new HashSet<Edge>());
+  for (  Edge oldEdge : ListSequence.fromList(oldEdges)) {
+    List<Edge> history=embeddedGraph.findFullHistory(oldEdge);
+    Node cur=oldEdge.getSource();
+    if (!(ListSequence.fromList(ListSequence.fromList(history).first().getAdjacentNodes()).contains(cur))) {
+      history=ListSequence.fromList(history).reversedList();
+    }
+    Edge midEdge=ListSequence.fromList(history).getElement(ListSequence.fromList(history).count() / 2);
+    for (    Edge edge : ListSequence.fromList(history)) {
+      if (edge == midEdge && MapSequence.fromMap(edgeSizes).get(oldEdge) != null) {
+        MapSequence.fromMap(newEdgeSizes).put(edge,MapSequence.fromMap(edgeSizes).get(oldEdge));
+        MapSequence.fromMap(myMovedLabels).put(oldEdge,edge);
+        SetSequence.fromSet(hasLabel).addElement(edge);
+      }
+ else {
+        MapSequence.fromMap(newEdgeSizes).put(edge,new Dimension(myEdgeDistance,myEdgeDistance));
+      }
+    }
+  }
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    if (MapSequence.fromMap(newEdgeSizes).get(edge) == null) {
+      MapSequence.fromMap(newEdgeSizes).put(edge,new Dimension(myEdgeDistance,myEdgeDistance));
+    }
+  }
+  List<Node> outerNodes=ListSequence.fromList(new ArrayList<Node>());
+  for (  Dart dart : ListSequence.fromList(embeddedGraph.getOuterFace().getDarts())) {
+    ListSequence.fromList(outerNodes).addElement(dart.getTarget());
+  }
+  Node s=ListSequence.fromList(outerNodes).getElement(0);
+  Node t=ListSequence.fromList(outerNodes).getElement((ListSequence.fromList(outerNodes).count()) / 2);
+  GraphOrientation.orientST(graph,s,t);
+  STPlanarGraph stPlanarGraph=new STPlanarGraph(embeddedGraph,s,t);
+  ConstraintsSupporter supporter=new ConstraintsSupporter();
+  supporter.setMinEdgeDistance(myEdgeDistance,15);
+  Map<Object,Rectangle> representation=supporter.getRepresentation(stPlanarGraph,nodeSizes,newEdgeSizes);
+  GraphLayout graphLayout=this.createLayout(graph,representation,nodeSizes,newEdgeSizes,hasLabel);
+  if (myLayoutLevel > 0) {
+    this.removeTempObjects(oldEdges,embeddedGraph,graphLayout,graph,addedNode);
+  }
+  if (myLayoutLevel > 1) {
+    LayoutOptimizer.optimizeEdges(graphLayout);
+  }
+  return graphLayout;
+}
