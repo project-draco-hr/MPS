@@ -1,25 +1,29 @@
 {
+  if (sourceNode.getReferent(role) != null) {
+    return;
+  }
   ASMClassType classType=(ASMClassType)enumValue.getType();
   SModelReference targetRef=this.getModelReferenceFor(NodeNameUtil.getNamespace(classType.getName()));
-  if (!(sourceNode.getModel().getSModelReference().equals(targetRef))) {
-    SNodeId nodeId=ASMNodeId.createFieldId(classType.getName(),enumValue.getConstant());
-    SReference reference=SReference.create(role,sourceNode,targetRef,nodeId);
-    sourceNode.addReference(reference);
-  }
- else {
-    if (sourceNode.getReferent(role) == null) {
-      Classifier classifier=this.getClassifier(NameUtil.shortNameFromLongName(classType.getName()));
-      EnumConstantDeclaration constDcl=null;
-      if (classifier instanceof EnumClass) {
-        EnumClass ec=(EnumClass)classifier;
-        for (        EnumConstantDeclaration dcl : ec.getEnumConstants()) {
-          if (enumValue.getConstant().equals(dcl.getName())) {
-            constDcl=dcl;
-            break;
-          }
+  SReference reference=null;
+  if (sourceNode.getModel().getSModelReference().equals(targetRef)) {
+    Classifier classifier=this.getClassifier(NameUtil.shortNameFromLongName(classType.getName()));
+    EnumConstantDeclaration constDcl=null;
+    if (classifier instanceof EnumClass) {
+      EnumClass ec=(EnumClass)classifier;
+      for (      EnumConstantDeclaration dcl : ec.getEnumConstants()) {
+        if (enumValue.getConstant().equals(dcl.getName())) {
+          constDcl=dcl;
+          break;
         }
       }
-      sourceNode.addReference(SReference.create(role,sourceNode,BaseAdapter.fromAdapter(constDcl)));
+    }
+    if (constDcl != null) {
+      reference=SReference.create(role,sourceNode,BaseAdapter.fromAdapter(constDcl));
     }
   }
+  if (reference == null) {
+    SNodeId nodeId=ASMNodeId.createFieldId(classType.getName(),enumValue.getConstant());
+    reference=SReference.create(role,sourceNode,targetRef,nodeId);
+  }
+  sourceNode.addReference(reference);
 }
