@@ -1,0 +1,60 @@
+{
+  super.computeAValue();
+  if (getState() != PQNode.State.PARTIAL) {
+    myAValue=0;
+    return;
+  }
+  List<PQNode> partialChildren=ListSequence.fromList(getChildren()).where(new IWhereFilter<PQNode>(){
+    public boolean accept(    PQNode it){
+      return it.getState() == PQNode.State.PARTIAL;
+    }
+  }
+).toListSequence();
+  int valueFromA=0;
+  PQNode aChild=null;
+  for (  PQNode child : ListSequence.fromList(partialChildren)) {
+    int curValue=child.getNumFullLeaves() - child.getAValue();
+    if (valueFromA < curValue) {
+      valueFromA=curValue;
+      aChild=child;
+    }
+  }
+  valueFromA=getNumFullLeaves() - valueFromA;
+  int firstHMax=0;
+  int secondHMax=0;
+  PQNode firstHChild=null;
+  PQNode secondHChild=null;
+  int numPartialFullLeaves=0;
+  for (  PQNode child : ListSequence.fromList(partialChildren)) {
+    numPartialFullLeaves+=child.getNumFullLeaves();
+    int curValue=child.getNumFullLeaves() - child.getHValue();
+    if (curValue > firstHMax) {
+      secondHMax=firstHMax;
+      secondHChild=firstHChild;
+      firstHMax=curValue;
+      firstHChild=child;
+    }
+ else {
+      if (curValue > secondHMax) {
+        secondHMax=curValue;
+        secondHChild=child;
+      }
+    }
+  }
+  int valueFromH=numPartialFullLeaves - firstHMax - secondHMax;
+  if (valueFromA < valueFromH) {
+    myMakeAFromH=false;
+    myAValue=valueFromA;
+    myFirstAChild=aChild;
+    mySecondAChild=null;
+  }
+ else {
+    myMakeAFromH=true;
+    myAValue=valueFromH;
+    myFirstAChild=firstHChild;
+    mySecondAChild=secondHChild;
+  }
+  if (myAValue > INF) {
+    myAValue=INF;
+  }
+}

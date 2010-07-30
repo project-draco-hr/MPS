@@ -1,0 +1,75 @@
+{
+  super.computeAValue();
+  if (getState() != PQNode.State.PARTIAL) {
+    myAValue=0;
+    return;
+  }
+  int valueFromA=0;
+  PQNode aChild=null;
+  for (  PQNode child : ListSequence.fromList(getChildren())) {
+    int curValue=child.getNumFullLeaves() - child.getAValue();
+    if (valueFromA < curValue) {
+      valueFromA=curValue;
+      aChild=child;
+    }
+  }
+  valueFromA=getNumFullLeaves() - valueFromA;
+  int valueFromH=INF;
+  PQNode firstChild=null;
+  PQNode lastChild=null;
+  PQNode curFirst=null;
+  boolean insideHSegment=false;
+  int numFullLeavesInSegment=0;
+  for (  PQNode child : ListSequence.fromList(getChildren())) {
+    if (insideHSegment) {
+      if (child.getState() == PQNode.State.FULL) {
+        numFullLeavesInSegment+=child.getNumFullLeaves();
+      }
+ else {
+        int aValue=getNumFullLeaves() - numFullLeavesInSegment - (curFirst.getNumFullLeaves() - curFirst.getHValue())- (child.getNumFullLeaves() - child.getHValue());
+        if (aValue < valueFromH) {
+          firstChild=curFirst;
+          lastChild=child;
+          valueFromH=aValue;
+        }
+        numFullLeavesInSegment=0;
+        if (child.getState() == PQNode.State.PARTIAL) {
+          curFirst=child;
+        }
+ else {
+          insideHSegment=false;
+        }
+      }
+    }
+ else {
+      if (child.getState() != PQNode.State.EMPTY) {
+        curFirst=child;
+        insideHSegment=true;
+      }
+    }
+  }
+  PQNode last=ListSequence.fromList(getChildren()).last();
+  if (insideHSegment && curFirst != last) {
+    int aValue=getNumFullLeaves() - numFullLeavesInSegment - curFirst.getAValue()- last.getAValue();
+    if (aValue < valueFromH) {
+      firstChild=curFirst;
+      lastChild=last;
+      valueFromH=aValue;
+    }
+  }
+  if (valueFromA < valueFromH) {
+    myMakeAFromH=false;
+    myAValue=valueFromA;
+    myFirstAChild=aChild;
+    mySecondAChild=null;
+  }
+ else {
+    myMakeAFromH=true;
+    myAValue=valueFromH;
+    myFirstAChild=firstChild;
+    mySecondAChild=lastChild;
+  }
+  if (myAValue > INF) {
+    myAValue=INF;
+  }
+}

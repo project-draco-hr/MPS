@@ -1,0 +1,129 @@
+{
+  ListSequence.fromList(this.getChildren()).removeWhere(new IWhereFilter<PQNode>(){
+    public boolean accept(    PQNode it){
+      return it.getState() != PQNode.State.EMPTY;
+    }
+  }
+);
+  children=ListSequence.fromList(children).removeWhere(new IWhereFilter<PQNode>(){
+    public boolean accept(    PQNode it){
+      return it.getState() == PQNode.State.EMPTY;
+    }
+  }
+);
+  List<PQNode> partialChildren=ListSequence.fromList(children).where(new IWhereFilter<PQNode>(){
+    public boolean accept(    PQNode it){
+      return it.getState() == PQNode.State.PARTIAL;
+    }
+  }
+).toListSequence();
+  int numPartialChildren=ListSequence.fromList(partialChildren).count();
+  PQNode newComponent=new QNode();
+  PNode nextNode=new PNode();
+  newComponent.addLastChild(nextNode);
+  for (  PQNode partialChild : ListSequence.fromList(partialChildren)) {
+    SetSequence.fromSet(newComponent.getGraphNodes()).addSequence(SetSequence.fromSet(partialChild.getGraphNodes()));
+  }
+  List<PQNode> fullChildren=ListSequence.fromList(new ArrayList<PQNode>());
+  this.addLastChild(newComponent);
+  if (numPartialChildren > 2) {
+    return null;
+  }
+  if (numPartialChildren == 0) {
+    fullChildren=ListSequence.fromList(children).where(new IWhereFilter<PQNode>(){
+      public boolean accept(      PQNode it){
+        return it.getState() == PQNode.State.FULL;
+      }
+    }
+).toListSequence();
+  }
+  if (numPartialChildren == 1) {
+    PQNode partialChild=ListSequence.fromList(partialChildren).getElement(0);
+    List<PQNode> firstEmptySegment=ListSequence.fromList(new ArrayList<PQNode>());
+    boolean endFirstSegment=false;
+    for (    PQNode child : ListSequence.fromList(partialChild.getChildren())) {
+      if (child.getState() == PQNode.State.FULL) {
+        endFirstSegment=true;
+      }
+ else {
+        if (endFirstSegment) {
+          newComponent.addLastChild(child);
+        }
+ else {
+          ListSequence.fromList(firstEmptySegment).addElement(child);
+        }
+      }
+    }
+    for (    PQNode child : ListSequence.fromList(firstEmptySegment).reversedList()) {
+      newComponent.addFirstChild(child);
+    }
+    ListSequence.fromList(fullChildren).addSequence(ListSequence.fromList(partialChild.getChildren()).where(new IWhereFilter<PQNode>(){
+      public boolean accept(      PQNode it){
+        return it.getState() == PQNode.State.FULL;
+      }
+    }
+).toListSequence());
+    ListSequence.fromList(fullChildren).addSequence(ListSequence.fromList(children).where(new IWhereFilter<PQNode>(){
+      public boolean accept(      PQNode it){
+        return it.getState() == PQNode.State.FULL;
+      }
+    }
+).toListSequence());
+  }
+  if (numPartialChildren == 2) {
+    PQNode partialChild0=ListSequence.fromList(partialChildren).getElement(0);
+    List<PQNode> emptyNodes=ListSequence.fromList(partialChild0.getChildren()).where(new IWhereFilter<PQNode>(){
+      public boolean accept(      PQNode it){
+        return it.getState() == PQNode.State.EMPTY;
+      }
+    }
+).toListSequence();
+    emptyNodes=ListSequence.fromList(emptyNodes).reversedList();
+    for (    PQNode child : ListSequence.fromList(emptyNodes)) {
+      newComponent.addFirstChild(child);
+    }
+    PQNode partialChild1=ListSequence.fromList(partialChildren).getElement(1);
+    ((QNode)partialChild1).reverse();
+    emptyNodes=ListSequence.fromList(partialChild1.getChildren()).where(new IWhereFilter<PQNode>(){
+      public boolean accept(      PQNode it){
+        return it.getState() == PQNode.State.EMPTY;
+      }
+    }
+).toListSequence();
+    for (    PQNode child : ListSequence.fromList(emptyNodes)) {
+      newComponent.addLastChild(child);
+    }
+    ListSequence.fromList(fullChildren).addSequence(ListSequence.fromList(partialChild0.getChildren()).where(new IWhereFilter<PQNode>(){
+      public boolean accept(      PQNode it){
+        return it.getState() == PQNode.State.FULL;
+      }
+    }
+).toListSequence());
+    ListSequence.fromList(fullChildren).addSequence(ListSequence.fromList(children).where(new IWhereFilter<PQNode>(){
+      public boolean accept(      PQNode it){
+        return it.getState() == PQNode.State.FULL;
+      }
+    }
+).toListSequence());
+    ListSequence.fromList(fullChildren).addSequence(ListSequence.fromList(partialChild1.getChildren()).where(new IWhereFilter<PQNode>(){
+      public boolean accept(      PQNode it){
+        return it.getState() == PQNode.State.FULL;
+      }
+    }
+).toListSequence());
+  }
+  List<Edge> edgesOrder=ListSequence.fromList(new LinkedList<Edge>());
+  SetSequence.fromSet(newComponent.getGraphNodes()).addSequence(SetSequence.fromSet(this.getGraphNodes()));
+  for (  PQNode child : ListSequence.fromList(fullChildren)) {
+    SetSequence.fromSet(newComponent.getGraphNodes()).addSequence(SetSequence.fromSet(child.getGraphNodesInSubtree(edgesOrder)));
+  }
+  NodeWithInEdgeOrder node=null;
+  for (  NodeWithInEdgeOrder graphNode : SetSequence.fromSet(newComponent.getGraphNodes())) {
+    if (graphNode.getNode() == nextGraphNode) {
+      node=graphNode;
+    }
+  }
+  nextNode.addGraphNode(node);
+  nextNode.getGraphNode().setInEdgesOrder(edgesOrder);
+  return nextNode;
+}

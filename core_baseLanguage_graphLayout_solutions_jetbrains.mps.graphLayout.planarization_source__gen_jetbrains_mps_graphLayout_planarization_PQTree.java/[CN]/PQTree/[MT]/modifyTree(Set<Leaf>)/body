@@ -1,0 +1,79 @@
+{
+  Node graphNode=SetSequence.fromSet(SetSequence.fromSet(successiveLeaves).first().getGraphNodes()).first().getNode();
+  for (  Leaf leaf : ListSequence.fromList(myLeaves)) {
+    leaf.setState(PQNode.State.EMPTY);
+  }
+  for (  Leaf leaf : SetSequence.fromSet(successiveLeaves)) {
+    leaf.setState(PQNode.State.FULL);
+  }
+  String treeRepresentation=this.toString();
+  int oldNum=SetSequence.fromSet(successiveLeaves).count();
+  makeReducible();
+  Iterator<Leaf> leavesItr=SetSequence.fromSet(successiveLeaves).iterator();
+  while (leavesItr.hasNext()) {
+    Leaf leaf=leavesItr.next();
+    if (leaf.getState() == PQNode.State.EMPTY) {
+      ListSequence.fromList(myLeaves).removeElement(leaf);
+      PQNode cur=leaf;
+      while (ListSequence.fromList(cur.getParent().getChildren()).count() == 1) {
+        cur=cur.getParent();
+      }
+      ListSequence.fromList(cur.getParent().getChildren()).removeElement(cur);
+      leavesItr.remove();
+    }
+  }
+  if (oldNum > SetSequence.fromSet(successiveLeaves).count()) {
+    System.out.println("Graph has been made reductible!");
+    System.out.println("before:");
+    System.out.println(treeRepresentation);
+    System.out.println("after:");
+    System.out.println(this);
+  }
+  myNumFullLeaves=MapSequence.fromMap(new HashMap<PQNode,Integer>());
+  PQNode pertinentRoot=findPertinentRoot(myRoot,SetSequence.fromSet(successiveLeaves).count());
+  if (SetSequence.fromSet(successiveLeaves).count() == 1) {
+    pertinentRoot=pertinentRoot.getParent();
+    List<PQNode> children=pertinentRoot.getChildren();
+    ListIterator<PQNode> childItr=children.listIterator();
+    PQNode newNode=new PNode();
+    newNode.setParent(pertinentRoot);
+    while (childItr.hasNext()) {
+      PQNode child=childItr.next();
+      if (child.getState() == PQNode.State.FULL) {
+        childItr.set(newNode);
+        Edge edge=((Edge)((Leaf)child).getData());
+        NodeWithInEdgeOrder childGraphNode=child.getGraphNode();
+        childGraphNode.setInEdgesOrder(ListSequence.fromListAndArray(new LinkedList<Edge>(),edge));
+        newNode.addGraphNode(childGraphNode);
+      }
+    }
+    return newNode;
+  }
+ else {
+    List<PQNode> modifiedChildren=ListSequence.fromList(new ArrayList<PQNode>());
+    if (pertinentRoot instanceof QNode) {
+      PQNode prePertinentRoot=pertinentRoot.getParent();
+      for (      PQNode child : ListSequence.fromList(prePertinentRoot.getChildren())) {
+        if (child == pertinentRoot) {
+          ListSequence.fromList(modifiedChildren).addElement(arrange(child,true));
+        }
+ else {
+          ListSequence.fromList(modifiedChildren).addElement(arrange(child,false));
+        }
+      }
+      for (      PQNode child : ListSequence.fromList(modifiedChildren)) {
+        child.setParent(prePertinentRoot);
+      }
+      return prePertinentRoot.processAsPertinentRoot(modifiedChildren,graphNode);
+    }
+ else {
+      for (      PQNode child : ListSequence.fromList(pertinentRoot.getChildren())) {
+        ListSequence.fromList(modifiedChildren).addElement(arrange(child,false));
+      }
+      for (      PQNode child : ListSequence.fromList(modifiedChildren)) {
+        child.setParent(pertinentRoot);
+      }
+      return pertinentRoot.processAsPertinentRoot(modifiedChildren,graphNode);
+    }
+  }
+}
