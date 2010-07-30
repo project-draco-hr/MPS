@@ -1,9 +1,9 @@
 {
-  boolean currentGenerationOK;
+  boolean currentGenerationOK=false;
   IPerformanceTracer ttrace=myGenerationContext.getTracingMode() != GenerationSettings.TRACE_OFF ? new PerformanceTracer("model " + NameUtil.shortNameFromLongName(inputModel.getLongName())) : new NullPerformanceTracer();
   boolean traceTypes=myGenerationContext.getTracingMode() == GenerationSettings.TRACE_TYPES;
   TypeChecker.getInstance().setIsGeneration(true,traceTypes ? ttrace : null);
-  GenerationSession generationSession=new GenerationSession(inputModel,invocationContext,myProgress,myLogger,ttrace,myGenerationContext);
+  final GenerationSession generationSession=new GenerationSession(inputModel,invocationContext,myProgress,myLogger,ttrace,myGenerationContext);
   try {
     Logger.addLoggingHandler(generationSession.getLoggingHandler());
     if (!myGenerationHandler.canHandle(inputModel)) {
@@ -19,11 +19,21 @@
     if (myLogger.needsInfo()) {
       myLogger.info("[model " + inputModel.getSModelFqName() + (myGenerationContext.isRebuildAll() ? ", rebuilding" : "")+ (myGenerationContext.isGenerateInParallel() ? ", using " + myGenerationContext.getNumberOfThreads() + " threads]" : "]"));
     }
-    GenerationStatus status=generationSession.generateModel();
-    status.setOriginalInputModel(inputModel);
-    currentGenerationOK=status.isOk();
-    checkMonitorCanceled();
-    currentGenerationOK=currentGenerationOK && myGenerationHandler.handleOutput(module,inputModel,status,invocationContext,progressHelper);
+    try {
+      currentGenerationOK=GeneratorUtil.runReadInWrite(new GenerationComputable<Boolean>(){
+        @Override public Boolean compute() throws GenerationCanceledException {
+          GenerationStatus status=generationSession.generateModel();
+          status.setOriginalInputModel(inputModel);
+          boolean currentGenerationOK=status.isOk();
+          checkMonitorCanceled();
+          currentGenerationOK=currentGenerationOK && myGenerationHandler.handleOutput(module,inputModel,status,invocationContext,progressHelper);
+          return currentGenerationOK;
+        }
+      }
+);
+    }
+ catch (    GenerationFailureException e) {
+    }
   }
   finally {
     Logger.removeLoggingHandler(generationSession.getLoggingHandler());

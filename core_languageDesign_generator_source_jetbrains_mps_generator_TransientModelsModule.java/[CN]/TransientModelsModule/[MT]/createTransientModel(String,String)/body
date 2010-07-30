@@ -1,8 +1,17 @@
 {
-  SModelFqName fqName=new SModelFqName(name,stereotype);
+  while (!isValidName(longName,stereotype)) {
+    stereotype+="_";
+  }
+  SModelFqName fqName=new SModelFqName(longName,stereotype);
   DefaultSModelDescriptor result=new DefaultSModelDescriptor(IModelRootManager.NULL_MANAGER,null,new SModelReference(fqName,SModelId.generate())){
     protected SModel loadModel(){
       return new TransientSModel(getSModelReference());
+    }
+    @Override public IModule getModule(){
+      return TransientModelsModule.this;
+    }
+    @Override public Set<IModule> getModules(){
+      return Collections.<IModule>singleton(TransientModelsModule.this);
     }
     public boolean isReadOnly(){
       return false;
@@ -10,8 +19,18 @@
     @Override public boolean isTransient(){
       return true;
     }
+    @Override public SModelDescriptor resolveModel(    SModelReference reference){
+      if (reference.getLongName().equals(longName)) {
+        SModelDescriptor descriptor=myModels.get(reference.getSModelFqName());
+        if (descriptor != null) {
+          return descriptor;
+        }
+      }
+      return super.resolveModel(reference);
+    }
   }
 ;
-  SModelRepository.getInstance().registerModelDescriptor(result,this);
+  myModels.put(result.getSModelReference().getSModelFqName(),result);
+  invalidateCaches();
   return result;
 }
