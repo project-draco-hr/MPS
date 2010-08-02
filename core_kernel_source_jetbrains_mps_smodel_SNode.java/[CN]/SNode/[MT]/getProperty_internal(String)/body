@@ -1,26 +1,15 @@
 {
-  String propertyValue;
-  propertyValue=getPersistentProperty(propertyName);
-  if (propertyValue != null) {
-    return propertyValue;
+  Set<Pair<SNode,String>> getters=ourPropertyGettersInProgress.get();
+  Pair<SNode,String> current=new Pair<SNode,String>(this,propertyName);
+  if (getters.contains(current))   return getPersistentProperty(propertyName);
+  getters.add(current);
+  try {
+    INodePropertyGetter getter=ModelConstraintsManager.getInstance().getNodePropertyGetter(this,propertyName);
+    if (getter == null)     return getPersistentProperty(propertyName);
+    Object getterValue=getter.execPropertyGet(this,propertyName,GlobalScope.getInstance());
+    return getterValue == null ? null : String.valueOf(getterValue);
   }
-  Set<Pair<SNode,String>> threadSet=ourPropertyGettersInProgress.get();
-  Pair<SNode,String> pair=new Pair<SNode,String>(this,propertyName);
-  if (!threadSet.contains(pair)) {
-    INodePropertyGetter getter=CONSTRAINTS_MANAGER.getNodePropertyGetter(this,propertyName);
-    if (getter != null) {
-      threadSet.add(pair);
-      try {
-        Object getterValue=getter.execPropertyGet(this,propertyName,GlobalScope.getInstance());
-        propertyValue=getterValue == null ? null : String.valueOf(getterValue);
-      }
   finally {
-        threadSet.remove(pair);
-      }
-    }
+    getters.remove(current);
   }
- else {
-    LOG.warning("It's not recommended to access property from its getter (concept = " + getConceptFqName() + " property = "+ propertyName+ ")",this);
-  }
-  return propertyValue;
 }
