@@ -1,4 +1,6 @@
 {
+  Map<StubPath,PathData> oldp2d=myPath2Data;
+  myPath2Data=new HashMap<StubPath,PathData>();
   for (  AbstractModule m : getAllModules()) {
     for (    StubPath sp : getModuleStubPaths(m)) {
       BaseStubModelRootManager manager=createStubManager(m,sp);
@@ -9,7 +11,15 @@
       PathData data=new PathData(sp);
       data.setModelRootManager(manager);
       myPath2Data.put(sp,data);
-      manager.updateModels(sp.getPath(),"",m);
+      PathData oldData=oldp2d.get(sp);
+      if (oldData.isFresh()) {
+        manager.updateModels(m,oldData.getDescriptors());
+        data.setDescriptors(oldData.getDescriptors());
+      }
+ else {
+        Set<BaseStubModelDescriptor> descriptors=manager.updateModels(sp.getPath(),"",m);
+        data.setDescriptors(copyDescriptors(descriptors));
+      }
     }
   }
 }
