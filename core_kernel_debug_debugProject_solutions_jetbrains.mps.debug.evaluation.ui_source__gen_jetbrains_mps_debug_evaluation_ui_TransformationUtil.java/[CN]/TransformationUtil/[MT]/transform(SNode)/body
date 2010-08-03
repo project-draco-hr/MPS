@@ -1,6 +1,7 @@
 {
   SNode evaluateMethod=findEvaluateMethod(evaluator);
-  SNode whatToEvaluate=ListSequence.fromList(SModelOperations.getNodes(SNodeOperations.getModel(evaluator),"jetbrains.mps.baseLanguage.structure.ClassConcept")).translate(new ITranslator2<SNode,SNode>(){
+  SModel model=SNodeOperations.getModel(evaluator);
+  SNode whatToEvaluate=ListSequence.fromList(SModelOperations.getNodes(model,"jetbrains.mps.baseLanguage.structure.ClassConcept")).translate(new ITranslator2<SNode,SNode>(){
     public Iterable<SNode> translate(    SNode root){
       return ListSequence.fromList(SNodeOperations.getDescendants(root,null,false,new String[]{})).where(new IWhereFilter<SNode>(){
         public boolean accept(        SNode node){
@@ -11,16 +12,9 @@
     }
   }
 ).first();
-  preprocess(whatToEvaluate);
-  replaceConstructors(evaluator,whatToEvaluate);
-  replaceThis(whatToEvaluate);
-  replaceSuper(whatToEvaluate);
-  replaceLowLevelVariableReferences(evaluator,whatToEvaluate);
-  replaceLocalMemberReferences(whatToEvaluate);
-  wrapMemberReferencesInCycle(evaluator,whatToEvaluate);
-  replaceInstanceof(whatToEvaluate);
-  wrapReturn(evaluateMethod);
   if (!(whatToEvaluate.isDescendantOf(evaluateMethod,false))) {
     ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(evaluateMethod,"body",true),"statement",true)).addElement(SNodeOperations.cast(whatToEvaluate,"jetbrains.mps.baseLanguage.structure.Statement"));
   }
+  TransformationUtil.transformInternal(whatToEvaluate);
+  wrapReturn(evaluateMethod);
 }
