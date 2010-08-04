@@ -1,0 +1,87 @@
+{
+  Editor editor=e.getData(DataKeys.EDITOR);
+  if (editor == null)   return;
+  final Project project=e.getData(DataKeys.PROJECT);
+  if (project == null)   return;
+  int offset=editor.getCaretModel().getOffset();
+  PsiFile file=PsiDocumentManager.getInstance(project).getCachedPsiFile(editor.getDocument());
+  if (file == null)   return;
+  PsiElement element=file.findElementAt(offset);
+  final PsiClass pc=getPsiClass(element);
+  if (pc == null)   return;
+  File baseDir=getProjectBaseDir(project);
+  String ptns=showInputDialog(project,"I want coockie. Give me the coockie!","Coockie monster",Icons.JUNIT_TEST_CLASS_ICON);
+  if (ptns == null)   return;
+  Map<File,Set<String>> includePathsMap=new HashMap<File,Set<String>>();
+  Map<File,Set<String>> excludePathsMap=new HashMap<File,Set<String>>();
+  List<String> errors=new ArrayList<String>();
+  for (  String ptn : ptns.split("\\n")) {
+    FilePattern fp;
+    try {
+      fp=FilePattern.fromString(ptn);
+    }
+ catch (    FilePatternParseException ex) {
+      errors.add("Bad coockie: \"" + ptn + "\"");
+      continue;
+    }
+    ModulesSourcePath msp=new ModulesSourcePath(fp.modulePtn,project);
+    PatternFileSearcher pfs=new PatternFileSearcher(fp.filePtn,Collections.unmodifiableList(msp.getSourcePath()));
+    for (    Pair<File,String> pear : pfs.getRelativePaths()) {
+      Map<File,Set<String>> pathsMap=fp.include ? includePathsMap : excludePathsMap;
+      Set<String> paths=pathsMap.get(pear.getFirst());
+      if (paths == null) {
+        paths=new HashSet<String>();
+        pathsMap.put(pear.getFirst(),paths);
+      }
+      paths.add(pear.getSecond());
+    }
+  }
+  final List<String> suiteClasses=new ArrayList<String>();
+  for (  Map.Entry<File,Set<String>> en : includePathsMap.entrySet()) {
+    Set<String> include=en.getValue();
+    Set<String> exclude=excludePathsMap.get(en.getKey());
+    if (exclude != null) {
+      include.removeAll(exclude);
+    }
+    for (    String p : include) {
+      suiteClasses.add(filePathToJavaClass(p));
+    }
+  }
+  String error;
+  if (!suiteClasses.isEmpty()) {
+    error=new WriteAction<String>(){
+      @Override protected void run(      Result<String> stringResult) throws Throwable {
+        stringResult.setResult(null);
+        StringBuilder sb=new StringBuilder("@SuiteClasses({");
+        String sep="";
+        for (        String sc : suiteClasses) {
+          sb.append(sep).append(sc).append(".class");
+          sep=",\n";
+        }
+        sb.append("})");
+        try {
+          PsiElementFactoryImpl fact=new PsiElementFactoryImpl((PsiManagerEx)PsiManagerEx.getInstance(project));
+          PsiAnnotation ann=fact.createAnnotationFromText(sb.toString(),pc.getParent());
+          pc.getParent().addBefore(ann,pc);
+        }
+ catch (        Exception ex) {
+          stringResult.setResult(ex.toString());
+        }
+      }
+    }
+.execute().getResultObject();
+  }
+ else {
+    error="No coockie, no work. :-|";
+  }
+  if (error != null)   errors.add(error);
+  if (!errors.isEmpty()) {
+    StringBuilder sb=new StringBuilder("");
+    String sep="";
+    for (    String er : errors) {
+      sb.append(sep).append(er);
+      sep="\n";
+    }
+    Messages.showErrorDialog(project,sb.toString(),"I've got a bad feeling about this");
+  }
+}
