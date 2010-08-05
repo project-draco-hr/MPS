@@ -1,0 +1,31 @@
+{
+  SModelReference reference=model.getSModelReference();
+  RefactoringHistory refactorings=null;
+  int version=fromVersion;
+  while (version < toVersion) {
+    IModelWriter writer=modelWriters.get(++version);
+    if (version == 5) {
+      refactorings=model.getRefactoringHistory();
+      if (refactorings != null && refactorings.getRefactoringContexts().isEmpty()) {
+        refactorings=null;
+      }
+    }
+    Document document=writer.saveModel(model,false);
+    model.dispose();
+    LOG.assertLog(modelReaders.get(version) != null);
+    model=modelReaders.get(version).readModel(document,reference.getShortName(),reference.getStereotype());
+  }
+  LOG.info("persistence upgraded: " + fromVersion + "->"+ toVersion+ " "+ reference);
+  model.setPersistenceVersion(toVersion);
+  try {
+    Document document=saveModel(model,false);
+    JDOMUtil.writeDocument(document,file);
+    if (refactorings != null) {
+      RefactoringsPersistence.save(file,refactorings);
+    }
+  }
+ catch (  IOException e) {
+    LOG.error("error while saving model after persistence upgrade " + model.getSModelReference(),e);
+  }
+  return model;
+}

@@ -1,5 +1,35 @@
 {
-  Document document=loadModelDocument(file);
-  int modelPersistenceVersion=getModelPersistenceVersion(document);
-  return modelPersistenceVersion;
+  final int[] version=new int[]{-1};
+  try {
+    SAXParser parser=JDOMUtil.createSAXParser();
+    parser.parse(new InputSource(file.openReader()),new DefaultHandler(){
+      @Override public void startElement(      String uri,      String localName,      String qName,      Attributes attributes) throws SAXException {
+        if (MODEL.equals(qName)) {
+          version[0]=0;
+        }
+ else         if (version[0] == 0 && PERSISTENCE.equals(qName)) {
+          String s=attributes.getValue(PERSISTENCE_VERSION);
+          if (s != null) {
+            try {
+              version[0]=Integer.parseInt(s);
+            }
+ catch (            NumberFormatException ex) {
+            }
+          }
+        }
+        throw new SAXException();
+      }
+      @Override public void endElement(      String uri,      String localName,      String qName) throws SAXException {
+        throw new SAXException();
+      }
+    }
+);
+  }
+ catch (  SAXException ex) {
+  }
+catch (  ParserConfigurationException e) {
+  }
+catch (  IOException e) {
+  }
+  return version[0] == -1 ? getCurrentPersistenceVersion() : version[0];
 }
