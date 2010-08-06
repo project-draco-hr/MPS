@@ -1,16 +1,22 @@
 {
-  Iterable<SNode> newExpressions=ListSequence.fromList(SNodeOperations.getDescendants(whatToEvaluate,"jetbrains.mps.baseLanguage.structure.GenericNewExpression",false,new String[]{})).where(new IWhereFilter<SNode>(){
+  for (  SNode newExpression : ListSequence.fromList(SNodeOperations.getDescendants(whatToEvaluate,"jetbrains.mps.baseLanguage.structure.GenericNewExpression",false,new String[]{})).where(new IWhereFilter<SNode>(){
     public boolean accept(    SNode it){
-      return SNodeOperations.isInstanceOf(SLinkOperations.getTarget(it,"creator",true),"jetbrains.mps.baseLanguage.structure.ClassCreator");
+      return SNodeOperations.isInstanceOf(SLinkOperations.getTarget(it,"creator",true),"jetbrains.mps.baseLanguage.structure.ClassCreator") && isUnprocessed(it);
     }
   }
-);
-  for (  SNode newExpression : Sequence.fromIterable(newExpressions)) {
+)) {
     SNode constructor=SLinkOperations.getTarget(SNodeOperations.cast(SLinkOperations.getTarget(newExpression,"creator",true),"jetbrains.mps.baseLanguage.structure.ClassCreator"),"baseMethodDeclaration",false);
-    SNode fqNameNode=TransformationUtil.createClassFqNameNode(SNodeOperations.getModel(whatToEvaluate),SNodeOperations.getAncestor(constructor,"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false));
-    SNode jnSignature=TransformationUtil.createStringLiteral(getJniSignature(constructor));
-    SNode invokeConstructorCall=new TransformationUtil.QuotationClass_crriw5_a0a3a1a3().createNode(fqNameNode,jnSignature);
-    ListSequence.fromList(SLinkOperations.getTargets(invokeConstructorCall,"actualArgument",true)).addSequence(ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(SLinkOperations.getTarget(newExpression,"creator",true),"jetbrains.mps.baseLanguage.structure.ClassCreator"),"actualArgument",true)));
-    SNodeOperations.replaceWithAnother(newExpression,invokeConstructorCall);
+    SNode fqNameNode=createClassFqNameNode(SNodeOperations.getModel(whatToEvaluate),SNodeOperations.getAncestor(constructor,"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false));
+    SNode jnSignature=createStringLiteral(getJniSignature(constructor));
+    List<SNode> actualArguments=SLinkOperations.getTargets(SNodeOperations.cast(SLinkOperations.getTarget(newExpression,"creator",true),"jetbrains.mps.baseLanguage.structure.ClassCreator"),"actualArgument",true);
+    replaceConstructor(newExpression,fqNameNode,jnSignature,actualArguments);
+  }
+  for (  SNode newExpression : ListSequence.fromList(SNodeOperations.getDescendants(whatToEvaluate,"jetbrains.mps.baseLanguageInternal.structure.InternalNewExpression",false,new String[]{}))) {
+    replaceConstructor(newExpression,createStringLiteral(SPropertyOperations.getString(newExpression,"fqClassName")),createStringLiteral(getJniSignature(ListSequence.fromList(SLinkOperations.getTargets(newExpression,"actualArgument",true)).select(new ISelector<SNode,SNode>(){
+      public SNode select(      SNode it){
+        return SNodeOperations.cast(TypeChecker.getInstance().getTypeOf(it),"jetbrains.mps.baseLanguage.structure.Type");
+      }
+    }
+),new TransformationUtil.QuotationClass_crriw5_a1a2a0a2a4().createNode())),SLinkOperations.getTargets(newExpression,"actualArgument",true));
   }
 }
