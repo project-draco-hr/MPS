@@ -1,0 +1,50 @@
+{
+  int currentVersion=usedModelDescriptor.getVersion();
+  int usedVersion=model.getUsedVersion(usedModelDescriptor.getSModelReference());
+  if (myIsTestRefactoringMode) {
+    System.err.println(this + ": current version of used model " + usedModelDescriptor.getLongName()+ " is "+ currentVersion+ ", used version is "+ usedVersion);
+  }
+  if (currentVersion > usedVersion) {
+    boolean result=false;
+    if (myIsTestRefactoringMode) {
+      System.err.println("updating a model " + this);
+    }
+    RefactoringHistory refactoringHistory=usedModelDescriptor.getRefactoringHistory();
+    for (    RefactoringContext refactoringContext : refactoringHistory.getRefactoringContexts()) {
+      if (refactoringContext.getModelVersion() <= usedVersion)       continue;
+      result=true;
+      IRefactoring refactoring=refactoringContext.getRefactoring();
+      if (!(refactoring instanceof ILoggableRefactoring)) {
+        LOG.error("Non-loggable refactoring was logged: " + refactoring.getClass().getName());
+      }
+ else {
+        try {
+          ((ILoggableRefactoring)refactoring).updateModel(model,refactoringContext);
+        }
+ catch (        Throwable t) {
+          LOG.error("An exception was thrown by refactoring " + refactoring.getUserFriendlyName() + " while updating model "+ model.getLongName()+ ". Models could have been corrupted.");
+        }
+      }
+    }
+    model.updateImportedModelUsedVersion(usedModelDescriptor.getSModelReference(),currentVersion);
+    IFile modelFile=getModelFile();
+    if (modelFile != null && !modelFile.isReadOnly()) {
+      SModelRepository.getInstance().markChanged(this,true);
+    }
+    return result;
+  }
+  if (currentVersion < usedVersion) {
+    if (currentVersion == -1) {
+      if (usedModelDescriptor instanceof EditableSModelDescriptor) {
+        usedModelDescriptor.getSModel();
+      }
+      if (usedModelDescriptor.getVersion() == usedVersion)       return false;
+    }
+    LOG.error("Model version mismatch for import " + usedModelDescriptor.getSModelFqName() + " in model "+ getSModelFqName());
+    LOG.error("Used version = " + usedVersion + ", current version = "+ currentVersion);
+    model.updateImportedModelUsedVersion(usedModelDescriptor.getSModelReference(),currentVersion);
+    SModelRepository.getInstance().markChanged(this,true);
+    LOG.error("Mismatch fixed");
+  }
+  return false;
+}

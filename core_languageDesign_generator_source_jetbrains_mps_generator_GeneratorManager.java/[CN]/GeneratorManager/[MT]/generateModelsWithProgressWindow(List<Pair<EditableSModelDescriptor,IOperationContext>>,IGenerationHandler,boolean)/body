@@ -1,0 +1,83 @@
+{
+  if (inputModels.isEmpty()) {
+    return true;
+  }
+  final IOperationContext invocationContext=inputModels.get(0).o2;
+  final DefaultMessageHandler messages=new DefaultMessageHandler(invocationContext.getProject());
+  final boolean saveTransientModels;
+  if (mySettings.isSaveTransientModels()) {
+    Object[] options={"Save Transient Models","Not this time","No, and cancel saving"};
+    int option=JOptionPane.showOptionDialog(invocationContext.getMainFrame(),"Would you like to save transient models?","",JOptionPane.YES_NO_CANCEL_OPTION,JOptionPane.QUESTION_MESSAGE,null,options,options[0]);
+    if (option == 0) {
+      saveTransientModels=true;
+    }
+ else {
+      saveTransientModels=false;
+      if (option == 2) {
+        mySettings.setSaveTransientModels(false);
+      }
+      if (option == -1) {
+        return false;
+      }
+    }
+  }
+ else {
+    saveTransientModels=false;
+  }
+  if (DumbService.getInstance(myProject).isDumb()) {
+    DumbService.getInstance(myProject).showDumbModeNotification("Generation is not available until indices are built.");
+    return false;
+  }
+  if (generateRequirements()) {
+    boolean wasSaveTransientModels=mySettings.isSaveTransientModels();
+    myGeneratingRequirements=true;
+    try {
+      final Set<EditableSModelDescriptor> requirements=new LinkedHashSet<EditableSModelDescriptor>();
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          for (          Pair<EditableSModelDescriptor,IOperationContext> inputModel : inputModels) {
+            requirements.addAll(getModelsToGenerateBeforeGeneration(inputModel.o1,inputModel.o2));
+          }
+        }
+      }
+);
+      for (      Pair<EditableSModelDescriptor,IOperationContext> inputModel : inputModels) {
+        requirements.remove(inputModel.o1);
+      }
+      if (!requirements.isEmpty()) {
+        String message="The following models might be required for generation\n" + "but aren't generated. Do you want to generate them?\n";
+        for (        SModelDescriptor sm : requirements) {
+          message+="\n" + sm.getSModelFqName();
+        }
+        int result=1;
+        if (IdeMain.getTestMode() != TestMode.CORE_TEST) {
+          result=Messages.showYesNoCancelDialog(myProject,message,"Generate Required Models",Messages.getWarningIcon());
+        }
+        if (result == -1 || result == 2)         return false;
+        if (result == 0) {
+          generateModelsFromDifferentModules(invocationContext,new ArrayList<EditableSModelDescriptor>(requirements),new JavaGenerationHandler());
+        }
+      }
+    }
+  finally {
+      mySettings.setSaveTransientModels(wasSaveTransientModels);
+      myGeneratingRequirements=false;
+    }
+  }
+  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+    public void run(){
+      SModelRepository.getInstance().saveAll();
+    }
+  }
+);
+  showMessageView();
+  IdeEventQueue.getInstance().flushQueue();
+  final boolean[] result=new boolean[]{false};
+  ProgressManager.getInstance().run(new Modal(invocationContext.getProject(),"Generation",true){
+    public void run(    @NotNull ProgressIndicator progress){
+      result[0]=generateModels(inputModels,generationHandler,progress,messages,saveTransientModels,rebuildAll);
+    }
+  }
+);
+  return result[0];
+}
