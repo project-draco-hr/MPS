@@ -5,18 +5,17 @@
     SModelRepository modelRepository=SModelRepository.getInstance();
     for (    File file : affectedFiles) {
       SModelDescriptor model=modelRepository.findModel(new FileSystemFile(file));
-      if (model != null) {
-        affectedModels.add(model);
-      }
+      if (model == null)       continue;
+      affectedModels.add(model);
     }
     final IOperationContext operationContext=ProjectOperationContext.get(myProject);
     ThreadUtils.assertLogIsEDT();
     try {
       ModelAccess.instance().runCommandInEDT(new Runnable(){
-        @Override public void run(){
+        public void run(){
           new OptimizeImportsHelper(operationContext).optimizeModelsImports(affectedModels);
           for (          SModelDescriptor affectedModel : affectedModels) {
-            affectedModel.save();
+            ((EditableSModelDescriptor)affectedModel).save();
           }
         }
       }
