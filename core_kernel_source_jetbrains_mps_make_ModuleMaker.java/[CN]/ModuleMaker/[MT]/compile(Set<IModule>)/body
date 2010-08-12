@@ -1,2 +1,51 @@
 {
+  boolean hasAnythingToCompile=false;
+  for (  IModule m : modules) {
+    if (m.isCompileInMPS()) {
+      hasAnythingToCompile=true;
+    }
+  }
+  if (!hasAnythingToCompile) {
+    return new jetbrains.mps.plugin.CompilationResult(0,0,false,false);
+  }
+  JavaCompiler compiler=new JavaCompiler();
+  Set<IModule> modulesWithRemovals=new HashSet<IModule>();
+  for (  IModule m : modules) {
+    if (areClassesUpToDate(m)) {
+      continue;
+    }
+    if (!m.isCompileInMPS()) {
+      LOG.warning("Module which compiled in IDEA depend on module which has to be compiled in MPS:" + m.getModuleFqName(),m);
+      continue;
+    }
+    ModuleSources sources=getModuleSources(m);
+    for (    IFile f : sources.getFilesToDelete()) {
+      f.delete();
+      modulesWithRemovals.add(m);
+    }
+    for (    JavaFile f : sources.getFilesToCompile()) {
+      compiler.addSource(f.getClassName(),f.getContents());
+      myContainingModules.put(f.getClassName(),m);
+    }
+  }
+  invalidateClasspath(modulesWithRemovals);
+  IClassPathItem classPathItems=computeDependenciesClassPath(modules);
+  MyCompilationResultAdapter listener=new MyCompilationResultAdapter(modules,classPathItems);
+  compiler.addCompilationResultListener(listener);
+  compiler.compile(classPathItems);
+  compiler.removeCompilationResultListener(listener);
+  invalidateClasspath(modules);
+  for (  IModule module : modules) {
+    ModuleSources sources=getModuleSources(module);
+    for (    ResourceFile toCopy : sources.getResourcesToCopy()) {
+      String fqName=toCopy.getPath();
+      fqName=fqName.substring(0,fqName.length() - toCopy.getFile().getName().length());
+      String path=fqName.replace('/',File.separatorChar) + toCopy.getFile().getName();
+      FileUtil.copyFile(toCopy.getFile().toFile(),module.getClassesGen().child(path).toFile());
+    }
+  }
+  for (  IModule module : modules) {
+    module.updateClassPath();
+  }
+  return new jetbrains.mps.plugin.CompilationResult(listener.getErrorCount(),0,false);
 }
