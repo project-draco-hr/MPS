@@ -1,63 +1,53 @@
 {
-  System.out.println("GRAPH!!! " + graph);
-  System.out.println(stNumbering);
-  myInEdgeOrder=new NodeMap<List<Edge>>(graph);
-  Map<Node,NodeWithInEdgeOrder> nodeMap=new NodeMap<NodeWithInEdgeOrder>(graph);
-  for (  Node node : ListSequence.fromList(graph.getNodes())) {
-    MapSequence.fromMap(nodeMap).put(node,new NodeWithInEdgeOrder(node));
+  if (SHOW_LOG > 0) {
+    System.out.println("GRAPH!!! " + graph);
+    System.out.println(stNumbering);
   }
+  myInEdgeOrder=new NodeMap<List<Edge>>(graph);
   Node[] nodeOrder=new Node[graph.getNumNodes()];
   for (  Node node : ListSequence.fromList(graph.getNodes())) {
     nodeOrder[MapSequence.fromMap(stNumbering).get(node)]=node;
   }
   PQTree graphTree=new PQTree();
-  PQNode curPQNode=new PNode();
-  curPQNode.addGraphNode(new NodeWithInEdgeOrder(nodeOrder[0]));
+  PQNode curPQNode=new PNode(nodeOrder[0],null);
   graphTree.setRoot(curPQNode);
   for (int i=0; i < nodeOrder.length - 1; i++) {
     Node curGraphNode=nodeOrder[i];
     for (    Edge edge : ListSequence.fromList(curGraphNode.getOutEdges())) {
-      Leaf edgeLeaf=new Leaf(graphTree);
-      edgeLeaf.setData(edge);
-      edgeLeaf.addGraphNode(MapSequence.fromMap(nodeMap).get(edge.getTarget()));
-      curPQNode.addLastChild(edgeLeaf);
+      PNode node=new PNode(edge.getTarget(),edge);
+      curPQNode.addLastChild(node);
     }
-    System.out.println(graphTree);
     Node nextGraphNode=nodeOrder[i + 1];
-    Set<Leaf> nextLeaves=this.findLeavesForGraphNode(nextGraphNode,graphTree);
-    if (i < nodeOrder.length - 2) {
-      curPQNode=graphTree.modifyTree(nextLeaves);
-      if (SetSequence.fromSet(nextLeaves).count() > 1) {
-        System.out.println("tree have been changed:");
-        System.out.println(graphTree);
-      }
-      MapSequence.fromMap(myInEdgeOrder).put(nextGraphNode,curPQNode.getGraphNode().getInEdgesOrder());
+    if (SHOW_LOG > 0) {
+      System.out.println(graphTree);
+      System.out.println("next node is: " + nextGraphNode);
+    }
+    if (i < nodeOrder.length - 1) {
+      curPQNode=graphTree.modifyTree(nextGraphNode);
     }
  else {
       MapSequence.fromMap(myInEdgeOrder).put(nextGraphNode,ListSequence.fromList(new LinkedList<Edge>()));
       getLastEdgeOrder(graphTree.getRoot(),MapSequence.fromMap(myInEdgeOrder).get(nextGraphNode));
-      MapSequence.fromMap(nodeMap).get(nextGraphNode).setInEdgesOrder(MapSequence.fromMap(myInEdgeOrder).get(nextGraphNode));
-    }
-    for (int j=0; j <= i + 1; j++) {
-      System.out.println(nodeOrder[j] + ": " + MapSequence.fromMap(nodeMap).get(nodeOrder[j]).getInEdgesOrder());
-    }
-    for (    Leaf leaf : SetSequence.fromSet(nextLeaves)) {
-      ListSequence.fromList(graphTree.getLeaves()).removeElement(leaf);
     }
   }
-  System.out.println("FINAL EDGE ORDER:");
-  for (int i=0; i < nodeOrder.length; i++) {
-    Node node=nodeOrder[i];
-    MapSequence.fromMap(myInEdgeOrder).put(node,MapSequence.fromMap(nodeMap).get(node).getInEdgesOrder());
-    System.out.println(node + ": ");
-    System.out.println(MapSequence.fromMap(myInEdgeOrder).get(node));
+  EdgesOrder order=((QNode)ListSequence.fromList(graphTree.getRoot().getChildren()).first()).getEdgesOrder();
+  if (PQPlanarityTest.SHOW_LOG > 0) {
+    System.out.println(graphTree);
+    for (int i=nodeOrder.length - 1; i >= 0; i--) {
+      Node node=nodeOrder[i];
+      System.out.print("node " + node + ":");
+      System.out.print(" in edges: " + order.getInEdgesOrder(node));
+      System.out.println(" out edges: " + order.getOutEdgesOrder(node));
+    }
   }
-  EmbeddedGraph embeddedGraph=createEmbeddedGraphNew(graph,myInEdgeOrder,nodeOrder);
-  System.out.println(embeddedGraph);
-  System.out.println("bad edges:");
-  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
-    if (!(MapSequence.fromMap(embeddedGraph.getAdjacentFacesMap()).containsKey(edge))) {
-      System.out.println(edge);
+  EmbeddedGraph embeddedGraph=createEmbeddedGraph(graph,order,Arrays.asList(nodeOrder));
+  if (PQPlanarityTest.SHOW_LOG > 0) {
+    System.out.println(embeddedGraph);
+    System.out.println("bad edges:");
+    for (    Edge edge : ListSequence.fromList(graph.getEdges())) {
+      if (!(MapSequence.fromMap(embeddedGraph.getAdjacentFacesMap()).containsKey(edge))) {
+        System.out.println(edge);
+      }
     }
   }
   return embeddedGraph;
