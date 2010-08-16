@@ -13,20 +13,20 @@
       }
     }
 ;
+    final String fullClassName=this.myAuxModel.getLongName() + "." + EVALUATOR_NAME;
     InMemoryJavaGenerationHandler handler=new AbstractEvaluationLogic.MyInMemoryJavaGenerationHandler(false,true,classpaths);
     Project ideaProject=this.myAuxModule.getMPSProject().getProject();
     DefaultMessageHandler messageHandler=new DefaultMessageHandler(ideaProject);
     ProgressWindow progressWindow=new ProgressWindow(false,ideaProject);
-    boolean successful=manager.generateModels(ListSequence.fromListAndArray(new ArrayList<EditableSModelDescriptor>(),this.myAuxModel),myContext,handler,progressWindow,messageHandler,true);
+    boolean successful=manager.generateModels(ListSequence.fromListAndArray(new ArrayList<SModelDescriptor>(),this.myAuxModel),myContext,handler,progressWindow,messageHandler,true);
     Disposer.dispose(progressWindow);
-    String fullClassName=this.myAuxModel.getLongName() + "." + EVALUATOR_NAME;
     String source=handler.getSources().get(fullClassName);
-    if (successful || StringUtils.isNotEmpty(source)) {
+    if (successful && StringUtils.isNotEmpty(source)) {
       if (isDeveloperMode()) {
         System.err.println(source);
       }
-      ClassLoader loader=handler.getCompiler().getClassLoader(this.myUiState.getClass().getClassLoader());
-      Class clazz=Class.forName(fullClassName,true,loader);
+      ClassLoader parentClassLoader=this.myUiState.getClass().getClassLoader();
+      Class clazz=Class.forName(fullClassName,true,handler.getCompiler().getClassLoader(parentClassLoader));
       Evaluator evaluator;
       try {
         evaluator=(Evaluator)clazz.getConstructor(JavaUiState.class).newInstance(this.myUiState);
@@ -36,6 +36,9 @@
         evaluator=(Evaluator)clazz.getConstructor(JavaUiState.class).newInstance(this.myUiState);
       }
       return evaluator;
+    }
+ else     if (StringUtils.isNotEmpty(source) && !(successful)) {
+      throw new EvaluationException("Errors during compilation.");
     }
  else {
       throw new EvaluationException("Errors during generation.");

@@ -2,22 +2,29 @@
   int numFull=0;
   int numPartial=0;
   int numChildren=ListSequence.fromList(getChildren()).count();
+  QNode replacement=null;
   for (  PQNode node : ListSequence.fromList(getChildren())) {
     if (node.getState() == PQNode.State.FULL) {
       numFull++;
     }
     if (node.getState() == PQNode.State.PARTIAL) {
+      replacement=((QNode)node);
       numPartial++;
     }
   }
+  if (numPartial > 1) {
+    throw new RuntimeException("can not make reduction: P-node has more than one partial child");
+  }
   if (numFull == numChildren) {
-    return doP1Pattern();
+    setState(PQNode.State.FULL);
+    return this;
   }
- else   if (numPartial == 0) {
-    return doP3Pattern();
+ else {
+    if (replacement == null) {
+      replacement=new QNode();
+      replacement.setState(PQNode.State.PARTIAL);
+    }
+    splitNodes(replacement);
+    return replacement;
   }
- else   if (numPartial == 1) {
-    return doP5Pattern();
-  }
-  return null;
 }

@@ -17,17 +17,20 @@
   }
   final List<SModel> outputModels=new ArrayList<SModel>();
   outputModels.addAll(myGenerationHandler.getOutputModels());
-  List<CompilationResult> compilationResult=null;
+  final List<CompilationResult> compilationResult=new ArrayList<CompilationResult>();
   if (generationOk && isCompileSet()) {
-    compilationResult=ModelAccess.instance().runReadAction(new Computable<List<CompilationResult>>(){
-      public List<CompilationResult> compute(){
-        return myGenerationHandler.compile(ITaskProgressHelper.EMPTY);
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        CompilationResultAdapter listener=new CompilationResultAdapter(){
+          public void onCompilationResult(          CompilationResult r){
+            compilationResult.add(r);
+          }
+        }
+;
+        myGenerationHandler.compile(ITaskProgressHelper.EMPTY,listener);
       }
     }
 );
-  }
-  if (compilationResult == null) {
-    compilationResult=Collections.EMPTY_LIST;
   }
   boolean compilatonOk=true;
   for (  CompilationResult r : compilationResult) {

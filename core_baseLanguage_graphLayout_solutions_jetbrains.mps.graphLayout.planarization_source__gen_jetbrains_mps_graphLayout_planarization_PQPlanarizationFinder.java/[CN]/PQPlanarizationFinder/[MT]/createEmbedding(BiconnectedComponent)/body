@@ -1,0 +1,108 @@
+{
+  Graph componentGraph=new Graph();
+  Set<Node> nodes=component.getNodes();
+  EmbeddedGraph graphEmbedding=new EmbeddedGraph(myGraph);
+  boolean manyNodeComponent=SetSequence.fromSet(nodes).count() > 1;
+  if (manyNodeComponent) {
+    Map<Node,Node> nodeMap=MapSequence.fromMap(new HashMap<Node,Node>());
+    Map<Node,Node> invertedNodeMap=MapSequence.fromMap(new HashMap<Node,Node>());
+    Map<Edge,Edge> invertedEdgeMap=MapSequence.fromMap(new HashMap<Edge,Edge>());
+    for (    Node node : SetSequence.fromSet(nodes)) {
+      Node componentNode=componentGraph.addNode();
+      MapSequence.fromMap(nodeMap).put(node,componentNode);
+      MapSequence.fromMap(invertedNodeMap).put(componentNode,node);
+    }
+    for (    Node node : SetSequence.fromSet(component.getNodes())) {
+      for (      Edge edge : ListSequence.fromList(node.getEdges(Edge.Direction.FRONT))) {
+        Node target=edge.getTarget();
+        if (SetSequence.fromSet(nodes).contains(target)) {
+          Edge newEdge=MapSequence.fromMap(nodeMap).get(node).addEdgeTo(MapSequence.fromMap(nodeMap).get(target));
+          MapSequence.fromMap(invertedEdgeMap).put(newEdge,edge);
+        }
+      }
+    }
+    if (SHOW_LOG > 0) {
+      System.out.println("COMPONENT!!! " + componentGraph.getNumNodes() + "  : "+ ListSequence.fromList(componentGraph.getEdges()).count());
+      System.out.println("map: " + nodeMap);
+    }
+    EmbeddedGraph componentEmbedding=new PQPlanarityTest().getEmbedding(componentGraph,GraphOrientation.orientST(componentGraph));
+    for (    Face componentFace : ListSequence.fromList(componentEmbedding.getFaces())) {
+      Face graphFace=new Face(myGraph);
+      for (      Dart dart : ListSequence.fromList(componentFace.getDarts())) {
+        graphFace.addLast(new Dart(MapSequence.fromMap(invertedEdgeMap).get(dart.getEdge()),MapSequence.fromMap(invertedNodeMap).get(dart.getSource())));
+      }
+      graphEmbedding.addFace(graphFace);
+      if (componentEmbedding.isOuterFace(componentFace)) {
+        graphEmbedding.setOuterFace(graphFace);
+      }
+    }
+  }
+ else {
+    Face fakeFace=new Face(myGraph);
+    graphEmbedding.addFace(fakeFace);
+    graphEmbedding.setOuterFace(fakeFace);
+  }
+  for (  BiconnectedComponent child : ListSequence.fromList(component.getChildren())) {
+    EmbeddedGraph childEmbedding=createEmbedding(child);
+    Object connection=component.getConnection(child);
+    Edge bridge;
+    Node cutpoint;
+    if (connection instanceof Edge) {
+      bridge=((Edge)connection);
+      cutpoint=bridge.getTarget();
+      if (!(SetSequence.fromSet(component.getNodes()).contains(cutpoint))) {
+        cutpoint=bridge.getSource();
+      }
+    }
+ else {
+      bridge=null;
+      cutpoint=((Node)connection);
+    }
+    Node childCutpoint;
+    if (bridge != null) {
+      childCutpoint=bridge.getOpposite(cutpoint);
+    }
+ else {
+      childCutpoint=cutpoint;
+    }
+    Face outerChildFace;
+    if (ListSequence.fromList(childEmbedding.getFaces()).count() > 1) {
+      outerChildFace=childEmbedding.findContainingFace(ListSequence.fromListAndArray(new ArrayList<Node>(),childCutpoint));
+    }
+ else {
+      outerChildFace=childEmbedding.getOuterFace();
+    }
+    if (bridge != null) {
+      if (ListSequence.fromList(outerChildFace.getDarts()).count() > 0) {
+        makeEndsWith(outerChildFace.getDarts(),bridge.getOpposite(cutpoint));
+      }
+      outerChildFace.addLast(new Dart(bridge,bridge.getOpposite(cutpoint)));
+      outerChildFace.addLast(new Dart(bridge,cutpoint));
+    }
+    if (!(manyNodeComponent)) {
+      graphEmbedding=childEmbedding;
+      manyNodeComponent=true;
+    }
+ else {
+      Face face=graphEmbedding.findContainingFace(ListSequence.fromListAndArray(new ArrayList<Node>(),cutpoint));
+      boolean isOuter=graphEmbedding.isOuterFace(face);
+      graphEmbedding.removeFace(face);
+      childEmbedding.removeFace(outerChildFace);
+      Face newFace=new Face(myGraph);
+      for (      Dart dart : ListSequence.fromList(makeEndsWith(face.getDarts(),cutpoint))) {
+        newFace.addLast(dart);
+      }
+      for (      Dart dart : ListSequence.fromList(makeEndsWith(outerChildFace.getDarts(),cutpoint))) {
+        newFace.addLast(dart);
+      }
+      graphEmbedding.addFace(newFace);
+      if (isOuter) {
+        graphEmbedding.setOuterFace(newFace);
+      }
+      for (      Face childFace : ListSequence.fromList(childEmbedding.getFaces())) {
+        graphEmbedding.addFace(childFace);
+      }
+    }
+  }
+  return graphEmbedding;
+}

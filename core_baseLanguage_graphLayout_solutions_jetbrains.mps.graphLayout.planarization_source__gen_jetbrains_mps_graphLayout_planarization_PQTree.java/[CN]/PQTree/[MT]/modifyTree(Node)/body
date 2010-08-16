@@ -1,0 +1,59 @@
+{
+  myNodeToMerge=nodeToMerge;
+  String oldTreeRepresentation=this.toString();
+  int oldNumFullLeaves=findPertinentRoot(myRoot).getNumFullLeaves();
+  makeReducible();
+  PQNode pertinentRoot=findPertinentRoot(myRoot);
+  int numFullLeaves=pertinentRoot.getNumFullLeaves();
+  if (SHOW_LOG > 0) {
+    if (oldNumFullLeaves > numFullLeaves) {
+      System.out.println("Graph has been made reductible!");
+      System.out.println("before:");
+      System.out.println(oldTreeRepresentation);
+      System.out.println("after:");
+      System.out.println(this);
+    }
+  }
+  if (numFullLeaves == 1) {
+    pertinentRoot=pertinentRoot.getParent();
+    List<PQNode> children=pertinentRoot.getChildren();
+    ListIterator<PQNode> childItr=children.listIterator();
+    PNode newNode=null;
+    while (childItr.hasNext()) {
+      PQNode child=childItr.next();
+      if (child.getState() == PQNode.State.FULL) {
+        newNode=new PNode(nodeToMerge,((PNode)child).getEdge());
+        newNode.setParent(pertinentRoot);
+        childItr.set(newNode);
+      }
+    }
+    return newNode;
+  }
+ else {
+    List<PQNode> modifiedChildren=ListSequence.fromList(new ArrayList<PQNode>());
+    if (pertinentRoot instanceof QNode) {
+      PQNode prePertinentRoot=pertinentRoot.getParent();
+      for (      PQNode child : ListSequence.fromList(prePertinentRoot.getChildren())) {
+        if (child == pertinentRoot) {
+          ListSequence.fromList(modifiedChildren).addElement(arrange(child,true));
+        }
+ else {
+          ListSequence.fromList(modifiedChildren).addElement(arrange(child,false));
+        }
+      }
+      for (      PQNode child : ListSequence.fromList(modifiedChildren)) {
+        child.setParent(prePertinentRoot);
+      }
+      return prePertinentRoot.processAsPertinentRoot(modifiedChildren,nodeToMerge);
+    }
+ else {
+      for (      PQNode child : ListSequence.fromList(pertinentRoot.getChildren())) {
+        ListSequence.fromList(modifiedChildren).addElement(arrange(child,false));
+      }
+      for (      PQNode child : ListSequence.fromList(modifiedChildren)) {
+        child.setParent(pertinentRoot);
+      }
+      return pertinentRoot.processAsPertinentRoot(modifiedChildren,nodeToMerge);
+    }
+  }
+}

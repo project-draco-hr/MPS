@@ -1,0 +1,78 @@
+{
+  if (SHOW_LOG > 0) {
+    System.out.println("-------------------------");
+    System.out.println(myEdgesOrder);
+  }
+  Set<Node> addedNodes=SetSequence.fromSet(new HashSet<Node>());
+  Set<Edge> addedEdges=SetSequence.fromSet(new HashSet<Edge>());
+  EmbeddedGraph embeddedGraph=new EmbeddedGraph(graph);
+  Face outerFace=new Face(graph);
+  Face innerFace=new Face(graph);
+  Node first=ListSequence.fromList(nodeOrder).first();
+  Node last=ListSequence.fromList(nodeOrder).last();
+  Node cur=last;
+  while (cur != first) {
+    SetSequence.fromSet(addedNodes).addElement(cur);
+    Edge curEdge=ListSequence.fromList(MapSequence.fromMap(myEdgesOrder).get(cur)).first();
+    Node next=curEdge.getOpposite(cur);
+    outerFace.addFirst(new Dart(curEdge,next));
+    innerFace.addLast(new Dart(curEdge,cur));
+    SetSequence.fromSet(addedEdges).addElement(curEdge);
+    cur=next;
+  }
+  SetSequence.fromSet(addedNodes).addElement(first);
+  cur=last;
+  while (cur != first) {
+    SetSequence.fromSet(addedNodes).addElement(cur);
+    Edge curEdge=ListSequence.fromList(MapSequence.fromMap(myEdgesOrder).get(cur)).last();
+    Node next=curEdge.getOpposite(cur);
+    outerFace.addLast(new Dart(curEdge,cur));
+    innerFace.addFirst(new Dart(curEdge,next));
+    SetSequence.fromSet(addedEdges).addElement(curEdge);
+    cur=next;
+  }
+  embeddedGraph.addFace(outerFace);
+  embeddedGraph.setOuterFace(outerFace);
+  embeddedGraph.addFace(innerFace);
+  if (SHOW_LOG > 0) {
+    System.out.println(embeddedGraph);
+  }
+  for (  Node node : ListSequence.fromList(nodeOrder).reversedList()) {
+    Edge prev=null;
+    for (    Edge edge : ListSequence.fromList(MapSequence.fromMap(myEdgesOrder).get(node))) {
+      if (SetSequence.fromSet(addedEdges).contains(edge)) {
+        prev=edge;
+        continue;
+      }
+      List<Edge> path=ListSequence.fromList(new LinkedList<Edge>());
+      ListSequence.fromList(path).addElement(edge);
+      cur=edge.getSource();
+      while (!(SetSequence.fromSet(addedNodes).contains(cur))) {
+        SetSequence.fromSet(addedNodes).addElement(cur);
+        Edge nextEdge=ListSequence.fromList(MapSequence.fromMap(myEdgesOrder).get(cur)).first();
+        ListSequence.fromList(path).insertElement(0,nextEdge);
+        cur=nextEdge.getSource();
+      }
+      if (SHOW_LOG > 0) {
+        System.out.println("adding path: " + path);
+      }
+      Face containingFace;
+      if (edge == ListSequence.fromList(MapSequence.fromMap(myEdgesOrder).get(node)).first()) {
+        containingFace=embeddedGraph.getFaceToTheLeft(ListSequence.fromList(MapSequence.fromMap(myEdgesOrder).get(node)).last());
+      }
+ else {
+        containingFace=embeddedGraph.getFaceToTheRight(prev);
+      }
+      if (SHOW_LOG > 0) {
+        System.out.println("to face: " + containingFace);
+      }
+      embeddedGraph.splitFace(containingFace,path,ListSequence.fromList(path).first().getSource(),node);
+      SetSequence.fromSet(addedEdges).addSequence(ListSequence.fromList(path));
+      prev=edge;
+      if (SHOW_LOG > 0) {
+        System.out.println(embeddedGraph);
+      }
+    }
+  }
+  return embeddedGraph;
+}

@@ -1,0 +1,53 @@
+{
+  String fileName="C:\\work\\stressPQ.txt";
+  int numNodes=Integer.parseInt(args[0]);
+  int numEdges=Integer.parseInt(args[1]);
+  int numIter=Integer.parseInt(args[2]);
+  IEmbeddingFinder finder;
+  finder=new PlanarizationEmbeddingFinder();
+  for (int iter=0; iter < numIter; iter++) {
+    System.out.println("ITERATION: " + iter);
+    Graph graph=RandomGraphGenerator.generateSimple(numNodes,numEdges);
+    Map<Node,Integer> components=ConnectivityComponents.getComponents(graph);
+    Graph firstComponent=new Graph();
+    Map<Node,Node> nodeMap=MapSequence.fromMap(new HashMap<Node,Node>());
+    for (    Node node : ListSequence.fromList(graph.getNodes())) {
+      if (MapSequence.fromMap(components).get(node) == 0) {
+        MapSequence.fromMap(nodeMap).put(node,firstComponent.addNode());
+      }
+    }
+    for (    Edge edge : ListSequence.fromList(graph.getEdges())) {
+      if (MapSequence.fromMap(components).get(edge.getSource()) == 0) {
+        MapSequence.fromMap(nodeMap).get(edge.getSource()).addEdgeTo(MapSequence.fromMap(nodeMap).get(edge.getTarget()));
+      }
+    }
+    if (firstComponent.getNumNodes() < 3) {
+      System.out.println("skipped  :(");
+      continue;
+    }
+    BiconnectAugmentation.makeBiconnected(firstComponent);
+    PrintWriter out=new PrintWriter(fileName);
+    GraphIO.writeGraph(firstComponent,out);
+    out.close();
+    try {
+      EmbeddedGraph embeddedGraph=finder.find(firstComponent);
+      CheckEmbeddedGraph.checkEmbeddedGraph(embeddedGraph);
+      System.out.println("number of faces: " + ListSequence.fromList(embeddedGraph.getFaces()).count());
+    }
+ catch (    Exception e) {
+      System.out.println("planarization failed!!!");
+      Graph orderedGraph=new Graph();
+      nodeMap=MapSequence.fromMap(new HashMap<Node,Node>());
+      List<Node> sorting=TopologicalSorting.sort(firstComponent);
+      for (      Node node : ListSequence.fromList(sorting)) {
+        MapSequence.fromMap(nodeMap).put(node,orderedGraph.addNode());
+      }
+      for (      Edge edge : ListSequence.fromList(firstComponent.getEdges())) {
+        MapSequence.fromMap(nodeMap).get(edge.getSource()).addEdgeTo(MapSequence.fromMap(nodeMap).get(edge.getTarget()));
+      }
+      System.out.println(e);
+      System.exit(1);
+    }
+  }
+  System.out.println("END!");
+}
