@@ -7,19 +7,20 @@
     setAdditionalText(generationRequired().getMessage());
   }
   setText(getModulePresentation());
-  boolean valid=ModelAccess.instance().runReadAction(new Computable<Boolean>(){
-    public Boolean compute(){
-      return getModule().isValid();
+  List<String> errors=ModelAccess.instance().runReadAction(new Computable<List<String>>(){
+    public List<String> compute(){
+      return ModuleValidatorFactory.createValidator(getModule()).getErrors();
     }
   }
 );
+  boolean valid=errors.isEmpty();
   setErrorState(valid ? ErrorState.NONE : ErrorState.ERROR);
-  if (getModule().validate().isEmpty()) {
+  if (valid) {
     setTooltipText(null);
   }
  else {
     String result="<html>";
-    for (    String error : getModule().validate()) {
+    for (    String error : errors) {
       result+=error + "<br>";
     }
     setTooltipText(result);
