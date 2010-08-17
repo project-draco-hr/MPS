@@ -30,11 +30,12 @@
       }
     }
 ,true));
-    List<Set<IModule>> sm=StronglyConnectedModules.getInstance().getStronglyConnectedComponents(modulesCopy);
+    List<Set<IModule>> sm=(List<Set<IModule>>)StronglyConnectedModules.getInstance().getStronglyConnectedComponents(modulesCopy);
     SNode lastCycle=null;
+    List<SNode> result=ListSequence.fromList(new ArrayList<SNode>(ListSequence.fromList(sm).count()));
     for (    Set<IModule> moduleSet : ListSequence.fromList(sm)) {
       SNode cycle=SConceptOperations.createNewNode("jetbrains.mps.build.packaging.structure.ModuleCycle",null);
-      SLinkOperations.addChild(layout,"cycle",cycle);
+      ListSequence.fromList(result).addElement(cycle);
       if (lastCycle != null) {
         SNode ref=SConceptOperations.createNewNode("jetbrains.mps.build.packaging.structure.ModuleCycleReference",null);
         SLinkOperations.setTarget(ref,"cycle",lastCycle,false);
@@ -47,6 +48,7 @@
         }
       }
 ,true);
+      SPropertyOperations.set(cycle,"name",_context.createUniqueName("cycle." + Sequence.fromIterable(sortedModuleSet).first().getModuleFqName(),layout));
       for (      IModule imodule : Sequence.fromIterable(sortedModuleSet)) {
         List<SNode> modulesForIModule=MapSequence.fromMap(map).get(imodule);
         for (        SNode module : ListSequence.fromList(modulesForIModule)) {
@@ -56,5 +58,11 @@
         }
       }
     }
+    ListSequence.fromList(SLinkOperations.getTargets(layout,"cycle",true)).addSequence(ListSequence.fromList(result).sort(new ISelector<SNode,Comparable<?>>(){
+      public Comparable<?> select(      SNode it){
+        return SPropertyOperations.getString(SLinkOperations.getTarget(ListSequence.fromList(SLinkOperations.getTargets(it,"moduleReference",true)).first(),"module",false),"name");
+      }
+    }
+,true));
   }
 }
