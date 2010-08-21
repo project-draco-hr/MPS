@@ -1,0 +1,49 @@
+{
+  Set<Edge> newEdges=reduceNodesDegree(graph);
+  Graph copy=new Graph();
+  Map<Node,Node> nodeMap=MapSequence.fromMap(new HashMap<Node,Node>());
+  final Map<Edge,Edge> edgeMap=MapSequence.fromMap(new HashMap<Edge,Edge>());
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    MapSequence.fromMap(nodeMap).put(node,copy.addNode());
+  }
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    MapSequence.fromMap(edgeMap).put(edge,MapSequence.fromMap(nodeMap).get(edge.getSource()).addEdgeTo(MapSequence.fromMap(nodeMap).get(edge.getTarget())));
+  }
+  BiconnectAugmentation.smartMakeBiconnected(copy);
+  int num=copy.getNumNodes();
+  EmbeddedGraph embeddedGraph=new ShortestPathEmbeddingFinder(new PQPlanarizationFinder()).find(copy);
+  System.out.println("*--------------------------------------------------------------*");
+  System.out.println("INFO: added " + (copy.getNumNodes() - num) + " edge crossings!!!");
+  System.out.println("*--------------------------------------------------------------*");
+  Map<Dart,Integer> bends=MapSequence.fromMap(new HashMap<Dart,Integer>());
+  Map<Dart,Integer> angles=MapSequence.fromMap(new HashMap<Dart,Integer>());
+  Set<Edge> copyEdges=SetSequence.fromSet(new HashSet<Edge>());
+  SetSequence.fromSet(copyEdges).addSequence(SetSequence.fromSet(newEdges).select(new ISelector<Edge,Edge>(){
+    public Edge select(    Edge edge){
+      return MapSequence.fromMap(edgeMap).get(edge);
+    }
+  }
+));
+  OrthogonalRepresentation.getRepresentation(embeddedGraph,copyEdges,bends,angles);
+  OrthogonalRepresentation.replaceBendsByNodes(embeddedGraph,bends,angles);
+  Map<Dart,Integer> directions=OrthogonalRepresentation.getDirections(embeddedGraph,angles);
+  Map<Edge,Integer> lengths=new EdgeLengthComputer().compute(embeddedGraph,directions);
+  OrthogonalPointLayouter.CoordinatePlacerDfs dfs=new OrthogonalPointLayouter.CoordinatePlacerDfs(embeddedGraph,lengths,directions);
+  dfs.doDfs(copy,Edge.Direction.BOTH);
+  Map<Node,Point> coordinates=dfs.getCoordinates();
+  GraphLayoutPoint layout=new GraphLayoutPoint(graph);
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    layout.setLayoutFor(node,MapSequence.fromMap(coordinates).get(MapSequence.fromMap(nodeMap).get(node)));
+  }
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    List<Point> edgeLayout=ListSequence.fromList(new ArrayList<Point>());
+    Edge copyEdge=MapSequence.fromMap(edgeMap).get(edge);
+    List<Edge> history=embeddedGraph.findFullHistory(copyEdge);
+    ListSequence.fromList(edgeLayout).addElement(new Point(MapSequence.fromMap(coordinates).get(ListSequence.fromList(history).first().getSource())));
+    for (    Edge historyEdge : ListSequence.fromList(history)) {
+      ListSequence.fromList(edgeLayout).addElement(new Point(MapSequence.fromMap(coordinates).get(historyEdge.getTarget())));
+    }
+    layout.setLayoutFor(edge,edgeLayout);
+  }
+  return layout;
+}
