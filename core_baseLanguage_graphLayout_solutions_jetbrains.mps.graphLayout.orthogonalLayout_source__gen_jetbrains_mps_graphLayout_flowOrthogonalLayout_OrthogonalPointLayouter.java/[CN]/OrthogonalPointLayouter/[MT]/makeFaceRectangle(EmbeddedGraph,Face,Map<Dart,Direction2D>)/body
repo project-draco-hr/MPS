@@ -1,0 +1,55 @@
+{
+  Dart badDart=null;
+  List<Dart> darts=face.getDarts();
+  Iterator<Dart> dartItr=ListSequence.fromList(darts).iterator();
+  Dart prev=ListSequence.fromList(darts).last();
+  int sum=0;
+  while (dartItr.hasNext() && badDart == null) {
+    Dart cur=dartItr.next();
+    int turn=MapSequence.fromMap(direction).get(prev).getTurn(MapSequence.fromMap(direction).get(cur));
+    if (turn < 0) {
+      badDart=prev;
+      sum=turn;
+    }
+    prev=cur;
+  }
+  while (sum != 1) {
+    if (!(dartItr.hasNext())) {
+      dartItr=ListSequence.fromList(darts).iterator();
+    }
+    Dart cur=dartItr.next();
+    sum+=MapSequence.fromMap(direction).get(prev).getTurn(MapSequence.fromMap(direction).get(cur));
+    prev=cur;
+  }
+  if (badDart != null) {
+    List<Edge> newEdges=ListSequence.fromList(new ArrayList<Edge>());
+    Dart prevOpposite=embeddedGraph.getOpposite(prev);
+    Node newNode=embeddedGraph.splitEdge(prev.getEdge(),newEdges);
+    for (    Edge newEdge : ListSequence.fromList(newEdges)) {
+      for (      Dart newDart : ListSequence.fromList(embeddedGraph.getDarts(newEdge))) {
+        if (embeddedGraph.getFace(newDart) == face) {
+          MapSequence.fromMap(direction).put(newDart,MapSequence.fromMap(direction).get(prev));
+        }
+ else {
+          MapSequence.fromMap(direction).put(newDart,MapSequence.fromMap(direction).get(prev).opposite());
+        }
+      }
+    }
+    MapSequence.fromMap(direction).removeKey(prev);
+    MapSequence.fromMap(direction).removeKey(prevOpposite);
+    Node badCorner=badDart.getTarget();
+    Edge splitEdge=badCorner.addEdgeTo(newNode);
+    List<Face> newFaces=embeddedGraph.splitFace(face,ListSequence.fromListAndArray(new ArrayList<Edge>(),splitEdge),badCorner,newNode);
+    for (    Dart dart : ListSequence.fromList(embeddedGraph.getDarts(splitEdge))) {
+      if (dart.getSource() == badCorner) {
+        MapSequence.fromMap(direction).put(dart,MapSequence.fromMap(direction).get(badDart));
+      }
+ else {
+        MapSequence.fromMap(direction).put(dart,MapSequence.fromMap(direction).get(badDart).opposite());
+      }
+    }
+    for (    Face newFace : ListSequence.fromList(newFaces)) {
+      makeFaceRectangle(embeddedGraph,newFace,direction);
+    }
+  }
+}
