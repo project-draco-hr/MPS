@@ -1,0 +1,44 @@
+{
+  myMessageGroups=ListSequence.fromList(new ArrayList<ChangesFoldingAreaPainter.MessageGroup>());
+  final EditorComponent editorComponent=getEditorComponent();
+  List<EditorComponentChangesHighligher.ChangeEditorMessage> messagesWithCells=ListSequence.fromList(myEditorComponentChangesHighligher.getEditorMessages()).where(new IWhereFilter<EditorComponentChangesHighligher.ChangeEditorMessage>(){
+    public boolean accept(    EditorComponentChangesHighligher.ChangeEditorMessage m){
+      return m.getCell(editorComponent) != null;
+    }
+  }
+).toListSequence();
+  messagesWithCells=ListSequence.fromList(messagesWithCells).sort(new Comparator<EditorComponentChangesHighligher.ChangeEditorMessage>(){
+    public int compare(    EditorComponentChangesHighligher.ChangeEditorMessage aMsg,    EditorComponentChangesHighligher.ChangeEditorMessage bMsg){
+      Rectangle a=getMessageBounds(editorComponent,aMsg);
+      Rectangle b=getMessageBounds(editorComponent,bMsg);
+      if (a.y == b.y) {
+        if (a.x == b.x) {
+          return a.height - b.height;
+        }
+ else {
+          return a.x - b.x;
+        }
+      }
+ else {
+        return a.y - b.y;
+      }
+    }
+  }
+,true).toListSequence();
+  List<EditorComponentChangesHighligher.ChangeEditorMessage> currentGroupMessages=ListSequence.fromList(new ArrayList<EditorComponentChangesHighligher.ChangeEditorMessage>());
+  double currentMaxY=0;
+  for (  EditorComponentChangesHighligher.ChangeEditorMessage message : ListSequence.fromList(messagesWithCells)) {
+    Rectangle cellBounds=getMessageBounds(editorComponent,message);
+    if (ListSequence.fromList(currentGroupMessages).isNotEmpty()) {
+      if (currentMaxY < cellBounds.getMinY()) {
+        ListSequence.fromList(myMessageGroups).addElement(createMessageGroup(currentGroupMessages));
+        ListSequence.fromList(currentGroupMessages).clear();
+      }
+    }
+    ListSequence.fromList(currentGroupMessages).addElement(message);
+    currentMaxY=Math.max(currentMaxY,cellBounds.getMaxY());
+  }
+  if (ListSequence.fromList(currentGroupMessages).isNotEmpty()) {
+    ListSequence.fromList(myMessageGroups).addElement(createMessageGroup(currentGroupMessages));
+  }
+}

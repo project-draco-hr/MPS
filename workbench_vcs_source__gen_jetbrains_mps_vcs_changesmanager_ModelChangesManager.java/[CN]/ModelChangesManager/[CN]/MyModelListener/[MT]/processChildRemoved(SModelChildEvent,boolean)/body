@@ -1,0 +1,65 @@
+{
+  final List<SNode> pathToRoot=SModelUtils.getPathToRoot(e.getParent());
+  final List<SNode> currentChildren=getCurrentChildren(e.getParent(),e.getChildRole());
+  myCommandQueue.runTask(new Runnable(){
+    public void run(){
+      if (!(checkLoaded())) {
+        return;
+      }
+      fireChangeUpdateStarted();
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          if (recursively) {
+            recursivelyChildRemoved(e.getChild());
+          }
+          if (isAncestorAlreadyAdded(pathToRoot)) {
+            return;
+          }
+          removeChanges(Change.class,new _FunctionTypes._return_P1_E0<Boolean,Change>(){
+            public Boolean invoke(            Change ch){
+              return !(ch instanceof NewNodeChange || ch instanceof DeleteNodeChange) && ObjectUtils.equals(ch.getAffectedNodeId(),e.getChild().getSNodeId());
+            }
+          }
+);
+          removeChildChanges(e.getChild().getSNodeId());
+          boolean isSingle=SModelUtils.isChildInSingleRole(e);
+          if (removeChanges(NewNodeChange.class,new _FunctionTypes._return_P1_E0<Boolean,NewNodeChange>(){
+            public Boolean invoke(            NewNodeChange ch){
+              return ch.getAffectedNodeId().equals(e.getChild().getSNodeId());
+            }
+          }
+) == 0) {
+            if (isSingle) {
+              addChange(new DeleteNodeChange(e.getChild().getSNodeId(),SModelUtils.getNodeIds(e.getChild().getChildren()),check_fh1co9_c0a0a0a0j0a3a0a0c0r0(e.getParent()),e.getChildRole(),-1),e.getAffectedRoot());
+            }
+ else {
+              refreshMultipleChildChanges(e.getParent(),e.getChildRole(),currentChildren,false);
+            }
+          }
+ else {
+            if (isSingle) {
+              final SNode baseParent=myBaseVersionModel.getNodeById(e.getParent().getSNodeId());
+              if (baseParent != null) {
+                ModelAccess.instance().runReadAction(new Runnable(){
+                  public void run(){
+                    SNode baseChild=baseParent.getChild(e.getChildRole());
+                    if (baseChild != null) {
+                      addChange(new DeleteNodeChange(baseChild.getSNodeId(),SModelUtils.getNodeIds(baseChild.getChildren()),baseParent.getSNodeId(),e.getChildRole(),-1),e.getAffectedRoot());
+                    }
+                  }
+                }
+);
+              }
+            }
+ else {
+              refreshMultipleChildChanges(e.getParent(),e.getChildRole(),currentChildren,false);
+            }
+          }
+        }
+      }
+);
+      fireChangeUpdateFinished();
+    }
+  }
+);
+}
