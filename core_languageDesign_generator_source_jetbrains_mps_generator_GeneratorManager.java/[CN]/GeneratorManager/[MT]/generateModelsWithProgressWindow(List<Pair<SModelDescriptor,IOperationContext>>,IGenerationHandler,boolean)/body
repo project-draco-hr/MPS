@@ -45,15 +45,22 @@
         requirements.remove(inputModel.o1);
       }
       if (!requirements.isEmpty()) {
-        String message="The following models might be required for generation\n" + "but aren't generated. Do you want to generate them?\n";
-        for (        SModelDescriptor sm : requirements) {
-          message+="\n" + sm.getSModelReference().getSModelFqName();
+        int result=2;
+        if (mySettings.getGenerateRequirementsPolicy() == GenerationSettings.GenerateRequirementsPolicy.ASK) {
+          final StringBuffer message=new StringBuffer("The following models might be required for generation\n" + "but aren't generated. Do you want to generate them?\n");
+          for (          SModelDescriptor sm : requirements) {
+            message.append("\n").append(sm.getSModelReference().getSModelFqName());
+          }
+          if (IdeMain.getTestMode() != TestMode.CORE_TEST) {
+            DialogWrapper questionDialog=new GenerateRequirementsDialog(myProject,mySettings,message.toString());
+            questionDialog.show();
+            result=questionDialog.getExitCode();
+          }
         }
-        int result=1;
-        if (IdeMain.getTestMode() != TestMode.CORE_TEST) {
-          result=Messages.showYesNoCancelDialog(myProject,message,"Generate Required Models",Messages.getWarningIcon());
+ else {
+          result=0;
         }
-        if (result == -1 || result == 2)         return false;
+        if (result == 1)         return false;
         if (result == 0) {
           generateModelsFromDifferentModules(invocationContext,new ArrayList<SModelDescriptor>(requirements),getDefaultGenerationHandler());
         }
