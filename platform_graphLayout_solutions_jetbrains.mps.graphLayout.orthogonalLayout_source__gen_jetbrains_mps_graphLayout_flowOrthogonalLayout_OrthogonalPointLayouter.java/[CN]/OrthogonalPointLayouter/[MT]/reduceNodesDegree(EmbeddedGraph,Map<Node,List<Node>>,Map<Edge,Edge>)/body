@@ -1,0 +1,78 @@
+{
+  Graph graph=embeddedGraph.getGraph();
+  Set<Edge> addedEdges=SetSequence.fromSet(new HashSet<Edge>());
+  List<Node> realNodes=ListSequence.fromList(new ArrayList<Node>());
+  ListSequence.fromList(realNodes).addSequence(ListSequence.fromList(graph.getNodes()));
+  for (  final Node node : ListSequence.fromList(realNodes)) {
+    List<Edge> edges=node.getEdges();
+    if (ListSequence.fromList(edges).count() <= 4) {
+      continue;
+    }
+    List<Node> newNodes=ListSequence.fromList(new ArrayList<Node>());
+    MapSequence.fromMap(nodeMap).put(node,newNodes);
+    Edge firstEdge=ListSequence.fromList(edges).first();
+    Dart firstDart=ListSequence.fromList(embeddedGraph.getDarts(firstEdge)).findFirst(new IWhereFilter<Dart>(){
+      public boolean accept(      Dart dart){
+        return dart.getSource() == node;
+      }
+    }
+);
+    Dart curDart=firstDart;
+    Node firstNewNode=graph.addDummyNode();
+    Node curNewNode=firstNewNode;
+    Edge firstNewEdge=firstNewNode.addEdgeTo(firstEdge.getOpposite(node));
+    if (firstEdge.getSource() == node) {
+      firstEdge.revert();
+    }
+    ListSequence.fromList(newNodes).addElement(firstNewNode);
+    MapSequence.fromMap(edgeMap).put(firstEdge,firstNewEdge);
+    Edge curNewEdge=firstNewEdge;
+    Face newFace=new Face(graph);
+    do {
+      Face curFace=embeddedGraph.getFace(curDart);
+      List<Dart> darts=curFace.getDarts();
+      int curPos=ListSequence.fromList(darts).indexOf(curDart);
+      int nextPos=curPos - 1;
+      if (nextPos == -1) {
+        nextPos=ListSequence.fromList(darts).count() - 1;
+      }
+      Dart nextDart=embeddedGraph.getOpposite(ListSequence.fromList(darts).getElement(nextPos));
+      if (nextDart == null) {
+        nextDart=firstDart;
+      }
+      Node oppositeNode=nextDart.getEdge().getOpposite(node);
+      Node nextNewNode;
+      if (nextDart == firstDart) {
+        nextNewNode=firstNewNode;
+      }
+ else {
+        nextNewNode=graph.addDummyNode();
+        ListSequence.fromList(newNodes).addElement(nextNewNode);
+      }
+      Edge nextNewEdge;
+      if (nextDart == firstDart) {
+        nextNewEdge=firstNewEdge;
+      }
+ else {
+        nextNewEdge=nextNewNode.addEdgeTo(oppositeNode);
+        if (firstEdge.getSource() == node) {
+          firstEdge.revert();
+        }
+        MapSequence.fromMap(edgeMap).put(nextDart.getEdge(),nextNewEdge);
+      }
+      Edge edgeBetweenNewNodes=curNewNode.addEdgeTo(nextNewNode);
+      SetSequence.fromSet(addedEdges).addElement(edgeBetweenNewNodes);
+      newFace.addLast(new Dart(edgeBetweenNewNodes,curNewNode));
+      embeddedGraph.setDart(curFace,nextPos,new Dart(nextNewEdge,oppositeNode));
+      embeddedGraph.setDart(curFace,curPos,new Dart(curNewEdge,curNewNode));
+      embeddedGraph.insertDart(curFace,nextPos + 1,new Dart(edgeBetweenNewNodes,nextNewNode));
+      curDart=nextDart;
+      curNewNode=nextNewNode;
+      curNewEdge=nextNewEdge;
+    }
+ while (curDart != firstDart);
+    embeddedGraph.addFace(newFace);
+    graph.remove(node);
+  }
+  return addedEdges;
+}
