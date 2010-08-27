@@ -1,0 +1,35 @@
+{
+  Map<Project,List<VirtualFile>> toMerge=new HashMap<Project,List<VirtualFile>>();
+  Map<VirtualFile,Conflictable> fileToConflictable=new LinkedHashMap<VirtualFile,Conflictable>();
+  Set<Conflictable> toReload=new HashSet<Conflictable>();
+  for (  Conflictable conflictable : conflictableList) {
+    IFile ifile=conflictable.getFile();
+    if (VCSUtil.isInConflict(ifile,true)) {
+      VirtualFile vfile=VFileSystem.getFile(ifile);
+      Conflictable prev=fileToConflictable.put(vfile,conflictable);
+      if (prev == null) {
+        Project project=VCSUtil.getProjectForFile(vfile);
+        List<VirtualFile> files=toMerge.get(project);
+        if (files == null) {
+          files=new LinkedList<VirtualFile>();
+          toMerge.put(project,files);
+        }
+        files.add(vfile);
+      }
+    }
+ else     if (conflictable.isConflictDetected() || conflictable.needReloading()) {
+      toReload.add(conflictable);
+    }
+  }
+  ModelChangesWatcher.instance().suspendTasksProcessing();
+  for (  Project project : toMerge.keySet()) {
+    List<VirtualFile> virtualFileList=AbstractVcsHelper.getInstance(project).showMergeDialog(toMerge.get(project));
+    for (    VirtualFile vfile : virtualFileList) {
+      Conflictable conflictable=fileToConflictable.get(vfile);
+      if (conflictable != null) {
+        toReload.add(conflictable);
+      }
+    }
+  }
+  return toReload;
+}

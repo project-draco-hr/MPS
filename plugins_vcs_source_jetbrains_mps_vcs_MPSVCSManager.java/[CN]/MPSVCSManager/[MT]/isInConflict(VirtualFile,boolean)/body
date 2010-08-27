@@ -1,0 +1,20 @@
+{
+  if (isChangeListManagerInitialized() && !synchronously) {
+    return ChangeListManager.getInstance(myProject).getStatus(vfile).equals(FileStatus.MERGED_WITH_CONFLICTS);
+  }
+  ensureVcssInitialized();
+  AbstractVcs vcs=myManager.getVcsFor(vfile);
+  if (vcs == null)   return false;
+  VcsDirtyScopeImpl scope=new VcsDirtyScopeImpl(vcs,myProject);
+  scope.addDirtyFile(VcsContextFactory.SERVICE.getInstance().createFilePathOn(vfile));
+  ChangeProvider changeProvider=vcs.getChangeProvider();
+  if (changeProvider == null)   return false;
+  final MyChangelistBuilder builder=new MyChangelistBuilder(vfile);
+  try {
+    changeProvider.getChanges(scope,builder,new EmptyProgressIndicator(),new StubChangeListManagerGate());
+  }
+ catch (  VcsException e) {
+    LOG.error(e);
+  }
+  return builder.isInConflict();
+}
