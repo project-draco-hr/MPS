@@ -1,0 +1,35 @@
+{
+  try {
+    Iterable<File> backupFiles=Sequence.fromIterable(Sequence.fromArray(ReRunMergeFromBackup_Action.this.getBackupFiles())).sort(new ISelector<File,Comparable<?>>(){
+      public Comparable<?> select(      File f){
+        return f.lastModified();
+      }
+    }
+,false);
+    for (    File backupFile : Sequence.fromIterable(backupFiles)) {
+      try {
+        SModel[] models=ModelUtils.loadZippedModels(backupFile,VcsHelper.VcsMergeVersion.values());
+        ReRunMergeFromBackup_Action.this.doMerge(models[VcsHelper.VcsMergeVersion.MINE.ordinal()],models[VcsHelper.VcsMergeVersion.BASE.ordinal()],models[VcsHelper.VcsMergeVersion.REPOSITORY.ordinal()]);
+        return;
+      }
+ catch (      IOException e) {
+        if (log.isWarnEnabled()) {
+          log.warn("",e);
+        }
+        continue;
+      }
+catch (      ModelDiffTool.ReadException e) {
+        if (log.isWarnEnabled()) {
+          log.warn("",e);
+        }
+        continue;
+      }
+    }
+    Messages.showInfoMessage("No suitable backup files for " + ReRunMergeFromBackup_Action.this.model.getSModelReference().getSModelFqName() + "was not found.","No Backup Files Found");
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "ReRunMergeFromBackup",t);
+    }
+  }
+}
