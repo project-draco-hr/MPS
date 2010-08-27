@@ -2,21 +2,21 @@
   final boolean[] result=new boolean[1];
   ModelAccess.instance().runWriteAction(new Runnable(){
     public void run(){
-      final Project project=inputModels.get(0).o2.getProject();
-      project.getComponent(TransientModelsModule.class).clearAll();
+      myProject.getComponent(TransientModelsModule.class).clearAll();
       if (!saveTransientModels) {
-        project.getComponent(GenerationTracer.class).discardTracing();
+        myProject.getComponent(GenerationTracer.class).discardTracing();
       }
-      IGenerationTracer tracer=saveTransientModels ? project.getComponent(GenerationTracer.class) : new NullGenerationTracer();
+      IGenerationTracer tracer=saveTransientModels ? myProject.getComponent(GenerationTracer.class) : new NullGenerationTracer();
       tracer.startTracing();
       fireBeforeGeneration(inputModels);
-      GenerationProcessContext parameters=new GenerationProcessContext(saveTransientModels,mySettings.isParallelGenerator(),mySettings.isStrictMode(),rebuildAll,mySettings.isGenerateDependencies(),!mySettings.isShowWarnings() && !mySettings.isShowInfo(),progress,tracer,mySettings.getNumberOfParallelThreads(),mySettings.getPerformanceTracingLevel());
-      GeneratorLoggerAdapter logger=new GeneratorLoggerAdapter(messages,mySettings.isShowInfo(),mySettings.isShowWarnings(),mySettings.isKeepModelsWithWarnings());
+      GenerationSettings settings=GenerationSettings.getInstance();
+      GenerationProcessContext parameters=new GenerationProcessContext(saveTransientModels,settings.isParallelGenerator(),settings.isStrictMode(),rebuildAll,settings.isGenerateDependencies(),!settings.isShowWarnings() && !settings.isShowInfo(),progress,tracer,settings.getNumberOfParallelThreads(),settings.getPerformanceTracingLevel());
+      GeneratorLoggerAdapter logger=new GeneratorLoggerAdapter(messages,settings.isShowInfo(),settings.isShowWarnings(),settings.isKeepModelsWithWarnings());
       GenerationController gc=new GenerationController(parameters,new GeneratorNotifierHelper(),inputModels,logger,generationHandler);
       result[0]=gc.generate();
       tracer.finishTracing();
       fireAfterGeneration(inputModels);
-      project.getComponent(TransientModelsModule.class).publishAll();
+      myProject.getComponent(TransientModelsModule.class).publishAll();
       CleanupManager.getInstance().cleanup();
     }
   }

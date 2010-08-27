@@ -4,8 +4,9 @@
   }
   final IOperationContext invocationContext=inputModels.get(0).o2;
   final DefaultMessageHandler messages=new DefaultMessageHandler(invocationContext.getProject());
+  final GenerationSettings settings=GenerationSettings.getInstance();
   final boolean saveTransientModels;
-  if (mySettings.isSaveTransientModels()) {
+  if (settings.isSaveTransientModels()) {
     Object[] options={"Save Transient Models","Not this time","No, and cancel saving"};
     int option=JOptionPane.showOptionDialog(invocationContext.getMainFrame(),"Would you like to save transient models?","",JOptionPane.YES_NO_CANCEL_OPTION,JOptionPane.QUESTION_MESSAGE,null,options,options[0]);
     if (option == 0) {
@@ -14,7 +15,7 @@
  else {
       saveTransientModels=false;
       if (option == 2) {
-        mySettings.setSaveTransientModels(false);
+        settings.setSaveTransientModels(false);
       }
       if (option == -1) {
         return false;
@@ -24,13 +25,12 @@
  else {
     saveTransientModels=false;
   }
-  if (DumbService.getInstance(myProject).isDumb()) {
-    DumbService.getInstance(myProject).showDumbModeNotification("Generation is not available until indices are built.");
+  if (DumbService.getInstance(project).isDumb()) {
+    DumbService.getInstance(project).showDumbModeNotification("Generation is not available until indices are built.");
     return false;
   }
-  if (generateRequirements()) {
-    boolean wasSaveTransientModels=mySettings.isSaveTransientModels();
-    myGeneratingRequirements=true;
+  if (!skipRequirementsGeneration && generateRequirements(settings)) {
+    boolean wasSaveTransientModels=settings.isSaveTransientModels();
     try {
       final Set<SModelDescriptor> requirements=new LinkedHashSet<SModelDescriptor>();
       ModelAccess.instance().runReadAction(new Runnable(){
@@ -46,13 +46,13 @@
       }
       if (!requirements.isEmpty()) {
         int result=2;
-        if (mySettings.getGenerateRequirementsPolicy() == GenerationSettings.GenerateRequirementsPolicy.ASK) {
+        if (settings.getGenerateRequirementsPolicy() == GenerationSettings.GenerateRequirementsPolicy.ASK) {
           final StringBuffer message=new StringBuffer("The following models might be required for generation\n" + "but aren't generated. Do you want to generate them?\n");
           for (          SModelDescriptor sm : requirements) {
             message.append("\n").append(sm.getSModelReference().getSModelFqName());
           }
           if (IdeMain.getTestMode() != TestMode.CORE_TEST) {
-            DialogWrapper questionDialog=new GenerateRequirementsDialog(myProject,mySettings,message.toString());
+            DialogWrapper questionDialog=new GenerateRequirementsDialog(project,settings,message.toString());
             questionDialog.show();
             result=questionDialog.getExitCode();
           }
@@ -62,13 +62,12 @@
         }
         if (result == 1)         return false;
         if (result == 0) {
-          generateModelsFromDifferentModules(invocationContext,new ArrayList<SModelDescriptor>(requirements),getDefaultGenerationHandler(),true);
+          generateModels(invocationContext,new ArrayList<SModelDescriptor>(requirements),getDefaultGenerationHandler(),rebuildAll,true);
         }
       }
     }
   finally {
-      mySettings.setSaveTransientModels(wasSaveTransientModels);
-      myGeneratingRequirements=false;
+      settings.setSaveTransientModels(wasSaveTransientModels);
     }
   }
   ModelAccess.instance().runWriteActionInCommand(new Runnable(){
@@ -77,12 +76,13 @@
     }
   }
 );
-  showMessageView();
+  showMessageView(project);
   IdeEventQueue.getInstance().flushQueue();
   final boolean[] result=new boolean[]{false};
   ProgressManager.getInstance().run(new Modal(invocationContext.getProject(),"Generation",true){
     public void run(    @NotNull ProgressIndicator progress){
-      result[0]=generateModels(inputModels,generationHandler,progress,messages,saveTransientModels,rebuildAll);
+      GeneratorManager generatorManager=project.getComponent(GeneratorManager.class);
+      result[0]=generatorManager.generateModels(inputModels,generationHandler,progress,messages,saveTransientModels,rebuildAll);
     }
   }
 );
