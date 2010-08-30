@@ -1,0 +1,38 @@
+{
+  try {
+    myProgramFile=NanocConfigRunPreparationUtil.prepare(myNodeId,myModelRef);
+    String sourceGen=SModelRepository.getInstance().getModelDescriptor(SModelReference.fromString(myModelRef)).getModule().getGeneratorOutputPath();
+    File gdbFile=new File(ProgramsLocationUtil.getGdbLocation());
+    ProcessBuilder processBuilder=new ProcessBuilder();
+    processBuilder.directory(gdbFile.getParentFile());
+    processBuilder.command(gdbFile.getAbsolutePath(),"-quiet","--interpreter=mi");
+    Process process=processBuilder.start();
+    final ConsoleViewImpl consoleView=StacktraceUtil.createConsoleView(project);
+    SimpleConsoleProcessHandler processHandler=new SimpleConsoleProcessHandler(consoleView,process,gdbFile.getAbsolutePath());
+    processHandler.addProcessListener(new CppGDBCreator.MyProcessListener());
+    ExecutionConsole executionConsole=new ExecutionConsole(){
+      @Override public JComponent getComponent(){
+        return consoleView.getComponent();
+      }
+      @Override public JComponent getPreferredFocusableComponent(){
+        return consoleView;
+      }
+      @Override public void dispose(){
+        Disposer.dispose(consoleView);
+      }
+    }
+;
+    myDebugSession=new CppDebugSession(project,sourceGen);
+    myDebugSession.setProcessHandler(processHandler);
+    myDebugSession.getGDBEventsHandler().addEventListener(new GDBEventsAdapter(){
+      @Override public void processTerminated(      SimpleConsoleProcessHandler gdbProcess){
+        gdbProcess.inputWithFlush("-gdb-exit\n");
+      }
+    }
+);
+    return new DefaultExecutionResult(executionConsole,processHandler,consoleView.createConsoleActions());
+  }
+ catch (  Throwable t) {
+    throw new ExecutionException("can't create debug session",t);
+  }
+}
