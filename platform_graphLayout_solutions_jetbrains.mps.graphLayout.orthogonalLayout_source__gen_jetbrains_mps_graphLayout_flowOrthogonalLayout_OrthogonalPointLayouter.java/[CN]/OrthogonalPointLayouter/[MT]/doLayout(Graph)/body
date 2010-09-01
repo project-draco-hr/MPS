@@ -25,7 +25,7 @@
   }
   Map<Node,List<Node>> newNodes=MapSequence.fromMap(new HashMap<Node,List<Node>>());
   Map<Edge,Edge> replacedEdges=MapSequence.fromMap(new HashMap<Edge,Edge>());
-  Set<Edge> newEdges=reduceNodesDegree(embeddedGraph,newNodes,replacedEdges);
+  Set<Edge> newEdges=new EmbeddedGraphModifier(embeddedGraph).reduceNodesDegree(newNodes,replacedEdges);
   for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(replacedEdges).keySet())) {
     Edge replacement=MapSequence.fromMap(replacedEdges).get(edge);
     if (MapSequence.fromMap(replacedEdges).containsKey(replacement)) {
@@ -50,7 +50,17 @@
     System.out.println("graph now has " + ListSequence.fromList(copy.getNodes()).count() + " nodes and "+ ListSequence.fromList(copy.getEdges()).count()+ " edges");
     curTime=newTime;
   }
-  GraphPointLayout copyLayout=getFlowLayout(embeddedGraph,newEdges);
+  Map<Node,List<Node>> nodesToSplit=MapSequence.fromMap(new LinkedHashMap<Node,List<Node>>(16,(float)0.75,false));
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    Node copyNode=MapSequence.fromMap(nodeMap).get(node);
+    if (!(MapSequence.fromMap(newNodes).containsKey(copyNode))) {
+      MapSequence.fromMap(nodesToSplit).put(copyNode,ListSequence.fromList(new ArrayList<Node>()));
+    }
+ else {
+      MapSequence.fromMap(nodesToSplit).put(copyNode,MapSequence.fromMap(newNodes).get(copyNode));
+    }
+  }
+  GraphPointLayout copyLayout=getFlowLayout(embeddedGraph,newEdges,nodesToSplit);
   GraphPointLayout graphLayout=new GraphPointLayout(graph);
   for (  Node node : ListSequence.fromList(graph.getNodes())) {
     Node copyNode=MapSequence.fromMap(nodeMap).get(node);
@@ -101,5 +111,5 @@
     long newTime=System.currentTimeMillis();
     System.out.println("all: " + ((newTime - time) / MILLIS));
   }
-  return graphLayout;
+  return copyLayout;
 }
