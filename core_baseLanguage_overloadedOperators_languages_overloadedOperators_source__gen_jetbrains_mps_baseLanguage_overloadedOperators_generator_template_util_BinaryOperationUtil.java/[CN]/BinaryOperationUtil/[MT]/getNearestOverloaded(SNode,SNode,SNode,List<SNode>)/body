@@ -2,15 +2,25 @@
   if (!(SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.BinaryOperation"))) {
     return null;
   }
-  operators=getOverloadedOperators(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.BinaryOperation"),leftType,rightType,operators);
-  if (ListSequence.fromList(operators).count() == 0) {
+  SNode result=(SNode)(node.getUserObject("operator"));
+  if (result != null) {
+    return result;
+  }
+  Map<SNode,Boolean> operatorMap=getOverloadedOperators(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.BinaryOperation"),leftType,rightType,operators);
+  if (MapSequence.fromMap(operatorMap).count() == 0) {
     return null;
   }
-  SNode result=ListSequence.fromList(operators).first();
-  for (  SNode operator : operators) {
-    if (isSubTypeOperator(operator,result)) {
+  result=MapSequence.fromMap(operatorMap).first().key();
+  boolean resultReversed=MapSequence.fromMap(operatorMap).first().value();
+  for (  IMapping<SNode,Boolean> operatorEntry : MapSequence.fromMap(operatorMap)) {
+    SNode operator=operatorEntry.key();
+    boolean reversed=operatorEntry.value() != resultReversed;
+    if (isSubTypeOperator(operator,result,reversed)) {
       result=operator;
+      resultReversed=operatorEntry.value();
     }
   }
+  node.putUserObject("operator",result);
+  node.putUserObject("reversed",resultReversed);
   return result;
 }
