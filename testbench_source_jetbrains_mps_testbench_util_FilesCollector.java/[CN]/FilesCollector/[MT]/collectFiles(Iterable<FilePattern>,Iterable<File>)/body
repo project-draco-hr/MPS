@@ -1,0 +1,28 @@
+{
+  Map<File,Set<String>> includePathsMap=new HashMap<File,Set<String>>();
+  Map<File,Set<String>> excludePathsMap=new HashMap<File,Set<String>>();
+  for (  FilePattern fp : filePtns) {
+    PatternFileSearcher pfs=new PatternFileSearcher(fp.filePtn,path);
+    for (    Pair<File,String> pear : pfs.getRelativePaths()) {
+      Map<File,Set<String>> pathsMap=fp.include ? includePathsMap : excludePathsMap;
+      Set<String> paths=pathsMap.get(pear.getFirst());
+      if (paths == null) {
+        paths=new HashSet<String>();
+        pathsMap.put(pear.getFirst(),paths);
+      }
+      paths.add(pear.getSecond());
+    }
+  }
+  final List<File> files=new ArrayList<File>();
+  for (  Map.Entry<File,Set<String>> en : includePathsMap.entrySet()) {
+    Set<String> include=en.getValue();
+    Set<String> exclude=excludePathsMap.get(en.getKey());
+    if (exclude != null) {
+      include.removeAll(exclude);
+    }
+    for (    String p : include) {
+      files.add(new File(p));
+    }
+  }
+  return Collections.unmodifiableCollection(files);
+}
