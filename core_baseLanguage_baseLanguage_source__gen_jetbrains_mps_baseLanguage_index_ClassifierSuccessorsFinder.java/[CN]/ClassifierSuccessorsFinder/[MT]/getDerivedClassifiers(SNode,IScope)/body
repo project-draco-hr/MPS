@@ -1,0 +1,41 @@
+{
+  Set<VirtualFile> unModifiedModelFiles=SetSequence.fromSet(new HashSet<VirtualFile>());
+  List<SNode> modifiedClasses=ListSequence.fromList(new ArrayList<SNode>());
+  List<SNode> modifiedInterfaces=ListSequence.fromList(new ArrayList<SNode>());
+  for (  SModelDescriptor md : scope.getModelDescriptors()) {
+    if (!((md instanceof EditableSModelDescriptor))) {
+      continue;
+    }
+    EditableSModelDescriptor emd=(EditableSModelDescriptor)md;
+    IFile modelFile=emd.getModelFile();
+    if (modelFile == null) {
+      continue;
+    }
+    if (SModelRepository.getInstance().isChanged(emd)) {
+      SModel sModel=md.getSModel();
+      for (      SNode sNode : ListSequence.fromList(SModelOperations.getNodes(sModel,null))) {
+        if (SNodeOperations.isInstanceOf(sNode,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
+          ListSequence.fromList(modifiedClasses).addElement(SNodeOperations.cast(sNode,"jetbrains.mps.baseLanguage.structure.ClassConcept"));
+        }
+ else         if (SNodeOperations.isInstanceOf(sNode,"jetbrains.mps.baseLanguage.structure.Interface")) {
+          ListSequence.fromList(modifiedInterfaces).addElement(SNodeOperations.cast(sNode,"jetbrains.mps.baseLanguage.structure.Interface"));
+        }
+      }
+    }
+ else {
+      SetSequence.fromSet(unModifiedModelFiles).addElement(modelFile.toVirtualFile());
+    }
+  }
+  List<SNode> result=new ArrayList<SNode>();
+  Queue<SNode> queue=QueueSequence.fromQueue(new LinkedList<SNode>());
+  QueueSequence.fromQueue(queue).addLastElement(classifier);
+  ClassifierSuccessorsFinder.ValueProcessor valueProcessor=new ClassifierSuccessorsFinder.ValueProcessor(result,queue);
+  ClassifierSuccessorsFinder.ModifiedsuccessorFinder modifiedSuccessorFinder=new ClassifierSuccessorsFinder.ModifiedsuccessorFinder(modifiedClasses,modifiedInterfaces,result,queue);
+  ClassifierSuccessorsFinder.SearchScope unModifiedFilesSearchScope=new ClassifierSuccessorsFinder.SearchScope(unModifiedModelFiles);
+  while (!(QueueSequence.fromQueue(queue).isEmpty())) {
+    SNode nextClassifier=QueueSequence.fromQueue(queue).removeFirstElement();
+    FileBasedIndex.getInstance().processValues(ClassifierSuccessorsIndexer.NAME,new GlobalSNodeId(nextClassifier),null,valueProcessor,unModifiedFilesSearchScope);
+    modifiedSuccessorFinder.process(nextClassifier);
+  }
+  return result;
+}
