@@ -1,0 +1,51 @@
+{
+  final String[] error=new String[]{null};
+  ProgressManager.getInstance().run(new Task.Modal(myProject,"Creating",false){
+    public void run(    @NotNull() ProgressIndicator indicator){
+      indicator.setIndeterminate(true);
+      error[0]=createDirs();
+      if (error[0] != null)       return;
+      myCreatedProject=ProjectManagerEx.getInstanceEx().newProject(myOptions.getProjectName(),myOptions.getProjectPath() + File.separator + myOptions.getProjectName()+ MPSExtentions.DOT_MPS_PROJECT,true,false);
+    }
+  }
+);
+  if (error[0] != null) {
+    Messages.showErrorDialog(getContentPane(),error[0]);
+    return;
+  }
+  myCreatedProject.save();
+  final MPSProject mpsProject=myCreatedProject.getComponent(MPSProject.class);
+  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+    public void run(){
+      if (myOptions.getCreateNewLanguage()) {
+        myCreatedLanguage=createNewLanguage(mpsProject);
+        mpsProject.addProjectLanguage(myCreatedLanguage);
+        myCreatedLanguage.save();
+      }
+      if (myOptions.getCreateNewSolution()) {
+        IFile solutionDescriptorFile=createNewSolution();
+        myCreatedSolution=mpsProject.addProjectSolution(solutionDescriptorFile.toFile());
+        myCreatedSolution.save();
+      }
+      if (myCreatedSolution != null && myCreatedLanguage != null) {
+        myCreatedSolution.addUsedLanguage(myCreatedLanguage.getModuleReference());
+        myCreatedSolution.save();
+        if (myOptions.getCreateModel()) {
+          EditableSModelDescriptor model=myCreatedSolution.createModel(SModelFqName.fromString(myCreatedSolution.getModuleReference().getModuleFqName() + ".sandbox"),myCreatedSolution.getSModelRoots().get(0));
+          model.getSModel().addLanguage(myCreatedLanguage);
+          model.save();
+        }
+      }
+    }
+  }
+);
+  ProjectManagerEx projectManager=ProjectManagerEx.getInstanceEx();
+  boolean opened=projectManager.openProject(myCreatedProject);
+  if (!opened)   return;
+  StartupManager.getInstance(myCreatedProject).runWhenProjectIsInitialized(new Runnable(){
+    public void run(){
+      ProjectPane.getInstance(myCreatedProject).activate();
+    }
+  }
+);
+}
