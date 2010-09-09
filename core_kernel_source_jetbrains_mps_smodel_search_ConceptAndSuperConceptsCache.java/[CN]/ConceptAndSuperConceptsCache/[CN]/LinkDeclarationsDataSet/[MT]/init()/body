@@ -1,0 +1,43 @@
+{
+  List<LinkDeclaration> allLinks=new ArrayList<LinkDeclaration>();
+  myLinkByRole=new HashMap<String,LinkDeclaration>();
+  List<AbstractConceptDeclaration> concepts=((ConceptAndSuperConceptsCache)getOwnerCache()).getConcepts();
+  for (  AbstractConceptDeclaration concept : concepts) {
+    List<LinkDeclaration> list=concept.getLinkDeclarations();
+    allLinks.addAll(list);
+    for (    LinkDeclaration link : list) {
+      String role1=link.getRole();
+      if (role1 == null)       continue;
+      if (myLinkByRole.containsKey(role1))       continue;
+      myLinkByRole.put(role1,link);
+    }
+  }
+  Map<LinkDeclaration,LinkDeclaration> specializedLinks=new HashMap<LinkDeclaration,LinkDeclaration>();
+  for (  LinkDeclaration link : allLinks) {
+    LinkDeclaration specializedLink=link.getSpecializedLink();
+    if (specializedLink != null) {
+      specializedLinks.put(specializedLink,link);
+    }
+  }
+  myMostSpecificLinkBySpecializedLink=new HashMap<LinkDeclaration,LinkDeclaration>();
+  myMostSpecificLinks=new ArrayList<LinkDeclaration>(5);
+  for (  LinkDeclaration link : allLinks) {
+    LinkDeclaration moreSpecificLink=specializedLinks.get(link);
+    if (moreSpecificLink == null) {
+      myMostSpecificLinks.add(link);
+    }
+ else {
+      while (moreSpecificLink != null) {
+        myMostSpecificLinkBySpecializedLink.put(link,moreSpecificLink);
+        moreSpecificLink=specializedLinks.get(moreSpecificLink);
+      }
+    }
+  }
+  myDependsOnNodes=new HashSet<SNode>();
+  for (  AbstractConceptDeclaration concept : concepts) {
+    myDependsOnNodes.add(concept.getNode());
+  }
+  for (  LinkDeclaration link : allLinks) {
+    myDependsOnNodes.add(link.getNode());
+  }
+}
