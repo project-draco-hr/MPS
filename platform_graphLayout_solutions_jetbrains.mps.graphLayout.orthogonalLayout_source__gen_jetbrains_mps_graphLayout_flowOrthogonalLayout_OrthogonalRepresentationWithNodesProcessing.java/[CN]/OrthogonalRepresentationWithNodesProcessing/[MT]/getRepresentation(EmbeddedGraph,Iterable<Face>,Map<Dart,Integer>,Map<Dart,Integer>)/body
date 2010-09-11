@@ -1,0 +1,88 @@
+{
+  Graph graph=embeddedGraph.getGraph();
+  Graph network=new Graph();
+  Node center=network.addNode();
+  Map<Edge,Integer> low=MapSequence.fromMap(new HashMap<Edge,Integer>());
+  Map<Edge,Integer> capacity=MapSequence.fromMap(new HashMap<Edge,Integer>());
+  Map<Edge,Integer> cost=MapSequence.fromMap(new HashMap<Edge,Integer>());
+  Map<Node,Node> nodeMap=MapSequence.fromMap(new HashMap<Node,Node>());
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    Node networkNode=network.addNode();
+    MapSequence.fromMap(nodeMap).put(node,networkNode);
+    Edge edge=center.addEdgeTo(networkNode);
+    MapSequence.fromMap(low).put(edge,4);
+    MapSequence.fromMap(capacity).put(edge,MapSequence.fromMap(low).get(edge));
+    MapSequence.fromMap(cost).put(edge,0);
+  }
+  Map<Face,Node> faceMap=MapSequence.fromMap(new HashMap<Face,Node>());
+  for (  Face face : ListSequence.fromList(embeddedGraph.getFaces())) {
+    Node node=network.addNode();
+    MapSequence.fromMap(faceMap).put(face,node);
+    Edge edge=node.addEdgeTo(center);
+    if (embeddedGraph.isOuterFace(face)) {
+      MapSequence.fromMap(low).put(edge,2 * ListSequence.fromList(face.getDarts()).count() + 4);
+    }
+ else {
+      MapSequence.fromMap(low).put(edge,2 * ListSequence.fromList(face.getDarts()).count() - 4);
+    }
+    MapSequence.fromMap(capacity).put(edge,MapSequence.fromMap(low).get(edge));
+    MapSequence.fromMap(cost).put(edge,0);
+  }
+  Map<Dart,Edge> dartBendMap=MapSequence.fromMap(new HashMap<Dart,Edge>());
+  Map<Dart,Edge> dartAngleMap=MapSequence.fromMap(new HashMap<Dart,Edge>());
+  for (  Face face : ListSequence.fromList(embeddedGraph.getFaces())) {
+    Node faceNode=MapSequence.fromMap(faceMap).get(face);
+    boolean isNodeFace=Sequence.fromIterable(nodeFaces).contains(face);
+    for (    Dart dart : ListSequence.fromList(face.getDarts())) {
+      Edge edge=MapSequence.fromMap(nodeMap).get(dart.getSource()).addEdgeTo(faceNode);
+      MapSequence.fromMap(dartAngleMap).put(dart,edge);
+      MapSequence.fromMap(low).put(edge,1);
+      if (isNodeFace) {
+        MapSequence.fromMap(capacity).put(edge,2);
+      }
+ else {
+        MapSequence.fromMap(capacity).put(edge,4);
+      }
+      MapSequence.fromMap(cost).put(edge,0);
+      List<Face> faces=embeddedGraph.getAdjacentFaces(dart.getEdge());
+      Face oppositeFace;
+      if (ListSequence.fromList(faces).getElement(0) == face) {
+        oppositeFace=ListSequence.fromList(faces).getElement(1);
+      }
+ else {
+        oppositeFace=ListSequence.fromList(faces).getElement(0);
+      }
+      if (Sequence.fromIterable(nodeFaces).contains(oppositeFace)) {
+        continue;
+      }
+      Node oppositeFaceNode=MapSequence.fromMap(faceMap).get(oppositeFace);
+      edge=faceNode.addEdgeTo(oppositeFaceNode);
+      MapSequence.fromMap(dartBendMap).put(dart,edge);
+      MapSequence.fromMap(low).put(edge,0);
+      MapSequence.fromMap(capacity).put(edge,Integer.MAX_VALUE / 2);
+      if (isNodeFace) {
+        MapSequence.fromMap(cost).put(edge,1);
+      }
+ else {
+        MapSequence.fromMap(cost).put(edge,10);
+      }
+    }
+  }
+  if (OrthogonalRepresentationWithNodesProcessing.SHOW_INFO > 0) {
+    System.out.println("Constructed network:");
+    for (    Node node : ListSequence.fromList(graph.getNodes())) {
+      System.out.println("for node " + node + ": "+ MapSequence.fromMap(nodeMap).get(node));
+    }
+    for (    Face face : ListSequence.fromList(embeddedGraph.getFaces())) {
+      System.out.println("for face " + face + ": "+ MapSequence.fromMap(faceMap).get(face));
+    }
+    for (    Edge edge : ListSequence.fromList(network.getEdges())) {
+      System.out.println("edge " + edge + ": low = "+ MapSequence.fromMap(low).get(edge)+ ", cap = "+ MapSequence.fromMap(capacity).get(edge)+ ", cost = "+ MapSequence.fromMap(cost).get(edge));
+    }
+  }
+  Map<Edge,Integer> circulation=MinCostCirculation.getCirculation(network,low,capacity,cost);
+  for (  Dart dart : SetSequence.fromSet(MapSequence.fromMap(dartBendMap).keySet())) {
+    MapSequence.fromMap(bends).put(dart,MapSequence.fromMap(circulation).get(MapSequence.fromMap(dartBendMap).get(dart)));
+    MapSequence.fromMap(angles).put(dart,MapSequence.fromMap(circulation).get(MapSequence.fromMap(dartAngleMap).get(dart)));
+  }
+}

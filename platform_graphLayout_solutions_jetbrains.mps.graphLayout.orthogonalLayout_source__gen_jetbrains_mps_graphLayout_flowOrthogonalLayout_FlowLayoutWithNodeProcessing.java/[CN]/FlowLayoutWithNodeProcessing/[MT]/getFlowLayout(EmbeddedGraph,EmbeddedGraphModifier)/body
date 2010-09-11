@@ -1,0 +1,50 @@
+{
+  Graph graph=embeddedGraph.getGraph();
+  List<Edge> oldEdges=ListSequence.fromList(new ArrayList<Edge>());
+  ListSequence.fromList(oldEdges).addSequence(ListSequence.fromList(graph.getEdges()));
+  List<Node> oldNodes=ListSequence.fromList(new ArrayList<Node>());
+  ListSequence.fromList(oldNodes).addSequence(ListSequence.fromList(graph.getNodes()));
+  Map<Dart,Integer> bends=MapSequence.fromMap(new HashMap<Dart,Integer>());
+  Map<Dart,Integer> angles=MapSequence.fromMap(new HashMap<Dart,Integer>());
+  OrthogonalRepresentationWithNodesProcessing.getRepresentation(embeddedGraph,MapSequence.fromMap(modifier.getNodeFaces()).values(),bends,angles);
+  OrthogonalRepresentationWithNodesProcessing.replaceBendsByNodes(embeddedGraph,bends,angles);
+  Map<Dart,Direction2D> directions=OrthogonalRepresentation.getDirections(embeddedGraph,angles);
+  modifier.setDartDirections(directions);
+  modifier.makeRectangularFaces();
+  if (SHOW_lOG > 0) {
+    System.out.println("after making faces rectangular: ");
+    printEmbeddedGraphWithDirections(embeddedGraph,directions);
+  }
+  EdgeLengthComputer lengthComputer=new EdgeLengthComputer();
+  lengthComputer.setUnitLength(2);
+  Map<Edge,Integer> lengths=lengthComputer.compute(embeddedGraph,directions);
+  CoordinatePlacer placer=new CoordinatePlacer(embeddedGraph,lengths,directions);
+  Map<Node,Point> coordinates=placer.getCoordinates();
+  GraphPointLayout graphLayout=new GraphPointLayout(graph);
+  for (  Node node : ListSequence.fromList(oldNodes)) {
+    graphLayout.setLayoutFor(node,MapSequence.fromMap(coordinates).get(node));
+  }
+  for (  Edge edge : ListSequence.fromList(oldEdges)) {
+    List<Edge> history=embeddedGraph.findFullHistory(edge);
+    List<Point> edgeLayout=ListSequence.fromList(new ArrayList<Point>());
+    Node cur=edge.getSource();
+    ListSequence.fromList(edgeLayout).addElement(MapSequence.fromMap(coordinates).get(cur));
+    for (    Edge historyEdge : ListSequence.fromList(history)) {
+      Node next=historyEdge.getOpposite(cur);
+      ListSequence.fromList(edgeLayout).addElement(MapSequence.fromMap(coordinates).get(next));
+      cur=next;
+    }
+    graphLayout.setLayoutFor(edge,edgeLayout);
+  }
+  GraphPointLayout copyLayout=new GraphPointLayout(graph);
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    copyLayout.setLayoutFor(node,MapSequence.fromMap(coordinates).get(node));
+  }
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    List<Point> edgeLayout=ListSequence.fromList(new ArrayList<Point>());
+    ListSequence.fromList(edgeLayout).addElement(new Point(MapSequence.fromMap(coordinates).get(edge.getSource())));
+    ListSequence.fromList(edgeLayout).addElement(new Point(MapSequence.fromMap(coordinates).get(edge.getTarget())));
+    copyLayout.setLayoutFor(edge,edgeLayout);
+  }
+  return graphLayout;
+}

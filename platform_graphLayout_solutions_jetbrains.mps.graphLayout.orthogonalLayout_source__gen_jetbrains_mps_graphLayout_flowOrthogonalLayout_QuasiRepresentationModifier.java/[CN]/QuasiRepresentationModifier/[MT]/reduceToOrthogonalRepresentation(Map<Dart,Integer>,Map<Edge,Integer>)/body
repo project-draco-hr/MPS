@@ -1,0 +1,88 @@
+{
+  Graph representationGraph=new Graph();
+  Map<Node,Node> nodeMap=MapSequence.fromMap(new HashMap<Node,Node>());
+  Map<Edge,Edge> edgeMap=MapSequence.fromMap(new HashMap<Edge,Edge>());
+  Map<Edge,List<Edge>> longEdges=MapSequence.fromMap(new HashMap<Edge,List<Edge>>());
+  for (  Node node : ListSequence.fromList(myGraph.getNodes())) {
+    MapSequence.fromMap(nodeMap).put(node,representationGraph.addNode());
+  }
+  Set<Edge> reduced=SetSequence.fromSet(new HashSet<Edge>());
+  for (  Node node : ListSequence.fromList(myGraph.getNodes())) {
+    List<Dart> darts=myEmbeddedGraph.getDartWithSource(node);
+    List<Dart> sortedDarts=ListSequence.fromList(new LinkedList<Dart>());
+    Dart curDart=ListSequence.fromList(darts).first();
+    while (ListSequence.fromList(sortedDarts).count() != ListSequence.fromList(darts).count()) {
+      ListSequence.fromList(sortedDarts).addElement(curDart);
+      Face curFace=myEmbeddedGraph.getFace(curDart);
+      for (      Dart dart : ListSequence.fromList(darts)) {
+        Dart opposite=myEmbeddedGraph.getOpposite(dart);
+        if (myEmbeddedGraph.getFace(opposite) == curFace) {
+          curDart=dart;
+          break;
+        }
+      }
+    }
+    darts=sortedDarts;
+    boolean hasZeroAngles=false;
+    for (    Dart dart : ListSequence.fromList(darts)) {
+      if (MapSequence.fromMap(myAngles).get(dart) == 0) {
+        hasZeroAngles=true;
+      }
+    }
+    if (hasZeroAngles) {
+      while (MapSequence.fromMap(myAngles).get(ListSequence.fromList(darts).first()) != 0) {
+        ListSequence.fromList(darts).addElement(ListSequence.fromList(darts).removeElementAt(0));
+      }
+      while (MapSequence.fromMap(myAngles).get(ListSequence.fromList(darts).last()) == 0) {
+        ListSequence.fromList(darts).insertElement(0,ListSequence.fromList(darts).removeLastElement());
+      }
+    }
+    Iterator<Dart> dartItr=ListSequence.fromList(darts).iterator();
+    while (dartItr.hasNext()) {
+      curDart=dartItr.next();
+      if (MapSequence.fromMap(myAngles).get(curDart) == 0) {
+        List<Dart> sameDirectionDarts=ListSequence.fromList(new LinkedList<Dart>());
+        while (MapSequence.fromMap(myAngles).get(curDart) == 0) {
+          ListSequence.fromList(sameDirectionDarts).addElement(curDart);
+          curDart=dartItr.next();
+        }
+        Node curNode=MapSequence.fromMap(nodeMap).get(node);
+        List<Edge> edgeList=ListSequence.fromList(new LinkedList<Edge>());
+        for (        Dart dart : ListSequence.fromList(sameDirectionDarts)) {
+          Edge edgeToReduce=dart.getEdge();
+          if (SetSequence.fromSet(reduced).contains(edgeToReduce)) {
+            throw new RuntimeException("found edge with two reduced ends: " + edgeToReduce);
+          }
+ else {
+            SetSequence.fromSet(reduced).addElement(edgeToReduce);
+          }
+          Node tempNode=representationGraph.addNode();
+          ListSequence.fromList(edgeList).addElement(curNode.addEdgeTo(tempNode));
+          replaceEdge(dart,tempNode,edgeMap,nodeMap);
+          curNode=tempNode;
+        }
+        Edge edgeToReduce=curDart.getEdge();
+        if (SetSequence.fromSet(reduced).contains(edgeToReduce)) {
+          throw new RuntimeException("found edge with two reduced ends: " + edgeToReduce);
+        }
+ else {
+          SetSequence.fromSet(reduced).addElement(edgeToReduce);
+        }
+        replaceEdge(curDart,curNode,edgeMap,nodeMap);
+        MapSequence.fromMap(longEdges).put(curDart.getEdge(),edgeList);
+      }
+ else {
+        Edge edge=curDart.getEdge();
+        if (!(MapSequence.fromMap(edgeMap).containsKey(edge))) {
+          if (edge.getSource() == node) {
+            MapSequence.fromMap(edgeMap).put(edge,MapSequence.fromMap(nodeMap).get(node).addEdgeTo(MapSequence.fromMap(nodeMap).get(curDart.getTarget())));
+          }
+ else {
+            MapSequence.fromMap(edgeMap).put(edge,MapSequence.fromMap(nodeMap).get(curDart.getTarget()).addEdgeTo(MapSequence.fromMap(nodeMap).get(node)));
+          }
+        }
+      }
+    }
+  }
+  return getEmbeddedGraph(representationGraph,edgeMap,longEdges);
+}
