@@ -1,0 +1,37 @@
+{
+  String namePattern=getNamePattern(pattern);
+  String qualifierPattern=getQualifierPattern(pattern);
+  boolean empty=namePattern.length() == 0 || namePattern.equals("@");
+  if (empty && !myChooseByNameBase.isShowListForEmptyPattern())   return;
+  List<String> namesList=new ArrayList<String>();
+  getNamesByPattern(myCalcElementsThread.myCheckboxState,myCalcElementsThread,namesList,namePattern);
+  if (myCalcElementsThread.myCancelled) {
+    throw new ProcessCanceledException();
+  }
+  Collections.sort(namesList,new MatchesComparator(pattern));
+  boolean overflow=false;
+  List<Object> sameNameElements=new SmartList<Object>();
+  All:   for (  String name : namesList) {
+    if (myCalcElementsThread.myCancelled) {
+      throw new ProcessCanceledException();
+    }
+    final Object[] elements=myChooseByNameBase.myModel.getElementsByName(name,myCalcElementsThread.myCheckboxState,namePattern);
+    sameNameElements.clear();
+    for (    final Object element : elements) {
+      if (matchesQualifier(element,qualifierPattern)) {
+        sameNameElements.add(element);
+      }
+    }
+    sortByProximity(sameNameElements);
+    for (    Object element : sameNameElements) {
+      elementsArray.add(element);
+      if (elementsArray.size() >= myChooseByNameBase.myMaximumListSizeLimit) {
+        overflow=true;
+        break All;
+      }
+    }
+  }
+  if (overflow) {
+    elementsArray.add(ChooseByNameBase.EXTRA_ELEM);
+  }
+}
