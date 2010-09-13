@@ -1,18 +1,18 @@
 {
   final KeyStroke keyStroke=KeyStroke.getKeyStrokeForEvent(e);
   if (myCompletionKeyStroke != null && keyStroke.equals(myCompletionKeyStroke)) {
+    completionKeyStrokeHappened=true;
     e.consume();
     final String pattern=myTextField.getText();
     final String oldText=myTextField.getText();
     final int oldPos=myList.getSelectedIndex();
     myHistory.add(Pair.create(oldText,oldPos));
     final Runnable postRunnable=new Runnable(){
-      public void run(){
-        fillInCommonPrefix(pattern);
+      @Patch public void run(){
       }
     }
 ;
-    rebuildList(0,0,postRunnable,ModalityState.current());
+    rebuildList(0,0,postRunnable,ModalityState.current(),e);
     return;
   }
   if (backStroke != null && keyStroke.equals(backStroke)) {
@@ -23,7 +23,7 @@
       final Pair<String,Integer> last=myHistory.remove(myHistory.size() - 1);
       myTextField.setText(last.first);
       myFuture.add(Pair.create(oldText,oldPos));
-      rebuildList(0,0,null,ModalityState.current());
+      rebuildList(0,0,null,ModalityState.current(),e);
     }
     return;
   }
@@ -35,9 +35,16 @@
       final Pair<String,Integer> next=myFuture.remove(myFuture.size() - 1);
       myTextField.setText(next.first);
       myHistory.add(Pair.create(oldText,oldPos));
-      rebuildList(0,0,null,ModalityState.current());
+      rebuildList(0,0,null,ModalityState.current(),e);
     }
     return;
   }
-  super.processKeyEvent(e);
+  try {
+    super.processKeyEvent(e);
+  }
+ catch (  NullPointerException e1) {
+    if (!Patches.SUN_BUG_6322854) {
+      throw e1;
+    }
+  }
 }
