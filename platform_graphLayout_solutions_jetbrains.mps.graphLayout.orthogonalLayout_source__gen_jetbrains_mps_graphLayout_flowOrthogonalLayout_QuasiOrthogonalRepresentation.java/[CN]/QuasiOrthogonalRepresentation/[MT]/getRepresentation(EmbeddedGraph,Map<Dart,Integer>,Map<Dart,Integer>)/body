@@ -67,34 +67,36 @@
   Map<Node,Map<Face,Edge>> faceToNodeEdges=MapSequence.fromMap(new HashMap<Node,Map<Face,Edge>>());
   Map<Edge,Dart> tempEdgesToDart=MapSequence.fromMap(new HashMap<Edge,Dart>());
   for (  Node node : ListSequence.fromList(graph.getNodes())) {
-    List<Dart> darts=embeddedGraph.getDartWithSource(node);
-    Map<Face,Node> faceNodes=MapSequence.fromMap(new HashMap<Face,Node>());
-    Map<Face,Edge> faceEdges=MapSequence.fromMap(new HashMap<Face,Edge>());
-    for (    Dart dart : ListSequence.fromList(darts)) {
-      Node faceNode=network.addNode();
-      Face face=embeddedGraph.getFace(dart);
-      MapSequence.fromMap(faceNodes).put(face,faceNode);
-      Edge edge=faceNode.addEdgeTo(MapSequence.fromMap(nodeMap).get(node));
-      MapSequence.fromMap(cost).put(edge,0);
-      MapSequence.fromMap(capacity).put(edge,1);
-      MapSequence.fromMap(faceEdges).put(face,edge);
+    if (ListSequence.fromList(node.getEdges()).count() > 4) {
+      List<Dart> darts=embeddedGraph.getDartWithSource(node);
+      Map<Face,Node> faceNodes=MapSequence.fromMap(new HashMap<Face,Node>());
+      Map<Face,Edge> faceEdges=MapSequence.fromMap(new HashMap<Face,Edge>());
+      for (      Dart dart : ListSequence.fromList(darts)) {
+        Node faceNode=network.addNode();
+        Face face=embeddedGraph.getFace(dart);
+        MapSequence.fromMap(faceNodes).put(face,faceNode);
+        Edge edge=faceNode.addEdgeTo(MapSequence.fromMap(nodeMap).get(node));
+        MapSequence.fromMap(cost).put(edge,0);
+        MapSequence.fromMap(capacity).put(edge,1);
+        MapSequence.fromMap(faceEdges).put(face,edge);
+      }
+      for (      Dart dart : ListSequence.fromList(darts)) {
+        Face face=embeddedGraph.getFace(dart);
+        Face leftFace=embeddedGraph.getFace(embeddedGraph.getOpposite(dart));
+        Edge edge=MapSequence.fromMap(faceMap).get(leftFace).addEdgeTo(MapSequence.fromMap(faceNodes).get(face));
+        MapSequence.fromMap(cost).put(edge,1);
+        MapSequence.fromMap(capacity).put(edge,1);
+        MapSequence.fromMap(tempEdgesToDart).put(edge,dart);
+      }
+      MapSequence.fromMap(faceToNodeEdges).put(node,faceEdges);
     }
-    for (    Dart dart : ListSequence.fromList(darts)) {
-      Face face=embeddedGraph.getFace(dart);
-      Face leftFace=embeddedGraph.getFace(embeddedGraph.getOpposite(dart));
-      Edge edge=MapSequence.fromMap(faceMap).get(leftFace).addEdgeTo(MapSequence.fromMap(faceNodes).get(face));
-      MapSequence.fromMap(cost).put(edge,1);
-      MapSequence.fromMap(capacity).put(edge,1);
-      MapSequence.fromMap(tempEdgesToDart).put(edge,dart);
-    }
-    MapSequence.fromMap(faceToNodeEdges).put(node,faceEdges);
   }
   Map<Edge,Integer> flow=MinCostMaxFlowWithPotentials.getFlow(network,networkSource,networkTarget,capacity,cost);
   for (  Face face : ListSequence.fromList(embeddedGraph.getFaces())) {
     for (    Dart dart : ListSequence.fromList(face.getDarts())) {
       Node source=dart.getSource();
       int angle=MapSequence.fromMap(flow).get(MapSequence.fromMap(dartAngleMap).get(dart)) + 1;
-      if (MapSequence.fromMap(flow).get(MapSequence.fromMap(MapSequence.fromMap(faceToNodeEdges).get(source)).get(face)) > 0) {
+      if (MapSequence.fromMap(MapSequence.fromMap(faceToNodeEdges).get(source)).get(face) != null && MapSequence.fromMap(flow).get(MapSequence.fromMap(MapSequence.fromMap(faceToNodeEdges).get(source)).get(face)) > 0) {
         angle-=1;
       }
       MapSequence.fromMap(angles).put(dart,angle);
@@ -108,7 +110,7 @@
     for (    Dart dart : ListSequence.fromList(darts)) {
       Node node=dart.getSource();
       Edge edgeToNode=MapSequence.fromMap(MapSequence.fromMap(faceToNodeEdges).get(node)).get(face);
-      if (MapSequence.fromMap(flow).get(edgeToNode) > 0) {
+      if (edgeToNode != null && MapSequence.fromMap(flow).get(edgeToNode) > 0) {
         Dart dartWithBend=embeddedGraph.getOpposite(dart);
         MapSequence.fromMap(bends).put(dartWithBend,MapSequence.fromMap(bends).get(dartWithBend) + 1);
       }
