@@ -1,0 +1,50 @@
+{
+  Set<File> generatedFiles=new HashSet<File>();
+  Map<String,GenerationRootDependencies> dependenciesByFile=null;
+  DefaultFileGenerator fileGenerator=new DefaultFileGenerator();
+  for (  SNode outputRootNode : outputNodeContents.keySet()) {
+    try {
+      SNode originalInputNode=null;
+      File generatedFile=fileGenerator.generateFile(outputRootNode,originalInputNode,status.getInputModel(),outputNodeContents.get(outputRootNode),outputRootDirectory);
+      if (generatedFile != null) {
+        generatedFiles.add(generatedFile);
+      }
+    }
+ catch (    IOException e) {
+      LOG.error(e);
+    }
+  }
+  DebugInfo debugInfoCache=null;
+  ModelDependencies modelDep=null;
+  GenerationDependencies dependencies=status.getDependencies();
+  if (dependencies != null) {
+    File outputDir=FileGenerationUtil.getDefaultOutputDir(status.getInputModel(),outputRootDirectory);
+    for (    GenerationRootDependencies rdep : dependencies.getUnchangedDependencies()) {
+      for (      String filename : rdep.getFiles()) {
+        File file=new File(outputDir,filename);
+        if (file.exists()) {
+          generatedFiles.add(file);
+          if (modelDep == null) {
+            modelDep=BLDependenciesCache.getInstance().get(status.getOriginalInputModel());
+          }
+          if (modelDep != null) {
+            RootDependencies root=modelDep.getDependency(filename);
+            if (root != null) {
+              status.getBLDependencies().replaceRoot(root);
+            }
+          }
+        }
+      }
+      if (debugInfoCache == null) {
+        debugInfoCache=BLDebugInfoCache.getInstance().get(status.getOriginalInputModel());
+      }
+      if (debugInfoCache != null) {
+        DebugInfoRoot infoRoot=debugInfoCache.getRootInfo(rdep.getRootId());
+        if (infoRoot != null) {
+          status.getDebugInfo().replaceRoot(infoRoot);
+        }
+      }
+    }
+  }
+  return generatedFiles;
+}
