@@ -1,31 +1,4 @@
 {
-  final boolean[] result=new boolean[1];
-  ModelAccess.instance().runWriteAction(new Runnable(){
-    public void run(){
-      myProject.getComponent(TransientModelsModule.class).startGeneration(GenerationSettings.getInstance().getNumberOfModelsToKeep());
-      if (!saveTransientModels) {
-        myProject.getComponent(GenerationTracer.class).discardTracing();
-      }
-      IGenerationTracer tracer=saveTransientModels ? myProject.getComponent(GenerationTracer.class) : new NullGenerationTracer();
-      tracer.startTracing();
-      GenerationSettings settings=GenerationSettings.getInstance();
-      GenerationOptions options=new GenerationOptions(settings.isStrictMode(),saveTransientModels,rebuildAll,settings.isGenerateDependencies(),!settings.isShowWarnings() && !settings.isShowInfo(),settings.isParallelGenerator(),settings.getNumberOfParallelThreads(),settings.getPerformanceTracingLevel(),tracer);
-      fireBeforeGeneration(inputModels,options,invocationContext);
-      GeneratorLoggerAdapter logger=new GeneratorLoggerAdapter(messages,settings.isShowInfo(),settings.isShowWarnings(),settings.isKeepModelsWithWarnings());
-      final GenerationController gc=new GenerationController(inputModels,options,generationHandler,new GeneratorNotifierHelper(),logger,invocationContext,progress);
-      result[0]=UndoHelper.getInstance().runNonUndoableAction(new Computable<Boolean>(){
-        @Override public Boolean compute(){
-          return gc.generate();
-        }
-      }
-);
-      tracer.finishTracing();
-      fireAfterGeneration(inputModels,options,invocationContext);
-      myProject.getComponent(TransientModelsModule.class).publishAll();
-      CleanupManager.getInstance().cleanup();
-    }
-  }
-);
-  generationHandler.generationCompleted();
-  return result[0];
+  GenerationOptions options=new GenerationOptions(false,saveTransientModels,rebuildAll,false,false,2,GenerationOptions.TRACE_OFF,false,true,true,16,new NullGenerationTracer());
+  return generateModels(inputModels,invocationContext,generationHandler,progress,messages,options);
 }
