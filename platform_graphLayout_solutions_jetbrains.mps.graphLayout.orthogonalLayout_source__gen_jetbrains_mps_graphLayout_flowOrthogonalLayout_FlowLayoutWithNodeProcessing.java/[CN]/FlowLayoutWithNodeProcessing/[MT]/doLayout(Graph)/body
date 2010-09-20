@@ -1,0 +1,31 @@
+{
+  Graph copy=new Graph();
+  Map<Node,Node> nodeMap=MapSequence.fromMap(new HashMap<Node,Node>());
+  Map<Edge,Edge> edgeMap=MapSequence.fromMap(new HashMap<Edge,Edge>());
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    MapSequence.fromMap(nodeMap).put(node,copy.addNode());
+  }
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    MapSequence.fromMap(edgeMap).put(edge,MapSequence.fromMap(nodeMap).get(edge.getSource()).addEdgeTo(MapSequence.fromMap(nodeMap).get(edge.getTarget())));
+  }
+  EmbeddedGraph embeddedGraph=new ShortestPathEmbeddingFinder(new PQPlanarizationFinder()).find(copy);
+  Map<Edge,List<Edge>> history=MapSequence.fromMap(new HashMap<Edge,List<Edge>>());
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    Edge copyEdge=MapSequence.fromMap(edgeMap).get(edge);
+    MapSequence.fromMap(history).put(edge,embeddedGraph.findFullHistory(copyEdge));
+    if (copyEdge.getSource() != MapSequence.fromMap(nodeMap).get(edge.getSource())) {
+      MapSequence.fromMap(history).put(edge,ListSequence.fromList(MapSequence.fromMap(history).get(edge)).reversedList());
+    }
+  }
+  Map<Node,List<Node>> newNodes=MapSequence.fromMap(new HashMap<Node,List<Node>>());
+  Map<Edge,Edge> replacedEdges=MapSequence.fromMap(new HashMap<Edge,Edge>());
+  EmbeddedGraphModifier modifier=new EmbeddedGraphModifier(embeddedGraph);
+  modifier.reduceNodesDegree(newNodes,replacedEdges,true);
+  updateHistory(replacedEdges,history);
+  Map<Dart,Integer> bends=MapSequence.fromMap(new HashMap<Dart,Integer>());
+  Map<Dart,Integer> angles=MapSequence.fromMap(new HashMap<Dart,Integer>());
+  OrthogonalRepresentationWithNodesProcessing.getRepresentation(embeddedGraph,MapSequence.fromMap(modifier.getNodeFaces()).values(),bends,angles);
+  OrthogonalRepresentationWithNodesProcessing.replaceBendsByNodes(embeddedGraph,bends,angles);
+  Map<Dart,Direction2D> directions=OrthogonalRepresentation.getDirections(embeddedGraph,angles);
+  return null;
+}

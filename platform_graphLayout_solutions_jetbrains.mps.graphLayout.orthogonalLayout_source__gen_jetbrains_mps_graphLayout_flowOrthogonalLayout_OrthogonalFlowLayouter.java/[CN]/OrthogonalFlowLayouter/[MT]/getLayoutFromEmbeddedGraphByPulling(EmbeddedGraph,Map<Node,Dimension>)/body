@@ -1,0 +1,69 @@
+{
+  Graph graph=embeddedGraph.getGraph();
+  List<Edge> oldEdges=ListSequence.fromList(new ArrayList<Edge>());
+  ListSequence.fromList(oldEdges).addSequence(ListSequence.fromList(graph.getEdges()));
+  List<Node> oldNodes=ListSequence.fromList(new ArrayList<Node>());
+  ListSequence.fromList(oldNodes).addSequence(SetSequence.fromSet(MapSequence.fromMap(nodeSizes).keySet()));
+  Map<Dart,Integer> bends=MapSequence.fromMap(new HashMap<Dart,Integer>());
+  Map<Dart,Integer> angles=MapSequence.fromMap(new HashMap<Dart,Integer>());
+  QuasiOrthogonalRepresentation.getRepresentation(embeddedGraph,bends,angles);
+  new QuasiRepresentationModifier(embeddedGraph,bends,angles).reduceToOrthogonalRepresentation();
+  OrthogonalRepresentation.replaceBendsByNodes(embeddedGraph,bends,angles);
+  Map<Dart,Direction2D> directions=OrthogonalRepresentation.getDirections(embeddedGraph,angles);
+  EmbeddedGraphModifier modifier=new EmbeddedGraphModifier(embeddedGraph);
+  modifier.setDartDirections(directions);
+  modifier.makeRectangularFaces();
+  if (SHOW_INFO > 0) {
+    System.out.println("modified graph: " + embeddedGraph);
+  }
+  EdgeLengthComputer lengthComputer=new EdgeLengthComputer();
+  lengthComputer.setUnitLength(myUnitLength);
+  Map<Edge,Integer> lengths=lengthComputer.compute(embeddedGraph,directions);
+  CoordinatePlacer placer=new CoordinatePlacer(embeddedGraph,lengths,directions);
+  Map<Node,Point> coordinates=placer.getCoordinates();
+  GraphPointLayout graphPointLayout=new GraphPointLayout(graph);
+  for (  Node node : ListSequence.fromList(oldNodes)) {
+    graphPointLayout.setLayoutFor(node,MapSequence.fromMap(coordinates).get(node));
+  }
+  for (  Edge edge : ListSequence.fromList(oldEdges)) {
+    List<Edge> history=embeddedGraph.findFullHistory(edge);
+    List<Point> edgeLayout=ListSequence.fromList(new LinkedList<Point>());
+    Node cur=edge.getSource();
+    ListSequence.fromList(edgeLayout).addElement(new Point(MapSequence.fromMap(coordinates).get(cur)));
+    for (    Edge historyEdge : ListSequence.fromList(history)) {
+      Node next=historyEdge.getOpposite(cur);
+      ListSequence.fromList(edgeLayout).addElement(new Point(MapSequence.fromMap(coordinates).get(next)));
+      cur=next;
+    }
+    graphPointLayout.setLayoutFor(edge,edgeLayout);
+  }
+  Map<Node,Map<Direction2D,Integer>> nodeDirectionSizes=MapSequence.fromMap(new HashMap<Node,Map<Direction2D,Integer>>());
+  for (  Node node : ListSequence.fromList(oldNodes)) {
+    Map<Direction2D,Integer> directionSizes=MapSequence.fromMap(new HashMap<Direction2D,Integer>());
+    Dimension size=MapSequence.fromMap(nodeSizes).get(node);
+    int horSize=size.height;
+    MapSequence.fromMap(directionSizes).put(Direction2D.UP,horSize / 2);
+    MapSequence.fromMap(directionSizes).put(Direction2D.DOWN,horSize - MapSequence.fromMap(directionSizes).get(Direction2D.UP));
+    int verSize=size.width;
+    MapSequence.fromMap(directionSizes).put(Direction2D.LEFT,verSize / 2);
+    MapSequence.fromMap(directionSizes).put(Direction2D.RIGHT,verSize - MapSequence.fromMap(directionSizes).get(Direction2D.LEFT));
+    MapSequence.fromMap(nodeDirectionSizes).put(node,directionSizes);
+  }
+  for (  Node node : ListSequence.fromList(oldNodes)) {
+    graphPointLayout=pullPointLayout(graphPointLayout,graphPointLayout.getLayoutFor(node),MapSequence.fromMap(nodeDirectionSizes).get(node));
+  }
+  GraphLayout graphLayout=new GraphLayout(graph);
+  for (  Node node : ListSequence.fromList(oldNodes)) {
+    Point center=graphPointLayout.getLayoutFor(node);
+    Map<Direction2D,Integer> sizes=MapSequence.fromMap(nodeDirectionSizes).get(node);
+    Dimension nodeSize=MapSequence.fromMap(nodeSizes).get(node);
+    Rectangle rect=new Rectangle(center.x - MapSequence.fromMap(sizes).get(Direction2D.LEFT),center.y - MapSequence.fromMap(sizes).get(Direction2D.DOWN),nodeSize.width,nodeSize.height);
+    graphLayout.setLayoutFor(node,rect);
+  }
+  for (  Edge edge : ListSequence.fromList(oldEdges)) {
+    List<Edge> history=embeddedGraph.findFullHistory(edge);
+    List<Point> edgeLayout=graphPointLayout.getLayoutFor(edge);
+    graphLayout.setLayoutFor(edge,edgeLayout);
+  }
+  return graphLayout;
+}

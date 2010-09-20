@@ -1,0 +1,25 @@
+{
+  boolean compiledSuccessfully=generationOK;
+  boolean[] ideaIsFresh=new boolean[]{false};
+  IProjectHandler projectHandler=getProjectHandler(operationContext.getProject());
+  if (generationOK) {
+    long compilationStart=System.currentTimeMillis();
+    boolean needToReload=false;
+    for (    Pair<IModule,List<SModelDescriptor>> moduleListPair : input) {
+      IModule module=moduleListPair.o1;
+      if (module != null && module.reloadClassesAfterGeneration()) {
+        needToReload=true;
+      }
+      boolean compilationResult=compileModule(module,projectHandler,ideaIsFresh,progressHelper);
+      compiledSuccessfully=compiledSuccessfully && compilationResult;
+    }
+    if (compiledSuccessfully && needToReload) {
+      reloadClasses(progressHelper);
+    }
+    info("Compilation finished in " + (System.currentTimeMillis() - compilationStart) + " ms");
+  }
+  if (isIDEAPresent(projectHandler) && !ideaIsFresh[0]) {
+    projectHandler.refreshFS();
+  }
+  return compiledSuccessfully;
+}

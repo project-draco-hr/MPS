@@ -1,7 +1,31 @@
 {
-  List<Pair<SModelDescriptor,IOperationContext>> inputModelPairs=new ArrayList<Pair<SModelDescriptor,IOperationContext>>();
-  for (  SModelDescriptor model : inputModels) {
-    inputModelPairs.add(new Pair<SModelDescriptor,IOperationContext>(model,invocationContext));
+  final boolean[] result=new boolean[1];
+  ModelAccess.instance().runWriteAction(new Runnable(){
+    public void run(){
+      myProject.getComponent(TransientModelsModule.class).clearAll();
+      if (!saveTransientModels) {
+        myProject.getComponent(GenerationTracer.class).discardTracing();
+      }
+      IGenerationTracer tracer=saveTransientModels ? myProject.getComponent(GenerationTracer.class) : new NullGenerationTracer();
+      tracer.startTracing();
+      GenerationSettings settings=GenerationSettings.getInstance();
+      GenerationOptions options=new GenerationOptions(settings.isStrictMode(),saveTransientModels,rebuildAll,settings.isGenerateDependencies(),!settings.isShowWarnings() && !settings.isShowInfo(),settings.isParallelGenerator(),settings.getNumberOfParallelThreads(),settings.getPerformanceTracingLevel(),tracer);
+      fireBeforeGeneration(inputModels,options,invocationContext);
+      GeneratorLoggerAdapter logger=new GeneratorLoggerAdapter(messages,settings.isShowInfo(),settings.isShowWarnings(),settings.isKeepModelsWithWarnings());
+      final GenerationController gc=new GenerationController(inputModels,options,generationHandler,new GeneratorNotifierHelper(),logger,invocationContext,progress);
+      result[0]=UndoHelper.getInstance().runNonUndoableAction(new Computable<Boolean>(){
+        @Override public Boolean compute(){
+          return gc.generate();
+        }
+      }
+);
+      tracer.finishTracing();
+      fireAfterGeneration(inputModels,options,invocationContext);
+      myProject.getComponent(TransientModelsModule.class).publishAll();
+      CleanupManager.getInstance().cleanup();
+    }
   }
-  return generateModels(inputModelPairs,generationHandler,progress,messages,saveTransientModels,rebuildAll);
+);
+  generationHandler.generationCompleted();
+  return result[0];
 }

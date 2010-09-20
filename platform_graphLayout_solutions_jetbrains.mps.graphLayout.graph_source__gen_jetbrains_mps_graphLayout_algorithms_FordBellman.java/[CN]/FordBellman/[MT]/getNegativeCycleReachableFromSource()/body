@@ -1,0 +1,44 @@
+{
+  for (  Node node : ListSequence.fromList(myGraph.getNodes())) {
+    int sourceDist=MapSequence.fromMap(myDist).get(node);
+    if (sourceDist == ShortestPath.INF) {
+      continue;
+    }
+    for (    Edge edge : ListSequence.fromList(node.getEdges(myDirection)).where(new IWhereFilter<Edge>(){
+      public boolean accept(      Edge it){
+        return myFilter.invoke(it);
+      }
+    }
+)) {
+      Node target=edge.getOpposite(node);
+      int targetDist=MapSequence.fromMap(myDist).get(target);
+      if (sourceDist + MapSequence.fromMap(myWeights).get(edge) < targetDist) {
+        List<Edge> cycle=ListSequence.fromList(new LinkedList<Edge>());
+        Set<Node> visited=SetSequence.fromSet(new HashSet<Node>());
+        ListSequence.fromList(cycle).insertElement(0,edge);
+        SetSequence.fromSet(visited).addElement(target);
+        Node cur=node;
+        while (!(SetSequence.fromSet(visited).contains(cur))) {
+          SetSequence.fromSet(visited).addElement(cur);
+          Edge next=MapSequence.fromMap(myPrev).get(cur);
+          ListSequence.fromList(cycle).insertElement(0,next);
+          cur=next.getOpposite(cur);
+        }
+        Node first=cur;
+        Edge last=null;
+        for (        Edge cycleEdge : ListSequence.fromList(cycle)) {
+          cur=cycleEdge.getOpposite(cur);
+          if (cur == first) {
+            last=cycleEdge;
+            break;
+          }
+        }
+        while (ListSequence.fromList(cycle).last() != last) {
+          ListSequence.fromList(cycle).removeLastElement();
+        }
+        return cycle;
+      }
+    }
+  }
+  return null;
+}

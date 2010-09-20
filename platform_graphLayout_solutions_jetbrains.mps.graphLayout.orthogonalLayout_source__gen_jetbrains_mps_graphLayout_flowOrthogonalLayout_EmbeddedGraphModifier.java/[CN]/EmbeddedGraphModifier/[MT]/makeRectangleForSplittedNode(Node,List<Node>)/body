@@ -1,0 +1,95 @@
+{
+  final Wrappers._T<Node> prev=new Wrappers._T<Node>(ListSequence.fromList(nodes).getElement(ListSequence.fromList(nodes).count() - 2));
+  final Wrappers._T<Node> cur=new Wrappers._T<Node>(ListSequence.fromList(nodes).getElement(ListSequence.fromList(nodes).count() - 1));
+  Edge prevToCurEdge=ListSequence.fromList(prev.value.getEdges()).findFirst(new IWhereFilter<Edge>(){
+    public boolean accept(    Edge edge){
+      return edge.getOpposite(prev.value) == cur.value;
+    }
+  }
+);
+  Map<Edge,Integer> toSplit=MapSequence.fromMap(new HashMap<Edge,Integer>());
+  for (  final Node next : ListSequence.fromList(nodes)) {
+    Edge curToNextEdge=ListSequence.fromList(cur.value.getEdges()).findFirst(new IWhereFilter<Edge>(){
+      public boolean accept(      Edge edge){
+        return edge.getOpposite(cur.value) == next;
+      }
+    }
+);
+    Dart prevToCurDart=myEmbeddedGraph.getSourceDart(prevToCurEdge,prev.value);
+    Dart curToNextDart=myEmbeddedGraph.getSourceDart(curToNextEdge,cur.value);
+    if (!(MapSequence.fromMap(myNodeFaces).containsKey(node))) {
+      MapSequence.fromMap(myNodeFaces).put(node,myEmbeddedGraph.getFace(prevToCurDart));
+    }
+    Direction2D prevToCurDir=MapSequence.fromMap(myDartDirections).get(prevToCurDart);
+    Direction2D curToNextDir=MapSequence.fromMap(myDartDirections).get(curToNextDart);
+    if (prevToCurDir != curToNextDir) {
+      Edge curRealEdge=ListSequence.fromList(cur.value.getEdges()).findFirst(new IWhereFilter<Edge>(){
+        public boolean accept(        Edge edge){
+          return !(ListSequence.fromList(nodes).contains(edge.getOpposite(cur.value)));
+        }
+      }
+);
+      Dart curRealDart=myEmbeddedGraph.getSourceDart(curRealEdge,cur.value);
+      Edge edgeToSplit;
+      if (MapSequence.fromMap(myDartDirections).get(curRealDart) == prevToCurDir) {
+        edgeToSplit=prevToCurEdge;
+      }
+ else {
+        edgeToSplit=curToNextEdge;
+      }
+      if (MapSequence.fromMap(toSplit).containsKey(edgeToSplit)) {
+        MapSequence.fromMap(toSplit).put(edgeToSplit,MapSequence.fromMap(toSplit).get(edgeToSplit) + 1);
+      }
+ else {
+        MapSequence.fromMap(toSplit).put(edgeToSplit,1);
+      }
+    }
+    prev.value=cur.value;
+    cur.value=next;
+    prevToCurEdge=curToNextEdge;
+  }
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(toSplit).keySet())) {
+    int splitNum=MapSequence.fromMap(toSplit).get(edge);
+    final Wrappers._T<Edge> curEdge=new Wrappers._T<Edge>(edge);
+    Direction2D curDirection=null;
+    for (int i=0; i < splitNum; i++) {
+      List<Dart> toRemove=ListSequence.fromList(new ArrayList<Dart>());
+      ListSequence.fromList(toRemove).addSequence(ListSequence.fromList(myEmbeddedGraph.getDarts(curEdge.value)));
+      if (curDirection == null) {
+        final Node curSource=curEdge.value.getSource();
+        Edge realEdge=ListSequence.fromList(curSource.getEdges()).findFirst(new IWhereFilter<Edge>(){
+          public boolean accept(          Edge edge){
+            return !(ListSequence.fromList(nodes).contains(edge.getOpposite(curSource)));
+          }
+        }
+);
+        curDirection=MapSequence.fromMap(myDartDirections).get(myEmbeddedGraph.getSourceDart(realEdge,curSource)).turnClockwise(1);
+      }
+      List<Edge> newEdges=ListSequence.fromList(new ArrayList<Edge>());
+      Node newNode=myEmbeddedGraph.splitEdge(curEdge.value,newEdges);
+      Dart firstDart=ListSequence.fromList(myEmbeddedGraph.getDarts(ListSequence.fromList(newEdges).getElement(0))).findFirst(new IWhereFilter<Dart>(){
+        public boolean accept(        Dart dart){
+          return dart.getSource() == curEdge.value.getSource();
+        }
+      }
+);
+      MapSequence.fromMap(myDartDirections).put(firstDart,curDirection);
+      MapSequence.fromMap(myDartDirections).put(myEmbeddedGraph.getOpposite(firstDart),curDirection.opposite());
+      Dart secondDart=ListSequence.fromList(myEmbeddedGraph.getDarts(ListSequence.fromList(newEdges).getElement(1))).findFirst(new IWhereFilter<Dart>(){
+        public boolean accept(        Dart dart){
+          return dart.getTarget() == curEdge.value.getTarget();
+        }
+      }
+);
+      Direction2D nextDirection=curDirection.turnClockwise(1);
+      MapSequence.fromMap(myCornerNodes).get(node)[nextDirection.ordinal()]=newNode;
+      MapSequence.fromMap(myDartDirections).put(secondDart,nextDirection);
+      MapSequence.fromMap(myDartDirections).put(myEmbeddedGraph.getOpposite(secondDart),nextDirection.opposite());
+      for (      Dart dartToRemove : ListSequence.fromList(toRemove)) {
+        MapSequence.fromMap(myDartDirections).removeKey(dartToRemove);
+      }
+      curEdge.value=ListSequence.fromList(newEdges).getElement(1);
+      curDirection=nextDirection;
+    }
+  }
+}

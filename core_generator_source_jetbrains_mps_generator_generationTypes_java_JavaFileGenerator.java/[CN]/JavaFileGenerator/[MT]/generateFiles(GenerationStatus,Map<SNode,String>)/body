@@ -1,0 +1,35 @@
+{
+  for (  SNode outputRootNode : outputNodeContents.keySet()) {
+    String name=getFileName(outputRootNode);
+    myStreamHandler.saveStream(name,outputNodeContents.get(outputRootNode),false);
+  }
+  DebugInfo debugInfoCache=null;
+  ModelDependencies modelDep=null;
+  GenerationDependencies dependencies=status.getDependencies();
+  if (dependencies != null) {
+    for (    GenerationRootDependencies rdep : dependencies.getUnchangedDependencies()) {
+      for (      String filename : rdep.getFiles()) {
+        if (myStreamHandler.touch(filename,false)) {
+          if (modelDep == null) {
+            modelDep=BLDependenciesCache.getInstance().get(status.getOriginalInputModel());
+          }
+          if (modelDep != null) {
+            RootDependencies root=modelDep.getDependency(filename);
+            if (root != null) {
+              status.getBLDependencies().replaceRoot(root);
+            }
+          }
+        }
+      }
+      if (debugInfoCache == null) {
+        debugInfoCache=BLDebugInfoCache.getInstance().get(status.getOriginalInputModel());
+      }
+      if (debugInfoCache != null) {
+        DebugInfoRoot infoRoot=debugInfoCache.getRootInfo(rdep.getRootId());
+        if (infoRoot != null) {
+          status.getDebugInfo().replaceRoot(infoRoot);
+        }
+      }
+    }
+  }
+}

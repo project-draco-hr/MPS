@@ -1,0 +1,30 @@
+{
+  boolean bothMaps=answer != isWeak;
+  ConcurrentHashMap<CacheNodeHandler,ConcurrentHashMap<CacheNodeHandler,MyBoolean>> cache1=isWeak ? myCacheWeak : myCache;
+  ConcurrentHashMap<CacheNodeHandler,ConcurrentHashMap<CacheNodeHandler,MyBoolean>> cache2=isWeak ? myCache : myCacheWeak;
+  CacheNodeHandler subtypeHandler=new CacheNodeHandler(subtype);
+  ConcurrentHashMap<CacheNodeHandler,MyBoolean> supertypes2=null;
+  CacheNodeHandler subtypeHandler2=null;
+  ConcurrentHashMap<CacheNodeHandler,MyBoolean> supertypes=cache1.get(subtypeHandler);
+  if (bothMaps) {
+    subtypeHandler2=new CacheNodeHandler(subtype);
+    supertypes2=cache2.get(subtypeHandler2);
+  }
+  if (supertypes == null || (bothMaps && supertypes2 == null)) {
+synchronized (myCacheLock) {
+      supertypes=cache1.get(subtypeHandler);
+      if (supertypes == null) {
+        supertypes=new ConcurrentHashMap<CacheNodeHandler,MyBoolean>();
+        cache1.put(subtypeHandler,supertypes);
+      }
+      if (bothMaps) {
+        supertypes2=cache2.get(subtypeHandler2);
+        if (supertypes2 == null) {
+          supertypes2=new ConcurrentHashMap<CacheNodeHandler,MyBoolean>();
+          cache2.put(subtypeHandler2,supertypes2);
+        }
+      }
+    }
+  }
+  supertypes.put(new CacheNodeHandler(supertype),preprocessPutBoolean(answer));
+}

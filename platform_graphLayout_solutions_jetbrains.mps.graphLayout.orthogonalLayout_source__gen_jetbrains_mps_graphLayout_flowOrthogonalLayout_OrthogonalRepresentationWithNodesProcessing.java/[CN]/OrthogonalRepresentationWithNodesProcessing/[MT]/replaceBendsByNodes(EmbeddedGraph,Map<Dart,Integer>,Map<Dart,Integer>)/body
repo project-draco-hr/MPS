@@ -1,0 +1,62 @@
+{
+  for (  Edge edge : ListSequence.fromList(embeddedGraph.getGraph().getEdges())) {
+    List<Dart> darts=embeddedGraph.getDarts(edge);
+    final Wrappers._T<Dart> dartToSplit=new Wrappers._T<Dart>(null);
+    Dart opposite=null;
+    if (MapSequence.fromMap(bends).get(ListSequence.fromList(darts).getElement(0)) > 0) {
+      dartToSplit.value=ListSequence.fromList(darts).getElement(0);
+      opposite=ListSequence.fromList(darts).getElement(1);
+    }
+    if (MapSequence.fromMap(bends).get(ListSequence.fromList(darts).getElement(1)) > 0) {
+      dartToSplit.value=ListSequence.fromList(darts).getElement(1);
+      opposite=ListSequence.fromList(darts).getElement(0);
+    }
+    if (dartToSplit.value != null) {
+      while (MapSequence.fromMap(bends).get(dartToSplit.value) > 0) {
+        List<Edge> newEdges=ListSequence.fromList(new ArrayList<Edge>());
+        final Node addedNode=embeddedGraph.splitEdge(dartToSplit.value.getEdge(),newEdges);
+        Edge first=ListSequence.fromList(newEdges).findFirst(new IWhereFilter<Edge>(){
+          public boolean accept(          Edge it){
+            return it.getOpposite(addedNode) == dartToSplit.value.getSource();
+          }
+        }
+);
+        Edge second=ListSequence.fromList(newEdges).findFirst(new IWhereFilter<Edge>(){
+          public boolean accept(          Edge it){
+            return it.getOpposite(addedNode) == dartToSplit.value.getTarget();
+          }
+        }
+);
+        for (        Dart firstDart : ListSequence.fromList(embeddedGraph.getDarts(first))) {
+          MapSequence.fromMap(bends).put(firstDart,0);
+          if (firstDart.getSource() == addedNode) {
+            MapSequence.fromMap(angles).put(firstDart,3);
+          }
+ else {
+            MapSequence.fromMap(angles).put(firstDart,MapSequence.fromMap(angles).get(dartToSplit.value));
+          }
+        }
+        Dart nextToSplit=null;
+        Dart nextOpposite=null;
+        for (        Dart secondDart : ListSequence.fromList(embeddedGraph.getDarts(second))) {
+          if (secondDart.getSource() == addedNode) {
+            nextToSplit=secondDart;
+            MapSequence.fromMap(bends).put(secondDart,MapSequence.fromMap(bends).get(dartToSplit.value) - 1);
+            MapSequence.fromMap(angles).put(secondDart,1);
+          }
+ else {
+            nextOpposite=secondDart;
+            MapSequence.fromMap(bends).put(secondDart,0);
+            MapSequence.fromMap(angles).put(secondDart,MapSequence.fromMap(angles).get(opposite));
+          }
+        }
+        MapSequence.fromMap(bends).removeKey(dartToSplit.value);
+        MapSequence.fromMap(angles).removeKey(dartToSplit.value);
+        MapSequence.fromMap(bends).removeKey(opposite);
+        MapSequence.fromMap(angles).removeKey(opposite);
+        dartToSplit.value=nextToSplit;
+        opposite=nextOpposite;
+      }
+    }
+  }
+}
