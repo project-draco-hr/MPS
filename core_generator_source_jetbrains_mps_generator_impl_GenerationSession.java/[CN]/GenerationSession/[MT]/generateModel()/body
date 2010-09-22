@@ -5,7 +5,7 @@
   myGenerationPlan=new GenerationPlan(myOriginalInputModel.getSModel());
   if (!checkGenerationPlan(myGenerationPlan)) {
   }
-  GenerationFilter filter=new GenerationFilter(myOriginalInputModel,myInvocationContext,myGenerationOptions);
+  GenerationFilter filter=new GenerationFilter(myOriginalInputModel,myInvocationContext,myGenerationOptions,myGenerationPlan.getSignature());
   myDependenciesBuilder=filter.createDependenciesBuilder();
   if (!filter.getUnchangedRoots().isEmpty() || !filter.areConditionalsDirty()) {
     int unchanged=filter.getUnchangedRoots().size();
@@ -16,6 +16,8 @@
       return new GenerationStatus(myOriginalInputModel.getSModel(),null,myDependenciesBuilder.getResult(myInvocationContext),false,false,false);
     }
   }
+  boolean success=false;
+  filter.createNewCache();
   try {
     SModel currInputModel=myOriginalInputModel.getSModel();
     SModel currOutput=null;
@@ -25,6 +27,7 @@
         myLogger.info("executing step " + (myMajorStep + 1));
       }
       currOutput=executeMajorStep(currInputModel);
+      filter.storeModel(myMajorStep,currOutput);
       if (currOutput == null || myLogger.getErrorCount() > 0) {
         break;
       }
@@ -37,7 +40,9 @@
     if (mySessionContext != null) {
       mySessionContext.clearTransientObjects();
     }
-    return new GenerationStatus(myOriginalInputModel.getSModel(),currOutput,myDependenciesBuilder.getResult(myInvocationContext),myLogger.getErrorCount() > 0,myLogger.getWarningCount() > 0,false);
+    GenerationStatus generationStatus=new GenerationStatus(myOriginalInputModel.getSModel(),currOutput,myDependenciesBuilder.getResult(myInvocationContext),myLogger.getErrorCount() > 0,myLogger.getWarningCount() > 0,false);
+    success=generationStatus.isOk();
+    return generationStatus;
   }
  catch (  GenerationCanceledException gce) {
     throw gce;
@@ -51,5 +56,8 @@ catch (  Throwable e) {
     myLogger.handleException(e);
     myLogger.error("model \"" + myOriginalInputModel.getSModelReference().getSModelFqName() + "\" generation failed : "+ e);
     return new GenerationStatus.ERROR(myOriginalInputModel.getSModel());
+  }
+ finally {
+    filter.cleanup(success);
   }
 }
