@@ -1,4 +1,5 @@
 {
+  myFacesToSkip=SetSequence.fromSet(new HashSet<Face>());
   List<Dart> darts=myEmbeddedGraph.getDartWithSource(node);
   Map<Direction2D,List<Edge>> edgesInDirection=MapSequence.fromMap(new HashMap<Direction2D,List<Edge>>());
   for (  Direction2D dir : Direction2D.values()) {
@@ -34,18 +35,23 @@
     }
     boolean isOuter=myEmbeddedGraph.isOuterFace(face);
     List<Face> newFaces=myEmbeddedGraph.splitFace(face,newEdges,pathSource,pathTarget);
-    if (isOuter) {
-      Face newOuterFace=null;
-      for (      Face newFace : ListSequence.fromList(newFaces)) {
-        Iterable<Node> faceNodes=ListSequence.fromList(newFace.getDarts()).select(new ISelector<Dart,Node>(){
-          public Node select(          Dart dart){
-            return dart.getSource();
-          }
+    Face newFaceWithNode=null;
+    for (    Face newFace : ListSequence.fromList(newFaces)) {
+      Iterable<Node> faceNodes=ListSequence.fromList(newFace.getDarts()).select(new ISelector<Dart,Node>(){
+        public Node select(        Dart dart){
+          return dart.getSource();
         }
+      }
 );
-        if (!(Sequence.fromIterable(faceNodes).contains(node))) {
-          newOuterFace=newFace;
-        }
+      if (Sequence.fromIterable(faceNodes).contains(node)) {
+        newFaceWithNode=newFace;
+      }
+    }
+    SetSequence.fromSet(myFacesToSkip).addElement(newFaceWithNode);
+    if (isOuter) {
+      Face newOuterFace=ListSequence.fromList(newFaces).getElement(0);
+      if (newOuterFace == newFaceWithNode) {
+        newOuterFace=ListSequence.fromList(newFaces).getElement(1);
       }
       myEmbeddedGraph.setOuterFace(newOuterFace);
     }
