@@ -1,5 +1,5 @@
 {
-  GenerationRootDependencies commonDeps=dependencies.getDependenciesFor(ModelDigestHelper.HEADER);
+  GenerationRootDependencies commonDeps=oldDependencies.getDependenciesFor(ModelDigestHelper.HEADER);
   if (commonDeps == null) {
     return;
   }
@@ -11,7 +11,7 @@
     }
   }
   Set<String> changedModels=new HashSet<String>();
-  Map<String,String> externalHashes=dependencies.getExternalHashes();
+  Map<String,String> externalHashes=oldDependencies.getExternalHashes();
   for (  Entry<String,String> entry : externalHashes.entrySet()) {
     String modelReference=entry.getKey();
     SModelDescriptor sm=SModelRepository.getInstance().getModelDescriptor(SModelReference.fromString(modelReference));
@@ -34,11 +34,10 @@
   }
   List<SNode> rootsList=myModel.getSModel().getRoots();
   myRootsCount=rootsList.size();
-  Map<String,SNode> rootById=new HashMap<String,SNode>();
   myUnchangedRoots=new HashSet<SNode>();
   for (  SNode root : rootsList) {
     String id=root.getId();
-    GenerationRootDependencies rd=dependencies.getDependenciesFor(id);
+    GenerationRootDependencies rd=oldDependencies.getDependenciesFor(id);
     String oldHash;
     if (rd == null || (oldHash=rd.getHash()) == null) {
       continue;
@@ -61,18 +60,40 @@
   if (myUnchangedRoots.isEmpty()) {
     return;
   }
-  for (  SNode root : rootsList) {
-    rootById.put(root.getId(),root);
-  }
   myConditionalsUnchanged=true;
-  Map<String,Set<String>> savedDep=getDependenciesWithoutOrientation(dependencies,myUnchangedRoots);
+  Map<String,Set<String>> savedDep=getDependencies(oldDependencies,myUnchangedRoots);
+  ConnectedComponentPartitioner partitioner=null;
+  boolean changed;
+  if (myCache != null) {
+    closureUsingSavedDependencies(savedDep);
+    if (myUnchangedRoots.isEmpty() && myConditionalsUnchanged == false) {
+      return;
+    }
+    partitioner=new ConnectedComponentPartitioner(rootsList);
+    Component[] strongComponents=partitioner.partitionStrong();
+    changed=closureUsingStrongComponents(strongComponents,savedDep);
+    while (changed) {
+      if (myUnchangedRoots.isEmpty() && myConditionalsUnchanged == false) {
+        return;
+      }
+      changed=closureUsingSavedDependencies(savedDep);
+      if (changed) {
+        changed=closureUsingStrongComponents(strongComponents,savedDep);
+      }
+    }
+    myRequiredRoots=new HashSet<SNode>(myUnchangedRoots);
+    myConditionalsRequired=myConditionalsUnchanged;
+  }
+  addIncomingDependencies(oldDependencies,savedDep);
   closureUsingSavedDependencies(savedDep);
-  if (myUnchangedRoots.isEmpty()) {
+  if (myUnchangedRoots.isEmpty() && myConditionalsUnchanged == false) {
     return;
   }
-  ConnectedComponentPartitioner partitioner=new ConnectedComponentPartitioner(rootsList);
+  if (partitioner == null) {
+    partitioner=new ConnectedComponentPartitioner(rootsList);
+  }
   List<SNode[]> components=partitioner.partition();
-  boolean changed=closureUsingReferences(components,savedDep);
+  changed=closureUsingReferences(components,savedDep);
   while (changed) {
     if (myUnchangedRoots.isEmpty() && myConditionalsUnchanged == false) {
       return;
@@ -81,5 +102,9 @@
     if (changed) {
       changed=closureUsingReferences(components,savedDep);
     }
+  }
+  myRequiredRoots.removeAll(myUnchangedRoots);
+  if (myConditionalsUnchanged) {
+    myConditionalsRequired=false;
   }
 }
