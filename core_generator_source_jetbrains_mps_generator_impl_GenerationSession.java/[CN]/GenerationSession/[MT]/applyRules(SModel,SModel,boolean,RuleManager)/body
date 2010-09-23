@@ -1,8 +1,9 @@
 {
+  boolean result;
   myDependenciesBuilder.setOutputModel(currentOutputModel);
   final TemplateGenerator tg=myGenerationOptions.isGenerateInParallel() ? new ParallelTemplateGenerator(myController,mySessionContext,myProgressMonitor,myLogger,ruleManager,currentInputModel,currentOutputModel,myGenerationOptions,myDependenciesBuilder,ttrace) : new TemplateGenerator(mySessionContext,myProgressMonitor,myLogger,ruleManager,currentInputModel,currentOutputModel,myGenerationOptions,myDependenciesBuilder,ttrace);
   if (tg instanceof ParallelTemplateGenerator) {
-    return GeneratorUtil.runReadInWrite(new GenerationComputable<Boolean>(){
+    result=GeneratorUtil.runReadInWrite(new GenerationComputable<Boolean>(){
       @Override public Boolean compute() throws GenerationCanceledException, GenerationFailureException {
         return tg.apply(isPrimary);
       }
@@ -10,6 +11,10 @@
 );
   }
  else {
-    return tg.apply(isPrimary);
+    result=tg.apply(isPrimary);
   }
+  if (isPrimary && myNewCache != null) {
+    myNewCache.storeModel(myMajorStep,currentOutputModel,tg.getMappings());
+  }
+  return result;
 }
