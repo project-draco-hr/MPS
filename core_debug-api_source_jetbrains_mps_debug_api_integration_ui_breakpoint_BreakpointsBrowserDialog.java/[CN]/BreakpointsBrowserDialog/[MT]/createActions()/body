@@ -1,16 +1,6 @@
 {
-  final AnAction showNodeAction=new AnAction("View Source","View Source",jetbrains.mps.ide.projectPane.Icons.TEXT_ICON){
-    @Override public void actionPerformed(    AnActionEvent e){
-      AbstractMPSBreakpoint breakpoint=myBreakpointsView.getSelectedBreakpoint();
-      if (breakpoint == null)       return;
-      openNode(breakpoint,false,true);
-    }
-    @Override public void update(    AnActionEvent e){
-      e.getPresentation().setEnabled(myBreakpointsView.getSelectedBreakpoint() != null);
-    }
-  }
-;
-  final AnAction gotoNodeAction=new AnAction("Go To","Go To Source",jetbrains.mps.ide.projectPane.Icons.REFERENCE_ICON){
+  DefaultActionGroup group=new DefaultActionGroup();
+  myGotoNodeAction=new AnAction("Go To","Go To Source",jetbrains.mps.ide.projectPane.Icons.REFERENCE_ICON){
     @Override public void actionPerformed(    AnActionEvent e){
       AbstractMPSBreakpoint breakpoint=myBreakpointsView.getSelectedBreakpoint();
       if (breakpoint == null)       return;
@@ -22,7 +12,20 @@
     }
   }
 ;
-  final AnAction deleteBreakpointAction=new AnAction("Delete","Delete Breakpoint",jetbrains.mps.workbench.dialogs.project.components.parts.actions.icons.Icons.REMOVE){
+  group.add(myGotoNodeAction);
+  myShowNodeAction=new AnAction("View Source","View Source",jetbrains.mps.ide.projectPane.Icons.TEXT_ICON){
+    @Override public void actionPerformed(    AnActionEvent e){
+      AbstractMPSBreakpoint breakpoint=myBreakpointsView.getSelectedBreakpoint();
+      if (breakpoint == null)       return;
+      openNode(breakpoint,false,true);
+    }
+    @Override public void update(    AnActionEvent e){
+      e.getPresentation().setEnabled(myBreakpointsView.getSelectedBreakpoint() != null);
+    }
+  }
+;
+  group.add(myShowNodeAction);
+  myDeleteBreakpointAction=new AnAction("Delete","Delete Breakpoint",jetbrains.mps.workbench.dialogs.project.components.parts.actions.icons.Icons.REMOVE){
     @Override public void actionPerformed(    AnActionEvent e){
       int selectedRow=myBreakpointsView.getSelectedBreakpointIndex();
       final AbstractMPSBreakpoint breakpoint=myBreakpointsView.getSelectedBreakpoint();
@@ -40,36 +43,20 @@
     }
   }
 ;
-  DefaultActionGroup group=new DefaultActionGroup();
-  group.add(gotoNodeAction);
-  group.add(showNodeAction);
-  group.add(deleteBreakpointAction);
-  myBreakpointsView.getMainComponent().getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER,0),COMMAND_SHOW_NODE);
-  myBreakpointsView.getMainComponent().getActionMap().put(COMMAND_SHOW_NODE,new AbstractAction(){
-    @Override public void actionPerformed(    ActionEvent e){
-      showNodeAction.actionPerformed(null);
+  group.add(myDeleteBreakpointAction);
+  group.add(new Separator());
+  group.add(new ToggleAction("Tree View","Toggle Tree/List View",Icons.SHOW_AS_TREE){
+    @Override public boolean isSelected(    AnActionEvent e){
+      return myBreakpointsView instanceof BreakpointsTree;
     }
-  }
-);
-  myBreakpointsView.getMainComponent().registerKeyboardAction(new AbstractAction(){
-    @Override public void actionPerformed(    ActionEvent e){
-      gotoNodeAction.actionPerformed(null);
-    }
-  }
-,KeyStroke.getKeyStroke("F4"),JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-  myBreakpointsView.getMainComponent().registerKeyboardAction(new ActionListener(){
-    @Override public void actionPerformed(    ActionEvent e){
-      deleteBreakpointAction.actionPerformed(null);
-    }
-  }
-,KeyStroke.getKeyStroke("DELETE"),JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-  myBreakpointsView.getMainComponent().addMouseListener(new MouseAdapter(){
-    @Override public void mouseClicked(    MouseEvent e){
-      if (e.getClickCount() == 2) {
-        AbstractMPSBreakpoint breakpoint=myBreakpointsView.getSelectedBreakpoint();
-        if (breakpoint == null)         return;
-        dispose();
-        openNode(breakpoint,true,true);
+    @Override public void setSelected(    AnActionEvent e,    boolean state){
+      if (state) {
+        switchView(new BreakpointsTree(myContext,myBreakpointsManager));
+        e.getPresentation().setText("List View");
+      }
+ else {
+        switchView(new BreakpointsTable(myBreakpointsManager));
+        e.getPresentation().setText("Tree View");
       }
     }
   }
