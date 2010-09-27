@@ -1,9 +1,9 @@
 {
-  boolean result;
+  boolean hasChanges;
   myDependenciesBuilder.setOutputModel(currentOutputModel);
   final TemplateGenerator tg=myGenerationOptions.isGenerateInParallel() ? new ParallelTemplateGenerator(myController,mySessionContext,myProgressMonitor,myLogger,ruleManager,currentInputModel,currentOutputModel,myGenerationOptions,myDependenciesBuilder,ttrace) : new TemplateGenerator(mySessionContext,myProgressMonitor,myLogger,ruleManager,currentInputModel,currentOutputModel,myGenerationOptions,myDependenciesBuilder,ttrace);
   if (tg instanceof ParallelTemplateGenerator) {
-    result=GeneratorUtil.runReadInWrite(new GenerationComputable<Boolean>(){
+    hasChanges=GeneratorUtil.runReadInWrite(new GenerationComputable<Boolean>(){
       @Override public Boolean compute() throws GenerationCanceledException, GenerationFailureException {
         return tg.apply(isPrimary);
       }
@@ -11,11 +11,11 @@
 );
   }
  else {
-    result=tg.apply(isPrimary);
+    hasChanges=tg.apply(isPrimary);
   }
-  if (isPrimary && myNewCache != null) {
+  if (myNewCache != null && (isPrimary || hasChanges)) {
     TransientModelWithMetainfo modelWithMetaInfo=TransientModelWithMetainfo.create(currentOutputModel,tg.getMappings(),myDependenciesBuilder);
-    myNewCache.store(myMajorStep,modelWithMetaInfo);
+    myNewCache.store(myMajorStep,myMinorStep,modelWithMetaInfo);
   }
-  return result;
+  return hasChanges;
 }
