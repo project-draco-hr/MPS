@@ -1,0 +1,28 @@
+{
+  int lastDot=className.lastIndexOf(".");
+  String pkg=(lastDot == -1 ? "" : className.substring(0,lastDot));
+  for (  String stereotype : SModelStereotype.values) {
+    final SModelDescriptor descriptor=SModelRepository.getInstance().getModelDescriptor(new SModelFqName(pkg,stereotype));
+    if (descriptor == null) {
+      continue;
+    }
+    if (SModelStereotype.isStubModelStereotype(descriptor.getStereotype())) {
+      continue;
+    }
+    final DebugInfo info=TraceInfoCache.getInstance().get(descriptor);
+    if (info == null) {
+      continue;
+    }
+    final Object[] result=new Object[1];
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        result[0]=nodeGetter.value(info,descriptor);
+      }
+    }
+);
+    if (result[0] != null) {
+      return (T)result[0];
+    }
+  }
+  return null;
+}

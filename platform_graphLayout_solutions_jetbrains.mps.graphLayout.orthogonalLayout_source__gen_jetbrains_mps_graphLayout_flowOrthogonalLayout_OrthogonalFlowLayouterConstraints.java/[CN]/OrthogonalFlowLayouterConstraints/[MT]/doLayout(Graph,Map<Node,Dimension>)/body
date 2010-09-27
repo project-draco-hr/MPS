@@ -1,0 +1,30 @@
+{
+  Graph copy=new Graph();
+  Map<Node,Node> nodeMap=MapSequence.fromMap(new HashMap<Node,Node>());
+  Map<Edge,Edge> edgeMap=MapSequence.fromMap(new HashMap<Edge,Edge>());
+  Map<Node,Dimension> copySizes=MapSequence.fromMap(new HashMap<Node,Dimension>());
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    Node copyNode=copy.addNode();
+    MapSequence.fromMap(nodeMap).put(node,copyNode);
+    MapSequence.fromMap(copySizes).put(copyNode,MapSequence.fromMap(nodeSizes).get(node));
+  }
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    MapSequence.fromMap(edgeMap).put(edge,MapSequence.fromMap(nodeMap).get(edge.getSource()).addEdgeTo(MapSequence.fromMap(nodeMap).get(edge.getTarget())));
+  }
+  GraphLayout copyLayout=getLayoutCorruptGraph(copy,copySizes);
+  GraphLayout layout=new GraphLayout(graph);
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    layout.setLayoutFor(node,copyLayout.getLayoutFor(MapSequence.fromMap(nodeMap).get(node)));
+  }
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    Edge copyEdge=MapSequence.fromMap(edgeMap).get(edge);
+    List<Point> copyEdgeLayout=copyLayout.getLayoutFor(copyEdge);
+    if (copyEdge.getSource() != MapSequence.fromMap(nodeMap).get(edge.getSource())) {
+      copyEdgeLayout=ListSequence.fromList(copyEdgeLayout).reversedList();
+    }
+    layout.setLayoutFor(edge,copyEdgeLayout);
+  }
+  Rectangle rect=layout.getContainingRectangle();
+  layout=LayoutTransform.shift(layout,20 - rect.x,20 - rect.y);
+  return layout;
+}
