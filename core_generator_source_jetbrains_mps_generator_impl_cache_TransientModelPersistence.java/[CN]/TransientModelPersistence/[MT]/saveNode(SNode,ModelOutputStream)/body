@@ -1,0 +1,33 @@
+{
+  os.writeString(node.getConceptFqName());
+  os.writeString(node.getId());
+  os.writeString(node.getRole_());
+  os.writeByte('{');
+  Map<String,String> properties=node.getProperties();
+  os.writeInt(properties.size());
+  for (  Entry<String,String> entry : properties.entrySet()) {
+    os.writeString(entry.getKey());
+    os.writeString(entry.getValue());
+  }
+  Collection<SReference> refs=node.getReferencesIterable();
+  os.writeInt(refs.size());
+  for (  SReference reference : refs) {
+    SModelReference targetModelReference=reference.getTargetSModelReference();
+    if (reference instanceof StaticReference) {
+      os.writeInt(1);
+      SNodeId targetId=reference.getTargetNodeId();
+      os.writeString(targetId != null ? targetId.toString() : null);
+    }
+ else     if (reference instanceof DynamicReference) {
+      os.writeInt(2);
+    }
+ else {
+      throw new IOException("cannot store reference: " + reference.toString());
+    }
+    os.writeString(reference.getRole());
+    os.writeString(targetModelReference != null ? targetModelReference.toString() : null);
+    os.writeString(reference.getResolveInfo());
+  }
+  saveNodes(node.getChildren(),os);
+  os.writeByte('}');
+}
