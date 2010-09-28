@@ -1,0 +1,39 @@
+{
+  IRefactoring result=null;
+  try {
+    String namespace=NameUtil.namespaceFromLongName(NameUtil.namespaceFromLongName(className));
+    Language l=MPSModuleRepository.getInstance().getLanguage(namespace);
+    if (l == null) {
+      l=Refactoring_Language.get();
+    }
+    if (l == null) {
+      LOG.errorWithTrace("can't find a language " + namespace);
+    }
+ else {
+      Class refactoringClass=l.getClass(className);
+      if (refactoringClass == null) {
+        LOG.errorWithTrace("can't find a class " + className + " in a language "+ namespace);
+      }
+ else {
+        Constructor constructor=refactoringClass.getConstructor();
+        Object refactoring=constructor.newInstance();
+        if (refactoring instanceof AbstractLoggableRefactoring) {
+          result=OldRefactoringAdapter.createAdapterFor(((AbstractLoggableRefactoring)refactoring));
+        }
+ else {
+          result=(IRefactoring)refactoring;
+        }
+        if (!(result instanceof ILoggableRefactoring)) {
+          LOG.error("Non-loggable refactoring was logged: " + result.getUserFriendlyName());
+        }
+      }
+    }
+  }
+ catch (  Throwable t) {
+    LOG.error(t);
+  }
+  if (result == null) {
+    LOG.error("refactoring for " + className + " was not loaded");
+  }
+  return result;
+}
