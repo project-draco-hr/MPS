@@ -1,0 +1,44 @@
+{
+  String namePattern=myBase.getNamePattern(pattern);
+  String qualifierPattern=getQualifierPattern(pattern);
+  boolean empty=namePattern.length() == 0 || namePattern.equals("@");
+  if (empty && !canShowListForEmptyPattern())   return false;
+  List<String> namesList=new ArrayList<String>();
+  getNamesByPattern(namesList,namePattern,names,isCancelled);
+  if (isCancelled.compute()) {
+    throw new ProcessCanceledException();
+  }
+  Collections.sort(namesList,new MatchesComparator(namePattern));
+  boolean overflow=false;
+  List<Object> sameNameElements=new SmartList<Object>();
+  All:   for (  String name : namesList) {
+    if (isCancelled.compute()) {
+      throw new ProcessCanceledException();
+    }
+    final Object[] elements=myModel.getElementsByName(name,checkboxState,namePattern);
+    if (elements.length > 1) {
+      sameNameElements.clear();
+      for (      final Object element : elements) {
+        if (matchesQualifier(element,qualifierPattern)) {
+          sameNameElements.add(element);
+        }
+      }
+      sortByProximity(sameNameElements);
+      for (      Object element : sameNameElements) {
+        result.add(element);
+        if (result.size() >= maxCount) {
+          overflow=true;
+          break All;
+        }
+      }
+    }
+ else     if (elements.length == 1 && matchesQualifier(elements[0],qualifierPattern)) {
+      result.add(elements[0]);
+      if (result.size() >= maxCount) {
+        overflow=true;
+        break;
+      }
+    }
+  }
+  return overflow;
+}
