@@ -6,67 +6,52 @@
   if (conceptFqName.equals(RuntimeTypeVariable.concept)) {
     return null;
   }
-  final StringBuilder builder=StringBuilderSpinAllocator.alloc();
-  try {
-    builder.append('#');
-    builder.append(propertyName);
-    final String prefixedPropertyName=builder.toString();
-    builder.setLength(0);
-    builder.append(conceptFqName);
-    builder.append(prefixedPropertyName);
-    final String originalKey=builder.toString();
-    if (isSetter) {
-      INodePropertySetter setter=myNodePropertySettersCache.get(originalKey);
-      if (setter != null) {
-        return setter == NULL_SETTER ? null : setter;
-      }
+  final Pair<String,String> originalKey=new Pair<String,String>(conceptFqName,propertyName);
+  if (isSetter) {
+    INodePropertySetter setter=myNodePropertySettersCache.get(originalKey);
+    if (setter != null) {
+      return setter == NULL_SETTER ? null : setter;
     }
+  }
  else {
-      INodePropertyGetter getter=myNodePropertyGettersCache.get(originalKey);
-      if (getter != null) {
-        return getter == NULL_GETTER ? null : getter;
-      }
+    INodePropertyGetter getter=myNodePropertyGettersCache.get(originalKey);
+    if (getter != null) {
+      return getter == NULL_GETTER ? null : getter;
     }
-    return NodeReadAccessCasterInEditor.runReadTransparentAction(new Computable<IModelConstraints>(){
-      public IModelConstraints compute(){
-        AbstractConceptDeclaration conceptDeclaration=SModelUtil_new.findConceptDeclaration(conceptFqName,GlobalScope.getInstance());
-        List<AbstractConceptDeclaration> hierarchy=SModelUtil_new.getConceptAndSuperConcepts(conceptDeclaration);
-        for (        final AbstractConceptDeclaration concept : hierarchy) {
-          Language l=SModelUtil_new.getDeclaringLanguage(concept,GlobalScope.getInstance());
-          ensureLanguageAdded(l);
-          final String conceptFqName=NameUtil.nodeFQName(concept);
-          final IModelConstraints result;
-          builder.setLength(0);
-          builder.append(conceptFqName);
-          builder.append(prefixedPropertyName);
-          if (isSetter) {
-            result=myNodePropertySettersMap.get(builder.toString());
-          }
- else {
-            result=myNodePropertyGettersMap.get(builder.toString());
-          }
-          if (result != null) {
-            if (isSetter) {
-              myNodePropertySettersCache.put(originalKey,(INodePropertySetter)result);
-            }
- else {
-              myNodePropertyGettersCache.put(originalKey,(INodePropertyGetter)result);
-            }
-            return result;
-          }
-        }
+  }
+  return NodeReadAccessCasterInEditor.runReadTransparentAction(new Computable<IModelConstraints>(){
+    public IModelConstraints compute(){
+      AbstractConceptDeclaration conceptDeclaration=SModelUtil_new.findConceptDeclaration(conceptFqName,GlobalScope.getInstance());
+      List<AbstractConceptDeclaration> hierarchy=SModelUtil_new.getConceptAndSuperConcepts(conceptDeclaration);
+      for (      final AbstractConceptDeclaration concept : hierarchy) {
+        Language l=SModelUtil_new.getDeclaringLanguage(concept,GlobalScope.getInstance());
+        ensureLanguageAdded(l);
+        final String conceptFqName=NameUtil.nodeFQName(concept);
+        final IModelConstraints result;
         if (isSetter) {
-          myNodePropertySettersCache.put(originalKey,NULL_SETTER);
+          result=myNodePropertySettersMap.get(new Pair<String,String>(conceptFqName,propertyName));
         }
  else {
-          myNodePropertyGettersCache.put(originalKey,NULL_GETTER);
+          result=myNodePropertyGettersMap.get(new Pair<String,String>(conceptFqName,propertyName));
         }
-        return null;
+        if (result != null) {
+          if (isSetter) {
+            myNodePropertySettersCache.put(originalKey,(INodePropertySetter)result);
+          }
+ else {
+            myNodePropertyGettersCache.put(originalKey,(INodePropertyGetter)result);
+          }
+          return result;
+        }
       }
+      if (isSetter) {
+        myNodePropertySettersCache.put(originalKey,NULL_SETTER);
+      }
+ else {
+        myNodePropertyGettersCache.put(originalKey,NULL_GETTER);
+      }
+      return null;
     }
+  }
 );
-  }
-  finally {
-    StringBuilderSpinAllocator.dispose(builder);
-  }
 }
