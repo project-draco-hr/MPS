@@ -1,0 +1,34 @@
+{
+  try {
+    EditorCell selectedCell=CollapseAll_Action.this.editorContext.getSelectedCell();
+    Queue<EditorCell_Collection> cellsToProcess=QueueSequence.fromQueueAndArray(new LinkedList<EditorCell_Collection>(),(EditorCell_Collection)CollapseAll_Action.this.editorComponent.getRootCell());
+    while (QueueSequence.fromQueue(cellsToProcess).isNotEmpty()) {
+      EditorCell_Collection collectionCell=QueueSequence.fromQueue(cellsToProcess).removeFirstElement();
+      if (collectionCell.isFolded()) {
+        continue;
+      }
+      for (      EditorCell childCell : Sequence.fromIterable(collectionCell)) {
+        if (childCell instanceof EditorCell_Collection) {
+          QueueSequence.fromQueue(cellsToProcess).addLastElement((EditorCell_Collection)childCell);
+        }
+      }
+      if (collectionCell.canBePossiblyFolded()) {
+        collectionCell.fold();
+      }
+    }
+    EditorCell_Collection collectionToSelect=CollapseAll_Action.this.getFoldedCollectionToSelect(selectedCell);
+    if (collectionToSelect != null) {
+      CollapseAll_Action.this.editorContext.getNodeEditorComponent().clearSelectionStack();
+      EditorCell editorCellToSelect=collectionToSelect.getFirstDescendant(CellConditions.SELECTABLE);
+      if (editorCellToSelect != null) {
+        CollapseAll_Action.this.editorContext.getNodeEditorComponent().changeSelection(editorCellToSelect);
+        editorCellToSelect.home();
+      }
+    }
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "CollapseAll",t);
+    }
+  }
+}
