@@ -1,4 +1,7 @@
 {
+  if (SHOW_INFO > 0) {
+    System.out.println("initial graph: " + embeddedGraph);
+  }
   Graph graph=embeddedGraph.getGraph();
   List<Edge> oldEdges=ListSequence.fromList(new ArrayList<Edge>());
   ListSequence.fromList(oldEdges).addSequence(ListSequence.fromList(graph.getEdges()));
@@ -9,11 +12,10 @@
   QuasiOrthogonalRepresentation.getRepresentation(embeddedGraph,bends,angles);
   QuasiRepresentationModifier quasiModifier=new QuasiRepresentationModifier(embeddedGraph,bends,angles);
   quasiModifier.reduceToOrthogonalRepresentation();
-  List<List<Edge>> modifiedEdges=quasiModifier.getModifiedEdges();
   if (SHOW_INFO > 0) {
-    System.out.println("merged edges: ");
-    for (    List<Edge> list : ListSequence.fromList(modifiedEdges)) {
-      System.out.println(list);
+    System.out.println("modifications: ");
+    for (    QuasiRepresentationModifier.Modification modification : ListSequence.fromList(quasiModifier.getModifications())) {
+      System.out.println(modification);
     }
   }
   OrthogonalRepresentation.replaceBendsByNodes(embeddedGraph,bends,angles);
@@ -21,22 +23,13 @@
   if (SHOW_INFO > 0) {
     System.out.println("modified graph: " + embeddedGraph);
   }
-  Map<Node,Map<Direction2D,Integer>> nodeDirectionSizes=MapSequence.fromMap(new HashMap<Node,Map<Direction2D,Integer>>());
-  for (  Node node : ListSequence.fromList(oldNodes)) {
-    Map<Direction2D,Integer> directionSizes=MapSequence.fromMap(new HashMap<Direction2D,Integer>());
-    Dimension size=MapSequence.fromMap(nodeSizes).get(node);
-    int horSize=size.height;
-    MapSequence.fromMap(directionSizes).put(Direction2D.UP,horSize / 2);
-    MapSequence.fromMap(directionSizes).put(Direction2D.DOWN,horSize - MapSequence.fromMap(directionSizes).get(Direction2D.UP));
-    int verSize=size.width;
-    MapSequence.fromMap(directionSizes).put(Direction2D.LEFT,verSize / 2);
-    MapSequence.fromMap(directionSizes).put(Direction2D.RIGHT,verSize - MapSequence.fromMap(directionSizes).get(Direction2D.LEFT));
-    MapSequence.fromMap(nodeDirectionSizes).put(node,directionSizes);
-  }
+  Map<Node,Map<Direction2D,Integer>> nodeDirectionSizes=this.getNodeDirectionSizes(oldNodes,nodeSizes);
+  Map<Edge,Integer> edgesShifts=getEdgesShifts(quasiModifier.getModifications(),directions,nodeSizes);
   ConstraintsGraphProcessor processor=new ConstraintsGraphProcessor(embeddedGraph,directions);
+  processor.setUnitLength(myUnitLength);
   processor.modifyEmbeddedGraph(oldNodes,nodeSizes);
   processor.constructGraph();
-  Map<Node,Point> coordinates=processor.getCoordinatesInModifiedGraph();
+  Map<Node,Point> coordinates=processor.getCoordinatesInModifiedGraph(edgesShifts,nodeDirectionSizes);
   GraphLayout graphLayout=new GraphLayout(graph);
   for (  Node node : ListSequence.fromList(oldNodes)) {
     Point center=MapSequence.fromMap(coordinates).get(node);
@@ -75,13 +68,8 @@
     }
     graphLayout.setLayoutFor(edge,edgeLayout);
   }
-  List<Node> modificationSources=quasiModifier.getModificationSources();
-  Iterator<List<Edge>> modifiedEdgesItr=ListSequence.fromList(modifiedEdges).iterator();
-  Iterator<Node> sourcesItr=ListSequence.fromList(modificationSources).iterator();
-  while (sourcesItr.hasNext()) {
-    List<Edge> edges=modifiedEdgesItr.next();
-    Node source=sourcesItr.next();
-    splitEdges(graphLayout,edges,source);
+  for (  QuasiRepresentationModifier.Modification modification : ListSequence.fromList(quasiModifier.getModifications())) {
+    splitEdges(graphLayout,modification,edgesShifts);
   }
   return graphLayout;
 }
