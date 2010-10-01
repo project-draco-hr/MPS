@@ -1,0 +1,38 @@
+{
+  MapSequence.fromMap(dataMap).clear();
+  Sequence.fromIterable(vertices).visitAll(new IVisitor<V>(){
+    public void visit(    V v){
+      MapSequence.fromMap(dataMap).put(v,new CycleDetector.Data());
+    }
+  }
+);
+  final Wrappers._int time=new Wrappers._int(0);
+  Sequence.fromIterable(vertices).visitAll(new IVisitor<V>(){
+    public void visit(    V v){
+      if (CycleDetector.Color.WHITE == MapSequence.fromMap(dataMap).get(v).color) {
+        time.value=visitForward(v,time.value);
+      }
+    }
+  }
+);
+  final List<List<V>> cycles=ListSequence.fromList(new ArrayList<List<V>>());
+  Sequence.fromIterable(vertices).sort(new Comparator<V>(){
+    public int compare(    V a,    V b){
+      return MapSequence.fromMap(dataMap).get(b).endTime - MapSequence.fromMap(dataMap).get(a).endTime;
+    }
+  }
+,true).visitAll(new IVisitor<V>(){
+    public void visit(    V v){
+      if (CycleDetector.Color.BLACK == MapSequence.fromMap(dataMap).get(v).color) {
+        visitBackward(v);
+        if (ListSequence.fromList(MapSequence.fromMap(dataMap).get(v).successors).isNotEmpty()) {
+          List<V> cycle=ListSequence.fromListAndArray(new ArrayList<V>(),v);
+          addSuccessors(v,cycle);
+          ListSequence.fromList(cycles).addElement(cycle);
+        }
+      }
+    }
+  }
+);
+  return cycles;
+}
