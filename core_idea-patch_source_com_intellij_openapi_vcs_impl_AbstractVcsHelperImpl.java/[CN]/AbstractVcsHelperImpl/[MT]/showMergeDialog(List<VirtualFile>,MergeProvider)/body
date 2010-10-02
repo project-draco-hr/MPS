@@ -1,3 +1,20 @@
 {
-  return showMergeDialog(files,provider,true);
+  if (files.isEmpty())   return Collections.emptyList();
+  MergeProvider providerDecorator=new MergeProviderDecorator(myProject,this,provider);
+  List<VirtualFile> toMerge=new ArrayList<VirtualFile>();
+  List<VirtualFile> alreadyResolved=new ArrayList<VirtualFile>();
+  for (  VirtualFile f : files) {
+    if (VcsMigrationUtil.getHandler().isInConflict(VirtualFileUtils.toIFile(f),true)) {
+      toMerge.add(f);
+    }
+ else {
+      alreadyResolved.add(f);
+    }
+  }
+  if (toMerge.isEmpty()) {
+    return alreadyResolved;
+  }
+  final MultipleFileMergeDialog fileMergeDialog=new MultipleFileMergeDialog(myProject,toMerge,providerDecorator);
+  fileMergeDialog.show();
+  return CollectionUtil.union(fileMergeDialog.getProcessedFiles(),alreadyResolved);
 }

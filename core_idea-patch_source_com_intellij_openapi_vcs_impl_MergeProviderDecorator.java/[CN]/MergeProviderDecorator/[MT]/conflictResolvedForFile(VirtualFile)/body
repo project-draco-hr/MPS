@@ -1,0 +1,27 @@
+{
+  myProvider.conflictResolvedForFile(file);
+  if (myBackup != null && myBackup.exists()) {
+    try {
+      File tmp=FileUtil.createTmpDir();
+      ZipUtil.extract(myBackup,tmp,null);
+      FileUtil.copyFile(new File(file.getPath()),new File(tmp + File.separator + file.getName()+ ".result"));
+      File logsDir=new File(PathManager.getLogPath());
+      File[] logfiles=logsDir.listFiles(new FilenameFilter(){
+        public boolean accept(        File dir,        String name){
+          return name.matches("mpsvcs\\.log(\\.1)*") || name.matches("idea\\.log(\\.1)*");
+        }
+      }
+);
+      File tmpLogDir=new File(tmp + File.separator + "logs");
+      tmpLogDir.mkdir();
+      for (      File logfile : logfiles) {
+        FileUtil.copyFile(logfile,new File(tmpLogDir + File.separator + logfile.getName()));
+      }
+      FileUtil.zip(tmp,myBackup);
+      FileUtil.delete(tmp);
+    }
+ catch (    IOException e) {
+      LOG.error(e);
+    }
+  }
+}
