@@ -1,31 +1,33 @@
 {
-  final AnAction showNodeAction=new AnAction("View Source","View Source",jetbrains.mps.ide.projectPane.Icons.TEXT_ICON){
+  DefaultActionGroup group=new DefaultActionGroup();
+  myGotoNodeAction=new AnAction("Go To","Go To Source",jetbrains.mps.ide.projectPane.Icons.REFERENCE_ICON){
     @Override public void actionPerformed(    AnActionEvent e){
-      AbstractMPSBreakpoint breakpoint=myBreakpointsView.getSelectedBreakpoint();
-      if (breakpoint == null)       return;
-      openNode(breakpoint,false,true);
-    }
-    @Override public void update(    AnActionEvent e){
-      e.getPresentation().setEnabled(myBreakpointsView.getSelectedBreakpoint() != null);
-    }
-  }
-;
-  final AnAction gotoNodeAction=new AnAction("Go To","Go To Source",jetbrains.mps.ide.projectPane.Icons.REFERENCE_ICON){
-    @Override public void actionPerformed(    AnActionEvent e){
-      AbstractMPSBreakpoint breakpoint=myBreakpointsView.getSelectedBreakpoint();
+      AbstractMPSBreakpoint breakpoint=getBreakpoint(e);
       if (breakpoint == null)       return;
       dispose();
       openNode(breakpoint,true,true);
     }
     @Override public void update(    AnActionEvent e){
-      e.getPresentation().setEnabled(myBreakpointsView.getSelectedBreakpoint() != null);
+      e.getPresentation().setEnabled(getBreakpoint(e) != null);
     }
   }
 ;
-  final AnAction deleteBreakpointAction=new AnAction("Delete","Delete Breakpoint",jetbrains.mps.workbench.dialogs.project.components.parts.actions.icons.Icons.REMOVE){
+  group.add(myGotoNodeAction);
+  myShowNodeAction=new AnAction("View Source","View Source",jetbrains.mps.ide.projectPane.Icons.TEXT_ICON){
     @Override public void actionPerformed(    AnActionEvent e){
-      int selectedRow=myBreakpointsView.getSelectedBreakpointIndex();
-      final AbstractMPSBreakpoint breakpoint=myBreakpointsView.getSelectedBreakpoint();
+      AbstractMPSBreakpoint breakpoint=getBreakpoint(e);
+      if (breakpoint == null)       return;
+      openNode(breakpoint,false,true);
+    }
+    @Override public void update(    AnActionEvent e){
+      e.getPresentation().setEnabled(getBreakpoint(e) != null);
+    }
+  }
+;
+  group.add(myShowNodeAction);
+  myDeleteBreakpointAction=new AnAction("Delete","Delete Breakpoint",jetbrains.mps.workbench.dialogs.project.components.parts.actions.icons.Icons.REMOVE){
+    @Override public void actionPerformed(    AnActionEvent e){
+      final AbstractMPSBreakpoint breakpoint=getBreakpoint(e);
       if (breakpoint == null)       return;
       ModelAccess.instance().runReadAction(new Runnable(){
         @Override public void run(){
@@ -33,44 +35,79 @@
         }
       }
 );
-      myBreakpointsView.breakpointDeleted(selectedRow);
+      myViews[myCurrentViewIndex].breakpointDeleted(breakpoint);
     }
     @Override public void update(    AnActionEvent e){
-      e.getPresentation().setEnabled(myBreakpointsView.getSelectedBreakpoint() != null);
+      e.getPresentation().setEnabled(getBreakpoint(e) != null);
     }
   }
 ;
-  DefaultActionGroup group=new DefaultActionGroup();
-  group.add(gotoNodeAction);
-  group.add(showNodeAction);
-  group.add(deleteBreakpointAction);
-  myBreakpointsView.getMainComponent().getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER,0),COMMAND_SHOW_NODE);
-  myBreakpointsView.getMainComponent().getActionMap().put(COMMAND_SHOW_NODE,new AbstractAction(){
-    @Override public void actionPerformed(    ActionEvent e){
-      showNodeAction.actionPerformed(null);
+  group.add(myDeleteBreakpointAction);
+  group.add(new Separator());
+  group.add(new ToggleAction("Tree View","Toggle Tree/List View",Icons.SHOW_AS_TREE){
+    @Override public boolean isSelected(    AnActionEvent e){
+      return isTreeView();
+    }
+    @Override public void setSelected(    AnActionEvent e,    boolean state){
+      switchView();
+      e.getPresentation().setText(myViews[1 - myCurrentViewIndex].getTitle());
     }
   }
 );
-  myBreakpointsView.getMainComponent().registerKeyboardAction(new AbstractAction(){
-    @Override public void actionPerformed(    ActionEvent e){
-      gotoNodeAction.actionPerformed(null);
+  group.add(new ToggleAction("Group By Module","Group By Module",jetbrains.mps.ide.findusages.view.icons.Icons.MODULE_ICON){
+    @Override public void update(    AnActionEvent e){
+      super.update(e);
+      e.getPresentation().setEnabled(isTreeView());
     }
-  }
-,KeyStroke.getKeyStroke("F4"),JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-  myBreakpointsView.getMainComponent().registerKeyboardAction(new ActionListener(){
-    @Override public void actionPerformed(    ActionEvent e){
-      deleteBreakpointAction.actionPerformed(null);
-    }
-  }
-,KeyStroke.getKeyStroke("DELETE"),JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-  myBreakpointsView.getMainComponent().addMouseListener(new MouseAdapter(){
-    @Override public void mouseClicked(    MouseEvent e){
-      if (e.getClickCount() == 2) {
-        AbstractMPSBreakpoint breakpoint=myBreakpointsView.getSelectedBreakpoint();
-        if (breakpoint == null)         return;
-        dispose();
-        openNode(breakpoint,true,true);
+    @Override public boolean isSelected(    AnActionEvent e){
+      if (!isTreeView()) {
+        return false;
       }
+      BreakpointsTree tree=(BreakpointsTree)myViews[myCurrentViewIndex];
+      return tree.isModuleGroupVisible();
+    }
+    @Override public void setSelected(    AnActionEvent e,    boolean state){
+      BreakpointsTree tree=(BreakpointsTree)myViews[myCurrentViewIndex];
+      tree.toggleModuleGroup(state);
+      tree.update();
+    }
+  }
+);
+  group.add(new ToggleAction("Group By Model","Group By Model",jetbrains.mps.ide.findusages.view.icons.Icons.MODEL_ICON){
+    @Override public void update(    AnActionEvent e){
+      super.update(e);
+      e.getPresentation().setEnabled(isTreeView());
+    }
+    @Override public boolean isSelected(    AnActionEvent e){
+      if (!isTreeView()) {
+        return false;
+      }
+      BreakpointsTree tree=(BreakpointsTree)myViews[myCurrentViewIndex];
+      return tree.isModelGroupVisible();
+    }
+    @Override public void setSelected(    AnActionEvent e,    boolean state){
+      BreakpointsTree tree=(BreakpointsTree)myViews[myCurrentViewIndex];
+      tree.toggleModelGroup(state);
+      tree.update();
+    }
+  }
+);
+  group.add(new ToggleAction("Group By Root","Group By Root",jetbrains.mps.ide.findusages.view.icons.Icons.ROOT_ICON){
+    @Override public void update(    AnActionEvent e){
+      super.update(e);
+      e.getPresentation().setEnabled(isTreeView());
+    }
+    @Override public boolean isSelected(    AnActionEvent e){
+      if (!isTreeView()) {
+        return false;
+      }
+      BreakpointsTree tree=(BreakpointsTree)myViews[myCurrentViewIndex];
+      return tree.isRootGroupVisible();
+    }
+    @Override public void setSelected(    AnActionEvent e,    boolean state){
+      BreakpointsTree tree=(BreakpointsTree)myViews[myCurrentViewIndex];
+      tree.toggleRootGroup(state);
+      tree.update();
     }
   }
 );
