@@ -5,83 +5,9 @@
   largeModel=true;
   TreeToolTipHandler.install(this);
   setCellRenderer(new NewMPSTreeCellRenderer());
-  addTreeWillExpandListener(new TreeWillExpandListener(){
-    public void treeWillExpand(    TreeExpansionEvent event) throws ExpandVetoException {
-      TreePath path=event.getPath();
-      Object node=path.getLastPathComponent();
-      MPSTreeNode treeNode=(MPSTreeNode)node;
-      if (!treeNode.isInitialized()) {
-        doInit(treeNode);
-      }
-    }
-    public void treeWillCollapse(    TreeExpansionEvent event) throws ExpandVetoException {
-    }
-  }
-);
-  addTreeExpansionListener(new TreeExpansionListener(){
-    public void treeExpanded(    TreeExpansionEvent event){
-      if (!myAutoExpandEnabled)       return;
-      TreePath eventPath=event.getPath();
-      MPSTreeNode node=(MPSTreeNode)eventPath.getLastPathComponent();
-      if (node.getChildCount() == 1) {
-        List<MPSTreeNode> path=new ArrayList<MPSTreeNode>();
-        for (        Object item : eventPath.getPath()) {
-          path.add((MPSTreeNode)item);
-        }
-        MPSTreeNode onlyChild=(MPSTreeNode)node.getChildAt(0);
-        if (onlyChild.isAutoExpandable()) {
-          path.add(onlyChild);
-          expandPath(new TreePath(path.toArray()));
-        }
-      }
-    }
-    public void treeCollapsed(    TreeExpansionEvent event){
-    }
-  }
-);
-  addMouseListener(new MouseAdapter(){
-    public void mousePressed(    MouseEvent e){
-      if (e.getButton() == 0) {
-        TreePath path=getSelectionPath();
-        if (path == null)         return;
-        int rowNum=getRowForPath(path);
-        Rectangle r=getRowBounds(rowNum);
-        showPopup(r.x,r.y);
-      }
- else {
-        requestFocus();
-        myMousePressed(e);
-      }
-    }
-    public void mouseReleased(    MouseEvent e){
-      myMouseReleased(e);
-    }
-    public void mouseEntered(    MouseEvent e){
-      myTooltipManagerRecentInitialDelay=ToolTipManager.sharedInstance().getInitialDelay();
-      ToolTipManager.sharedInstance().setInitialDelay(10);
-    }
-    public void mouseExited(    MouseEvent e){
-      ToolTipManager.sharedInstance().setInitialDelay(myTooltipManagerRecentInitialDelay);
-    }
-  }
-);
-  AbstractAction openNodeAction=new AbstractAction(){
-    public void actionPerformed(    ActionEvent e){
-      TreePath selPath=getSelectionPath();
-      if (selPath == null)       return;
-      MPSTreeNode selNode=(MPSTreeNode)selPath.getLastPathComponent();
-      selNode.doubleClick();
-    }
-  }
-;
-  registerKeyboardAction(openNodeAction,KeyStroke.getKeyStroke("F4"),WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-  AbstractAction refreshTreeAction=new AbstractAction(){
-    public void actionPerformed(    ActionEvent e){
-      long start=System.currentTimeMillis();
-      rebuildNow();
-      System.out.println("rebuilt in " + (System.currentTimeMillis() - start));
-    }
-  }
-;
-  registerKeyboardAction(refreshTreeAction,KeyStroke.getKeyStroke("F5"),WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+  addTreeWillExpandListener(new MyTreeWillExpandListener());
+  addTreeExpansionListener(new MyTreeExpansionListener());
+  addMouseListener(new MyMouseAdapter());
+  registerKeyboardAction(new MyOpenNodeAction(),KeyStroke.getKeyStroke("F4"),WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+  registerKeyboardAction(new MyRefreshAction(),KeyStroke.getKeyStroke("F5"),WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
 }
