@@ -1,21 +1,33 @@
 {
-  List<ITarget> targets=ListSequence.fromList(new ArrayList<ITarget>());
-  Map<ITarget.Name,ITarget> availableTargets=MapSequence.fromMap(new HashMap<ITarget.Name,ITarget>());
-  Map<IFacet.Name,IFacet> fview=Collections.unmodifiableMap(facetsView);
-  Map<IFacet.Name,IFacet> required=MapSequence.fromMap(new HashMap<IFacet.Name,IFacet>());
-  Map<IFacet.Name,IFacet> optional=MapSequence.fromMap(new HashMap<IFacet.Name,IFacet>());
-  for (  IFacet fct : Sequence.fromIterable(MapSequence.fromMap(fview).values())) {
-    this.collectRequired(fct.extended(),required);
-    this.collectRequired(fct.required(),required);
-    this.collectOptional(fct.optional(),optional);
-    for (    ITarget trg : Sequence.fromIterable(fct.targets(fview))) {
-      if (MapSequence.fromMap(availableTargets).containsKey(trg.getName())) {
-        LOG.error("duplicate target: " + trg.getName());
-      }
- else {
-        MapSequence.fromMap(availableTargets).put(trg.getName(),trg);
-      }
+  if (ListSequence.fromList(errors).isNotEmpty()) {
+    return new InvalidScript();
+  }
+  final Map<IFacet.Name,ScriptBuilder.FacetRefs> refs=MapSequence.fromMap(new HashMap<IFacet.Name,ScriptBuilder.FacetRefs>());
+  this.collectRefs(refs);
+  if (ListSequence.fromList(errors).isNotEmpty()) {
+    return new InvalidScript();
+  }
+  Iterable<IFacet.Name> sorted=this.toposortByExtended(refs);
+  if (ListSequence.fromList(errors).isNotEmpty()) {
+    return new InvalidScript();
+  }
+  TargetRange tr=new TargetRange();
+  List<ITarget> allTargets=ListSequence.fromList(Sequence.fromIterable(sorted).translate(new ITranslator2<IFacet.Name,ITarget>(){
+    public Iterable<ITarget> translate(    IFacet.Name fname){
+      return MapSequence.fromMap(facetsView).get(fname).targets();
     }
   }
-  return new Script(targets,MapSequence.fromMap(availableTargets).get(defaultTarget));
+).toListSequence()).reversedList();
+  for (  ITarget trg : ListSequence.fromList(allTargets)) {
+    if (SetSequence.fromSet(requestedTargets).contains(trg.getName()) || trg.getName().equals(defaultTarget)) {
+      tr.addTarget(trg);
+    }
+  }
+  tr.addRelated(Sequence.fromIterable(MapSequence.fromMap(facetsView).values()).translate(new ITranslator2<IFacet,ITarget>(){
+    public Iterable<ITarget> translate(    IFacet fct){
+      return fct.targets();
+    }
+  }
+));
+  return new InvalidScript();
 }
