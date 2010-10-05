@@ -1,14 +1,28 @@
 {
-  myModelAccess.tryWriteInCommand(new Runnable(){
-    public void run(){
-      long start=System.currentTimeMillis();
-      while (true) {
-        if (System.currentTimeMillis() - start > MAX_TIME)         break;
-        Runnable command=getToExecuteCommand();
-        if (command == null)         break;
-        command.run();
+synchronized (myLock) {
+    if (hasCommandWorker) {
+      return;
+    }
+    hasCommandWorker=true;
+  }
+  try {
+    final Project project=peekToExecuteProject();
+    if (project != null) {
+      myModelAccess.tryWriteInCommand(new Runnable(){
+        public void run(){
+          Runnable command;
+          while ((command=getToExecuteCommand(project)) != null) {
+            command.run();
+          }
+        }
       }
+,project);
     }
   }
-);
+  finally {
+synchronized (myLock) {
+      hasCommandWorker=false;
+      myLock.notifyAll();
+    }
+  }
 }
