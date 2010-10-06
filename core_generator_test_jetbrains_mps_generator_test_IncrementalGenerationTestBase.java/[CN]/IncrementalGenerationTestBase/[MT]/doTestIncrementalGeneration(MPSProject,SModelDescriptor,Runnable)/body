@@ -2,11 +2,12 @@
   GeneratorManager gm=p.getProject().getComponent(GeneratorManager.class);
   File tmpFile=File.createTempFile("mps-generator-caches","tmp");
   tmpFile.deleteOnExit();
-  GenerationOptions options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).incremental(true,new FileBasedGenerationCacheContainer(tmpFile)).create();
+  GenerationOptions options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).reporting(true,true,false,2).incremental(true,new FileBasedGenerationCacheContainer(tmpFile)).create();
   IncrementalTestGenerationHandler generationHandler=new IncrementalTestGenerationHandler();
-  gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),new TestMessageHandler(),options);
+  gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),generationHandler.getMessageHandler(),options);
   assertNoDiff(generationHandler.getExistingContent(),generationHandler.getGeneratedContent());
   Map<String,String> incrementalGenerationResults=null;
+  List<Long> time=new ArrayList<Long>();
   Assert.assertTrue(changeModel.length > 0);
   for (  final Runnable r : changeModel) {
     ThreadUtils.runInUIThreadAndWait(new Runnable(){
@@ -15,16 +16,19 @@
       }
     }
 );
-    options=GenerationOptions.getDefaults().rebuildAll(false).strictMode(true).incremental(true,new FileBasedGenerationCacheContainer(tmpFile)).create();
-    generationHandler=new IncrementalTestGenerationHandler();
-    gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),new TestMessageHandler(),options);
-    Map<String,String> prevResults=incrementalGenerationResults == null ? generationHandler.getExistingContent() : incrementalGenerationResults;
+    options=GenerationOptions.getDefaults().rebuildAll(false).strictMode(true).reporting(true,true,false,2).incremental(true,new FileBasedGenerationCacheContainer(tmpFile)).create();
+    generationHandler=new IncrementalTestGenerationHandler(incrementalGenerationResults);
+    long start=System.nanoTime();
+    gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),generationHandler.getMessageHandler(),options);
+    time.add(System.nanoTime() - start);
     incrementalGenerationResults=generationHandler.getGeneratedContent();
-    assertDiff(prevResults,incrementalGenerationResults,1);
+    assertDiff(generationHandler.getExistingContent(),incrementalGenerationResults,1);
   }
-  options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).incremental(false,null).create();
+  options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).reporting(true,true,false,2).incremental(true,new FileBasedGenerationCacheContainer(tmpFile)).create();
   generationHandler=new IncrementalTestGenerationHandler(incrementalGenerationResults);
-  gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),new TestMessageHandler(),options);
+  long start=System.nanoTime();
+  gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),generationHandler.getMessageHandler(),options);
+  time.add(System.nanoTime() - start);
   assertNoDiff(generationHandler.getGeneratedContent(),incrementalGenerationResults);
   ThreadUtils.runInUIThreadAndWait(new Runnable(){
     @Override public void run(){
@@ -37,4 +41,12 @@
     }
   }
 );
+  if (DEBUG) {
+    long regen=time.remove(time.size() - 1);
+    System.out.print("Full cycle: " + regen / 1000000 / 1000.);
+    for (    long l : time) {
+      System.out.print(", incremental: " + l / 1000000 / 1000.);
+    }
+    System.out.println();
+  }
 }
