@@ -1,0 +1,40 @@
+{
+  GeneratorManager gm=p.getProject().getComponent(GeneratorManager.class);
+  File tmpFile=File.createTempFile("mps-generator-caches","tmp");
+  tmpFile.deleteOnExit();
+  GenerationOptions options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).incremental(true,new FileBasedGenerationCacheContainer(tmpFile)).create();
+  IncrementalTestGenerationHandler generationHandler=new IncrementalTestGenerationHandler();
+  gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),new TestMessageHandler(),options);
+  assertNoDiff(generationHandler.getExistingContent(),generationHandler.getGeneratedContent());
+  Map<String,String> incrementalGenerationResults=null;
+  Assert.assertTrue(changeModel.length > 0);
+  for (  final Runnable r : changeModel) {
+    ThreadUtils.runInUIThreadAndWait(new Runnable(){
+      @Override public void run(){
+        ModelAccess.instance().runWriteActionInCommand(r,p.getProject());
+      }
+    }
+);
+    options=GenerationOptions.getDefaults().rebuildAll(false).strictMode(true).incremental(true,new FileBasedGenerationCacheContainer(tmpFile)).create();
+    generationHandler=new IncrementalTestGenerationHandler();
+    gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),new TestMessageHandler(),options);
+    Map<String,String> prevResults=incrementalGenerationResults == null ? generationHandler.getExistingContent() : incrementalGenerationResults;
+    incrementalGenerationResults=generationHandler.getGeneratedContent();
+    assertDiff(prevResults,incrementalGenerationResults,1);
+  }
+  options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).incremental(false,null).create();
+  generationHandler=new IncrementalTestGenerationHandler(incrementalGenerationResults);
+  gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),new TestMessageHandler(),options);
+  assertNoDiff(generationHandler.getGeneratedContent(),incrementalGenerationResults);
+  ThreadUtils.runInUIThreadAndWait(new Runnable(){
+    @Override public void run(){
+      ModelAccess.instance().runWriteAction(new Runnable(){
+        @Override public void run(){
+          ((EditableSModelDescriptor)descr).reloadFromDisk();
+        }
+      }
+);
+    }
+  }
+);
+}
