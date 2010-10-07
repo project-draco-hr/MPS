@@ -1,33 +1,22 @@
 {
   if (ListSequence.fromList(errors).isNotEmpty()) {
-    return new InvalidScript();
+    return new InvalidScript(errors);
   }
   final Map<IFacet.Name,ScriptBuilder.FacetRefs> refs=MapSequence.fromMap(new HashMap<IFacet.Name,ScriptBuilder.FacetRefs>());
   this.collectRefs(refs);
   if (ListSequence.fromList(errors).isNotEmpty()) {
-    return new InvalidScript();
+    return new InvalidScript(errors);
   }
-  Iterable<IFacet.Name> sorted=this.toposortByExtended(refs);
+  Iterable<IFacet.Name> sortedFacets=this.toposortByExtended(refs);
   if (ListSequence.fromList(errors).isNotEmpty()) {
-    return new InvalidScript();
+    return new InvalidScript(errors);
   }
   TargetRange tr=new TargetRange();
-  List<ITarget> allTargets=ListSequence.fromList(Sequence.fromIterable(sorted).translate(new ITranslator2<IFacet.Name,ITarget>(){
-    public Iterable<ITarget> translate(    IFacet.Name fname){
-      return MapSequence.fromMap(facetsView).get(fname).targets();
-    }
+  this.collectTargets(sortedFacets,tr);
+  if (ListSequence.fromList(errors).isNotEmpty()) {
+    return new InvalidScript(errors);
   }
-).toListSequence()).reversedList();
-  for (  ITarget trg : ListSequence.fromList(allTargets)) {
-    if (SetSequence.fromSet(requestedTargets).contains(trg.getName()) || trg.getName().equals(defaultTarget)) {
-      tr.addTarget(trg);
-    }
-  }
-  tr.addRelated(Sequence.fromIterable(MapSequence.fromMap(facetsView).values()).translate(new ITranslator2<IFacet,ITarget>(){
-    public Iterable<ITarget> translate(    IFacet fct){
-      return fct.targets();
-    }
-  }
-));
-  return new InvalidScript();
+  Script sc=new Script(tr,defaultTarget);
+  sc.validate();
+  return sc;
 }
