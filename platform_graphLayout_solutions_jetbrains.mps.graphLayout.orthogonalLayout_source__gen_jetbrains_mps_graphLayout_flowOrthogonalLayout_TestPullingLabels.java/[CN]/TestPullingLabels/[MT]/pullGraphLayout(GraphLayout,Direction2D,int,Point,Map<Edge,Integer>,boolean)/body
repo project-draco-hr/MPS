@@ -1,0 +1,57 @@
+{
+  GraphLayout pulledLayout=new GraphLayout(layout.getGraph());
+  Set<Node> unpulledNodes=SetSequence.fromSet(new HashSet<Node>());
+  for (  Node node : SetSequence.fromSet(MapSequence.fromMap(layout.getNodeLayout()).keySet())) {
+    Rectangle nodeRect=layout.getLayoutFor(node);
+    Rectangle pulledRect=pullRectangle(nodeRect,center,direction,shift,alongEdge);
+    if (pulledRect.equals(nodeRect)) {
+      SetSequence.fromSet(unpulledNodes).addElement(node);
+    }
+    pulledLayout.setLayoutFor(node,pulledRect);
+  }
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(layout.getEdgeLayout()).keySet())) {
+    List<Point> path=layout.getLayoutFor(edge);
+    List<Point> pulledPath=ListSequence.fromList(new LinkedList<Point>());
+    Set<Integer> pulled=SetSequence.fromSet(new HashSet<Integer>());
+    int index=0;
+    for (    Point point : ListSequence.fromList(path)) {
+      if (point == ListSequence.fromList(path).first() || point == ListSequence.fromList(path).last()) {
+        Node node=edge.getSource();
+        if (point == ListSequence.fromList(path).last()) {
+          node=edge.getTarget();
+        }
+        if (SetSequence.fromSet(unpulledNodes).contains(node)) {
+          ListSequence.fromList(pulledPath).addElement(new Point(point));
+        }
+ else {
+          SetSequence.fromSet(pulled).addElement(index);
+          int dx=direction.dx() * shift;
+          int dy=direction.dy() * shift;
+          ListSequence.fromList(pulledPath).addElement(new Point(point.x + dx,point.y + dy));
+        }
+      }
+ else {
+        Point newPoint=pullPoint(point,center,direction,shift);
+        if (!(newPoint.equals(point))) {
+          SetSequence.fromSet(pulled).addElement(index);
+        }
+        ListSequence.fromList(pulledPath).addElement(newPoint);
+      }
+      index++;
+    }
+    if (MapSequence.fromMap(labeledSegments).containsKey(edge)) {
+      Rectangle rect=layout.getLabelLayout(edge);
+      int seg=MapSequence.fromMap(labeledSegments).get(edge);
+      if (SetSequence.fromSet(pulled).contains(seg) || SetSequence.fromSet(pulled).contains(seg + 1)) {
+        int dx=direction.dx() * shift;
+        int dy=direction.dy() * shift;
+        pulledLayout.setLabelLayout(edge,new Rectangle(rect.x + dx,rect.y + dy,rect.width,rect.height));
+      }
+ else {
+        pulledLayout.setLabelLayout(edge,new Rectangle(rect));
+      }
+    }
+    pulledLayout.setLayoutFor(edge,pulledPath);
+  }
+  return pulledLayout;
+}

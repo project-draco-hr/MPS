@@ -1,0 +1,41 @@
+{
+  List<Point> path=layout.getLayoutFor(edge);
+  int begin=0;
+  int end=ListSequence.fromList(path).count() - 1;
+  if (wasSplitted(layout,edge.getSource(),edge)) {
+    begin++;
+  }
+  if (wasSplitted(layout,edge.getTarget(),edge)) {
+    end--;
+  }
+  int middle=(begin + end) / 2;
+  Point first=ListSequence.fromList(path).getElement(middle);
+  Point second=ListSequence.fromList(path).getElement(middle + 1);
+  Point center=new Point((first.x + second.x) / 2,(first.y + second.y) / 2);
+  Direction2D dir=GeomUtil.getDirection(first,second);
+  int width=labelSize.width;
+  int height=labelSize.height;
+  if (dir.isVertical()) {
+    width=labelSize.height;
+    height=labelSize.width;
+  }
+  int length=Math.abs(first.x - second.x) + Math.abs(first.y - second.y);
+  if (length < width + myUnitLength) {
+    int shift=(width + myUnitLength - length) / 2;
+    layout=pullGraphLayout(layout,dir,shift,center,labeledSegments,true);
+    layout=pullGraphLayout(layout,dir.opposite(),shift,center,labeledSegments,true);
+  }
+  Rectangle rect=getRectangle(labelSize,center,dir);
+  int dist=getMinDist(layout,rect,dir);
+  if (dist < height + myUnitLength) {
+    Direction2D shiftDir=Direction2D.RIGHT;
+    if (dir.isHorizontal()) {
+      shiftDir=Direction2D.UP;
+    }
+    int shift=height + myUnitLength - dist;
+    layout=pullGraphLayout(layout,shiftDir,shift,center,labeledSegments,false);
+  }
+  MapSequence.fromMap(labeledSegments).put(edge,middle);
+  layout.setLabelLayout(edge,rect);
+  return layout;
+}
