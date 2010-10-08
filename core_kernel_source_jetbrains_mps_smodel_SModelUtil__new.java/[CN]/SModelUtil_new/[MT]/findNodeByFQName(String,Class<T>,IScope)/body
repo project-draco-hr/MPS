@@ -4,13 +4,17 @@
   for (  SModelDescriptor descriptor : scope.getModelDescriptors()) {
     if (!modelName.equals(descriptor.getLongName()))     continue;
     SModel model=descriptor.getSModel();
-    List<SNode> roots=model.getRoots();
-    for (    SNode node : roots) {
-      if (name.equals(node.getName())) {
-        INodeAdapter adapter=BaseAdapter.fromNode(node);
-        if (conceptClass.isAssignableFrom(adapter.getClass())) {
-          return (T)adapter;
-        }
+    Condition<SNode> cond=new Condition<SNode>(){
+      public boolean met(      SNode node){
+        return name.equals(node.getName());
+      }
+    }
+;
+    Iterable<SNode> iterable=new ConditionalIterable<SNode>(model.roots(),cond);
+    for (    SNode node : iterable) {
+      INodeAdapter adapter=BaseAdapter.fromNode(node);
+      if (conceptClass.isAssignableFrom(adapter.getClass())) {
+        return (T)adapter;
       }
     }
   }
