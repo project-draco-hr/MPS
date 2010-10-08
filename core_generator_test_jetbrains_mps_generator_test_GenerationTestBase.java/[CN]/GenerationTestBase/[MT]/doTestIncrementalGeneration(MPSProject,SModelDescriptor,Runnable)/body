@@ -5,8 +5,21 @@
     Assert.assertTrue(FileUtil.delete(generatorCaches));
   }
   Assert.assertTrue(generatorCaches.mkdir());
+  final FileBasedGenerationCacheContainer generationCacheContainer=new FileBasedGenerationCacheContainer(generatorCaches);
+  IncrementalGenerationStrategy incrementalStrategy=new IncrementalGenerationStrategy(){
+    @Override public Map<String,String> getModelHashes(    SModelDescriptor sm,    IOperationContext operationContext){
+      return ModelDigestHelper.getInstance().getGenerationHashes(sm,operationContext);
+    }
+    @Override public GenerationCacheContainer getContainer(){
+      return generationCacheContainer;
+    }
+    @Override public GenerationDependencies getDependencies(    SModelDescriptor sm){
+      return GenerationDependenciesCache.getInstance().get(sm);
+    }
+  }
+;
   byte[] content=readContent(((EditableSModelDescriptor)descr).getModelFile());
-  GenerationOptions options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).reporting(true,true,false,2).incremental(true,new FileBasedGenerationCacheContainer(generatorCaches)).create();
+  GenerationOptions options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).reporting(true,true,false,2).incremental(incrementalStrategy).create();
   IncrementalTestGenerationHandler generationHandler=new IncrementalTestGenerationHandler();
   gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),generationHandler.getMessageHandler(),options);
   assertNoDiff(generationHandler.getExistingContent(),generationHandler.getGeneratedContent());
@@ -27,7 +40,7 @@
         }
       }
 );
-      options=GenerationOptions.getDefaults().rebuildAll(false).strictMode(true).reporting(true,true,false,2).incremental(true,new FileBasedGenerationCacheContainer(generatorCaches)).create();
+      options=GenerationOptions.getDefaults().rebuildAll(false).strictMode(true).reporting(true,true,false,2).incremental(incrementalStrategy).create();
       generationHandler=new IncrementalTestGenerationHandler(incrementalGenerationResults);
       generationHandler.checkIncremental();
       long start=System.nanoTime();
@@ -36,7 +49,7 @@
       incrementalGenerationResults=generationHandler.getGeneratedContent();
       assertDiff(generationHandler.getExistingContent(),incrementalGenerationResults,1);
     }
-    options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).reporting(true,true,false,2).incremental(true,new FileBasedGenerationCacheContainer(generatorCaches)).create();
+    options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).reporting(true,true,false,2).incremental(incrementalStrategy).create();
     generationHandler=new IncrementalTestGenerationHandler(incrementalGenerationResults);
     long start=System.nanoTime();
     gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),generationHandler.getMessageHandler(),options);
