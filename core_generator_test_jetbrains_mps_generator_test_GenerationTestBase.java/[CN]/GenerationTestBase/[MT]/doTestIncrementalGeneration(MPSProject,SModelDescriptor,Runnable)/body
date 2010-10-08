@@ -5,77 +5,58 @@
     Assert.assertTrue(FileUtil.delete(generatorCaches));
   }
   Assert.assertTrue(generatorCaches.mkdir());
-  final FileBasedGenerationCacheContainer generationCacheContainer=new FileBasedGenerationCacheContainer(generatorCaches);
-  IncrementalGenerationStrategy incrementalStrategy=new IncrementalGenerationStrategy(){
-    @Override public Map<String,String> getModelHashes(    SModelDescriptor sm,    IOperationContext operationContext){
-      return ModelDigestHelper.getInstance().getGenerationHashes(sm,operationContext);
-    }
-    @Override public GenerationCacheContainer getContainer(){
-      return generationCacheContainer;
-    }
-    @Override public GenerationDependencies getDependencies(    SModelDescriptor sm){
-      return GenerationDependenciesCache.getInstance().get(sm);
+  final MyIncrementalGenerationStrategy incrementalStrategy=new MyIncrementalGenerationStrategy(descr,new FileBasedGenerationCacheContainer(generatorCaches));
+  ModelAccess.instance().runReadAction(new Runnable(){
+    @Override public void run(){
+      incrementalStrategy.buildHash();
     }
   }
-;
-  byte[] content=readContent(((EditableSModelDescriptor)descr).getModelFile());
+);
   GenerationOptions options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).reporting(true,true,false,2).incremental(incrementalStrategy).create();
   IncrementalTestGenerationHandler generationHandler=new IncrementalTestGenerationHandler();
   gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),generationHandler.getMessageHandler(),options);
   assertNoDiff(generationHandler.getExistingContent(),generationHandler.getGeneratedContent());
-  try {
-    Map<String,String> incrementalGenerationResults=null;
-    List<Long> time=new ArrayList<Long>();
-    Assert.assertTrue(changeModel.length > 0);
-    for (    final Runnable r : changeModel) {
-      ThreadUtils.runInUIThreadAndWait(new Runnable(){
-        @Override public void run(){
-          ModelAccess.instance().runWriteActionInCommand(r,p.getProject());
-          ModelAccess.instance().runWriteAction(new Runnable(){
-            @Override public void run(){
-              ((EditableSModelDescriptor)descr).save();
-            }
-          }
-);
-        }
+  Map<String,String> incrementalGenerationResults=null;
+  List<Long> time=new ArrayList<Long>();
+  Assert.assertTrue(changeModel.length > 0);
+  for (  final Runnable r : changeModel) {
+    ThreadUtils.runInUIThreadAndWait(new Runnable(){
+      @Override public void run(){
+        ModelAccess.instance().runWriteActionInCommand(r,p.getProject());
       }
-);
-      options=GenerationOptions.getDefaults().rebuildAll(false).strictMode(true).reporting(true,true,false,2).incremental(incrementalStrategy).create();
-      generationHandler=new IncrementalTestGenerationHandler(incrementalGenerationResults);
-      generationHandler.checkIncremental();
-      long start=System.nanoTime();
-      gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),generationHandler.getMessageHandler(),options);
-      time.add(System.nanoTime() - start);
-      incrementalGenerationResults=generationHandler.getGeneratedContent();
-      assertDiff(generationHandler.getExistingContent(),incrementalGenerationResults,1);
     }
-    options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).reporting(true,true,false,2).incremental(incrementalStrategy).create();
+);
+    ModelAccess.instance().runReadAction(new Runnable(){
+      @Override public void run(){
+        incrementalStrategy.buildHash();
+      }
+    }
+);
+    Assert.assertNotNull(generationHandler.getLastDependencies());
+    incrementalStrategy.setDependencies(generationHandler.getLastDependencies());
+    options=GenerationOptions.getDefaults().rebuildAll(false).strictMode(true).reporting(true,true,false,2).incremental(incrementalStrategy).create();
     generationHandler=new IncrementalTestGenerationHandler(incrementalGenerationResults);
+    generationHandler.checkIncremental();
     long start=System.nanoTime();
     gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),generationHandler.getMessageHandler(),options);
     time.add(System.nanoTime() - start);
-    assertNoDiff(generationHandler.getGeneratedContent(),incrementalGenerationResults);
-    if (DEBUG) {
-      long regen=time.remove(time.size() - 1);
-      System.out.print("Full cycle: " + regen / 1000000 / 1000.);
-      for (      long l : time) {
-        System.out.print(", incremental: " + l / 1000000 / 1000.);
-      }
-      System.out.println();
-    }
+    incrementalGenerationResults=generationHandler.getGeneratedContent();
+    assertDiff(generationHandler.getExistingContent(),incrementalGenerationResults,1);
   }
-  finally {
-    writeContent(((EditableSModelDescriptor)descr).getModelFile(),content);
-    ThreadUtils.runInUIThreadAndWait(new Runnable(){
-      @Override public void run(){
-        ModelAccess.instance().runWriteAction(new Runnable(){
-          @Override public void run(){
-            ((EditableSModelDescriptor)descr).reloadFromDisk();
-          }
-        }
-);
-      }
+  incrementalStrategy.setDependencies(null);
+  options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).reporting(true,true,false,2).incremental(incrementalStrategy).create();
+  generationHandler=new IncrementalTestGenerationHandler(incrementalGenerationResults);
+  long start=System.nanoTime();
+  gm.generateModels(Collections.singletonList(descr),ModuleContext.create(descr,p.getProject()),generationHandler,new EmptyProgressIndicator(),generationHandler.getMessageHandler(),options);
+  time.add(System.nanoTime() - start);
+  assertNoDiff(generationHandler.getGeneratedContent(),incrementalGenerationResults);
+  PerformanceMessenger.getInstance().reportPercent("incrementalGeneration",(time.get(time.size() - 2)) / 1000000,(time.get(time.size() - 1)) / 1000000);
+  if (DEBUG) {
+    long regen=time.remove(time.size() - 1);
+    System.out.print("Full cycle: " + regen / 1000000 / 1000.);
+    for (    long l : time) {
+      System.out.print(", incremental: " + l / 1000000 / 1000.);
     }
-);
+    System.out.println();
   }
 }
