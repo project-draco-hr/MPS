@@ -1,0 +1,36 @@
+{
+  Graph copy=new Graph();
+  Map<Node,Node> nodeMap=MapSequence.fromMap(new HashMap<Node,Node>());
+  Map<Edge,Edge> edgeMap=MapSequence.fromMap(new HashMap<Edge,Edge>());
+  Map<Node,Dimension> copyNodeSizes=MapSequence.fromMap(new LinkedHashMap<Node,Dimension>(16,(float)0.75,false));
+  Map<Edge,Dimension> copyEdgeSizes=MapSequence.fromMap(new LinkedHashMap<Edge,Dimension>(16,(float)0.75,false));
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    Node copyNode=copy.addNode();
+    MapSequence.fromMap(nodeMap).put(node,copyNode);
+    MapSequence.fromMap(copyNodeSizes).put(copyNode,MapSequence.fromMap(nodeSizes).get(node));
+  }
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    Edge copyEdge=MapSequence.fromMap(nodeMap).get(edge.getSource()).addEdgeTo(MapSequence.fromMap(nodeMap).get(edge.getTarget()));
+    MapSequence.fromMap(edgeMap).put(edge,copyEdge);
+    MapSequence.fromMap(copyEdgeSizes).put(copyEdge,MapSequence.fromMap(edgeSizes).get(edge));
+  }
+  GraphLayout copyLayout=getLayoutCorruptGraph(copy,copyNodeSizes,copyEdgeSizes);
+  GraphLayout layout=new GraphLayout(graph);
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    layout.setLayoutFor(node,copyLayout.getLayoutFor(MapSequence.fromMap(nodeMap).get(node)));
+  }
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    Edge copyEdge=MapSequence.fromMap(edgeMap).get(edge);
+    List<Point> copyEdgeLayout=copyLayout.getLayoutFor(copyEdge);
+    if (copyEdge.getSource() != MapSequence.fromMap(nodeMap).get(edge.getSource())) {
+      copyEdgeLayout=ListSequence.fromList(copyEdgeLayout).reversedList();
+    }
+    layout.setLayoutFor(edge,copyEdgeLayout);
+  }
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(edgeSizes).keySet())) {
+    layout.setLabelLayout(edge,copyLayout.getLabelLayout(MapSequence.fromMap(edgeMap).get(edge)));
+  }
+  Rectangle rect=layout.getContainingRectangle();
+  layout=LayoutTransform.shift(layout,20 - rect.x,20 - rect.y);
+  return layout;
+}

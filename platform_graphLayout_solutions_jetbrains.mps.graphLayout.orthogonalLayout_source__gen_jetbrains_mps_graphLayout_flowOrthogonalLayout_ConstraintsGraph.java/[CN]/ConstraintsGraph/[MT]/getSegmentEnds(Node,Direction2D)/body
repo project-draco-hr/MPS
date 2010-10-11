@@ -1,0 +1,43 @@
+{
+  final Wrappers._T<Map<Node,Node>> nodeMap=new Wrappers._T<Map<Node,Node>>();
+  if (direction.isHorizontal()) {
+    nodeMap.value=myHorNodeMap;
+  }
+ else {
+    nodeMap.value=myVerNodeMap;
+  }
+  Iterable<Node> nodes=SetSequence.fromSet(MapSequence.fromMap(nodeMap.value).keySet()).where(new IWhereFilter<Node>(){
+    public boolean accept(    Node key){
+      return MapSequence.fromMap(nodeMap.value).get(key) == segment;
+    }
+  }
+);
+  Set<Node> firstCandidates=SetSequence.fromSet(new HashSet<Node>());
+  SetSequence.fromSet(firstCandidates).addSequence(Sequence.fromIterable(nodes));
+  Node[] ends=new Node[2];
+  for (  Node node : Sequence.fromIterable(nodes)) {
+    Dart dart=ListSequence.fromList(myEmbeddedGraph.getDartWithSource(node)).findFirst(new IWhereFilter<Dart>(){
+      public boolean accept(      Dart it){
+        return MapSequence.fromMap(myDirections).get(it) == direction;
+      }
+    }
+);
+    if (dart == null) {
+      if (ConstraintsGraph.DEBUG > 0 && ends[1] != null) {
+        throw new RuntimeException("found two last nodes for seg " + segment + " by dir "+ direction);
+      }
+      ends[1]=node;
+    }
+ else {
+      SetSequence.fromSet(firstCandidates).removeElement(dart.getTarget());
+    }
+  }
+  if (SetSequence.fromSet(firstCandidates).count() != 1) {
+    throw new RuntimeException("failed to find first node for seg " + segment + " by dir "+ direction);
+  }
+  if (ends[1] == null) {
+    throw new RuntimeException("failed to find last node for seg " + segment + " by dir "+ direction);
+  }
+  ends[0]=SetSequence.fromSet(firstCandidates).first();
+  return ends;
+}

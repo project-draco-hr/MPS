@@ -1,0 +1,41 @@
+{
+  Set<Node> initialNodes=SetSequence.fromSet(new HashSet<Node>());
+  SetSequence.fromSet(initialNodes).addSequence(ListSequence.fromList(graph.getNodes()));
+  Set<Edge> initialEdges=SetSequence.fromSet(new HashSet<Edge>());
+  SetSequence.fromSet(initialEdges).addSequence(ListSequence.fromList(graph.getEdges()));
+  BiconnectAugmentation.smartMakeBiconnected(graph);
+  EmbeddedGraph embeddedGraph=new ShortestPathEmbeddingFinder(new PQPlanarizationFinder()).find(graph);
+  Map<Edge,List<Edge>> history=MapSequence.fromMap(new HashMap<Edge,List<Edge>>());
+  for (  Edge edge : SetSequence.fromSet(initialEdges)) {
+    MapSequence.fromMap(history).put(edge,embeddedGraph.findFullHistory(edge));
+  }
+  Map<Edge,Edge> labeledEdges=MapSequence.fromMap(new HashMap<Edge,Edge>());
+  Map<Edge,Dimension> labeledEdgeSizes=MapSequence.fromMap(new HashMap<Edge,Dimension>());
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(edgeSizes).keySet())) {
+    Edge labeledEdge=getLabeledEdge(MapSequence.fromMap(history).get(edge));
+    MapSequence.fromMap(labeledEdges).put(edge,labeledEdge);
+    MapSequence.fromMap(labeledEdgeSizes).put(labeledEdge,MapSequence.fromMap(edgeSizes).get(edge));
+  }
+  GraphLayout layout=getLayoutFromEmbeddedGraph(embeddedGraph,nodeSizes,labeledEdgeSizes);
+  GraphLayout initialLayout=new GraphLayout(graph);
+  for (  Node node : SetSequence.fromSet(initialNodes)) {
+    initialLayout.setLayoutFor(node,layout.getLayoutFor(node));
+  }
+  for (  Edge edge : SetSequence.fromSet(initialEdges)) {
+    List<Point> edgeLayout=ListSequence.fromList(new ArrayList<Point>());
+    Node cur=edge.getSource();
+    for (    Edge historyEdge : ListSequence.fromList(MapSequence.fromMap(history).get(edge))) {
+      List<Point> historyLayout=layout.getLayoutFor(historyEdge);
+      if (historyEdge.getSource() != cur) {
+        historyLayout=ListSequence.fromList(historyLayout).reversedList();
+      }
+      ListSequence.fromList(edgeLayout).addSequence(ListSequence.fromList(historyLayout));
+      cur=historyEdge.getOpposite(cur);
+    }
+    initialLayout.setLayoutFor(edge,edgeLayout);
+  }
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(edgeSizes).keySet())) {
+    initialLayout.setLabelLayout(edge,layout.getLabelLayout(edge));
+  }
+  return initialLayout;
+}

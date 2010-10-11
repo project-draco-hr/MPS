@@ -1,0 +1,35 @@
+{
+  Map<Edge,Integer> edgeLengths=MapSequence.fromMap(new HashMap<Edge,Integer>());
+  for (  Edge edge : ListSequence.fromList(myHorConstraintsGraph.getEdges())) {
+    MapSequence.fromMap(edgeLengths).put(edge,myUnitLength);
+  }
+  for (  Edge edge : ListSequence.fromList(myVerConstraintsGraph.getEdges())) {
+    MapSequence.fromMap(edgeLengths).put(edge,myUnitLength);
+  }
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(predefinedEdgeLength).keySet())) {
+    Edge constraintEdge=MapSequence.fromMap(myEdgeMap).get(edge);
+    MapSequence.fromMap(edgeLengths).put(constraintEdge,MapSequence.fromMap(predefinedEdgeLength).get(edge));
+  }
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(predefinedEdgeWidth).keySet())) {
+    Dart dart=ListSequence.fromList(myEmbeddedGraph.getDarts(edge)).first();
+    Node constraintNode;
+    if (MapSequence.fromMap(myDirections).get(dart).isHorizontal()) {
+      constraintNode=MapSequence.fromMap(myHorNodeMap).get(edge.getSource());
+    }
+ else {
+      constraintNode=MapSequence.fromMap(myVerNodeMap).get(edge.getSource());
+    }
+    for (    Edge constraintEdge : ListSequence.fromList(constraintNode.getOutEdges())) {
+      MapSequence.fromMap(edgeLengths).put(constraintEdge,Math.max(MapSequence.fromMap(edgeLengths).get(constraintEdge),MapSequence.fromMap(predefinedEdgeWidth).get(edge)));
+    }
+  }
+  Map<Node,Integer> horNumbering=WeightedTopologicalNumbering.number(myHorConstraintsGraph,edgeLengths);
+  Map<Node,Integer> verNumbering=WeightedTopologicalNumbering.number(myVerConstraintsGraph,edgeLengths);
+  Map<Node,Point> coordinates=MapSequence.fromMap(new HashMap<Node,Point>());
+  for (  Node node : ListSequence.fromList(myGraph.getNodes())) {
+    Node horSeg=MapSequence.fromMap(myHorNodeMap).get(node);
+    Node verSeg=MapSequence.fromMap(myVerNodeMap).get(node);
+    MapSequence.fromMap(coordinates).put(node,new Point(MapSequence.fromMap(verNumbering).get(verSeg),MapSequence.fromMap(horNumbering).get(horSeg)));
+  }
+  return coordinates;
+}
