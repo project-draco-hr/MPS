@@ -18,13 +18,15 @@
     LOG.errorWithTrace("ERROR! " + toDelete.size() + " references found for role '"+ role+ "' in "+ this.getDebugText());
   }
   SReference resultReference=null;
-  boolean referenceKept=true;
+  boolean handlerFound=false;
   if (useHandler && !getModel().isLoading()) {
     Set<Pair<SNode,String>> threadSet=ourSetReferentEventHandlersInProgress.get();
     Pair<SNode,String> pair=new Pair<SNode,String>(this,role);
     if (!threadSet.contains(pair)) {
       INodeReferentSetEventHandler handler=CONSTRAINTS_MANAGER.getNodeReferentSetEventHandler(this,role);
       if (handler != null) {
+        boolean referenceKept=true;
+        handlerFound=true;
         threadSet.add(pair);
         try {
           if (handler instanceof INodeReferenceFullSetHandler) {
@@ -55,11 +57,8 @@
         }
       }
     }
- else {
-      resultReference=doSetReference(role,newReferent,toDelete);
-    }
   }
- else {
+  if (!handlerFound) {
     resultReference=doSetReference(role,newReferent,toDelete);
   }
   return resultReference;
