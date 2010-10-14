@@ -17,15 +17,8 @@
   if (toDelete.size() > 1) {
     LOG.errorWithTrace("ERROR! " + toDelete.size() + " references found for role '"+ role+ "' in "+ this.getDebugText());
   }
-  for (  SReference reference : toDelete) {
-    int index=_reference().indexOf(reference);
-    removeReferenceAt(index);
-  }
   SReference resultReference=null;
-  if (newReferent != null) {
-    resultReference=SReference.create(role,this,newReferent);
-    insertReferenceAt(myReferences == null ? 0 : myReferences.length,resultReference);
-  }
+  boolean referenceKept=true;
   if (useHandler && !getModel().isLoading()) {
     Set<Pair<SNode,String>> threadSet=ourSetReferentEventHandlersInProgress.get();
     Pair<SNode,String> pair=new Pair<SNode,String>(this,role);
@@ -34,13 +27,40 @@
       if (handler != null) {
         threadSet.add(pair);
         try {
+          if (handler instanceof INodeReferenceFullSetHandler) {
+            if (((INodeReferenceFullSetHandler)handler).keepsOriginalReference(this,oldReferent,newReferent,GlobalScope.getInstance())) {
+              resultReference=doSetReference(role,newReferent,toDelete);
+            }
+ else {
+              referenceKept=false;
+            }
+          }
+ else {
+            resultReference=doSetReference(role,newReferent,toDelete);
+          }
           handler.processReferentSetEvent(this,oldReferent,newReferent,GlobalScope.getInstance());
+          if (!referenceKept) {
+            if (myReferences != null) {
+              for (              SReference reference : myReferences) {
+                if (reference.getRole().equals(role)) {
+                  resultReference=reference;
+                  break;
+                }
+              }
+            }
+          }
         }
   finally {
           threadSet.remove(pair);
         }
       }
     }
+ else {
+      resultReference=doSetReference(role,newReferent,toDelete);
+    }
+  }
+ else {
+    resultReference=doSetReference(role,newReferent,toDelete);
   }
   return resultReference;
 }
