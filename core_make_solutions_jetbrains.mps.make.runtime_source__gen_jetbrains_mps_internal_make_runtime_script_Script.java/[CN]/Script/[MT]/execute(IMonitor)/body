@@ -1,0 +1,29 @@
+{
+  validate();
+  if (!(isValid())) {
+    LOG.error("attempt to execute invalid script");
+    throw new IllegalStateException("invalid script");
+  }
+  final CompositeResult results=new CompositeResult();
+  Iterable<ITarget> toExecute=targetRange.precursors(defaultTargetName);
+  for (  ITarget trg : Sequence.fromIterable(toExecute)) {
+    Iterable<IResource> input=Sequence.fromIterable(targetRange.immediatePrecursors(trg.getName())).select(new ISelector<ITarget,IResult>(){
+      public IResult select(      ITarget t){
+        return results.getResult(t.getName());
+      }
+    }
+).translate(new ITranslator2<IResult,IResource>(){
+      public Iterable<IResource> translate(      IResult r){
+        return r.output();
+      }
+    }
+);
+    IJob job=trg.createJob();
+    IResult jr=job.execute(input,monit);
+    results.addResult(trg.getName(),jr);
+    if (!(jr.isSucessful()) || monit.pleaseStop()) {
+      return results;
+    }
+  }
+  return results;
+}
