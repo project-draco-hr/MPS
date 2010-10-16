@@ -1,17 +1,17 @@
 {
   final String[] error=new String[]{null};
-  ProgressManager.getInstance().run(new Task.Modal(myProject,"Creating",false){
+  ProgressManager.getInstance().run(new Task.Modal(myCurrentProject,"Creating",false){
     public void run(    @NotNull() ProgressIndicator indicator){
       indicator.setIndeterminate(true);
       error[0]=createDirs();
       if (error[0] != null)       return;
-      myCreatedProject=ProjectManagerEx.getInstanceEx().newProject(myOptions.getProjectName(),myOptions.getProjectPath() + File.separator + myOptions.getProjectName()+ MPSExtentions.DOT_MPS_PROJECT,true,false);
+      String projectFilePath=myOptions.getProjectPath() + File.separator + myOptions.getProjectName()+ MPSExtentions.DOT_MPS_PROJECT;
+      myCreatedProject=ProjectManagerEx.getInstanceEx().newProject(myOptions.getProjectName(),projectFilePath,true,false);
     }
   }
 );
   if (error[0] != null) {
-    Messages.showErrorDialog(getContentPane(),error[0]);
-    return;
+    throw new ProjectNotCreatedException(error[0]);
   }
   myCreatedProject.save();
   final MPSProject mpsProject=myCreatedProject.getComponent(MPSProject.class);
@@ -39,13 +39,5 @@
     }
   }
 );
-  ProjectManagerEx projectManager=ProjectManagerEx.getInstanceEx();
-  boolean opened=projectManager.openProject(myCreatedProject);
-  if (!opened)   return;
-  StartupManager.getInstance(myCreatedProject).runWhenProjectIsInitialized(new Runnable(){
-    public void run(){
-      ProjectPane.getInstance(myCreatedProject).activate();
-    }
-  }
-);
+  return myCreatedProject;
 }
