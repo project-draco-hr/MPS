@@ -1,15 +1,32 @@
 {
   GenerationCacheContainer incrementalCacheContainer=myGenerationOptions.getIncrementalStrategy().getContainer();
   if (incrementalCacheContainer == null) {
+    if (myTracer != null)     myTracer.report("No container for incremental caches.");
     return;
   }
   String oldHash=dependencies.getModelHash();
   ModelCacheContainer cacheContainer=incrementalCacheContainer.getCache(myModel,oldHash,false);
   if (cacheContainer == null) {
+    if (myTracer != null)     myTracer.report("No cache for " + oldHash);
     return;
   }
   IntermediateModelsCache c=IntermediateModelsCache.load(cacheContainer);
   if (c != null && myPlanSignature.equals(c.getSignature())) {
     myCache=c;
+  }
+ else   if (myTracer != null) {
+    if (c == null) {
+      myTracer.report("Caches are corrupted for " + oldHash);
+    }
+ else {
+      myTracer.report("Plan differs:");
+      TextDiffBuilder tbuilder=new TextDiffBuilder(c.getSignature().split("\n|\r\n"),myPlanSignature.split("\n|\r\n"));
+      tbuilder.compare();
+      if (tbuilder.hasDifference()) {
+        for (        String s : tbuilder.getResult()) {
+          myTracer.report(s);
+        }
+      }
+    }
   }
 }
