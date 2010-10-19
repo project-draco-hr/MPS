@@ -1,0 +1,28 @@
+{
+  int version=getModelPersistenceVersion(source);
+  if (version >= 5) {
+    try {
+      SAXParser parser=JDOMUtil.createSAXParser();
+      DefaultMPSHandler handler=modelReadHandlers.get(version);
+      boolean partial=handler.setPartialLoading(state);
+      parser.parse(source,handler);
+      ModelLoadingState loadingState=partial ? state : ModelLoadingState.FULLY_LOADED;
+      return new ModelLoadResult(handler.getResult(),loadingState);
+    }
+ catch (    Throwable t) {
+      LOG.error(t);
+      StubModel model=new StubModel(new SModelReference(name,stereotype));
+      return new ModelLoadResult(model,ModelLoadingState.NOT_LOADED);
+    }
+  }
+ else {
+    Document document=loadModelDocument(source);
+    IModelReader modelReader=modelReaders.get(version);
+    if (modelReader == null) {
+      SModel model=handleNullReaderForPersistence(name);
+      return new ModelLoadResult(model,ModelLoadingState.NOT_LOADED);
+    }
+    SModel model=modelReader.readModel(document,name,stereotype);
+    return new ModelLoadResult(model,ModelLoadingState.FULLY_LOADED);
+  }
+}

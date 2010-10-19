@@ -1,0 +1,33 @@
+{
+  DefaultSModelDescriptor dsm=(DefaultSModelDescriptor)sm;
+  SModelReference dsmRef=dsm.getSModelReference();
+  if (!dsm.getModelFile().isReadOnly() && !dsm.getModelFile().exists()) {
+    SModel model=new SModel(dsmRef);
+    return new ModelLoadResult(model,ModelLoadingState.NOT_LOADED);
+  }
+  ModelLoadResult result;
+  try {
+    result=ModelPersistence.readModel(dsm.getModelFile(),state);
+  }
+ catch (  ModelFileReadException t) {
+    return handleExceptionDuringModelRead(dsm,t,false);
+  }
+catch (  PersistenceVersionNotFoundException e) {
+    LOG.error(e);
+    StubModel model=new StubModel(dsmRef);
+    return new ModelLoadResult(model,ModelLoadingState.NOT_LOADED);
+  }
+  SModel model=result.getModel();
+  try {
+    model.setLoading(true);
+    boolean needToSave=model.updateSModelReferences() || model.updateModuleReferences();
+    if (needToSave && !dsm.getModelFile().isReadOnly()) {
+      SModelRepository.getInstance().markChanged(model);
+    }
+  }
+  finally {
+    model.setLoading(false);
+  }
+  LOG.assertLog(model.getSModelReference().equals(dsmRef),"\nError loading model from file: \"" + dsm.getModelFile() + "\"\n"+ "expected model UID     : \""+ dsmRef+ "\"\n"+ "but was UID            : \""+ model.getSModelReference()+ "\"\n"+ "the model will not be available.\n"+ "Make sure that all project's roots and/or the model namespace is correct");
+  return result;
+}
