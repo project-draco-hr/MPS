@@ -2,31 +2,20 @@
   final List<BaseSNodeDescriptor> descriptors=new ArrayList<BaseSNodeDescriptor>();
   ModelAccess.instance().runIndexing(new Runnable(){
     public void run(){
-      try {
-        SModel model=inputData.getUserData(PARSED_MODEL);
-        if (model == null) {
-          model=ModelPersistence.readModel(inputData.getContentAsText());
-          if (model != null) {
-            model.setLoading(true);
-          }
-          inputData.putUserData(PARSED_MODEL,model);
-        }
-        if (model == null)         return;
-        for (        final SNode node : getNodesToIterate(model)) {
-          String persistentName=node.getPersistentProperty(INamedConcept.NAME);
-          String nodeName=(persistentName == null) ? "null" : persistentName;
-          String conceptFqName=node.getConceptFqName();
-          SModelReference modelRef=model.getSModelReference();
-          SNodeId id=node.getSNodeId();
-          BaseSNodeDescriptor value=SNodeDescriptor.fromModelReference(nodeName,conceptFqName,modelRef,id);
-          descriptors.add(value);
-        }
+      SModel model=inputData.getUserData(PARSED_MODEL);
+      if (model == null) {
+        model=ModelPersistence.readModel(new IdeaFileSystemProvider().getFile(inputData.getFile()));
+        model.setLoading(true);
+        inputData.putUserData(PARSED_MODEL,model);
       }
- catch (      JDOMException e) {
-        handleException(e,inputData);
-      }
-catch (      IOException e) {
-        handleException(e,inputData);
+      for (      final SNode node : getRootsToIterate(model)) {
+        String persistentName=node.getPersistentProperty(INamedConcept.NAME);
+        String nodeName=(persistentName == null) ? "null" : persistentName;
+        String conceptFqName=node.getConceptFqName();
+        SModelReference modelRef=model.getSModelReference();
+        SNodeId id=node.getSNodeId();
+        BaseSNodeDescriptor value=SNodeDescriptor.fromModelReference(nodeName,conceptFqName,modelRef,id);
+        descriptors.add(value);
       }
     }
   }
