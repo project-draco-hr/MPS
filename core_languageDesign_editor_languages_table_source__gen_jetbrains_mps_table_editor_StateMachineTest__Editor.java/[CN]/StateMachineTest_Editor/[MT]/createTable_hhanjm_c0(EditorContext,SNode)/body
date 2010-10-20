@@ -1,0 +1,55 @@
+{
+  TableModelCreator creator=new TableModelCreator(){
+    public TableModel getTable(    final SNode node,    EditorContext editorContext){
+      return new AbstractTableModel(){
+        public int getColumnsNumber(){
+          return 1 + ListSequence.fromList(SLinkOperations.getTargets(node,"events",true)).count();
+        }
+        public int getRowsNumber(){
+          return 1 + ListSequence.fromList(SLinkOperations.getTargets(node,"states",true)).count();
+        }
+        public SNode getValueAt(        int row,        int column){
+          if (row == 0 && column > 0) {
+            return ListSequence.fromList(SLinkOperations.getTargets(node,"events",true)).getElement(column - 1);
+          }
+          if (column == 0 && row > 0) {
+            return ListSequence.fromList(SLinkOperations.getTargets(node,"states",true)).getElement(row - 1);
+          }
+          if (row > 0 && column > 0) {
+            SNode event=ListSequence.fromList(SLinkOperations.getTargets(node,"events",true)).getElement(column - 1);
+            SNode state=ListSequence.fromList(SLinkOperations.getTargets(node,"states",true)).getElement(row - 1);
+            for (            SNode transition : ListSequence.fromList(SLinkOperations.getTargets(node,"transition",true))) {
+              if (SLinkOperations.getTarget(SLinkOperations.getTarget(transition,"event",true),"event",false) == event && SLinkOperations.getTarget(SLinkOperations.getTarget(transition,"state",true),"state",false) == state) {
+                return transition;
+              }
+            }
+          }
+          return null;
+        }
+        @Override public void createElement(        int row,        int column){
+          if (row > 0 && column > 0) {
+            SNode event=ListSequence.fromList(SLinkOperations.getTargets(node,"events",true)).getElement(column - 1);
+            SNode state=ListSequence.fromList(SLinkOperations.getTargets(node,"states",true)).getElement(row - 1);
+            SNode transition=SConceptOperations.createNewNode("jetbrains.mps.table.structure.Transition",null);
+            SLinkOperations.setTarget(transition,"event",SConceptOperations.createNewNode("jetbrains.mps.table.structure.EventReference",null),true);
+            SLinkOperations.setTarget(SLinkOperations.getTarget(transition,"event",true),"event",event,false);
+            SLinkOperations.setTarget(transition,"state",SConceptOperations.createNewNode("jetbrains.mps.table.structure.StateReference",null),true);
+            SLinkOperations.setTarget(SLinkOperations.getTarget(transition,"state",true),"state",state,false);
+            ListSequence.fromList(SLinkOperations.getTargets(node,"transition",true)).addElement(transition);
+          }
+        }
+        public void deleteRow(        int row){
+        }
+      }
+;
+    }
+  }
+;
+  EditorCell_Collection editorCell=EditorCell_Table.createTable(editorContext,node,creator.getTable(node,editorContext));
+  editorCell.setCellId("Table_hhanjm_c0");
+{
+    Style style=editorCell.getStyle();
+    style.set(StyleAttributes.INDENT_LAYOUT_NEW_LINE,true);
+  }
+  return editorCell;
+}
