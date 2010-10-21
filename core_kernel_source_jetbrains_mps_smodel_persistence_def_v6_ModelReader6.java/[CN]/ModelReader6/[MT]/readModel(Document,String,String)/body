@@ -1,0 +1,61 @@
+{
+  SModelVersionsInfo versionsInfo=new SModelVersionsInfo();
+  Element rootElement=document.getRootElement();
+  SModelReference modelReference=SModelReference.fromString(rootElement.getAttributeValue(ModelPersistence.MODEL_UID));
+  SModel model=new SModel(modelReference);
+  model.setPersistenceVersion(getVersion());
+  model.setLoading(true);
+  for (  Element element : (List<Element>)rootElement.getChildren(ModelPersistence.LANGUAGE)) {
+    String languageNamespace=element.getAttributeValue(ModelPersistence.NAMESPACE);
+    model.addLanguage(ModuleReference.fromString(languageNamespace));
+  }
+  for (  Element element : (List<Element>)rootElement.getChildren(ModelPersistence.LANGUAGE_ENGAGED_ON_GENERATION)) {
+    String languageNamespace=element.getAttributeValue(ModelPersistence.NAMESPACE);
+    model.addEngagedOnGenerationLanguage(ModuleReference.fromString(languageNamespace));
+  }
+  for (  Element element : (List<Element>)rootElement.getChildren(ModelPersistence.DEVKIT)) {
+    String devkitNamespace=element.getAttributeValue(ModelPersistence.NAMESPACE);
+    model.addDevKit(ModuleReference.fromString(devkitNamespace));
+  }
+  int maxImportIndex=-1;
+  for (  Element element : (List<Element>)rootElement.getChildren(ModelPersistence.IMPORT_ELEMENT)) {
+    String indexValue=element.getAttributeValue(ModelPersistence.MODEL_IMPORT_INDEX,element.getAttributeValue("referenceID"));
+    int importIndex=Integer.parseInt(indexValue);
+    String usedModelVersionString=element.getAttributeValue(ModelPersistence.VERSION);
+    int usedModelVersion=-1;
+    try {
+      if (usedModelVersionString != null) {
+        usedModelVersion=Integer.parseInt(usedModelVersionString);
+      }
+    }
+ catch (    Throwable t) {
+      LOG.error(t);
+    }
+    String importedModelUIDString=element.getAttributeValue(ModelPersistence.MODEL_UID);
+    if (importedModelUIDString == null) {
+      LOG.error("Error loading import element for index " + importIndex + " in "+ model.getSModelReference());
+      continue;
+    }
+    SModelReference importedModelReference=SModelReference.fromString(importedModelUIDString);
+    importedModelReference=upgradeModelUID(importedModelReference);
+    if (element.getAttributeValue(ModelPersistence.IMPLICIT) == null)     model.addModelImport(new ImportElement(importedModelReference,importIndex,usedModelVersion));
+ else     model.addAdditionalModelVersion(new ImportElement(importedModelReference,importIndex,usedModelVersion));
+    maxImportIndex=Math.max(maxImportIndex,importIndex);
+  }
+  model.setMaxImportIndex(maxImportIndex);
+  final Map<Integer,ImportElement> imports=new HashMap<Integer,ImportElement>();
+  for (  ImportElement elem : model.getAdditionalModelVersions()) {
+    imports.put(elem.getReferenceID(),elem);
+  }
+  for (  ImportElement elem : model.importedModels()) {
+    imports.put(elem.getReferenceID(),elem);
+  }
+  for (  Element child : (List<Element>)rootElement.getChildren(ModelPersistence.NODE)) {
+    SNode snode=readNode(child,model,false,versionsInfo,imports);
+    if (snode != null) {
+      model.addRoot(snode);
+    }
+  }
+  model.setLoading(false);
+  return model;
+}
