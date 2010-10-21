@@ -1,0 +1,49 @@
+{
+  SNode result=(SNode)resultObject;
+  if ("property".equals(tagName)) {
+    String[] child=(String[])value;
+    if (child[1] != null) {
+      result.setProperty(VersionUtil.getBeforeSeparator(child[0]),child[1]);
+    }
+    return;
+  }
+  if ("link".equals(tagName)) {
+    String[] child=(String[])value;
+    if (child[2] == null) {
+      if (log.isErrorEnabled()) {
+        log.error("couldn't create reference '" + child[0] + "' : traget node id is null");
+      }
+      return;
+    }
+    int i=child[2].indexOf('.');
+    String importedModelInfo=(i > 0 ? child[2].substring(0,i) : "-1");
+    String targetId=child[2].substring(i + 1);
+    SModelReference importedModelReference=fieldmodel.getSModelReference();
+    int ix=-1;
+    try {
+      ix=Integer.parseInt(importedModelInfo);
+    }
+ catch (    NumberFormatException e) {
+    }
+    if (ix > -1) {
+      importedModelReference=MapSequence.fromMap(fieldimports).get(ix).getModelReference();
+      if (importedModelReference == null) {
+        if (log.isErrorEnabled()) {
+          log.error("couldn't create reference '" + child[0] + "' : import for index ["+ ix+ "] not found");
+        }
+        return;
+      }
+    }
+    SReference ref=(targetId.equals("^") ? new DynamicReference(child[0],result,importedModelReference,child[1]) : new StaticReference(child[0],result,importedModelReference,SNodeId.fromString(targetId),child[1]));
+    if (ref != null) {
+      result.addReference(ref);
+    }
+    return;
+  }
+  if ("node".equals(tagName)) {
+    SNode child=(SNode)value;
+    result.addChild(child.getRole_(),child);
+    return;
+  }
+  super.handleChild(resultObject,tagName,value);
+}
