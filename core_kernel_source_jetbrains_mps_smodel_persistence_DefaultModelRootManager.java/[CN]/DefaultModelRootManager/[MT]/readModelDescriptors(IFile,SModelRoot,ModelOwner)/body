@@ -6,18 +6,25 @@
     String fileName=file.getName();
     boolean isMPSModel=fileName.endsWith(MPSExtentions.DOT_MODEL);
     if (!(isMPSModel))     continue;
-    SModelReference modelReference=ModelRefCreator.createModelReference(file,FileSystem.getInstance().getFileByPath(modelRoot.getPath()),modelRoot.getPrefix());
+    DescriptorLoadResult dr=ModelPersistence.loadDescriptor(file);
+    SModelReference modelReference=null;
+    if (dr.getUID() != null) {
+      modelReference=SModelReference.fromString(dr.getUID());
+    }
+ else {
+      modelReference=ModelRefCreator.createModelReference(file,FileSystem.getInstance().getFileByPath(modelRoot.getPath()),modelRoot.getPrefix());
+    }
     if (modelReference.getSModelId() == null) {
       modelReference=new SModelReference(modelReference.getSModelFqName(),SModelId.generate());
     }
     SModelDescriptor modelDescriptor;
     if (ModelPersistence.needsRecreating(file)) {
-      modelDescriptor=recreateFileAndGetInstance(this,file.getAbsolutePath(),modelReference,owner,modelRoot);
-      LOG.debug("I've recreated file and read model descriptor" + modelDescriptor.getSModelReference() + "\n"+ "Model root is "+ modelRoot.getPath()+ " "+ modelRoot.getPrefix());
+      modelDescriptor=recreateFileAndGetInstance(this,file.getAbsolutePath(),modelReference,owner,modelRoot,dr);
+      LOG.debug("Recreated file and read model descriptor" + modelDescriptor.getSModelReference() + "\n"+ "Model root is "+ modelRoot.getPath()+ " "+ modelRoot.getPrefix());
     }
  else {
-      modelDescriptor=getInstance(this,file.getAbsolutePath(),modelReference,owner,false);
-      LOG.debug("I've read model descriptor " + modelDescriptor.getSModelReference() + "\n"+ "Model root is "+ modelRoot.getPath()+ " "+ modelRoot.getPrefix());
+      modelDescriptor=getInstance(this,file.getAbsolutePath(),modelReference,dr,owner,false);
+      LOG.debug("Read model descriptor " + modelDescriptor.getSModelReference() + "\n"+ "Model root is "+ modelRoot.getPath()+ " "+ modelRoot.getPrefix());
     }
   }
   for (  IFile childDir : files) {
