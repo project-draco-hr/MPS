@@ -3,41 +3,41 @@ synchronized (LOCK) {
     if (myInitialized)     return;
     if (myInitializationInProgress)     return;
     myInitializationInProgress=true;
-    Set<IModule> visibleModules=new HashSet<IModule>();
+    myVisibleModules=new HashSet<IModule>();
+    myUsedLanguages=new HashSet<Language>();
+    myUsedDevkits=new HashSet<DevKit>();
     Set<IModule> initialModules=getInitialModules();
-    visibleModules.addAll(initialModules);
+    myVisibleModules.addAll(initialModules);
     for (    IModule module : initialModules) {
       for (      Dependency d : module.getDependOn()) {
         IModule dependency=MPSModuleRepository.getInstance().getModule(d.getModuleRef());
         if (dependency != null) {
-          visibleModules.add(dependency);
+          myVisibleModules.add(dependency);
         }
       }
     }
-    Set<Language> usedLanguages=new HashSet<Language>();
-    usedLanguages.addAll(getInitialUsedLanguages());
-    Set<DevKit> usedDevkits=new HashSet<DevKit>();
-    usedDevkits.addAll(LibraryInitializer.getInstance().getBootstrapModules(DevKit.class));
+    myUsedLanguages.addAll(getInitialUsedLanguages());
+    myUsedDevkits.addAll(LibraryInitializer.getInstance().getBootstrapModules(DevKit.class));
     for (    IModule m : initialModules) {
       if (m instanceof DevKit) {
         DevKit dk=(DevKit)m;
-        usedDevkits.add(dk);
+        myUsedDevkits.add(dk);
       }
-      usedDevkits.addAll(ModuleUtil.refsToDevkits(m.getUsedDevkitReferences()));
+      myUsedDevkits.addAll(ModuleUtil.refsToDevkits(m.getUsedDevkitReferences()));
     }
-    for (    DevKit dk : usedDevkits) {
-      usedLanguages.addAll(dk.getAllExportedLanguages());
-      visibleModules.addAll(dk.getAllExportedSolutions());
+    for (    DevKit dk : myUsedDevkits) {
+      myUsedLanguages.addAll(dk.getAllExportedLanguages());
+      myVisibleModules.addAll(dk.getAllExportedSolutions());
     }
     boolean changed=true;
     while (changed) {
       changed=false;
-      for (      IModule module : new HashSet<IModule>(visibleModules)) {
+      for (      IModule module : new HashSet<IModule>(myVisibleModules)) {
         if (module instanceof Language) {
           Language language=(Language)module;
           for (          Language l : language.getExtendedLanguages()) {
-            if (!visibleModules.contains(l)) {
-              visibleModules.add(l);
+            if (!myVisibleModules.contains(l)) {
+              myVisibleModules.add(l);
               changed=true;
             }
           }
@@ -46,8 +46,8 @@ synchronized (LOCK) {
           if (dep.isReexport()) {
             IModule dependency=MPSModuleRepository.getInstance().getModule(dep.getModuleRef());
             if (dependency != null) {
-              if (!visibleModules.contains(dependency)) {
-                visibleModules.add(dependency);
+              if (!myVisibleModules.contains(dependency)) {
+                myVisibleModules.add(dependency);
                 changed=true;
               }
             }
@@ -57,40 +57,25 @@ synchronized (LOCK) {
           }
         }
       }
-      for (      Language language : new ArrayList<Language>(usedLanguages)) {
+      for (      Language language : new ArrayList<Language>(myUsedLanguages)) {
         for (        Language extendedLanguage : language.getExtendedLanguages()) {
           if (extendedLanguage == null) {
             LOG.error("One of extended language of " + language.getModuleFqName() + " in "+ this+ " is null.");
           }
- else           if (!usedLanguages.contains(extendedLanguage)) {
-            usedLanguages.add(extendedLanguage);
+ else           if (!myUsedLanguages.contains(extendedLanguage)) {
+            myUsedLanguages.add(extendedLanguage);
             changed=true;
           }
         }
         for (        Dependency dep : language.getDependOn()) {
           IModule dependency=MPSModuleRepository.getInstance().getModule(dep.getModuleRef());
           if (dependency != null) {
-            if (dep.isReexport() && !visibleModules.contains(dependency)) {
-              visibleModules.add(dependency);
+            if (dep.isReexport() && !myVisibleModules.contains(dependency)) {
+              myVisibleModules.add(dependency);
               changed=true;
             }
           }
         }
-      }
-    }
-    myVisibleModules=visibleModules;
-    myUsedDevKitsByFqName=new HashMap<String,DevKit>();
-    for (    DevKit dk : usedDevkits) {
-      myUsedDevKitsByFqName.put(dk.getModuleFqName(),dk);
-      if (dk.getModuleReference().getModuleId() != null) {
-        myUsedDevKitsById.put(dk.getModuleReference().getModuleId(),dk);
-      }
-    }
-    myUsedLanguagesByFqName=new HashMap<String,Language>();
-    for (    Language l : usedLanguages) {
-      myUsedLanguagesByFqName.put(l.getModuleFqName(),l);
-      if (l.getModuleReference().getModuleId() != null) {
-        myUsedLanguagesById.put(l.getModuleReference().getModuleId(),l);
       }
     }
     myInitializationInProgress=false;
