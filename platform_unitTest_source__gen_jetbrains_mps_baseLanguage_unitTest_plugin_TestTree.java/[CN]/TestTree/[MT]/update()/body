@@ -1,0 +1,72 @@
+{
+  if (this.myState.getAvailableText() != null) {
+    return;
+  }
+  String loseTest=this.myState.getLoseClass();
+  String loseMethod=this.myState.getLoseMethod();
+  String test=this.myState.getCurrentClass();
+  String method=this.myState.getCurrentMethod();
+  final Wrappers._T<TestMethodTreeNode> methodNode=new Wrappers._T<TestMethodTreeNode>();
+  if (loseTest != null && loseMethod != null) {
+    methodNode.value=this.get(loseTest,loseMethod);
+    TestCaseTreeNode testCaseNode=this.get(loseTest);
+    if (methodNode.value != null && testCaseNode != null) {
+      this.updateState(methodNode.value,testCaseNode,TestState.ERROR);
+    }
+  }
+ else {
+    TestCaseTreeNode testCaseNode=this.get(test);
+    methodNode.value=this.get(test,method);
+    if (methodNode.value != null && testCaseNode != null) {
+      if (this.myState.isTerminated()) {
+        this.updateState(methodNode.value,testCaseNode,TestState.TERMINATED);
+        this.myAnimator.stopMovie();
+      }
+ else       if (TestEvent.START_TEST_PREFIX.equals(this.myState.getToken())) {
+        this.updateState(methodNode.value,testCaseNode,TestState.IN_PROGRESS);
+        SwingUtilities.invokeLater(new Runnable(){
+          public void run(){
+            TestTree.this.myAnimator.scheduleRepaint();
+          }
+        }
+);
+        if (this.getPreferences().getStateObject().isTrackRunning) {
+          SwingUtilities.invokeLater(new Runnable(){
+            public void run(){
+              TestTree.this.setCurrentNode(methodNode.value);
+            }
+          }
+);
+        }
+      }
+ else       if (TestEvent.END_TEST_PREFIX.equals(this.myState.getToken())) {
+        if (TestState.IN_PROGRESS.equals(methodNode.value.getState())) {
+          this.updateState(methodNode.value,testCaseNode,TestState.PASSED);
+        }
+      }
+ else       if (TestEvent.FAILURE_TEST_PREFIX.equals(this.myState.getToken())) {
+        this.updateState(methodNode.value,testCaseNode,TestState.FAILED);
+      }
+ else       if (TestEvent.ERROR_TEST_PREFIX.equals(this.myState.getToken())) {
+        methodNode.value.setState(TestState.ERROR);
+        this.updateState(methodNode.value,testCaseNode,TestState.ERROR);
+      }
+    }
+  }
+  if (isFailed(methodNode.value) && this.getPreferences().getStateObject().isSelectFirstFailed) {
+    SwingUtilities.invokeLater(new Runnable(){
+      public void run(){
+        TestTree.this.selectFirstDefectNode();
+      }
+    }
+);
+  }
+  if (this.getPreferences().getStateObject().isHidePassed) {
+    SwingUtilities.invokeLater(new Runnable(){
+      public void run(){
+        TestTree.this.hidePassed(true);
+      }
+    }
+);
+  }
+}

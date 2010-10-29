@@ -1,0 +1,55 @@
+{
+  this.myState=state;
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      StatisticsTableModel.this.setTests(state.getTestsMap());
+    }
+  }
+);
+  this.myState.addListener(new TestStateListener(){
+    public void onTestStart(    TestEvent event){
+      TestMethodRow row=this.findRowForEvent(event);
+      if (row != null) {
+        row.setStartTime(event.getTime());
+        row.setUsageBefore(event.getMemoryUsage());
+        fireTableChanged();
+      }
+    }
+    @Nullable private TestMethodRow findRowForEvent(    TestEvent event){
+      return StatisticsTableModel.this.getRow(event.getTestCaseName(),event.getTestMethodName());
+    }
+    public void onTestEnd(    TestEvent event){
+      TestMethodRow row=this.findRowForEvent(event);
+      if (row != null) {
+        row.setFinishTime(event.getTime());
+        row.setUsageAfter(event.getMemoryUsage());
+        if (row.getFailed() == 0 && row.getErrored() == 0) {
+          row.setSucceed();
+        }
+        fireTableChanged();
+      }
+    }
+    public void onTestError(    TestEvent event){
+      TestMethodRow row=this.findRowForEvent(event);
+      if (row != null) {
+        row.setErrored();
+        fireTableChanged();
+      }
+    }
+    public void onTestFailure(    TestEvent event){
+      TestMethodRow row=this.findRowForEvent(event);
+      if (row != null) {
+        row.setFailed();
+        fireTableChanged();
+      }
+    }
+    public void onLooseTest(    String className,    String methodName){
+      TestMethodRow row=StatisticsTableModel.this.getRow(className,methodName);
+      if (row != null) {
+        row.setErrored();
+        fireTableChanged();
+      }
+    }
+  }
+);
+}
