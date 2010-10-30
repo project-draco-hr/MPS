@@ -1,0 +1,232 @@
+{
+  if (SHOW_INFO > 0) {
+    System.out.println("initial graph: " + embeddedGraph);
+  }
+  Map<Node,Dimension> nodeSizes=MapSequence.fromMap(new LinkedHashMap<Node,Dimension>(16,(float)0.75,false));
+  for (  Node node : SetSequence.fromSet(layoutInfo.getNodesWithSize())) {
+    MapSequence.fromMap(nodeSizes).put(node,layoutInfo.getSize(node));
+  }
+  Map<Edge,Dimension> edgeSizes=MapSequence.fromMap(new LinkedHashMap<Edge,Dimension>(16,(float)0.75,false));
+  for (  Edge edge : SetSequence.fromSet(layoutInfo.getLabeledEdges())) {
+    MapSequence.fromMap(edgeSizes).put(edge,layoutInfo.getSize(edge));
+  }
+  Graph graph=embeddedGraph.getGraph();
+  List<Edge> initialEdges=ListSequence.fromList(new ArrayList<Edge>());
+  ListSequence.fromList(initialEdges).addSequence(ListSequence.fromList(graph.getEdges()));
+  List<Node> initialNodes=ListSequence.fromList(new ArrayList<Node>());
+  ListSequence.fromList(initialNodes).addSequence(SetSequence.fromSet(MapSequence.fromMap(nodeSizes).keySet()));
+  Map<Dart,Integer> bends=MapSequence.fromMap(new HashMap<Dart,Integer>());
+  Map<Dart,Integer> angles=MapSequence.fromMap(new HashMap<Dart,Integer>());
+  QuasiOrthogonalRepresentation.getRepresentation(embeddedGraph,bends,angles);
+  QuasiRepresentationModifier quasiModifier=new QuasiRepresentationModifier(embeddedGraph,bends,angles);
+  quasiModifier.reduceToOrthogonalRepresentation();
+  List<QuasiRepresentationModifier.Modification> modifications=quasiModifier.getModifications();
+  Set<Edge> modifiedEdges=SetSequence.fromSet(new HashSet<Edge>());
+  Set<Edge> newEdges=SetSequence.fromSet(new HashSet<Edge>());
+  for (  QuasiRepresentationModifier.Modification modification : ListSequence.fromList(modifications)) {
+    SetSequence.fromSet(modifiedEdges).addSequence(ListSequence.fromList(modification.getModifiedEdges()));
+    SetSequence.fromSet(newEdges).addSequence(ListSequence.fromList(modification.getNewEdges()));
+  }
+  Map<Edge,Edge> labeledEdges=MapSequence.fromMap(new HashMap<Edge,Edge>());
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(edgeSizes).keySet())) {
+    List<Edge> history=embeddedGraph.findFullHistory(edge);
+    if (SetSequence.fromSet(modifiedEdges).contains(edge)) {
+      for (      Edge historyEdge : ListSequence.fromList(history)) {
+        if (SetSequence.fromSet(newEdges).contains(historyEdge)) {
+          MapSequence.fromMap(labeledEdges).put(edge,historyEdge);
+        }
+      }
+    }
+ else {
+      MapSequence.fromMap(labeledEdges).put(edge,edge);
+    }
+  }
+  if (SHOW_INFO > 0) {
+    System.out.println("modifications: ");
+    for (    QuasiRepresentationModifier.Modification modification : ListSequence.fromList(modifications)) {
+      System.out.println(modification);
+    }
+  }
+  OrthogonalRepresentation.replaceBendsByNodes(embeddedGraph,bends,angles);
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(edgeSizes).keySet())) {
+    Edge labeledEdge=getLabeledEdge(embeddedGraph.findFullHistory(MapSequence.fromMap(labeledEdges).get(edge)));
+    MapSequence.fromMap(labeledEdges).put(edge,labeledEdge);
+  }
+  Map<Dart,Direction2D> directions=OrthogonalRepresentation.getDirections(embeddedGraph,angles);
+  if (SHOW_INFO > 0) {
+    System.out.println("modified graph: " + embeddedGraph);
+  }
+  Map<Node,Map<Direction2D,Integer>> nodeDirectionSizes=this.getNodeDirectionSizes(initialNodes,nodeSizes);
+  Map<Edge,Integer> edgeShifts=getEdgesShifts(modifications,directions,nodeSizes);
+  NodeBoxesMaker boxesMaker=new NodeBoxesMaker(embeddedGraph,directions);
+  boxesMaker.makeBoxes(nodeSizes);
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(edgeSizes).keySet())) {
+    Edge labeledEdge=MapSequence.fromMap(labeledEdges).get(edge);
+    List<Edge> history=embeddedGraph.findFullHistory(labeledEdge);
+    int pos=0;
+    if (ListSequence.fromList(initialNodes).contains(labeledEdge.getSource())) {
+      pos=1;
+    }
+    MapSequence.fromMap(labeledEdges).put(edge,ListSequence.fromList(history).getElement(pos));
+  }
+  Map<Edge,Direction2D> labelDir=MapSequence.fromMap(new HashMap<Edge,Direction2D>());
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(edgeSizes).keySet())) {
+    Edge labeledEdge=MapSequence.fromMap(labeledEdges).get(edge);
+    if (MapSequence.fromMap(directions).get(ListSequence.fromList(embeddedGraph.getDarts(labeledEdge)).first()).isHorizontal()) {
+      MapSequence.fromMap(labelDir).put(edge,Direction2D.UP);
+    }
+ else {
+      MapSequence.fromMap(labelDir).put(edge,Direction2D.RIGHT);
+    }
+  }
+  Map<Edge,Node> labelCenters=MapSequence.fromMap(new HashMap<Edge,Node>());
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(edgeSizes).keySet())) {
+    MapSequence.fromMap(labelCenters).put(edge,splitEdge(MapSequence.fromMap(labeledEdges).get(edge),embeddedGraph,directions));
+  }
+  Set<Face> boxFaces=boxesMaker.getBoxFaces();
+  Map<Edge,Integer> edgeLengths=boxesMaker.getBoxEdgeLengths();
+  for (  Node node : ListSequence.fromList(initialNodes)) {
+    for (    Edge edge : ListSequence.fromList(node.getEdges())) {
+      Dart dart=embeddedGraph.getSourceDart(edge,node);
+      MapSequence.fromMap(edgeLengths).put(edge,MapSequence.fromMap(MapSequence.fromMap(nodeDirectionSizes).get(node)).get(MapSequence.fromMap(directions).get(dart)));
+    }
+  }
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(edgeSizes).keySet())) {
+    Dimension size=MapSequence.fromMap(edgeSizes).get(edge);
+    int length;
+    if (MapSequence.fromMap(labelDir).get(edge).isHorizontal()) {
+      length=size.height;
+    }
+ else {
+      length=size.width;
+    }
+    for (    Edge nodeEdge : ListSequence.fromList(MapSequence.fromMap(labelCenters).get(edge).getEdges())) {
+      MapSequence.fromMap(edgeLengths).put(nodeEdge,length / 2 + getUnitLength());
+    }
+  }
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(edgeShifts).keySet())) {
+    Edge firstEdge=ListSequence.fromList(embeddedGraph.findFullHistory(edge)).first();
+    if (MapSequence.fromMap(edgeLengths).containsKey(firstEdge)) {
+      MapSequence.fromMap(edgeLengths).put(firstEdge,MapSequence.fromMap(edgeLengths).get(firstEdge) + MapSequence.fromMap(edgeShifts).get(edge));
+    }
+ else {
+      MapSequence.fromMap(edgeLengths).put(firstEdge,MapSequence.fromMap(edgeShifts).get(edge) + 2 * getUnitLength());
+    }
+  }
+  ConstraintsGraph constraintsGraph=new ConstraintsGraph(embeddedGraph,directions);
+  constraintsGraph.constructGraph(boxFaces);
+  constraintsGraph.setUnitLength(getUnitLength());
+  Map<Node,Point> coordinates=constraintsGraph.getCoordinates(edgeLengths,null);
+  Map<Edge,Rectangle> labelRects=MapSequence.fromMap(new HashMap<Edge,Rectangle>());
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(edgeSizes).keySet())) {
+    MapSequence.fromMap(labelRects).put(edge,getLabelLayout(labelCenters,edge,coordinates,embeddedGraph,edgeSizes,directions));
+  }
+  Map<Edge,Integer> constraintEdgeLengths=MapSequence.fromMap(new HashMap<Edge,Integer>());
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(labelRects).keySet())) {
+    Node center=MapSequence.fromMap(labelCenters).get(edge);
+    boolean isHorizontal=MapSequence.fromMap(labelDir).get(edge).isVertical();
+    Rectangle labelRect=MapSequence.fromMap(labelRects).get(edge);
+    Rectangle rect;
+    int width=labelRect.width + getUnitLength();
+    int height=labelRect.height + getUnitLength();
+    if (isHorizontal) {
+      rect=new Rectangle(labelRect.x - getUnitLength() / 2,labelRect.y,width,height);
+    }
+ else {
+      rect=new Rectangle(labelRect.x,labelRect.y - getUnitLength() / 2,width,height);
+    }
+    for (    Node node : ListSequence.fromList(graph.getNodes())) {
+      if (node == center) {
+        continue;
+      }
+      Point point=MapSequence.fromMap(coordinates).get(node);
+      if (rect.contains(point)) {
+        if (isHorizontal) {
+          Edge constraintEdge=constraintsGraph.addConstraintEdge(center,node,Direction2D.UP);
+          MapSequence.fromMap(constraintEdgeLengths).put(constraintEdge,rect.height);
+        }
+ else {
+          Edge constraintEdge=constraintsGraph.addConstraintEdge(center,node,Direction2D.RIGHT);
+          MapSequence.fromMap(constraintEdgeLengths).put(constraintEdge,rect.width);
+        }
+      }
+    }
+    for (    Edge graphEdge : ListSequence.fromList(graph.getEdges())) {
+      if (ListSequence.fromList(center.getEdges()).contains(graphEdge)) {
+        continue;
+      }
+      if (MapSequence.fromMap(directions).get(ListSequence.fromList(embeddedGraph.getDarts(graphEdge)).first()).isHorizontal() != isHorizontal) {
+        continue;
+      }
+      Point sourcePoint=MapSequence.fromMap(coordinates).get(graphEdge.getSource());
+      Point targetPoint=MapSequence.fromMap(coordinates).get(graphEdge.getTarget());
+      if (isHorizontal) {
+        boolean isIntersecting=GeomUtil.insideClosedSegment(sourcePoint.x,targetPoint.x,rect.x) && GeomUtil.insideClosedSegment(sourcePoint.x,targetPoint.x,rect.x + rect.width);
+        int dist=rect.y + rect.height - sourcePoint.y;
+        if (isIntersecting && dist < rect.height) {
+          Edge constraintEdge=constraintsGraph.addConstraintEdge(center,graphEdge.getSource(),Direction2D.UP);
+          MapSequence.fromMap(constraintEdgeLengths).put(constraintEdge,rect.height);
+        }
+      }
+ else {
+        boolean isIntersecting=GeomUtil.insideClosedSegment(sourcePoint.y,targetPoint.y,rect.y) && GeomUtil.insideClosedSegment(sourcePoint.y,targetPoint.y,rect.y + rect.height);
+        int dist=rect.x + rect.width - sourcePoint.x;
+        if (isIntersecting && dist < rect.width) {
+          Edge constraintEdge=constraintsGraph.addConstraintEdge(center,graphEdge.getSource(),Direction2D.RIGHT);
+          MapSequence.fromMap(constraintEdgeLengths).put(constraintEdge,rect.width);
+        }
+      }
+    }
+  }
+  coordinates=constraintsGraph.getCoordinates(edgeLengths,constraintEdgeLengths);
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(edgeSizes).keySet())) {
+    MapSequence.fromMap(labelRects).put(edge,getLabelLayout(labelCenters,edge,coordinates,embeddedGraph,edgeSizes,directions));
+  }
+  List<Edge> edgeList=ListSequence.fromList(new ArrayList<Edge>());
+  ListSequence.fromList(edgeList).addSequence(SetSequence.fromSet(MapSequence.fromMap(labelRects).keySet()));
+  for (int i=0; i < ListSequence.fromList(edgeList).count(); i++) {
+    Edge edgeI=ListSequence.fromList(edgeList).getElement(i);
+    Direction2D dirI=MapSequence.fromMap(labelDir).get(edgeI);
+    Rectangle rectI=MapSequence.fromMap(labelRects).get(edgeI);
+    for (int j=i + 1; j < ListSequence.fromList(edgeList).count(); j++) {
+      Edge edgeJ=ListSequence.fromList(edgeList).getElement(j);
+      Direction2D dirJ=MapSequence.fromMap(labelDir).get(edgeJ);
+      Rectangle rectJ=MapSequence.fromMap(labelRects).get(edgeJ);
+      if (rectI.intersects(rectJ)) {
+        int shiftByDirI=GeomUtil.width(rectJ,dirI) + GeomUtil.width(rectI,dirI);
+        int shiftByDirJ=GeomUtil.width(rectJ,dirJ) + GeomUtil.width(rectI,dirJ);
+        if (shiftByDirJ < shiftByDirI) {
+          Edge constraintEdge=constraintsGraph.addConstraintEdge(MapSequence.fromMap(labelCenters).get(edgeJ),MapSequence.fromMap(labelCenters).get(edgeI),dirJ);
+          MapSequence.fromMap(constraintEdgeLengths).put(constraintEdge,shiftByDirJ - GeomUtil.width(rectI,dirJ) / 2 + LABEL_DIST);
+        }
+ else {
+          Edge constraintEdge=constraintsGraph.addConstraintEdge(MapSequence.fromMap(labelCenters).get(edgeI),MapSequence.fromMap(labelCenters).get(edgeJ),dirI);
+          MapSequence.fromMap(constraintEdgeLengths).put(constraintEdge,shiftByDirI - GeomUtil.width(rectJ,dirI) / 2 + LABEL_DIST);
+        }
+      }
+    }
+  }
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    Point sourcePoint=MapSequence.fromMap(coordinates).get(edge.getSource());
+    Point targetPoint=MapSequence.fromMap(coordinates).get(edge.getTarget());
+    MapSequence.fromMap(edgeLengths).put(edge,Math.abs(sourcePoint.x - targetPoint.x) + Math.abs(sourcePoint.y - targetPoint.y));
+  }
+  coordinates=constraintsGraph.getCoordinates(edgeLengths,constraintEdgeLengths);
+  GraphLayout graphLayout=new GraphLayout(graph);
+  for (  Node node : ListSequence.fromList(initialNodes)) {
+    Rectangle rect=this.getNodeLayout(coordinates,node,nodeDirectionSizes,nodeSizes);
+    graphLayout.setLayoutFor(node,rect);
+  }
+  for (  Edge edge : ListSequence.fromList(initialEdges)) {
+    List<Point> edgeLayout=this.getEdgeLayout(edge,embeddedGraph,coordinates,initialNodes,directions,nodeDirectionSizes);
+    graphLayout.setLayoutFor(edge,edgeLayout);
+  }
+  for (  Edge edge : SetSequence.fromSet(MapSequence.fromMap(edgeSizes).keySet())) {
+    Rectangle rect=this.getLabelLayout(labelCenters,edge,coordinates,embeddedGraph,edgeSizes,directions);
+    graphLayout.setLabelLayout(edge,rect);
+  }
+  for (  QuasiRepresentationModifier.Modification modification : ListSequence.fromList(modifications)) {
+    splitEdges(graphLayout,modification,edgeShifts);
+  }
+  return graphLayout;
+}
