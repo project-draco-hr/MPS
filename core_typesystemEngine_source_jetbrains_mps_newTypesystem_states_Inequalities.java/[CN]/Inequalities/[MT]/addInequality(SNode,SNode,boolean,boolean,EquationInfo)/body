@@ -1,11 +1,10 @@
 {
-  Equations equations=myState.getEquations();
-  subType=equations.getRepresentative(subType);
-  superType=equations.getRepresentative(superType);
+  subType=myState.getRepresentative(subType);
+  superType=myState.getRepresentative(superType);
   if (subType == null || superType == null || subType == superType) {
     return;
   }
-  if (!myState.isConcrete(subType) || !myState.isConcrete(superType)) {
+  if (!myState.isConcrete(subType) || TypesUtil.isVariable(superType)) {
     addSubTyping(subType,superType,isWeak,check,info);
     return;
   }
@@ -14,12 +13,15 @@
     InequationReplacementRule_Runtime rule=inequalityReplacementRule.o1;
     IsApplicable2Status status=inequalityReplacementRule.o2;
     ((AbstractInequationReplacementRule_Runtime)rule).processInequation(subType,superType,info,myState.getTypeCheckingContext(),status);
-    myState.addDifference(new StringDifference("Replacement rule:" + subType + " <: "+ superType),false);
+    myState.addDifference(new StringDifference(subType + " is subtype of " + superType+ " by replacement rule"),false);
     return;
   }
+  subType=myState.getEquations().expandNode(subType);
+  superType=myState.getEquations().expandNode(superType);
   SubTyping subTyping=myState.getTypeCheckingContext().getSubTyping();
-  if (subTyping.isSubType(subType,superType,info,isWeak,myState)) {
+  if (subTyping.isSubType(subType,superType,info,isWeak,true)) {
+    myState.addDifference(new StringDifference(subType + " is subtype of " + superType),false);
     return;
   }
-  reportError(subType,superType,info,isWeak);
+  myState.getNodeMaps().reportSubTypeError(subType,superType,info,isWeak);
 }
