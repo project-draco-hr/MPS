@@ -1,45 +1,50 @@
 {
-  final List<SNode> nodesList=new ArrayList<SNode>();
-  for (  final SNode concept : Sequence.fromIterable(TestNodeWrapperFactory.getWrappedRootConcepts())) {
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        ListSequence.fromList(nodesList).addSequence(SetSequence.fromSet(FindUsagesManager.getInstance().findInstances(((AbstractConceptDeclaration)SNodeOperations.getAdapter(concept)),GlobalScope.getInstance(),new FindUsagesManager.ProgressAdapter(new EmptyProgressIndicator()),false)));
-      }
-    }
-);
-  }
-  if (this.myIsTestMethods) {
-    final List<ITestNodeWrapper> methodsList=ListSequence.fromList(new ArrayList<ITestNodeWrapper>());
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        for (        SNode testCase : nodesList) {
-          ITestNodeWrapper wrapper=TestNodeWrapperFactory.tryToWrap(testCase);
-          if (wrapper == null) {
-            continue;
+  ProgressManager.getInstance().runProcessWithProgressSynchronously(new Runnable(){
+    public void run(){
+      final List<SNode> nodesList=new ArrayList<SNode>();
+      for (      final SNode concept : Sequence.fromIterable(TestNodeWrapperFactory.getWrappedRootConcepts())) {
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            ListSequence.fromList(nodesList).addSequence(SetSequence.fromSet(FindUsagesManager.getInstance().findInstances(((AbstractConceptDeclaration)SNodeOperations.getAdapter(concept)),GlobalScope.getInstance(),new FindUsagesManager.ProgressAdapter(ProgressManager.getInstance().getProgressIndicator()),false)));
           }
-          ListSequence.fromList(methodsList).addSequence(Sequence.fromIterable(wrapper.getTestMethods()));
         }
-      }
-    }
 );
-    this.myCandidates=methodsList;
-  }
+      }
+      if (ListPanel.this.myIsTestMethods) {
+        final List<ITestNodeWrapper> methodsList=ListSequence.fromList(new ArrayList<ITestNodeWrapper>());
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            for (            SNode testCase : nodesList) {
+              ITestNodeWrapper wrapper=TestNodeWrapperFactory.tryToWrap(testCase);
+              if (wrapper == null) {
+                continue;
+              }
+              ListSequence.fromList(methodsList).addSequence(Sequence.fromIterable(wrapper.getTestMethods()));
+            }
+          }
+        }
+);
+        ListPanel.this.myCandidates=methodsList;
+      }
  else {
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        ListPanel.this.myCandidates=ListSequence.fromList(nodesList).select(new ISelector<SNode,ITestNodeWrapper>(){
-          public ITestNodeWrapper select(          SNode it){
-            return TestNodeWrapperFactory.tryToWrap(it);
-          }
-        }
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            ListPanel.this.myCandidates=ListSequence.fromList(nodesList).select(new ISelector<SNode,ITestNodeWrapper>(){
+              public ITestNodeWrapper select(              SNode it){
+                return TestNodeWrapperFactory.tryToWrap(it);
+              }
+            }
 ).where(new IWhereFilter<ITestNodeWrapper>(){
-          public boolean accept(          ITestNodeWrapper it){
-            return it != null;
+              public boolean accept(              ITestNodeWrapper it){
+                return it != null;
+              }
+            }
+).toListSequence();
           }
         }
-).toListSequence();
+);
       }
     }
-);
   }
+,"Searching for test nodes",false,myProject);
 }
