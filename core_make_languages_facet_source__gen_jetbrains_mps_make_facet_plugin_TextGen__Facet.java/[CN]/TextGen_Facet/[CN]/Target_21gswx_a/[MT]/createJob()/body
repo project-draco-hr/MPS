@@ -4,28 +4,35 @@
       Iterable<IResource> _output_21gswx_a0a=null;
 switch (0) {
 case 0:
-        if (pool.<TextGen_Facet.Target_21gswx_a.Variables>variables(Target_21gswx_a.this.getName(),TextGen_Facet.Target_21gswx_a.Variables.class).invocationContext() == null) {
+        FileProcessor fileProc=new FileProcessor();
+      for (      IResource resource : input) {
+        GResource gr=(GResource)resource;
+        if (!(gr.data.status().isOk())) {
+          Logger.getLogger("jetbrains.mps.make.TextGen").error("Generation was not OK");
           return new IResult.FAILURE(_output_21gswx_a0a);
         }
-      FileProcessor fileProc=new FileProcessor();
-    for (    IResource resource : input) {
-      GResource gr=(GResource)resource;
-      if (!(gr.data.status().isOk())) {
-        return new IResult.FAILURE(_output_21gswx_a0a);
-      }
-      IFile targetDir=FileSystem.getInstance().getFileByPath(gr.data.module().getOutputFor(gr.data.model()));
-      JavaStreamHandler javaStreamHandler=new JavaStreamHandler(gr.data.model(),targetDir,fileProc);
-      try {
-        if (!(new TextGenerator(javaStreamHandler,ModelGenerationStatusManager.getInstance().getCacheGenerator(),BLDependenciesCache.getInstance().getGenerator(),TraceInfoCache.getInstance().getGenerator(),GenerationDependenciesCache.getInstance().getGenerator()).handleOutput(pool.<TextGen_Facet.Target_21gswx_a.Variables>variables(Target_21gswx_a.this.getName(),TextGen_Facet.Target_21gswx_a.Variables.class).invocationContext(),gr.data.status()))) {
-          return new IResult.FAILURE(_output_21gswx_a0a);
+        IFile targetDir=FileSystem.getInstance().getFileByPath(gr.data.module().getOutputFor(gr.data.model()));
+        JavaStreamHandler javaStreamHandler=new JavaStreamHandler(gr.data.model(),targetDir,fileProc);
+        try {
+          ModelGenerationStatusManager mgsm=ModelGenerationStatusManager.getInstance();
+          BLDependenciesCache bldc=BLDependenciesCache.getInstance();
+          TraceInfoCache tic=TraceInfoCache.getInstance();
+          GenerationDependenciesCache gdc=GenerationDependenciesCache.getInstance();
+          if (mgsm == null || bldc == null || tic == null || gdc == null) {
+            Logger.getLogger("jetbrains.mps.make.TextGen").error("Something's wrong" + mgsm + bldc+ tic+ gdc);
+          }
+          if (!(new TextGenerator(javaStreamHandler,mgsm.getCacheGenerator(),bldc.getGenerator(),tic.getGenerator(),gdc.getGenerator()).handleOutput(pool.<Generator_Facet.Target_ixz87t_a.Variables>variables(new ITarget.Name("Parameters"),Generator_Facet.Target_ixz87t_a.Variables.class).operationContext(),gr.data.status()))) {
+            Logger.getLogger("jetbrains.mps.make.TextGen").error("TextGenerator returned false");
+            return new IResult.FAILURE(_output_21gswx_a0a);
+          }
+          _output_21gswx_a0a=Sequence.fromIterable(_output_21gswx_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(gr)));
         }
-        _output_21gswx_a0a=Sequence.fromIterable(_output_21gswx_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(gr)));
-      }
   finally {
-        javaStreamHandler.dispose();
+          javaStreamHandler.dispose();
+        }
       }
-    }
-  fileProc.saveGeneratedFiles();
+    fileProc.saveGeneratedFiles();
+  Logger.getLogger("jetbrains.mps.make.TextGen").error("TextGen completed");
 default :
 return new IResult.SUCCESS(_output_21gswx_a0a);
 }
