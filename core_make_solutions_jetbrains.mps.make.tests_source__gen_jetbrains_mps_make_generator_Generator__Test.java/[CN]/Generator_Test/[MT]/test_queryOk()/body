@@ -1,15 +1,30 @@
 {
   ScriptBuilder scb=new ScriptBuilder();
-  IScript scr=scb.withFacet(new IFacet.Name("Maker")).withFacet(new IFacet.Name("Generator")).withFacet(new IFacet.Name("TextGen")).withTarget(new ITarget.Name("Make")).toScript();
-  Assert.assertTrue(scr.isValid());
-  ITarget dt=scr.defaultTarget();
-  Assert.assertNotNull(dt);
-  Assert.assertEquals(new ITarget.Name("Make"),dt.getName());
-  final IMonitor mon=Mockups.monitor(context,"mon");
+  final IMonitors mons=Mockups.monitors(context,"mons");
+  final IConfigMonitor cmon=context.mock(IConfigMonitor.class);
   context.checking(new Expectations(){
 {
+      final Object[] cfg=new Object[1];
+      exactly(1).of(mons).runConfigWithMonitor((_FunctionTypes._void_P1_E0<? super IConfigMonitor>)with(new BaseMatcher<Object>(){
+        public boolean matches(        Object o){
+          cfg[0]=o;
+          return true;
+        }
+        public void describeTo(        Description p0){
+        }
+      }
+));
+      will(new Action(){
+        public Object invoke(        Invocation invocation) throws Throwable {
+          ((_FunctionTypes._void_P1_E0<? super IConfigMonitor>)cfg[0]).invoke(cmon);
+          return null;
+        }
+        public void describeTo(        Description description){
+        }
+      }
+);
       final IQuery[] query=new IQuery[1];
-      exactly(1).of(mon).relayQuery(with(new BaseMatcher<IQuery>(){
+      exactly(1).of(cmon).relayQuery(with(new BaseMatcher<IQuery>(){
         public boolean matches(        Object o){
           if (o instanceof IQuery) {
             query[0]=(IQuery)o;
@@ -32,7 +47,13 @@
     }
   }
 );
-  IResult res=scr.execute(mon);
+  Mockups.allowing(context,mons);
+  IScript scr=scb.withFacet(new IFacet.Name("Maker")).withFacet(new IFacet.Name("Generator")).withFacet(new IFacet.Name("TextGen")).withTarget(new ITarget.Name("Make")).withMonitors(mons).toScript();
+  Assert.assertTrue(scr.isValid());
+  ITarget dt=scr.defaultTarget();
+  Assert.assertNotNull(dt);
+  Assert.assertEquals(new ITarget.Name("Make"),dt.getName());
+  IResult res=scr.execute();
   Assert.assertNotNull(res);
   Assert.assertTrue(res.isSucessful());
   Assert.assertTrue(Sequence.fromIterable(res.output()).isEmpty());
