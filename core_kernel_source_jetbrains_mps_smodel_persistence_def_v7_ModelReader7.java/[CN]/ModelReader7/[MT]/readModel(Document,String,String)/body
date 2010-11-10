@@ -1,0 +1,34 @@
+{
+  Element rootElement=document.getRootElement();
+  SModelReference modelReference=SModelReference.fromString(rootElement.getAttributeValue(ModelPersistence.MODEL_UID));
+  SModel model=new SModel(modelReference);
+  model.setPersistenceVersion(getVersion());
+  myHelper=new VersionUtil(modelReference);
+  model.setLoading(true);
+  for (  Element element : (List<Element>)rootElement.getChildren(ModelPersistence.LANGUAGE)) {
+    String languageNamespace=element.getAttributeValue(ModelPersistence.NAMESPACE);
+    model.addLanguage(ModuleReference.fromString(languageNamespace));
+  }
+  for (  Element element : (List<Element>)rootElement.getChildren(ModelPersistence.LANGUAGE_ENGAGED_ON_GENERATION)) {
+    String languageNamespace=element.getAttributeValue(ModelPersistence.NAMESPACE);
+    model.addEngagedOnGenerationLanguage(ModuleReference.fromString(languageNamespace));
+  }
+  for (  Element element : (List<Element>)rootElement.getChildren(ModelPersistence.DEVKIT)) {
+    String devkitNamespace=element.getAttributeValue(ModelPersistence.NAMESPACE);
+    model.addDevKit(ModuleReference.fromString(devkitNamespace));
+  }
+  for (  Element element : (List<Element>)rootElement.getChildren(ModelPersistence.IMPORT_ELEMENT)) {
+    String indexValue=element.getAttributeValue(ModelPersistence.MODEL_IMPORT_INDEX);
+    int usedModelVersion=Integer.parseInt(element.getAttributeValue(ModelPersistence.VERSION,"-1"));
+    String importedModelUIDString=element.getAttributeValue(ModelPersistence.MODEL_UID);
+    myHelper.addImport(model,indexValue,importedModelUIDString,usedModelVersion,element.getAttributeValue(ModelPersistence.IMPLICIT) != null);
+  }
+  for (  Element child : (List<Element>)rootElement.getChildren(ModelPersistence.NODE)) {
+    SNode snode=readNode(child,model);
+    if (snode != null) {
+      model.addRoot(snode);
+    }
+  }
+  model.setLoading(false);
+  return model;
+}
