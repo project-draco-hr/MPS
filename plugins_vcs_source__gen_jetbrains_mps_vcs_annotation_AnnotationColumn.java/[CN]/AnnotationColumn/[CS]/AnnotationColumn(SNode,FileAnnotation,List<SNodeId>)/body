@@ -1,34 +1,21 @@
 {
-  Set<SNodeId> descendantIds=SetSequence.fromSetWithValues(new HashSet<SNodeId>(),ListSequence.fromList(SNodeOperations.getDescendants(root,null,false,new String[]{})).select(new ISelector<SNode,SNodeId>(){
+  Set<SNodeId> descendantIds=SetSequence.fromSetWithValues(new HashSet<SNodeId>(),ListSequence.fromList(SNodeOperations.getDescendants(root,null,true,new String[]{})).select(new ISelector<SNode,SNodeId>(){
     public SNodeId select(    SNode n){
       return n.getSNodeId();
     }
   }
 ));
-  Map<SNode,SimpleTextElement> simpleTextElements=MapSequence.fromMap(new HashMap<SNode,SimpleTextElement>());
   SModel model=SNodeOperations.getModel(root);
-  for (final Wrappers._int i=new Wrappers._int(0); i.value < ListSequence.fromList(lineToId).count(); i.value++) {
+  for (int line=0; line < ListSequence.fromList(lineToId).count(); line++) {
     SNode node=null;
-    SNodeId id=ListSequence.fromList(lineToId).getElement(i.value);
+    SNodeId id=ListSequence.fromList(lineToId).getElement(line);
     if (id != null && SetSequence.fromSet(descendantIds).contains(id)) {
       node=model.getNodeById(id);
     }
     if (node == null) {
       continue;
     }
-    if (MapSequence.fromMap(simpleTextElements).containsKey(node)) {
-      continue;
-    }
-    final StringBuffer text=new StringBuffer();
-    Sequence.fromIterable(Sequence.fromArray(fileAnnotation.getAspects())).visitAll(new IVisitor<LineAnnotationAspect>(){
-      public void visit(      LineAnnotationAspect a){
-        text.append(" ").append(a.getValue(i.value));
-      }
-    }
-);
-    MapSequence.fromMap(simpleTextElements).put(node,new SimpleTextElement(text.substring(1),node));
+    MapSequence.fromMap(myNodeIdToFileLine).put(id,line);
   }
-  for (  SimpleTextElement e : Sequence.fromIterable(MapSequence.fromMap(simpleTextElements).values())) {
-    addEntry(e);
-  }
+  myFileAnnotation=fileAnnotation;
 }
