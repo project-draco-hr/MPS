@@ -1,2 +1,40 @@
 {
+  int index=name.lastIndexOf("$");
+  if (index == -1) {
+    return getRootClassifier(name);
+  }
+  if (AbstractClassPathItem.isAnonymous(name)) {
+    return null;
+  }
+  final Wrappers._boolean isStatic=new Wrappers._boolean(false);
+  boolean isPrivate=false;
+  String packPrefix=pack + ((pack.length() == 0 ? "" : "."));
+  String outerName=name.substring(0,index);
+  final Classifier outerClassifier=getAnyClassifier(outerName,pack);
+  if (outerClassifier == null) {
+    return null;
+  }
+  List<InnerClassNode> innerClasses=MapSequence.fromMap(myClassChildInfo).get(outerName);
+  if (innerClasses == null) {
+    LOG.error(outerName);
+    return null;
+  }
+  String classifierNameSlashed=(packPrefix + name).replaceAll("\\.","/");
+  for (  InnerClassNode node : innerClasses) {
+    if (eq_fw13fk_a0a0p0b(node.name,classifierNameSlashed)) {
+      isStatic.value=(node.access & Opcodes.ACC_STATIC) != 0;
+      isPrivate=(node.access & Opcodes.ACC_PRIVATE) != 0;
+      break;
+    }
+  }
+  if (isPrivate && SKIP_PRIVATE) {
+    return null;
+  }
+  return getClassifier(name,new _FunctionTypes._void_P1_E0<SNode>(){
+    public void invoke(    SNode n){
+      SPropertyOperations.set(SNodeOperations.cast(n,"jetbrains.mps.baseLanguage.structure.Classifier"),"nonStatic","" + !(isStatic.value));
+      outerClassifier.addStaticInnerClassifiers(((Classifier)((BaseConcept)SNodeOperations.getAdapter(n))));
+    }
+  }
+);
 }
