@@ -1,17 +1,16 @@
 {
-  List<DevKit> devkits=ModelAccess.instance().runReadAction(new Computable<List<DevKit>>(){
-    public List<DevKit> compute(){
-      return GlobalScope.getInstance().getVisibleDevkits();
+  final Wrappers._T<List<ModuleReference>> dkRefs=new Wrappers._T<List<ModuleReference>>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      List<DevKit> devkits=GlobalScope.getInstance().getVisibleDevkits();
+      dkRefs.value=ListSequence.fromList(devkits).select(new ISelector<DevKit,ModuleReference>(){
+        public ModuleReference select(        DevKit it){
+          return it.getModuleReference();
+        }
+      }
+).toListSequence();
     }
   }
 );
-  List<DevKit> devKit=CommonChoosers.showDialogModuleCollectionChooser(myOwner.getMainComponent(),"devkit",devkits,null);
-  if (devKit == null) {
-    return null;
-  }
-  List<ModuleReference> references=new ArrayList<ModuleReference>();
-  for (  DevKit dk : devKit) {
-    references.add(dk.getModuleReference());
-  }
-  return references;
+  return CommonChoosers.showDialogModuleCollectionChooser(myOwner.getMainComponent(),"devkit",dkRefs.value,null);
 }

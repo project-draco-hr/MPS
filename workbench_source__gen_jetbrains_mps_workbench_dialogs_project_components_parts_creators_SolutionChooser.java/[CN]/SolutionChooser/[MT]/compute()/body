@@ -1,17 +1,16 @@
 {
-  List<Solution> solutions=ModelAccess.instance().runReadAction(new Computable<List<Solution>>(){
-    public List<Solution> compute(){
-      return MPSModuleRepository.getInstance().getAllSolutions();
+  final Wrappers._T<List<ModuleReference>> solRefs=new Wrappers._T<List<ModuleReference>>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      List<Solution> solutions=MPSModuleRepository.getInstance().getAllSolutions();
+      solRefs.value=ListSequence.fromList(solutions).select(new ISelector<Solution,ModuleReference>(){
+        public ModuleReference select(        Solution it){
+          return it.getModuleReference();
+        }
+      }
+).toListSequence();
     }
   }
 );
-  List<Solution> solution=CommonChoosers.showDialogModuleCollectionChooser(myOwner.getMainComponent(),"solution",solutions,null);
-  if (solution == null) {
-    return null;
-  }
-  List<ModuleReference> references=new ArrayList<ModuleReference>();
-  for (  Solution s : solution) {
-    references.add(s.getModuleReference());
-  }
-  return references;
+  return CommonChoosers.showDialogModuleCollectionChooser(myOwner.getMainComponent(),"solution",solRefs.value,null);
 }

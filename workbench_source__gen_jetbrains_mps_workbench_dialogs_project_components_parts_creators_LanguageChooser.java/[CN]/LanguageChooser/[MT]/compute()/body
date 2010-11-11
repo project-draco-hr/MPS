@@ -1,17 +1,16 @@
 {
-  List<Language> languages=ModelAccess.instance().runReadAction(new Computable<List<Language>>(){
-    public List<Language> compute(){
-      return GlobalScope.getInstance().getVisibleLanguages();
+  final Wrappers._T<List<ModuleReference>> langRefs=new Wrappers._T<List<ModuleReference>>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      List<Language> langs=GlobalScope.getInstance().getVisibleLanguages();
+      langRefs.value=ListSequence.fromList(langs).select(new ISelector<Language,ModuleReference>(){
+        public ModuleReference select(        Language it){
+          return it.getModuleReference();
+        }
+      }
+).toListSequence();
     }
   }
 );
-  List<Language> language=CommonChoosers.showDialogModuleCollectionChooser(myOwner.getMainComponent(),"language",languages,null);
-  if (language == null) {
-    return null;
-  }
-  List<ModuleReference> references=new ArrayList<ModuleReference>();
-  for (  Language l : language) {
-    references.add(l.getModuleReference());
-  }
-  return references;
+  return CommonChoosers.showDialogModuleCollectionChooser(myOwner.getMainComponent(),"language",langRefs.value,null);
 }
