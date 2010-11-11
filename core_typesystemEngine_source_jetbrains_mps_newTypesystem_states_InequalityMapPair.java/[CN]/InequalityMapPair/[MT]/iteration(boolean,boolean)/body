@@ -3,24 +3,37 @@
   SubTyping subTyping=new SubTyping(myState);
   boolean stateChanged=false;
   for (  SNode node : new HashSet<SNode>(map.keySet())) {
-    Set<SNode> concreteTypes=getConcrete(map.get(node).keySet(),shallow);
+    Map<SNode,EquationInfo> otherMap=map.get(node);
+    if (otherMap == null) {
+      continue;
+    }
+    Set<SNode> concreteTypes=getConcrete(otherMap.keySet(),shallow);
     if (concreteTypes == null || concreteTypes.isEmpty()) {
       continue;
     }
     if (TypesUtil.isVariable(node)) {
       SNode type=sub ? subTyping.createMeet(concreteTypes) : subTyping.createLCS(concreteTypes);
+      for (      SNode concreteType : concreteTypes) {
+        EquationInfo info=map.get(node).get(concreteType);
+        if (sub) {
+          removeAndTrack(node,concreteType);
+        }
+ else {
+          removeAndTrack(concreteType,node);
+        }
+      }
       myState.addEquation(node,type,null);
     }
  else     if (myState.isConcrete(node,shallow)) {
       for (      SNode concreteType : concreteTypes) {
         EquationInfo info=map.get(node).get(concreteType);
         if (sub) {
-          myState.addInequality(node,concreteType,isWeak,checkOnly,info);
-          remove(node,concreteType);
+          removeAndTrack(node,concreteType);
+          myState.getInequalities().addInequality(node,concreteType,isWeak,checkOnly,info,false);
         }
  else {
-          myState.addInequality(concreteType,node,isWeak,checkOnly,info);
-          remove(concreteType,node);
+          removeAndTrack(concreteType,node);
+          myState.getInequalities().addInequality(concreteType,node,isWeak,checkOnly,info,false);
         }
       }
     }

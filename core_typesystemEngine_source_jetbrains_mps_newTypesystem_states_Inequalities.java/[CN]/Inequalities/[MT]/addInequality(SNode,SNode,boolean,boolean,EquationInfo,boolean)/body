@@ -4,7 +4,7 @@
   if (subType == null || superType == null || subType == superType) {
     return;
   }
-  if (!myState.isConcrete(subType) || TypesUtil.isVariable(superType)) {
+  if (!myState.isConcrete(subType) && solveOnlyConcrete || TypesUtil.isVariable(superType)) {
     addSubTyping(subType,superType,isWeak,check,info);
     return;
   }
@@ -12,16 +12,21 @@
   for (  Pair<InequationReplacementRule_Runtime,IsApplicable2Status> inequalityReplacementRule : typeChecker.getRulesManager().getReplacementRules(subType,superType)) {
     InequationReplacementRule_Runtime rule=inequalityReplacementRule.o1;
     IsApplicable2Status status=inequalityReplacementRule.o2;
+    myState.addDifference(new StringDifference(subType + " is subtype of " + superType+ " by replacement rule"),true);
     ((AbstractInequationReplacementRule_Runtime)rule).processInequation(subType,superType,info,myState.getTypeCheckingContext(),status);
-    myState.addDifference(new StringDifference(subType + " is subtype of " + superType+ " by replacement rule"),false);
+    myState.popDifference();
     return;
   }
   subType=myState.getEquations().expandNode(subType);
   superType=myState.getEquations().expandNode(superType);
   SubTyping subTyping=myState.getTypeCheckingContext().getSubTyping();
+  StringDifference difference=new StringDifference(subType + " is subtype of " + superType);
+  myState.addDifference(difference,true);
   if (subTyping.isSubType(subType,superType,info,isWeak,true)) {
-    myState.addDifference(new StringDifference(subType + " is subtype of " + superType),false);
-    return;
+    myState.popDifference();
   }
-  myState.getNodeMaps().reportSubTypeError(subType,superType,info,isWeak);
+ else {
+    myState.removeLastDifference(difference);
+    myState.getNodeMaps().reportSubTypeError(subType,superType,info,isWeak);
+  }
 }
