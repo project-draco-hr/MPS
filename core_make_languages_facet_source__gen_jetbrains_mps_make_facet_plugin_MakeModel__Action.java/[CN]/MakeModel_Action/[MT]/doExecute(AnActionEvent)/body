@@ -19,7 +19,7 @@
       }
     }
 ;
-    IScript scr=scb.withFacets(new IFacet.Name("Generator"),new IFacet.Name("TextGen"),new IFacet.Name("JavaCompilator"),new IFacet.Name("Make")).withTarget(new ITarget.Name("make")).withInit(new _FunctionTypes._void_P1_E0<IParametersPool>(){
+    final IScript scr=scb.withFacets(new IFacet.Name("Generator"),new IFacet.Name("TextGen"),new IFacet.Name("JavaCompilator"),new IFacet.Name("Make")).withTarget(new ITarget.Name("make")).withInit(new _FunctionTypes._void_P1_E0<IParametersPool>(){
       public void invoke(      IParametersPool pool){
         Tuples._3<Project,IOperationContext,Iterable<SModelDescriptor>> vars=(Tuples._3<Project,IOperationContext,Iterable<SModelDescriptor>>)pool.parameters(new ITarget.Name("Parameters"),Object.class);
         vars._0(MakeModel_Action.this.context.getProject());
@@ -39,8 +39,30 @@
       }
     }
 ).toScript();
-    IResult res;
-    res=scr.execute();
+    if (!(scr.isValid())) {
+      return;
+    }
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        SModelRepository.getInstance().saveAll();
+      }
+    }
+);
+    final Wrappers._T<IResult> res=new Wrappers._T<IResult>();
+    ModelCheckerTool_Tool mct=MakeModel_Action.this.context.getProject().getComponent(ProjectPluginManager.class).getTool(ModelCheckerTool_Tool.class);
+    if (mct.checkModelsBeforeGenerationIfNeeded(MakeModel_Action.this.context,MakeModel_Action.this.models,new Runnable(){
+      public void run(){
+        res.value=scr.execute();
+      }
+    }
+)) {
+      new _FunctionTypes._return_P0_E0<IResult>(){
+        public IResult invoke(){
+          return res.value=scr.execute();
+        }
+      }
+.invoke();
+    }
   }
  catch (  Throwable t) {
     LOG.error("User's action execute method failed. Action:" + "MakeModel",t);
