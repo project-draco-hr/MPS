@@ -1,11 +1,19 @@
 {
   try {
     String pack=myModel.getLongName();
-    for (    String name : myCpItem.getAvailableClasses(pack)) {
-      if (name.contains("$")) {
+    ClassifierLoader loader=new ClassifierLoader(myModel,myCpItem);
+    for (    String name : myCpItem.getRootClasses(pack)) {
+      loader.getRootClassifier(name);
+    }
+    for (    Classifier c : loader.getLoadedClassifiers()) {
+      SNode node=c.getNode();
+      String name=SPropertyOperations.getString(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier"),"nestedName").replace(".","$");
+      byte[] code=myCpItem.getClass((pack.length() == 0 ? name : pack + "." + name));
+      if (code == null) {
         continue;
       }
-      getRootClassifier(name);
+      ClassReader reader=new ClassReader(code);
+      updateClassifier(c,reader);
     }
   }
  catch (  Exception e) {
