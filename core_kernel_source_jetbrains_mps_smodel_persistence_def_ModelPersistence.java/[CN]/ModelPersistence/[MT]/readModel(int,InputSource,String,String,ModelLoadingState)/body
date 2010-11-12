@@ -1,35 +1,24 @@
 {
-  if (version > PersistenceSettings.MAX_VERSION) {
-    SModel model=handleNullReaderForPersistence(name);
-    return new ModelLoadResult(model,ModelLoadingState.NOT_LOADED);
-  }
- else   if (version > 5) {
-    try {
-      SAXParser parser=JDOMUtil.createSAXParser();
-      DefaultMPSHandler handler=getModelPersistence(version).getModelReaderHandler();
+  if (0 <= version && version <= PersistenceSettings.MAX_VERSION) {
+    DefaultMPSHandler handler=getModelPersistence(version).getModelReaderHandler();
+    if (handler != null) {
       boolean partial=handler.setPartialLoading(state);
       try {
-        parser.parse(source,(DefaultHandler)handler);
+        JDOMUtil.createSAXParser().parse(source,(DefaultHandler)handler);
       }
- catch (      SAXException e) {
+ catch (      BreakParseSAXException e) {
       }
-      ModelLoadingState loadingState=partial ? state : ModelLoadingState.FULLY_LOADED;
-      return new ModelLoadResult(handler.getModel(),loadingState);
+catch (      Throwable t) {
+        LOG.error(t);
+        return new ModelLoadResult(new StubModel(new SModelReference(name,stereotype)),ModelLoadingState.NOT_LOADED);
+      }
+      return new ModelLoadResult(handler.getModel(),partial ? state : ModelLoadingState.FULLY_LOADED);
     }
- catch (    Throwable t) {
-      LOG.error(t);
-      StubModel model=new StubModel(new SModelReference(name,stereotype));
-      return new ModelLoadResult(model,ModelLoadingState.NOT_LOADED);
+    IModelReader reader=getModelPersistence(version).getModelReader();
+    if (reader != null) {
+      Document document=loadModelDocument(source);
+      return new ModelLoadResult(reader.readModel(document,name,stereotype),ModelLoadingState.FULLY_LOADED);
     }
   }
- else {
-    Document document=loadModelDocument(source);
-    IModelReader modelReader=getModelPersistence(version).getModelReader();
-    if (modelReader == null) {
-      SModel model=handleNullReaderForPersistence(name);
-      return new ModelLoadResult(model,ModelLoadingState.NOT_LOADED);
-    }
-    SModel model=modelReader.readModel(document,name,stereotype);
-    return new ModelLoadResult(model,ModelLoadingState.FULLY_LOADED);
-  }
+  return handleNullReaderForPersistence(name);
 }
