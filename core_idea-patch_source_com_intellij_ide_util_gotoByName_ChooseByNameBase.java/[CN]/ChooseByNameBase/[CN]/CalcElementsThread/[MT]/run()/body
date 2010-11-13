@@ -1,0 +1,46 @@
+{
+  showCard(SEARCHING_CARD,200);
+  final Set<Object> elements=new LinkedHashSet<Object>();
+  Runnable action=new Runnable(){
+    public void run(){
+      try {
+        ensureNamesLoaded(myCheckboxState);
+        addElementsByPattern(elements,myPattern);
+        for (        Object elem : elements) {
+          if (myCancelled) {
+            break;
+          }
+          if (elem instanceof PsiElement) {
+            final PsiElement psiElement=(PsiElement)elem;
+            psiElement.isWritable();
+          }
+        }
+      }
+ catch (      ProcessCanceledException e) {
+      }
+    }
+  }
+;
+  ApplicationManager.getApplication().runReadAction(action);
+  if (myCancelled) {
+    myShowCardAlarm.cancelAllRequests();
+    return;
+  }
+  final String cardToShow;
+  if (elements.isEmpty() && !myCheckboxState) {
+    myCheckboxState=true;
+    ApplicationManager.getApplication().runReadAction(action);
+    cardToShow=elements.isEmpty() ? NOT_FOUND_CARD : NOT_FOUND_IN_PROJECT_CARD;
+  }
+ else {
+    cardToShow=elements.isEmpty() ? NOT_FOUND_CARD : CHECK_BOX_CARD;
+  }
+  showCard(cardToShow,0);
+  myElements=elements;
+  ApplicationManager.getApplication().invokeLater(new Runnable(){
+    public void run(){
+      myCallback.run(myElements);
+    }
+  }
+,myModalityState);
+}
