@@ -1,43 +1,21 @@
 {
 synchronized (myBreakpoints) {
-    Set<SNodePointer> roots=new HashSet<SNodePointer>(myRootsToBreakpointsMap.keySet());
-    Map<SNodePointer,Set<FutureBreakpoint>> futureBreakpointsMap=new HashMap<SNodePointer,Set<FutureBreakpoint>>();
-    for (    FutureBreakpoint futureBreakpoint : myFutureBreakpoints) {
-      SNodePointer rootPointer=futureBreakpoint.getRootPointer();
-      roots.add(rootPointer);
-      Set<FutureBreakpoint> futures=futureBreakpointsMap.get(rootPointer);
-      if (futures == null) {
-        futures=new HashSet<FutureBreakpoint>();
-        futureBreakpointsMap.put(rootPointer,futures);
+    List<BreakpointState> states=new ArrayList<BreakpointState>();
+    for (    IBreakpoint breakpoint : myBreakpoints) {
+      ILanguageBreakpointsProvider provider=BreakpointProvidersManager.getInstance().getProvider(breakpoint.getKind());
+      if (provider == null) {
+        continue;
       }
-      futures.add(futureBreakpoint);
+      BreakpointState state=provider.saveToState(breakpoint);
+      if (state != null) {
+        states.add(state);
+      }
     }
     MyState state=new MyState();
-    state.myRootBreakpointInfos=new MyRootBreakpointInfo[roots.size()];
+    state.myBreakpointStates=new BreakpointState[states.size()];
     int i=0;
-    for (    SNodePointer rootPointer : roots) {
-      MyRootBreakpointInfo rootBreakpointInfo=new MyRootBreakpointInfo(rootPointer.getModelReference().toString(),rootPointer.getNodeId().toString());
-      state.myRootBreakpointInfos[i]=rootBreakpointInfo;
-      Set<AbstractMPSBreakpoint> mpsBreakpointSet=myRootsToBreakpointsMap.get(rootPointer);
-      Set<FutureBreakpoint> futureBreakpoints=futureBreakpointsMap.get(rootPointer);
-      if (mpsBreakpointSet != null || futureBreakpoints != null) {
-        int size1=mpsBreakpointSet == null ? 0 : mpsBreakpointSet.size();
-        int size2=futureBreakpoints == null ? 0 : futureBreakpoints.size();
-        int j=0;
-        rootBreakpointInfo.myBreakpointInfos=new BreakpointInfo[size1 + size2];
-        if (mpsBreakpointSet != null) {
-          for (          AbstractMPSBreakpoint mpsBreakpoint : mpsBreakpointSet) {
-            rootBreakpointInfo.myBreakpointInfos[j]=mpsBreakpoint.createBreakpointInfo();
-            j++;
-          }
-        }
-        if (futureBreakpoints != null) {
-          for (          FutureBreakpoint futureBreakpoint : futureBreakpoints) {
-            rootBreakpointInfo.myBreakpointInfos[j]=futureBreakpoint.getBreakpointInfo();
-            j++;
-          }
-        }
-      }
+    for (    BreakpointState s : states) {
+      state.myBreakpointStates[i]=s;
       i++;
     }
     return state;

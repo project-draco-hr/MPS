@@ -1,24 +1,13 @@
 {
 synchronized (myBreakpoints) {
     clear();
-    for (    MyRootBreakpointInfo rootBreakpointInfo : state.myRootBreakpointInfos) {
-      SNodePointer rootPointer=new SNodePointer(rootBreakpointInfo.myModelReference,rootBreakpointInfo.myNodeId);
-      Set<AbstractMPSBreakpoint> mpsBreakpointSet=myRootsToBreakpointsMap.get(rootPointer);
-      if (mpsBreakpointSet == null) {
-        mpsBreakpointSet=new HashSet<AbstractMPSBreakpoint>();
-        myRootsToBreakpointsMap.put(rootPointer,mpsBreakpointSet);
+    for (    BreakpointState s : state.myBreakpointStates) {
+      ILanguageBreakpointsProvider provider=BreakpointProvidersManager.getInstance().getProvider(s.myKind);
+      if (provider == null) {
+        continue;
       }
-      for (      BreakpointInfo breakpointInfo : rootBreakpointInfo.myBreakpointInfos) {
-        FutureBreakpoint futureBreakpoint=new FutureBreakpoint(breakpointInfo,rootPointer);
-        AbstractMPSBreakpoint breakpoint=futureBreakpoint.createBreakpoint(myProject);
-        if (breakpoint != null) {
-          mpsBreakpointSet.add(breakpoint);
-          myBreakpoints.add(breakpoint);
-        }
- else {
-          myFutureBreakpoints.add(futureBreakpoint);
-        }
-      }
+      IBreakpoint breakpoint=provider.loadFromState(s,myProject);
+      myBreakpoints.add(breakpoint);
     }
   }
 }
