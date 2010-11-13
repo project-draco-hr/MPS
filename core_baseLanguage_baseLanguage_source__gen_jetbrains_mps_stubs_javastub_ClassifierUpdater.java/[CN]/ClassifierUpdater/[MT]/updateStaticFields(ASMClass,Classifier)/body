@@ -1,0 +1,33 @@
+{
+  SModel model=cls.getModel();
+  for (  ASMField field : ac.getDeclaredFields()) {
+    if (field.isPrivate() && ASMModelLoader.SKIP_PRIVATE) {
+      continue;
+    }
+    if (!(field.isStatic())) {
+      continue;
+    }
+    if (field.isCompilerGenerated()) {
+      continue;
+    }
+    if (field.isEnumConstant()) {
+      EnumClass enumClass=(EnumClass)cls;
+      EnumConstantDeclaration enumConstantDeclaration=EnumConstantDeclaration.newInstance(model);
+      enumConstantDeclaration.getNode().setId(ASMNodeId.createId(ac,field));
+      enumConstantDeclaration.setName(field.getName());
+      enumClass.addEnumConstant(enumConstantDeclaration);
+    }
+ else {
+      StaticFieldDeclaration decl=StaticFieldDeclaration.newInstance(model);
+      decl.getNode().setId(ASMNodeId.createId(ac,field));
+      decl.setVisibility(createVisibility(field,model));
+      decl.setName(field.getName());
+      decl.setType(getTypeByASMType(field.getGenericType(),null,cls,model));
+      decl.setIsDeprecated(field.isDeprecated());
+      for (      ASMAnnotation annotation : field.getAnnotations()) {
+        decl.addAnnotation(createAnnotation(annotation,model));
+      }
+      cls.addStaticField(decl);
+    }
+  }
+}
