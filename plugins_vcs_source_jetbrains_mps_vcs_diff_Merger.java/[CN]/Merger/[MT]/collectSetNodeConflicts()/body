@@ -1,2 +1,30 @@
 {
+  Map<Pair<SNodeId,String>,List<SetNodeChange>> changes=new HashMap<Pair<SNodeId,String>,List<SetNodeChange>>();
+  List<SetNodeChange> sets=getChanges(SetNodeChange.class);
+  for (  SetNodeChange spc : sets) {
+    if (isOneOrZeroCardinality(getNodeByIdAndChange(spc,spc.getNodeParent()),spc.getNodeRole())) {
+      if (changes.get(new Pair<SNodeId,String>(spc.getNodeParent(),spc.getNodeRole())) == null) {
+        changes.put(new Pair<SNodeId,String>(spc.getNodeParent(),spc.getNodeRole()),new ArrayList<SetNodeChange>());
+      }
+      changes.get(new Pair<SNodeId,String>(spc.getNodeParent(),spc.getNodeRole())).add(spc);
+    }
+  }
+  for (  MoveNodeChange mnc : getChanges(MoveNodeChange.class)) {
+    String newRole=mnc.getNewRole();
+    for (    SNode newParent : CollectionUtil.set(getMine(mySourceModels).getNodeById(mnc.getNewParent()),getMine(mySourceModels).getNodeById(mnc.getNewParent()))) {
+      while (newParent != null) {
+        if (changes.containsKey(new Pair(newParent.getId(),newRole))) {
+          List<SetNodeChange> cs=new ArrayList<SetNodeChange>(changes.get(new Pair(newParent.getId(),newRole)));
+          myConflicts.add(new Conflict(cs.get(0),mnc));
+          myConflictingChanges.add(cs.get(0));
+          myConflictingChanges.add(mnc);
+        }
+        newRole=newParent.getRole_();
+        newParent=newParent.getParent();
+      }
+    }
+  }
+  for (  Pair<SNodeId,String> p : changes.keySet()) {
+    handlePossibleConflictOrSymmetry(changes.get(p));
+  }
 }
