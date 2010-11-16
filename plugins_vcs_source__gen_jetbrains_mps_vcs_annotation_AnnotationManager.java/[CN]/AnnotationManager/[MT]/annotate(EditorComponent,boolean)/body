@@ -1,0 +1,45 @@
+{
+  if (MapSequence.fromMap(myEditorToColumn).containsKey(editorComponent)) {
+    if (!(dryRun)) {
+      editorComponent.getLeftEditorHighlighter().removeTextColumn(MapSequence.fromMap(myEditorToColumn).get(editorComponent));
+      MapSequence.fromMap(myEditorToColumn).removeKey(editorComponent);
+    }
+    return true;
+  }
+  SNode root=editorComponent.getEditedNode();
+  SModel model=root.getModel();
+  SModelDescriptor modelDescriptor=model.getModelDescriptor();
+  if (!((modelDescriptor instanceof EditableSModelDescriptor))) {
+    return false;
+  }
+  IFile modelFile=((EditableSModelDescriptor)modelDescriptor).getModelFile();
+  if (modelFile == null) {
+    return false;
+  }
+  final VirtualFile file=VirtualFileUtils.getVirtualFile(modelFile);
+  final AbstractVcs vcs=myProjectLevelVcsManager.getVcsFor(file);
+  if (vcs == null) {
+    return false;
+  }
+  final AnnotationProvider annotationProvider=vcs.getAnnotationProvider();
+  if (annotationProvider == null) {
+    return false;
+  }
+  if (dryRun) {
+    return true;
+  }
+  FileAnnotation fileAnnotation;
+  try {
+    fileAnnotation=annotationProvider.annotate(file);
+  }
+ catch (  VcsException ex) {
+    if (log.isErrorEnabled()) {
+      log.error("",ex);
+    }
+    return false;
+  }
+  List<SNodeId> lineToId=LineToIdMapper.getLineNumberToNodeIdMap(fileAnnotation.getAnnotatedContent());
+  MapSequence.fromMap(myEditorToColumn).put(editorComponent,new AnnotationColumn(root,fileAnnotation,lineToId,vcs,file));
+  editorComponent.getLeftEditorHighlighter().addTextColumn(MapSequence.fromMap(myEditorToColumn).get(editorComponent));
+  return true;
+}
