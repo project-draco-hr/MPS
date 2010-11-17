@@ -25,6 +25,36 @@
   }
 ;
   group.add(myShowNodeAction);
+  AnAction addBreakpointAction=new AnAction("Add","Add Breakpoint",jetbrains.mps.workbench.dialogs.project.components.parts.actions.icons.Icons.ADD){
+    @Override public void actionPerformed(    AnActionEvent e){
+      Set<IBreakpointKind> allKinds=BreakpointProvidersManager.getInstance().getAllKinds();
+      List<IBreakpointKind> kindsToShow=new ArrayList<IBreakpointKind>();
+      List<String> kindNames=new ArrayList<String>();
+      for (      IBreakpointKind kind : allKinds) {
+        ILanguageBreakpointsProvider provider=BreakpointProvidersManager.getInstance().getProvider(kind);
+        if (provider == null)         continue;
+        if (provider.canCreateFromUi(kind)) {
+          kindsToShow.add(kind);
+          kindNames.add(kind.getPresentation());
+        }
+      }
+      int index=Messages.showChooseDialog(myMainPanel,"Select the kind of breakpoint to add.","Add Breakpoint",kindNames.toArray(new String[kindNames.size()]),kindNames.get(0),(Icon)null);
+      if (index >= 0) {
+        ILanguageBreakpointsProvider provider=BreakpointProvidersManager.getInstance().getProvider(kindsToShow.get(index));
+        if (provider == null) {
+          Messages.showErrorDialog(myMainPanel,"Can not create " + kindNames.get(index) + ". Provider was not found.");
+        }
+ else {
+          IBreakpoint breakpoint=provider.createFromUi(kindsToShow.get(index),myContext.getProject());
+          if (breakpoint != null) {
+            myBreakpointsManager.addBreakpoint(breakpoint);
+          }
+        }
+      }
+    }
+  }
+;
+  group.add(addBreakpointAction);
   myDeleteBreakpointAction=new AnAction("Delete","Delete Breakpoint",jetbrains.mps.workbench.dialogs.project.components.parts.actions.icons.Icons.REMOVE){
     @Override public void actionPerformed(    AnActionEvent e){
       final IBreakpoint breakpoint=getBreakpoint(e);
