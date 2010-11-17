@@ -1,8 +1,11 @@
 {
   if (0 <= version && version <= PersistenceSettings.MAX_VERSION) {
-    DefaultMPSHandler handler=getModelPersistence(version).getModelReaderHandler();
+    DefaultMPSHandler handler=getModelPersistence(version).getModelReaderHandler(state);
+    if (handler == null && state == ModelLoadingState.ROOTS_LOADED) {
+      state=ModelLoadingState.FULLY_LOADED;
+      handler=getModelPersistence(version).getModelReaderHandler(state);
+    }
     if (handler != null) {
-      boolean partial=handler.setPartialLoading(state);
       try {
         JDOMUtil.createSAXParser().parse(source,(DefaultHandler)handler);
       }
@@ -12,7 +15,7 @@ catch (      Throwable t) {
         LOG.error(t);
         return new ModelLoadResult(new StubModel(new SModelReference(name,stereotype)),ModelLoadingState.NOT_LOADED);
       }
-      return new ModelLoadResult(handler.getModel(),partial ? state : ModelLoadingState.FULLY_LOADED);
+      return new ModelLoadResult(handler.getModel(),state);
     }
     IModelReader reader=getModelPersistence(version).getModelReader();
     if (reader != null) {
