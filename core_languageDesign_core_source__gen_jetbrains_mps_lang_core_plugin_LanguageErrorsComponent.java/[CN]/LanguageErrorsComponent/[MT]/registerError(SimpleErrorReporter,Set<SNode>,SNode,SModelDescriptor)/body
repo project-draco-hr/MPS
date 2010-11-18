@@ -1,0 +1,68 @@
+{
+  SNode errorNode=reporter.getSNode();
+  Set<IErrorReporter> reporters=MapSequence.fromMap(myNodesToErrors).get(errorNode);
+  if (reporters == null) {
+    reporters=SetSequence.fromSet(new HashSet<IErrorReporter>());
+    MapSequence.fromMap(myNodesToErrors).put(errorNode,reporters);
+  }
+  SetSequence.fromSet(reporters).addElement(reporter);
+  addModelListener(SNodeOperations.getModel(ruleNode).getModelDescriptor());
+  addModelListener(modelDescriptor);
+  for (  SNode additional : additionalNodes) {
+    addModelListener(SNodeOperations.getModel(additional).getModelDescriptor());
+  }
+  Set<SNode> dependencies=SetSequence.fromSetWithValues(new HashSet<SNode>(),additionalNodes);
+  SetSequence.fromSet(dependencies).addElement(reporter.getSNode());
+  for (  SNode dependency : dependencies) {
+    Set<SNode> errorNodes=MapSequence.fromMap(myAdditionalToErrorNodes).get(dependency);
+    if (errorNodes == null) {
+      errorNodes=SetSequence.fromSet(new HashSet<SNode>());
+      MapSequence.fromMap(myAdditionalToErrorNodes).put(dependency,errorNodes);
+    }
+    SetSequence.fromSet(errorNodes).addElement(errorNode);
+  }
+  Set<SNode> additional=MapSequence.fromMap(myErrorNodesToAdditional).get(errorNode);
+  if (additional == null) {
+    additional=SetSequence.fromSet(new HashSet<SNode>());
+    MapSequence.fromMap(myErrorNodesToAdditional).put(errorNode,additional);
+  }
+  SetSequence.fromSet(additional).addSequence(SetSequence.fromSet(dependencies));
+  SModelDescriptor descriptor;
+  if (ruleNode == null) {
+    descriptor=modelDescriptor;
+  }
+ else {
+    descriptor=SNodeOperations.getModel(ruleNode).getModelDescriptor();
+  }
+  SNode root=SNodeOperations.getContainingRoot(ruleNode);
+  if (root == null) {
+    if (descriptor != null) {
+      Set<SNode> errorNodes=MapSequence.fromMap(myAspectModelsToErrorNodes).get(descriptor);
+      if (errorNodes == null) {
+        errorNodes=SetSequence.fromSet(new HashSet<SNode>());
+        MapSequence.fromMap(myAspectModelsToErrorNodes).put(descriptor,errorNodes);
+      }
+      SetSequence.fromSet(errorNodes).addElement(errorNode);
+      Set<SModelDescriptor> aspects=MapSequence.fromMap(myErrorNodesToAspects).get(errorNode);
+      if (aspects == null) {
+        aspects=SetSequence.fromSet(new HashSet<SModelDescriptor>());
+        MapSequence.fromMap(myErrorNodesToAspects).put(errorNode,aspects);
+      }
+      SetSequence.fromSet(aspects).addElement(descriptor);
+    }
+  }
+ else {
+    Set<SNode> errorNodes=MapSequence.fromMap(myRuleRootsToErrorNodes).get(root);
+    if (errorNodes == null) {
+      errorNodes=SetSequence.fromSet(new HashSet<SNode>());
+      MapSequence.fromMap(myRuleRootsToErrorNodes).put(root,errorNodes);
+    }
+    SetSequence.fromSet(errorNodes).addElement(errorNode);
+    Set<SNode> rulesRoots=MapSequence.fromMap(myErrorNodesToRules).get(errorNode);
+    if (rulesRoots == null) {
+      rulesRoots=SetSequence.fromSet(new HashSet<SNode>());
+      MapSequence.fromMap(myErrorNodesToRules).put(errorNode,rulesRoots);
+    }
+    SetSequence.fromSet(rulesRoots).addElement(root);
+  }
+}
