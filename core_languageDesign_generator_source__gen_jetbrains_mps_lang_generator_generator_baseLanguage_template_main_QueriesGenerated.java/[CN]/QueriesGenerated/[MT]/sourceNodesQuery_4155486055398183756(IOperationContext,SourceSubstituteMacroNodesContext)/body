@@ -4,7 +4,7 @@
     if (SLinkOperations.getTarget(_context.getNode(),AttributesRolesUtil.childRoleFromLinkAttributeRole("referenceMacro",reference.getRole()),true) != null) {
       continue;
     }
-    SNode targetNode=reference.getTargetNode();
+    SNode targetNode=reference.getTargetNodeSilently();
     if (targetNode == null) {
       _context.showErrorMessage(_context.getNode(),"cannot resolve reference in template model; role: " + reference.getRole());
       continue;
@@ -13,26 +13,35 @@
       SNode current=_context.getNode();
       int counter=0;
       while (current != null) {
-        if (eq_x583g4_a0a0c0d0b0oq(current,targetNode)) {
+        if (eq_x583g4_a0a0c0d0b0tq(current,targetNode)) {
           break;
         }
         current=SNodeOperations.getParent(current);
         counter++;
       }
+      SNode referenceNode=SModelOperations.createNewNode(_context.getInputModel(),"jetbrains.mps.lang.core.structure.BaseConcept",null);
+      referenceNode.setProperty("role",reference.getRole());
+      referenceNode.setReferent("originalNode",_context.getNode(),false);
       if (current != null) {
-        SNode referenceNode=SModelOperations.createNewNode(_context.getInputModel(),"jetbrains.mps.lang.core.structure.BaseConcept",null);
         referenceNode.setProperty("kind","parentIndex");
-        referenceNode.setProperty("role",reference.getRole());
         referenceNode.setProperty("parentIndex",Integer.toString(counter));
-        ListSequence.fromList(result).addElement(referenceNode);
       }
  else {
-        SNode referenceNode=SModelOperations.createNewNode(_context.getInputModel(),"jetbrains.mps.lang.core.structure.BaseConcept",null);
         referenceNode.setProperty("kind","internal");
-        referenceNode.setProperty("role",reference.getRole());
         referenceNode.setProperty("templateNodeId",GeneratorUtil.getTemplateNodeId(_context.getOriginalCopiedInputNode(targetNode)));
-        ListSequence.fromList(result).addElement(referenceNode);
       }
+      String resolveInfo=null;
+      if ((targetNode != null)) {
+        resolveInfo=targetNode.getResolveInfo();
+      }
+      if (resolveInfo == null) {
+        resolveInfo=reference.getResolveInfo();
+      }
+      if (resolveInfo == null) {
+        resolveInfo="";
+      }
+      referenceNode.setProperty("resolveInfo",resolveInfo);
+      ListSequence.fromList(result).addElement(referenceNode);
     }
  else {
       SNode referenceNode=SModelOperations.createNewNode(_context.getInputModel(),"jetbrains.mps.lang.core.structure.BaseConcept",null);
