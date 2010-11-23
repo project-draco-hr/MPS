@@ -31,20 +31,17 @@
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
       SModel model=component.getEditedNode().getModel();
-      for (      IMapping<SNodeId,Integer> nodeIdToFileLine : MapSequence.fromMap(myNodeIdToFileLine)) {
-        final SNode node=model.getNodeById(nodeIdToFileLine.key());
-        int fileLine=nodeIdToFileLine.value();
-        EditorCell cell=ListSequence.fromList(SNodeOperations.getAncestors(node,null,true)).select(new ISelector<SNode,EditorCell>(){
-          public EditorCell select(          SNode n){
-            return component.findNodeCell(node);
-          }
+      SNode editedNode=component.getEditedNode();
+      for (int fileLine=0; fileLine < ListSequence.fromList(myFileLineToContent).count(); fileLine++) {
+        LineContent content=ListSequence.fromList(myFileLineToContent).getElement(fileLine);
+        if (content == null) {
+          continue;
         }
-).findFirst(new IWhereFilter<EditorCell>(){
-          public boolean accept(          EditorCell c){
-            return c != null;
-          }
+        SNode node=model.getNodeById(content.getNodeId());
+        if (!(node.isDescendantOf(editedNode,true))) {
+          continue;
         }
-);
+        EditorCell cell=findCellForNodeAndContent(component,node,content);
         if (cell == null) {
           continue;
         }
