@@ -6,7 +6,7 @@
     }
     return true;
   }
-  SNode root=editorComponent.getEditedNode();
+  final SNode root=editorComponent.getEditedNode();
   SModel model=root.getModel();
   SModelDescriptor modelDescriptor=model.getModelDescriptor();
   if (!((modelDescriptor instanceof EditableSModelDescriptor))) {
@@ -28,18 +28,37 @@
   if (dryRun) {
     return true;
   }
-  FileAnnotation fileAnnotation;
-  try {
-    fileAnnotation=annotationProvider.annotate(file);
-  }
- catch (  VcsException ex) {
-    if (log.isErrorEnabled()) {
-      log.error("",ex);
+  Task.Backgroundable annotateTask=new Task.Backgroundable(myProject,"Retrieving annotations",true,BackgroundFromStartOption.getInstance()){
+    private FileAnnotation myFileAnnotation;
+    private VcsException myException;
+    public void run(    @NotNull ProgressIndicator indicator){
+      try {
+        myFileAnnotation=annotationProvider.annotate(file);
+      }
+ catch (      VcsException e) {
+        myException=e;
+      }
     }
-    return false;
+    @Override public void onCancel(){
+      onSuccess();
+    }
+    @Override public void onSuccess(){
+      if (myException != null) {
+        AbstractVcsHelper.getInstance(myProject).showErrors(Arrays.asList(myException),"Exception on retrieving annotation");
+      }
+      if (myFileAnnotation != null) {
+        final List<LineContent> lineToContent=ModelPersistence.getLineToContentMap(myFileAnnotation.getAnnotatedContent());
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            MapSequence.fromMap(myEditorToColumn).put(editorComponent,new AnnotationColumn(root,myFileAnnotation,lineToContent,vcs,file));
+            editorComponent.getLeftEditorHighlighter().addTextColumn(MapSequence.fromMap(myEditorToColumn).get(editorComponent));
+          }
+        }
+);
+      }
+    }
   }
-  List<SNodeId> lineToId=LineToIdMapper.getLineNumberToNodeIdMap(fileAnnotation.getAnnotatedContent());
-  MapSequence.fromMap(myEditorToColumn).put(editorComponent,new AnnotationColumn(root,fileAnnotation,lineToId,vcs,file));
-  editorComponent.getLeftEditorHighlighter().addTextColumn(MapSequence.fromMap(myEditorToColumn).get(editorComponent));
+;
+  ProgressManager.getInstance().run(annotateTask);
   return true;
 }
