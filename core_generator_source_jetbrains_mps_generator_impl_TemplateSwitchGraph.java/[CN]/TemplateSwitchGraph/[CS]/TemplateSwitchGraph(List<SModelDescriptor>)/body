@@ -3,9 +3,30 @@
     for (    SNode root : templateModel.getSModel().roots()) {
       if (!(root.getAdapter() instanceof TemplateSwitch))       continue;
       TemplateSwitch adapter=(TemplateSwitch)root.getAdapter();
-      if (myTemplateSwitchToGraphNodeMap.get(adapter) == null) {
-        addSwitch(adapter);
+      mySwitchToNode.put(adapter,new Node(adapter));
+    }
+  }
+  for (  Node node : mySwitchToNode.values()) {
+    TemplateSwitch modifiedSwitch=node.mySwitch.getModifiedSwitch();
+    if (modifiedSwitch != null) {
+      node.myModified=mySwitchToNode.get(modifiedSwitch);
+    }
+    if (node.myModified == null) {
+      node.myRules=new LinkedList<TemplateSwitch>();
+    }
+  }
+  for (  Node node : mySwitchToNode.values()) {
+    Node bottom=node;
+    int i=256;
+    while (bottom.myModified != null && --i > 0) {
+      bottom=bottom.myModified;
+    }
+    if (node != bottom) {
+      node.myModified=bottom;
+      if (i == 0) {
+        throw new RuntimeException("Template switch loop in: " + node);
       }
     }
+    bottom.myRules.add(node.mySwitch);
   }
 }
