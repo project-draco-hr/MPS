@@ -9,14 +9,21 @@
       component.addError(node,"Child in a role with unknown link",null);
       return;
     }
-    if (!(cm.canBeChild(node.getConceptFqName(),operationContext,SNodeOperations.getParent(node),link))) {
-      SNode rule=cm.getCanBeChildBlock(operationContext,node.getConceptFqName());
+    Method cbcMethod=cm.getCanBeChildMethod(node.getConceptFqName(),operationContext);
+    cm.canBeChild(node,cbcMethod,operationContext,SNodeOperations.getParent(node),link);
+    boolean canBeChild=cm.canBeChild(node,cbcMethod,operationContext,SNodeOperations.getParent(node),link);
+    if (!(canBeChild)) {
+      SNode rule=cm.getCanBeChildBlock(operationContext,cbcMethod);
       component.addError(node,"Node isn't applicable in the context",rule);
     }
   }
-  if (node.isRoot() && !(cm.canBeRoot(operationContext,node.getConceptFqName(),SNodeOperations.getModel(node)))) {
-    SNode rule=cm.getCanBeRootBlock(operationContext,node.getConceptFqName());
-    component.addError(node,"Not rootable concept added as root",rule);
+  if (node.isRoot()) {
+    Method method=cm.getCanBeRootMethod(node.getConceptFqName(),operationContext);
+    boolean canBeRoot=cm.canBeRoot(operationContext,method,SNodeOperations.getModel(node),((AbstractConceptDeclaration)SNodeOperations.getAdapter(SNodeOperations.getConceptDeclaration(node))));
+    if (!(canBeRoot)) {
+      SNode rule=cm.getCanBeRootBlock(operationContext,method);
+      component.addError(node,"Not rootable concept added as root",rule);
+    }
   }
   for (  SNode child : SNodeOperations.getChildren(node)) {
     component.addDependency(child);
@@ -25,8 +32,10 @@
     if (childLink == null) {
       continue;
     }
-    if (!(cm.canBeParent(node,childConcept,childLink,operationContext))) {
-      SNode rule=cm.getCanBeParentBlock(node,operationContext);
+    Method method=cm.getCanBeParentMethod(node,operationContext);
+    boolean canBeParent=cm.canBeParent(method,node,childConcept,childLink,operationContext);
+    if (!(canBeParent)) {
+      SNode rule=cm.getCanBeParentBlock(operationContext,method);
       component.addError(node,"Node isn't applicable in the context",rule);
     }
     SNode rule=cm.canBeAncestorReturnBlock(node,childConcept,operationContext);
@@ -49,7 +58,8 @@
       continue;
     }
     String value=ps.fromInternalValue(node.getProperty(propertyName));
-    if (!(ps.canSetValue(node,p.getName(),value,operationContext.getScope(),false))) {
+    boolean canSetValue=ps.canSetValue(node,p.getName(),value,operationContext.getScope(),false);
+    if (!(canSetValue)) {
       if ("name".equals(p.getName()) && "AnonymousClass".equals(SPropertyOperations.getString(concept,"name"))) {
         continue;
       }
