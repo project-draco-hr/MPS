@@ -51,11 +51,21 @@
         if (trg.requiresInput()) {
           if (Sequence.fromIterable(input).isEmpty()) {
             LOG.info("No input. Stopping");
+            results.addResult(trg.getName(),new IResult.FAILURE(null));
             return;
           }
         }
         IJob job=trg.createJob();
         IResult jr=job.execute(input,monit,pool);
+        if (!(trg.producesOutput())) {
+          Iterable<IResource> output=jr.output();
+          if (Sequence.fromIterable(output).isNotEmpty()) {
+            LOG.info("Unexpected output. Stopping");
+            results.addResult(trg.getName(),new IResult.FAILURE(null));
+            return;
+          }
+          jr=new Script.CatOutputResult(jr,input);
+        }
         results.addResult(trg.getName(),jr);
         if (!(jr.isSucessful()) || monit.pleaseStop()) {
           LOG.info((jr.isSucessful() ? "Stop requested" : "Execution failed"));
