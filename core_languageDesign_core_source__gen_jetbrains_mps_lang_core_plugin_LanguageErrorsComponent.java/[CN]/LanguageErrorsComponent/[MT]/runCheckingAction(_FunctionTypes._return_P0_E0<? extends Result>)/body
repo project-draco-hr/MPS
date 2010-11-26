@@ -1,0 +1,32 @@
+{
+  final Set<SNode> accessedNodes=SetSequence.fromSet(new HashSet<SNode>());
+  final Object[] result=new Object[1];
+  try {
+    AbstractNodesReadListener listener=new AbstractNodesReadListener(){
+      public void nodeUnclassifiedReadAccess(      SNode node){
+        SetSequence.fromSet(accessedNodes).addElement(node);
+      }
+      public void nodePropertyReadAccess(      SNode node,      String name,      String value){
+        SetSequence.fromSet(accessedNodes).addElement(node);
+      }
+      public void nodeReferentReadAccess(      SNode node,      String role,      SNode referent){
+        SetSequence.fromSet(accessedNodes).addElement(node);
+        SetSequence.fromSet(accessedNodes).addElement(referent);
+      }
+      public void nodeChildReadAccess(      SNode node,      String role,      SNode child){
+        SetSequence.fromSet(accessedNodes).addElement(node);
+        SetSequence.fromSet(accessedNodes).addElement(child);
+      }
+    }
+;
+    NodeReadEventsCaster.setNodesReadListener(listener);
+    result[0]=action.invoke();
+  }
+  finally {
+    NodeReadEventsCaster.removeNodesReadListener();
+  }
+  for (  SNode accessedNode : accessedNodes) {
+    addDependency(accessedNode);
+  }
+  return (Result)result[0];
+}
