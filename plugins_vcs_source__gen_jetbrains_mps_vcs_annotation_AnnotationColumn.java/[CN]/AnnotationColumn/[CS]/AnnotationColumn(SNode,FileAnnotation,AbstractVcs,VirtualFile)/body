@@ -7,26 +7,32 @@
 ));
   final SModel model=SNodeOperations.getModel(root);
   myFileAnnotation=fileAnnotation;
+  myFileLineToContent=ModelPersistence.getLineToContentMap(myFileAnnotation.getAnnotatedContent());
+  if (myFileLineToContent == null) {
+    return;
+  }
+  myFileAnnotation.addListener(myAnnotationListener);
   myAuthorAnnotationAspect=Sequence.fromIterable(Sequence.fromArray(myFileAnnotation.getAspects())).findFirst(new IWhereFilter<LineAnnotationAspect>(){
     public boolean accept(    LineAnnotationAspect a){
       return LineAnnotationAspect.AUTHOR.equals(a.getId());
     }
   }
 );
-  for (int line=0; line < ListSequence.fromList(fileLineToContent).count(); line++) {
+  Map<SNodeId,Integer> nodeIdToFileLine=MapSequence.fromMap(new HashMap<SNodeId,Integer>());
+  for (int line=0; line < ListSequence.fromList(myFileLineToContent).count(); line++) {
     SNode node=null;
-    SNodeId id=check_5mnya_a0b0e0a(ListSequence.fromList(fileLineToContent).getElement(line));
+    SNodeId id=check_5mnya_a0b0i0a(ListSequence.fromList(myFileLineToContent).getElement(line));
     if (id != null && SetSequence.fromSet(descendantIds).contains(id)) {
       node=model.getNodeById(id);
     }
     if (node == null) {
       continue;
     }
-    if (MapSequence.fromMap(myNodeIdToFileLine).containsKey(id)) {
-      MapSequence.fromMap(myNodeIdToFileLine).put(id,getFileLineWithMaxRevision(MapSequence.fromMap(myNodeIdToFileLine).get(id),line));
+    if (MapSequence.fromMap(nodeIdToFileLine).containsKey(id)) {
+      MapSequence.fromMap(nodeIdToFileLine).put(id,getFileLineWithMaxRevision(MapSequence.fromMap(nodeIdToFileLine).get(id),line));
     }
  else {
-      MapSequence.fromMap(myNodeIdToFileLine).put(id,line);
+      MapSequence.fromMap(nodeIdToFileLine).put(id,line);
     }
   }
   for (  LineAnnotationAspect aspect : Sequence.fromIterable(Sequence.fromArray(fileAnnotation.getAspects()))) {
@@ -41,7 +47,6 @@
   }
   myModelVirtualFile=modelVirtualFile;
   myModelDescriptor=model.getModelDescriptor();
-  myFileLineToContent=fileLineToContent;
   myVcs=vcs;
   final ChangesManager changesManager=ChangesManager.getInstance(myVcs.getProject());
   changesManager.getCommandQueue().runTask(new Runnable(){
