@@ -1,8 +1,9 @@
 {
+  SNode inputNode=context.getInput();
   TemplateReductionRule reductionRule=null;
   checkGenerationCanceledFast();
   try {
-    TemplateReductionRule[] conceptRules=myRuleManager.getRuleFinder().findReductionRules(inputNode);
+    TemplateReductionRule[] conceptRules=templateSwitch != null ? myRuleManager.getRuleFinder(templateSwitch).findReductionRules(inputNode) : myRuleManager.getRuleFinder().findReductionRules(inputNode);
     if (conceptRules == null) {
       return null;
     }
@@ -10,16 +11,18 @@
     for (    TemplateReductionRule rule : conceptRules) {
       reductionRule=rule;
       if (!getBlockedReductionsData().isReductionBlocked(inputNode,rule,reductionContext)) {
-        Collection<SNode> outputNodes=reductionContext.getQueryExecutor().tryToApply(rule,environment,new DefaultTemplateContext(inputNode));
+        Collection<SNode> outputNodes=reductionContext.getQueryExecutor().tryToApply(rule,environment,context);
         if (outputNodes != null) {
           if (outputNodes.size() == 1) {
             SNode reducedNode=outputNodes.iterator().next();
             getMappings().addOutputNodeByInputNodeAndMappingName(inputNode,mappingName,reducedNode);
-            getMappings().addCopiedOutputNodeForInputNode(inputNode,reducedNode);
-            reducedNode.putUserObjects(inputNode);
-            if (inputNode.getModel() == getGeneratorSessionContext().getOriginalInputModel()) {
-              reducedNode.putUserObject(TemplateQueryContext.ORIGINAL_INPUT_NODE,inputNode);
-              reducedNode.putUserObject(TemplateQueryContext.ORIGINAL_DEBUG_NODE,inputNode);
+            if (templateSwitch == null) {
+              getMappings().addCopiedOutputNodeForInputNode(inputNode,reducedNode);
+              reducedNode.putUserObjects(inputNode);
+              if (inputNode.getModel() == getGeneratorSessionContext().getOriginalInputModel()) {
+                reducedNode.putUserObject(TemplateQueryContext.ORIGINAL_INPUT_NODE,inputNode);
+                reducedNode.putUserObject(TemplateQueryContext.ORIGINAL_DEBUG_NODE,inputNode);
+              }
             }
           }
           return outputNodes;
