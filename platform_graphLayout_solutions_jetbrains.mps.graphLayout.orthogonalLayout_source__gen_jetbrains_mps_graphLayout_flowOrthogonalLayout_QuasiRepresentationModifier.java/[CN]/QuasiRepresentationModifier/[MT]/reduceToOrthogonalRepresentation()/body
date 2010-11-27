@@ -1,4 +1,5 @@
 {
+  Graph graph=myEmbeddedGraph.getGraph();
   Map<Edge,Edge> edgeTransform=MapSequence.fromMap(new HashMap<Edge,Edge>());
   List<Node> initialNodes=ListSequence.fromList(new ArrayList<Node>());
   ListSequence.fromList(initialNodes).addSequence(ListSequence.fromList(myGraph.getNodes()));
@@ -75,8 +76,8 @@
           SetSequence.fromSet(removed).addElement(frontOldDart);
           SetSequence.fromSet(removed).addElement(backOldDart);
           face.makeStartsWith(dart);
-          oldEdge.removeFromGraph();
-          Edge newEdge=newNode.addEdgeTo(oldEdge.getOpposite(node));
+          graph.removeEdge(oldEdge);
+          Edge newEdge=graph.connect(newNode,oldEdge.getOpposite(node));
           ListSequence.fromList(newEdges).addElement(newEdge);
           MapSequence.fromMap(edgeTransform).put(newEdge,oldEdge);
           Dart lastFaceDart=ListSequence.fromList(face.getDarts()).last();
@@ -91,8 +92,9 @@
           myEmbeddedGraph.insertDart(anotherFace,ListSequence.fromList(anotherFace.getDarts()).count(),lastFaceDart);
           MapSequence.fromMap(myAngles).put(backNewDart,MapSequence.fromMap(myAngles).get(backOldDart));
           MapSequence.fromMap(myBends).put(backNewDart,MapSequence.fromMap(myBends).get(backOldDart) - 1);
-          List<Edge> historyEdges=ListSequence.fromListAndArray(new ArrayList<Edge>(),nextEdge,newEdge);
-          myEmbeddedGraph.setEdgesHistory(oldEdge,historyEdges);
+          List<Edge> historyEdgesList=ListSequence.fromListAndArray(new ArrayList<Edge>(),nextEdge,newEdge);
+          GraphModificationEvent splitEvent=new GraphModificationEvent(GraphModificationEvent.Type.EDGE_SPLITTED,oldEdge,historyEdgesList);
+          myGraph.getModificationProcessor().fire(splitEvent);
           curEdge.value=nextEdge;
           curDart=myEmbeddedGraph.getSourceDart(curEdge.value,node);
           curNum++;
