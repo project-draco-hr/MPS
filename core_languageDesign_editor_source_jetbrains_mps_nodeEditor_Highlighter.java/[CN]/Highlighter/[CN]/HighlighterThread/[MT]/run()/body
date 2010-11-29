@@ -1,11 +1,15 @@
 {
   if (IdeMain.getTestMode() != TestMode.NO_TEST)   return;
+  DumbService dumbService=DumbService.getInstance(myProject);
   CommandProcessor commandProcessor=CommandProcessor.getInstance();
   while (true) {
     try {
       while (true) {
         while (commandProcessor.getCurrentCommand() != null) {
           Thread.sleep(200);
+        }
+        while (dumbService.isDumb()) {
+          Thread.sleep(600);
         }
         long current=System.currentTimeMillis();
         long commandTime=myLastCommandTime;
@@ -18,7 +22,13 @@
           break;
         }
       }
-      doUpdate();
+      try {
+        doUpdate();
+      }
+ catch (      IndexNotReadyException ex) {
+        myCheckedOnceEditors.clear();
+        myCheckedOnceInspectors.clear();
+      }
       processPendingActions();
       if (myStopThread) {
         break;

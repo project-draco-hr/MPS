@@ -1,5 +1,5 @@
 {
-  if (component == null || component.isDisposed()) {
+  if (component == null || component.isDisposed() || component.getGraphics() == null) {
     return;
   }
   Iterable<EditorCell> nonTrivialCells=Sequence.fromIterable(EditorUtils.getCellDescendants(component.getRootCell())).where(new IWhereFilter<EditorCell>(){
@@ -8,7 +8,7 @@
     }
   }
 );
-  Set<Integer> yCoordinatesSet=SetSequence.fromSetWithValues(new HashSet<Integer>(),Sequence.fromIterable(nonTrivialCells).select(new ISelector<EditorCell,Integer>(){
+  Set<Integer> yCoordinatesSet=SetSequence.fromSetWithValues(new HashSet<Integer>(),Sequence.fromIterable(nonTrivialCells).<Integer>select(new ISelector<EditorCell,Integer>(){
     public Integer select(    EditorCell cell){
       return cell.getY();
     }
@@ -27,40 +27,18 @@
     }
   }
 );
-  myWidth=0;
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
-      SModel model=component.getEditedNode().getModel();
-      for (      IMapping<SNodeId,Integer> nodeIdToFileLine : MapSequence.fromMap(myNodeIdToFileLine)) {
-        final SNode node=model.getNodeById(nodeIdToFileLine.key());
-        int fileLine=nodeIdToFileLine.value();
-        EditorCell cell=ListSequence.fromList(SNodeOperations.getAncestors(node,null,true)).select(new ISelector<SNode,EditorCell>(){
-          public EditorCell select(          SNode n){
-            return component.findNodeCell(node);
-          }
-        }
-).findFirst(new IWhereFilter<EditorCell>(){
-          public boolean accept(          EditorCell c){
-            return c != null;
-          }
-        }
-);
-        if (cell == null) {
-          continue;
-        }
-        int startPseudoLine=Collections.binarySearch(myPseudoLinesY,cell.getY());
-        int endPseudoLine=Collections.binarySearch(myPseudoLinesY,cell.getY() + cell.getHeight());
-        if (endPseudoLine < 0) {
-          endPseudoLine=-endPseudoLine - 1;
-        }
-        for (int pseudoLine=startPseudoLine; pseudoLine < endPseudoLine; pseudoLine++) {
+      for (int fileLine=0; fileLine < ListSequence.fromList(myFileLineToContent).count(); fileLine++) {
+        for (        int pseudoLine : Sequence.fromIterable(getPseudoLinesForContent(component,ListSequence.fromList(myFileLineToContent).getElement(fileLine)))) {
           int currentFileLine=ListSequence.fromList(myPseudoLinesToFileLines).getElement(pseudoLine);
           ListSequence.fromList(myPseudoLinesToFileLines).setElement(pseudoLine,getFileLineWithMaxRevision(currentFileLine,fileLine));
         }
-        int widthCandidate=component.getGraphics().getFontMetrics(myFont).stringWidth(getTextForFileLine(fileLine)) + 3;
-        myWidth=Math.max(myWidth,widthCandidate);
       }
     }
   }
 );
+  for (  AnnotationAspectSubcolumn aspectSubcolumn : ListSequence.fromList(myAspectSubcolumns)) {
+    aspectSubcolumn.computeWidth(component.getGraphics().getFontMetrics(myFont),myPseudoLinesToFileLines);
+  }
 }

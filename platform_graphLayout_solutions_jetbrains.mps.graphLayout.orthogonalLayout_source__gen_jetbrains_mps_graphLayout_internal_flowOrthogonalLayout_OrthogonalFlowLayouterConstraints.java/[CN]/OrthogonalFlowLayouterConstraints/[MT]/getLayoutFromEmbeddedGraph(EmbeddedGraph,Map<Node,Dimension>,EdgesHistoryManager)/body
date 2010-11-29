@@ -1,0 +1,75 @@
+{
+  if (OrthogonalFlowLayouterConstraints.SHOW_INFO > 0) {
+    System.out.println("initial graph: " + embeddedGraph);
+  }
+  Graph graph=embeddedGraph.getGraph();
+  List<Edge> oldEdges=ListSequence.fromList(new ArrayList<Edge>());
+  ListSequence.fromList(oldEdges).addSequence(ListSequence.fromList(graph.getEdges()));
+  List<Node> oldNodes=ListSequence.fromList(new ArrayList<Node>());
+  ListSequence.fromList(oldNodes).addSequence(SetSequence.fromSet(MapSequence.fromMap(nodeSizes).keySet()));
+  Map<Dart,Integer> bends=MapSequence.fromMap(new HashMap<Dart,Integer>());
+  Map<Dart,Integer> angles=MapSequence.fromMap(new HashMap<Dart,Integer>());
+  QuasiOrthogonalRepresentation.getRepresentation(embeddedGraph,bends,angles);
+  QuasiRepresentationModifier quasiModifier=new QuasiRepresentationModifier(embeddedGraph,bends,angles);
+  quasiModifier.reduceToOrthogonalRepresentation();
+  if (OrthogonalFlowLayouterConstraints.SHOW_INFO > 0) {
+    System.out.println("modifications: ");
+    for (    QuasiRepresentationModifier.Modification modification : ListSequence.fromList(quasiModifier.getModifications())) {
+      System.out.println(modification);
+    }
+  }
+  OrthogonalRepresentation.replaceBendsByNodes(embeddedGraph,bends,angles);
+  Map<Dart,Direction2D> directions=OrthogonalRepresentation.getDirections(embeddedGraph,angles);
+  if (OrthogonalFlowLayouterConstraints.SHOW_INFO > 0) {
+    System.out.println("modified graph: " + embeddedGraph);
+  }
+  Map<Node,Map<Direction2D,Integer>> nodeDirectionSizes=this.getNodeDirectionSizes(oldNodes,nodeSizes);
+  Map<Edge,Integer> edgesShifts=getEdgesShifts(quasiModifier.getModifications(),directions,nodeSizes);
+  ConstraintsGraphProcessor processor=new ConstraintsGraphProcessor(embeddedGraph,directions);
+  processor.setUnitLength(myUnitLength);
+  processor.modifyEmbeddedGraph(oldNodes,nodeSizes);
+  processor.constructGraph();
+  Map<Node,Point> coordinates=processor.getCoordinatesInModifiedGraph(edgesShifts,nodeDirectionSizes,historyManager);
+  GraphLayout graphLayout=new GraphLayout(graph);
+  for (  Node node : ListSequence.fromList(oldNodes)) {
+    Point center=MapSequence.fromMap(coordinates).get(node);
+    Map<Direction2D,Integer> sizes=MapSequence.fromMap(nodeDirectionSizes).get(node);
+    Dimension nodeSize=MapSequence.fromMap(nodeSizes).get(node);
+    Rectangle rect=new Rectangle(center.x - MapSequence.fromMap(sizes).get(Direction2D.LEFT),center.y - MapSequence.fromMap(sizes).get(Direction2D.DOWN),nodeSize.width,nodeSize.height);
+    graphLayout.setLayoutFor(node,rect);
+  }
+  for (  Edge edge : ListSequence.fromList(oldEdges)) {
+    Node source=edge.getSource();
+    Node target=edge.getTarget();
+    List<Edge> history=historyManager.getHistory(edge);
+    List<Point> edgeLayout=ListSequence.fromList(new LinkedList<Point>());
+    Node cur=source;
+    ListSequence.fromList(edgeLayout).addElement(new Point(MapSequence.fromMap(coordinates).get(cur)));
+    for (    Edge historyEdge : ListSequence.fromList(history)) {
+      Node next=historyEdge.getOpposite(cur);
+      ListSequence.fromList(edgeLayout).addElement(new Point(MapSequence.fromMap(coordinates).get(next)));
+      cur=next;
+    }
+    if (ListSequence.fromList(oldNodes).contains(source)) {
+      Direction2D dir=MapSequence.fromMap(directions).get(embeddedGraph.getSourceDart(ListSequence.fromList(history).first(),source));
+      int size=MapSequence.fromMap(MapSequence.fromMap(nodeDirectionSizes).get(source)).get(dir);
+      Point first=ListSequence.fromList(edgeLayout).removeElementAt(0);
+      first.translate(size * dir.dx(),size * dir.dy());
+      ListSequence.fromList(edgeLayout).removeElementAt(0);
+      ListSequence.fromList(edgeLayout).insertElement(0,first);
+    }
+    if (ListSequence.fromList(oldNodes).contains(edge.getTarget())) {
+      Direction2D dir=MapSequence.fromMap(directions).get(embeddedGraph.getSourceDart(ListSequence.fromList(history).last(),target));
+      int size=MapSequence.fromMap(MapSequence.fromMap(nodeDirectionSizes).get(target)).get(dir);
+      Point last=ListSequence.fromList(edgeLayout).removeLastElement();
+      last.translate(size * dir.dx(),size * dir.dy());
+      ListSequence.fromList(edgeLayout).removeLastElement();
+      ListSequence.fromList(edgeLayout).addElement(last);
+    }
+    graphLayout.setLayoutFor(edge,edgeLayout);
+  }
+  for (  QuasiRepresentationModifier.Modification modification : ListSequence.fromList(quasiModifier.getModifications())) {
+    splitEdges(graphLayout,modification,edgesShifts);
+  }
+  return graphLayout;
+}

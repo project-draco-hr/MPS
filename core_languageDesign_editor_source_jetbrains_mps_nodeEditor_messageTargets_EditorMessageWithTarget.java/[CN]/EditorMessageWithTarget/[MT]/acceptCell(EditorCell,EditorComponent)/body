@@ -1,36 +1,31 @@
 {
-  if (cell == null) {
+  if (cell == null || !editor.isValid(cell) || cell.getSNode() != getNode()) {
     return false;
   }
-  if (!editor.isValid(cell)) {
-    return false;
-  }
-  if (cell.getSNode() != getNode()) {
-    return false;
-  }
-  if (myMessageTarget.getTarget() == MessageTargetEnum.NODE) {
+switch (myMessageTarget.getTarget()) {
+case NODE:
     return cell.isBigCell();
+case REFERENCE:
+  if (cell.isReferenceCell()) {
+    return myMessageTarget.getRole().equals(cell.getRole()) && getNode() == cell.getSNode();
   }
-  if (myMessageTarget.getTarget() == MessageTargetEnum.REFERENCE) {
-    if (cell.isReferenceCell()) {
-      return myMessageTarget.getRole().equals(cell.getRole()) && getNode() == cell.getSNode();
-    }
  else {
-      return cell.isBigCell() && getCell(editor) == cell;
-    }
+    return cell.isBigCell() && getCell(editor) == cell;
   }
-  if (myMessageTarget.getTarget() == MessageTargetEnum.PROPERTY) {
-    if (!(cell instanceof EditorCell_Property)) {
-      return cell.isBigCell() && getCell(editor) == cell;
-    }
-    EditorCell_Property propertyCell=(EditorCell_Property)cell;
-    ModelAccessor modelAccessor=propertyCell.getModelAccessor();
-    if (modelAccessor instanceof PropertyAccessor) {
-      return myMessageTarget.getRole().equals(((PropertyAccessor)modelAccessor).getPropertyName()) && getNode() == propertyCell.getSNode();
-    }
-  }
-  if (myMessageTarget.getTarget() == MessageTargetEnum.DELETED_CHILD) {
-    return getCell(editor) == cell;
-  }
-  return false;
+case PROPERTY:
+if (!(cell instanceof EditorCell_Property)) {
+  return cell.isBigCell() && getCell(editor) == cell;
+}
+EditorCell_Property propertyCell=(EditorCell_Property)cell;
+ModelAccessor modelAccessor=propertyCell.getModelAccessor();
+if (modelAccessor instanceof PropertyAccessor) {
+return myMessageTarget.getRole().equals(((PropertyAccessor)modelAccessor).getPropertyName()) && getNode() == propertyCell.getSNode();
+}
+case DELETED_CHILD:
+if (myMessageTarget.getTarget() == MessageTargetEnum.DELETED_CHILD) {
+return getCell(editor) == cell;
+}
+default :
+return false;
+}
 }

@@ -1,0 +1,68 @@
+{
+  Set<SNodeId> descendantIds=SetSequence.fromSetWithValues(new HashSet<SNodeId>(),ListSequence.fromList(SNodeOperations.getDescendants(root,null,true,new String[]{})).<SNodeId>select(new ISelector<SNode,SNodeId>(){
+    public SNodeId select(    SNode n){
+      return n.getSNodeId();
+    }
+  }
+));
+  final SModel model=SNodeOperations.getModel(root);
+  myFileAnnotation=fileAnnotation;
+  for (  VcsFileRevision rev : ListSequence.fromList(fileAnnotation.getRevisions())) {
+    MapSequence.fromMap(myRevisionNumberToRevision).put(rev.getRevisionNumber(),rev);
+  }
+  myFileLineToContent=ModelPersistence.getLineToContentMap(myFileAnnotation.getAnnotatedContent());
+  if (myFileLineToContent == null) {
+    return;
+  }
+  myFileAnnotation.addListener(myAnnotationListener);
+  myAuthorAnnotationAspect=Sequence.fromIterable(Sequence.fromArray(myFileAnnotation.getAspects())).findFirst(new IWhereFilter<LineAnnotationAspect>(){
+    public boolean accept(    LineAnnotationAspect a){
+      return LineAnnotationAspect.AUTHOR.equals(a.getId());
+    }
+  }
+);
+  Map<SNodeId,Integer> nodeIdToFileLine=MapSequence.fromMap(new HashMap<SNodeId,Integer>());
+  for (int line=0; line < ListSequence.fromList(myFileLineToContent).count(); line++) {
+    SNode node=null;
+    SNodeId id=check_5mnya_a0b0j0a(ListSequence.fromList(myFileLineToContent).getElement(line));
+    if (id != null && SetSequence.fromSet(descendantIds).contains(id)) {
+      node=model.getNodeById(id);
+    }
+    if (node == null) {
+      continue;
+    }
+    if (MapSequence.fromMap(nodeIdToFileLine).containsKey(id)) {
+      MapSequence.fromMap(nodeIdToFileLine).put(id,getFileLineWithMaxRevision(MapSequence.fromMap(nodeIdToFileLine).get(id),line));
+    }
+ else {
+      MapSequence.fromMap(nodeIdToFileLine).put(id,line);
+    }
+  }
+  for (  LineAnnotationAspect aspect : Sequence.fromIterable(Sequence.fromArray(fileAnnotation.getAspects()))) {
+    ListSequence.fromList(myAspectSubcolumns).addElement(new AnnotationAspectSubcolumn(aspect));
+  }
+  ListSequence.fromList(myAspectSubcolumns).addElement(new CommitNumberSubcolumn(myFileAnnotation));
+  for (  VcsFileRevision revision : ListSequence.fromList(myFileAnnotation.getRevisions())) {
+    String author=revision.getAuthor();
+    if (!(MapSequence.fromMap(myAuthorsToColors).containsKey(author))) {
+      MapSequence.fromMap(myAuthorsToColors).put(author,AnnotationColors.BG_COLORS[MapSequence.fromMap(myAuthorsToColors).count() % AnnotationColors.BG_COLORS.length]);
+    }
+  }
+  myModelVirtualFile=modelVirtualFile;
+  myModelDescriptor=model.getModelDescriptor();
+  myVcs=vcs;
+  final ChangesManager changesManager=ChangesManager.getInstance(myVcs.getProject());
+  changesManager.getCommandQueue().runTask(new Runnable(){
+    public void run(){
+      ModelChangesManager modelChangesManager=changesManager.getModelChangesManager(model);
+      ListSequence.fromList(modelChangesManager.getChangeList()).visitAll(new IVisitor<Change>(){
+        public void visit(        Change ch){
+          saveChange(ch);
+        }
+      }
+);
+      modelChangesManager.addChangeListener(myChangeListener);
+    }
+  }
+);
+}
