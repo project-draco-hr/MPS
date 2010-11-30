@@ -1,13 +1,13 @@
 {
-  List<MappingScript> preMappingScripts=ruleManager.getPreMappingScripts();
+  List<TemplateMappingScript> preMappingScripts=ruleManager.getPreMappingScripts();
   if (preMappingScripts.isEmpty()) {
     return currentInputModel;
   }
   boolean needToCloneInputModel=!myDiscardTransients;
   if (!needToCloneInputModel) {
-    for (    MappingScript preMappingScript : preMappingScripts) {
-      if (preMappingScript.getScriptKind() == MappingScriptKind.pre_process_input_model) {
-        if (preMappingScript.getModifiesModel()) {
+    for (    TemplateMappingScript preMappingScript : preMappingScripts) {
+      if (preMappingScript.getKind() == TemplateMappingScript.PREPROCESS) {
+        if (preMappingScript.modifiesModel()) {
           needToCloneInputModel=true;
           break;
         }
@@ -30,16 +30,16 @@
     currentInputModel=currentInputModel_clone;
   }
   boolean preProcessed=false;
-  for (  MappingScript preMappingScript : preMappingScripts) {
-    if (preMappingScript.getScriptKind() != MappingScriptKind.pre_process_input_model) {
-      myLogger.warning(preMappingScript.getNode(),"skip script '" + preMappingScript + "' ("+ preMappingScript.getModel().getSModelFqName()+ ") - wrong script kind");
+  for (  TemplateMappingScript preMappingScript : preMappingScripts) {
+    if (preMappingScript.getKind() != TemplateMappingScript.PREPROCESS) {
+      myLogger.warning(preMappingScript.getScriptNode().getNode(),"skip script " + preMappingScript.getLongName() + " - wrong script kind");
       continue;
     }
     if (myLogger.needsInfo()) {
-      myLogger.info(preMappingScript.getNode(),"pre-process '" + preMappingScript + "' ("+ preMappingScript.getModel().getSModelFqName()+ ")");
+      myLogger.info(preMappingScript.getScriptNode().getNode(),"pre-process " + preMappingScript.getLongName());
     }
     TemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,myProgressMonitor,myLogger,ruleManager,currentInputModel,currentInputModel,myGenerationOptions,myDependenciesBuilder,ttrace);
-    templateGenerator.getDefaultExecutionContext(null).executeMappingScript(preMappingScript,currentInputModel);
+    templateGenerator.getDefaultExecutionContext(null).executeMappingScript(((TemplateMappingScriptInterpreted)preMappingScript).getNode(),currentInputModel);
     preProcessed=true;
   }
   if (needToCloneInputModel) {
