@@ -1,0 +1,47 @@
+{
+  EditorComponent editor=getEditorComponent();
+  if (editor == null || editor.isDisposed() || editor.getGraphics() == null) {
+    return;
+  }
+  Iterable<EditorCell> nonTrivialCells=Sequence.fromIterable(EditorUtils.getCellDescendants(editor.getRootCell())).where(new IWhereFilter<EditorCell>(){
+    public boolean accept(    EditorCell cell){
+      return cell.getWidth() * cell.getHeight() != 0;
+    }
+  }
+);
+  Set<Integer> yCoordinatesSet=SetSequence.fromSetWithValues(new HashSet<Integer>(),Sequence.fromIterable(nonTrivialCells).<Integer>select(new ISelector<EditorCell,Integer>(){
+    public Integer select(    EditorCell cell){
+      return cell.getY();
+    }
+  }
+));
+  myPseudoLinesY=SetSequence.fromSet(yCoordinatesSet).sort(new ISelector<Integer,Comparable<?>>(){
+    public Comparable<?> select(    Integer y){
+      return y;
+    }
+  }
+,true).toListSequence();
+  myPseudoLinesToFileLines=ListSequence.fromList(new ArrayList<Integer>());
+  ListSequence.fromList(myPseudoLinesY).visitAll(new IVisitor<Integer>(){
+    public void visit(    Integer t){
+      ListSequence.fromList(myPseudoLinesToFileLines).addElement(-1);
+    }
+  }
+);
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (int fileLine=0; fileLine < ListSequence.fromList(myFileLineToContent).count(); fileLine++) {
+        for (        int pseudoLine : Sequence.fromIterable(getPseudoLinesForContent(ListSequence.fromList(myFileLineToContent).getElement(fileLine)))) {
+          int currentFileLine=ListSequence.fromList(myPseudoLinesToFileLines).getElement(pseudoLine);
+          ListSequence.fromList(myPseudoLinesToFileLines).setElement(pseudoLine,getFileLineWithMaxRevision(currentFileLine,fileLine));
+        }
+      }
+    }
+  }
+);
+  FontMetrics metrics=editor.getGraphics().getFontMetrics(myFont);
+  for (  AnnotationAspectSubcolumn aspectSubcolumn : ListSequence.fromList(myAspectSubcolumns)) {
+    aspectSubcolumn.computeWidth(metrics,myPseudoLinesToFileLines);
+  }
+  mySubcolumnInterval=metrics.stringWidth(" ");
+}
