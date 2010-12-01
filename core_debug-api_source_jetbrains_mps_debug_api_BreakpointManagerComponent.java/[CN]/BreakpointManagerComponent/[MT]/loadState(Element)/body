@@ -1,0 +1,34 @@
+{
+synchronized (myBreakpoints) {
+    clear();
+    List breakpointsElement=state.getChildren(BREAKPOINT_ELEMENT);
+    for (ListIterator it=breakpointsElement.listIterator(); it.hasNext(); ) {
+      Element breakpointElement=(Element)it.next();
+      String kindName=breakpointElement.getAttributeValue(KIND_TAG);
+      IBreakpointKind kind=myProvidersManager.getKind(kindName);
+      if (kind == null) {
+        continue;
+      }
+      IBreakpointsProvider provider=myProvidersManager.getProvider(kind);
+      if (provider == null) {
+        continue;
+      }
+      IBreakpoint breakpoint=provider.loadFromState((Element)breakpointElement.getChildren().get(0),kind,myProject);
+      if (breakpoint != null) {
+        myBreakpoints.add(breakpoint);
+      }
+    }
+  }
+  ModelAccess.instance().runReadAction(new Runnable(){
+    @Override public void run(){
+synchronized (myBreakpoints) {
+        for (        IBreakpoint breakpoint : myBreakpoints) {
+          if (breakpoint instanceof ILocationBreakpoint) {
+            addLocationBreakpoint((ILocationBreakpoint)breakpoint);
+          }
+        }
+      }
+    }
+  }
+);
+}
