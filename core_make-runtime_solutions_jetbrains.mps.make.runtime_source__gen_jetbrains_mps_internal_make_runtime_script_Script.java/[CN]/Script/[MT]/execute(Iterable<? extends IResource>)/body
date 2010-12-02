@@ -1,0 +1,75 @@
+{
+  validate();
+  if (!(isValid())) {
+    LOG.error("attempt to execute invalid script");
+    throw new IllegalStateException("invalid script");
+  }
+  LOG.info("Beginning to execute script");
+  final CompositeResult results=new CompositeResult();
+  final Script.ParametersPool pool=new Script.ParametersPool();
+  LOG.info("Initializing");
+  if (init != null) {
+    init.invoke(pool);
+  }
+  IMonitors mons=monitors;
+  if (mons == null) {
+    mons=new Script.Monitors();
+  }
+  final Iterable<ITarget> toExecute=targetRange.targetAndSortedPrecursors(defaultTargetName);
+  mons.runConfigWithMonitor(new _FunctionTypes._void_P1_E0<IConfigMonitor>(){
+    public void invoke(    IConfigMonitor cmon){
+      for (      ITarget trg : Sequence.fromIterable(toExecute)) {
+        LOG.info("Configuring " + trg.getName());
+        IConfig cfg=trg.createConfig();
+        if (cfg != null && !(cfg.configure(cmon,pool))) {
+          LOG.info("Configuration failed");
+          results.addResult(trg.getName(),new IResult.FAILURE(null));
+          return;
+        }
+      }
+    }
+  }
+);
+  if (!(results.isSucessful())) {
+    return results;
+  }
+  mons.runJobWithMonitor(new _FunctionTypes._void_P1_E0<IJobMonitor>(){
+    public void invoke(    IJobMonitor monit){
+      for (      ITarget trg : Sequence.fromIterable(toExecute)) {
+        LOG.info("Executing " + trg.getName());
+        Iterable<ITarget> impre=targetRange.immediatePrecursors(trg.getName());
+        Iterable<IResource> input=(Iterable<IResource>)((Sequence.fromIterable(impre).isEmpty() ? scriptInput : Sequence.fromIterable(impre).<IResult>select(new ISelector<ITarget,IResult>(){
+          public IResult select(          ITarget t){
+            return results.getResult(t.getName());
+          }
+        }
+).<IResource>translate(new ITranslator2<IResult,IResource>(){
+          public Iterable<IResource> translate(          IResult r){
+            return r.output();
+          }
+        }
+).distinct().toListSequence()));
+        if (trg.requiresInput()) {
+          if (Sequence.fromIterable(input).isEmpty()) {
+            LOG.info("No input. Stopping");
+            results.addResult(trg.getName(),new IResult.FAILURE(null));
+            return;
+          }
+        }
+        IJob job=trg.createJob();
+        IResult jr=job.execute(input,monit,pool);
+        if (!(trg.producesOutput())) {
+          jr=new Script.SubsOutputResult(jr,(trg.requiresInput() ? null : input));
+        }
+        results.addResult(trg.getName(),jr);
+        if (!(jr.isSucessful()) || monit.pleaseStop()) {
+          LOG.info((jr.isSucessful() ? "Stop requested" : "Execution failed"));
+          return;
+        }
+      }
+    }
+  }
+);
+  LOG.info("Finished executing script");
+  return results;
+}
