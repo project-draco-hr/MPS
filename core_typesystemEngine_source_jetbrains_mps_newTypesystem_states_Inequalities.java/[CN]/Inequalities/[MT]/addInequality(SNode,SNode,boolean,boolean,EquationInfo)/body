@@ -12,21 +12,21 @@
   for (  Pair<InequationReplacementRule_Runtime,IsApplicable2Status> inequalityReplacementRule : typeChecker.getRulesManager().getReplacementRules(subType,superType)) {
     InequationReplacementRule_Runtime rule=inequalityReplacementRule.o1;
     IsApplicable2Status status=inequalityReplacementRule.o2;
-    myState.executeOperation(new AddRemarkOperation(subType + " is subtype of " + superType+ " by replacement rule"),true);
+    myState.executeOperation(new AddRemarkOperation(subType + " is subtype of " + superType+ " by replacement rule"));
     ((AbstractInequationReplacementRule_Runtime)rule).processInequation(subType,superType,info,myState.getTypeCheckingContext(),status);
-    myState.popOperation();
     return;
   }
   subType=myState.getEquations().expandNode(subType);
   superType=myState.getEquations().expandNode(superType);
-  SubTyping subTyping=myState.getTypeCheckingContext().getSubTyping();
-  AddRemarkOperation difference=new AddRemarkOperation(subType + " is subtype of " + superType);
-  myState.executeOperation(difference,true);
-  if (subTyping.isSubType(subType,superType,info,isWeak,false)) {
-    myState.popOperation();
+  final SubTyping subTyping=myState.getTypeCheckingContext().getSubTyping();
+  final SNode finalSubType=subType;
+  final SNode finalSuperType=superType;
+  myState.executeOperation(new AddRemarkOperation("checking whether " + subType + " is subtype of "+ superType,new Runnable(){
+    @Override public void run(){
+      if (!subTyping.isSubType(finalSubType,finalSuperType,info,isWeak,false)) {
+        myState.getNodeMaps().reportSubTypeError(finalSubType,finalSuperType,info,isWeak);
+      }
+    }
   }
- else {
-    myState.removeLastOperation(difference);
-    myState.getNodeMaps().reportSubTypeError(subType,superType,info,isWeak);
-  }
+));
 }
