@@ -1,0 +1,25 @@
+{
+  final SModelDescriptor modelDescriptor=node.getSModelDescriptor();
+  if (modelDescriptor != null && modelDescriptor.getLoadingState() != ModelLoadingState.NOT_LOADED) {
+    final IScope scope=node.getOperationContext().getScope();
+    List<String> errors=ModelAccess.instance().runReadAction(new Computable<List<String>>(){
+      public List<String> compute(){
+        List<String> errorsList=new ModelValidator(modelDescriptor.getSModel()).validate(scope);
+        boolean isValid=errorsList.isEmpty();
+        node.setErrorState(isValid ? ErrorState.NONE : ErrorState.ERROR);
+        return errorsList;
+      }
+    }
+);
+    if (errors.isEmpty()) {
+      node.setTooltipText(null);
+    }
+ else {
+      String result="<html>";
+      for (      String r : errors) {
+        result+=r + "<br>";
+      }
+      node.setTooltipText(result);
+    }
+  }
+}
