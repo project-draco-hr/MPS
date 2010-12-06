@@ -1,0 +1,26 @@
+{
+  int currentVersion=usedModelDescriptor.getVersion();
+  int usedVersion=SModelOperations.getUsedVersion(myModel,usedModelDescriptor.getSModelReference());
+  if (currentVersion > usedVersion) {
+    boolean played=false;
+    StructureModificationHistory0 history=RefactoringsPersistence.load0(usedModelDescriptor.getModelFile());
+    if (history == null) {
+      return false;
+    }
+    for (    StructureModification data : history.getHistory()) {
+      if (MapSequence.fromMap(data.getDependencies()).get(usedModelDescriptor.getSModelReference()) <= usedVersion) {
+        continue;
+      }
+      played|=playRefactoring(data);
+    }
+    return played;
+  }
+ else   if (currentVersion < usedVersion) {
+    LOG.error("Model version mismatch for import " + usedModelDescriptor.getSModelReference().getSModelFqName() + " in model "+ myModel.getSModelFqName());
+    LOG.error("Used version = " + usedVersion + ", current version = "+ currentVersion);
+    return true;
+  }
+ else {
+    return false;
+  }
+}
