@@ -1,0 +1,38 @@
+{
+  String applicableConcept=rule.getApplicableConcept();
+  if (applicableConcept == null) {
+    showErrorMessage(null,null,rule.getRuleNode().getNode(),"rule has no applicable concept defined");
+    return;
+  }
+  boolean includeInheritors=rule.applyToInheritors();
+  Iterable<SNode> inputNodes=myInputModel.getFastNodeFinder().getNodes(applicableConcept,includeInheritors);
+  for (  SNode inputNode : inputNodes) {
+    if (getGeneratorSessionContext().isCopiedRoot(inputNode))     continue;
+    final QueryExecutionContext executionContext=getExecutionContext(inputNode);
+    if (executionContext != null) {
+      TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(this,new ReductionContext(executionContext),getOperationContext(),myGenerationTracer);
+      Root_MappingRule rootMappingRule=((TemplateRootMappingRuleInterpreted)rule).getNode();
+      if (executionContext.checkCondition(rootMappingRule.getConditionFunction(),false,inputNode,rootMappingRule.getNode())) {
+        myGenerationTracer.pushInputNode(inputNode);
+        myGenerationTracer.pushRule(rule.getRuleNode());
+        try {
+          SNode templateNode=BaseAdapter.fromAdapter(rootMappingRule.getTemplate());
+          if (templateNode != null) {
+            boolean copyRootOnFailure=false;
+            if (inputNode.isRoot() && !rule.keepSourceRoot()) {
+              rootsToCopy.remove(inputNode);
+              copyRootOnFailure=true;
+            }
+            createRootNodeFromTemplate(GeneratorUtil.getMappingName(rootMappingRule,null),templateNode,inputNode,copyRootOnFailure,environment);
+          }
+ else {
+            myLogger.error(BaseAdapter.fromAdapter(rootMappingRule),"no template is defined for the rule");
+          }
+        }
+  finally {
+          myGenerationTracer.closeInputNode(inputNode);
+        }
+      }
+    }
+  }
+}

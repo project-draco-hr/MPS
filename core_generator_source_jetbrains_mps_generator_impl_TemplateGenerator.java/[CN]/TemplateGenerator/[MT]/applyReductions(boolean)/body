@@ -1,10 +1,13 @@
 {
-  TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(this,null,getOperationContext(),myGenerationTracer);
   if (isPrimary) {
     ttrace.push("create root",false);
-    for (    TemplateCreateRootRule rule : myRuleManager.getCreateRootRules()) {
-      checkMonitorCanceled();
-      applyCreateRootRule(rule,environment);
+    final QueryExecutionContext executionContext=getExecutionContext(null);
+    if (executionContext != null) {
+      TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(this,new ReductionContext(executionContext),getOperationContext(),myGenerationTracer);
+      for (      TemplateCreateRootRule rule : myRuleManager.getCreateRootRules()) {
+        checkMonitorCanceled();
+        applyCreateRootRule(rule,environment);
+      }
     }
     ttrace.pop();
   }
@@ -15,7 +18,7 @@
   }
   for (  TemplateRootMappingRule rule : myRuleManager.getRoot_MappingRules()) {
     checkMonitorCanceled();
-    applyRootMappingRule(rule,rootsToCopy,environment);
+    applyRootMappingRule(rule,rootsToCopy);
   }
   ttrace.pop();
   checkMonitorCanceled();
@@ -23,7 +26,8 @@
   for (  SNode rootToCopy : rootsToCopy) {
     QueryExecutionContext context=getExecutionContext(rootToCopy);
     if (context != null) {
-      copyRootNodeFromInput(rootToCopy,context);
+      TemplateExecutionEnvironmentImpl rootenv=new TemplateExecutionEnvironmentImpl(this,new ReductionContext(context),getOperationContext(),myGenerationTracer);
+      copyRootNodeFromInput(rootToCopy,rootenv);
     }
   }
 }
