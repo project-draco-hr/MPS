@@ -1,0 +1,43 @@
+{
+  IOperationContext operationContext=getOperationContext();
+  for (  LanguageAspect aspect : LanguageAspect.values()) {
+    if (aspect.get(getLanguage()) != null) {
+      add(new SModelTreeNode(aspect.get(getLanguage()),null,operationContext,false));
+    }
+  }
+  if (myLanguage.getAccessoryModels().size() > 0) {
+    TextTreeNode accessories=new AccessoriesModelTreeNode(this);
+    List<SModelDescriptor> sortedModels=SortUtil.sortModels(myLanguage.getAccessoryModels());
+    for (    SModelDescriptor model : sortedModels) {
+      Set<IModule> modules=model.getModules();
+      boolean currentModule=modules.contains(myLanguage) || modules.isEmpty();
+      IModule module=currentModule ? myLanguage : model.getModule();
+      if (!currentModule) {
+        accessories.add(new SModelReferenceTreeNode(model,new ModuleContext(module,myProject)));
+      }
+ else {
+        accessories.add(new SModelTreeNode(model,null,new ModuleContext(module,myProject)));
+      }
+    }
+    this.add(accessories);
+  }
+  for (  Generator generator : myLanguage.getGenerators()) {
+    MPSTreeNode generatorNode=new GeneratorTreeNode(generator,myProject);
+    add(generatorNode);
+  }
+  TextTreeNode languageRuntime=new RuntimeModulesTreeNode();
+  for (  IModule m : ((LanguageDepsManager)myLanguage.getDependenciesManager()).getRuntimeDependOnModules()) {
+    languageRuntime.add(createFor(myProject,m));
+  }
+  add(languageRuntime);
+  if (myLanguage.getUtilModels().size() > 0) {
+    TextTreeNode utilModels=new SModelGroupTreeNode(this,operationContext);
+    SModelsSubtree.create(utilModels,operationContext,(List)myLanguage.getUtilModels());
+    this.add(utilModels);
+  }
+  TextTreeNode allModels=new AllModelsTreeNode();
+  allModels.setIcon(Icons.PROJECT_MODELS_ICON,false);
+  allModels.setIcon(Icons.PROJECT_MODELS_EXPANDED_ICON,true);
+  SModelsSubtree.create(allModels,getOperationContext());
+  add(allModels);
+}

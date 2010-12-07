@@ -1,4 +1,5 @@
 {
+  Graph graph=embeddedGraph.getGraph();
   DualGraph dualGraph=new DualGraph(embeddedGraph);
   Node dualStart=dualGraph.addRealNode(start);
   Node dualEnd=dualGraph.addRealNode(end);
@@ -31,22 +32,25 @@
       }
  else {
         Edge lastEdge=ListSequence.fromList(path).removeLastElement();
-        lastEdge.removeFromGraph();
+        graph.removeEdge(lastEdge);
         deletedEdge=lastEdge;
         ListSequence.fromList(tempPath).addSequence(ListSequence.fromList(path));
-        Edge newEdge=lastEdge.getOpposite(end).addEdgeTo(curEnd);
+        Edge newEdge;
+        newEdge=graph.connect(lastEdge.getOpposite(end),curEnd);
         ListSequence.fromList(newEdges).addElement(newEdge);
         ListSequence.fromList(tempPath).addElement(newEdge);
       }
     }
  else {
-      Edge newEdge=curStart.addEdgeTo(curEnd);
+      Edge newEdge;
+      newEdge=graph.connect(curStart,curEnd);
       ListSequence.fromList(newEdges).addElement(newEdge);
       ListSequence.fromList(tempPath).addElement(newEdge);
     }
     embeddedGraph.splitFace(ListSequence.fromList(facePath).getElement(i),tempPath,curStart,curEnd);
     if (deletedEdge != null) {
-      embeddedGraph.setEdgesHistory(deletedEdge,newEdges);
+      GraphModificationEvent splitEvent=new GraphModificationEvent(GraphModificationEvent.Type.EDGE_SPLITTED,deletedEdge,newEdges);
+      graph.getModificationProcessor().fire(splitEvent);
     }
   }
 }

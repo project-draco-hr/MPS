@@ -1,0 +1,35 @@
+{
+  for (  IMapping<IFacet.Name,ScriptBuilder.FacetRefs> m : SetSequence.fromSet(MapSequence.fromMap(refs).mappingsSet())) {
+    IFacet fct=MapSequence.fromMap(facetsView).get(m.key());
+    for (    IFacet ex : ListSequence.fromList(m.value().extended)) {
+      ListSequence.fromList(MapSequence.fromMap(refs).get(ex.getName()).extendedBy).addElement(fct);
+    }
+  }
+  GraphAnalyzer<IFacet.Name> ga=new GraphAnalyzer<IFacet.Name>(){
+    @Override public Iterable<IFacet.Name> forwardEdges(    IFacet.Name v){
+      return ListSequence.fromList(MapSequence.fromMap(refs).get(v).extendedBy).<IFacet.Name>select(new ISelector<IFacet,IFacet.Name>(){
+        public IFacet.Name select(        IFacet f){
+          return f.getName();
+        }
+      }
+);
+    }
+    @Override public Iterable<IFacet.Name> backwardEdges(    IFacet.Name v){
+      return ListSequence.fromList(MapSequence.fromMap(refs).get(v).extended).<IFacet.Name>select(new ISelector<IFacet,IFacet.Name>(){
+        public IFacet.Name select(        IFacet f){
+          return f.getName();
+        }
+      }
+);
+    }
+    @Override public Iterable<IFacet.Name> vertices(){
+      return MapSequence.fromMap(refs).keySet();
+    }
+  }
+;
+  for (  List<IFacet.Name> cyc : ListSequence.fromList(ga.findCycles())) {
+    LOG.error("found cycle: " + cyc);
+    error(null,"found cycle: " + cyc);
+  }
+  return ga.topologicalSort();
+}

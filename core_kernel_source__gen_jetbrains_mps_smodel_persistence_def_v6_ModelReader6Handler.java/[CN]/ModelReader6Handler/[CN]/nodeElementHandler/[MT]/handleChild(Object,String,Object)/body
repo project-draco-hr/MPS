@@ -3,7 +3,7 @@
   if ("property".equals(tagName)) {
     String[] child=(String[])value;
     if (child[1] != null) {
-      result.setProperty(fieldhelper.parse(child[0],true).text,child[1]);
+      result.setProperty(fieldhelper.readName(child[0]),child[1]);
     }
     return;
   }
@@ -15,22 +15,15 @@
       }
       return;
     }
-    VersionUtil.ParseResult target=fieldhelper.parse(child[2],true);
-    SModelReference modelRef=fieldhelper.getSModelReference(target.modelID);
-    if (modelRef == null) {
-      if (log.isErrorEnabled()) {
-        log.error("couldn't create reference '" + child[0] + "' : import for index ["+ target.modelID+ "] not found");
-      }
-      return;
+    SReference ref=fieldhelper.readLink(result,child[0],child[2],child[1]);
+    if (ref != null) {
+      result.addReference(ref);
     }
-    SReference ref=(target.text.equals("^") ? new DynamicReference(child[0],result,modelRef,child[1]) : new StaticReference(child[0],result,modelRef,SNodeId.fromString(target.text),child[1]));
-    result.addReference(ref);
     return;
   }
   if ("node".equals(tagName)) {
     SNode child=(SNode)value;
     result.addChild(child.getRole_(),child);
-    fieldnodeEnded=true;
     return;
   }
   super.handleChild(resultObject,tagName,value);

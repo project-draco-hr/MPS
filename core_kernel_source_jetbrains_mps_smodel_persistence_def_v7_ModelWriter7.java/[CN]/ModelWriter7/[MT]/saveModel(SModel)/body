@@ -1,0 +1,53 @@
+{
+  myModel=sourceModel;
+  myHelper=new WriteHelper(sourceModel.getSModelReference());
+  Element rootElement=new Element(ModelPersistence.MODEL);
+  rootElement.setAttribute(ModelPersistence.MODEL_UID,sourceModel.getSModelReference().toString());
+  Element persistenceElement=new Element(ModelPersistence.PERSISTENCE);
+  persistenceElement.setAttribute(ModelPersistence.PERSISTENCE_VERSION,getModelPersistenceVersion() + "");
+  rootElement.addContent(persistenceElement);
+  for (  ModuleReference languageNamespace : sourceModel.importedLanguages()) {
+    Element languageElem=new Element(ModelPersistence.LANGUAGE);
+    languageElem.setAttribute(ModelPersistence.NAMESPACE,languageNamespace.toString());
+    rootElement.addContent(languageElem);
+  }
+  for (  ModuleReference languageNamespace : sourceModel.engagedOnGenerationLanguages()) {
+    Element languageElem=new Element(ModelPersistence.LANGUAGE_ENGAGED_ON_GENERATION);
+    languageElem.setAttribute(ModelPersistence.NAMESPACE,languageNamespace.toString());
+    rootElement.addContent(languageElem);
+  }
+  for (  ModuleReference devkitNamespace : sourceModel.importedDevkits()) {
+    Element devkitElem=new Element(ModelPersistence.DEVKIT);
+    devkitElem.setAttribute(ModelPersistence.NAMESPACE,devkitNamespace.toString());
+    rootElement.addContent(devkitElem);
+  }
+  for (  ImportElement importElement : sourceModel.importedModels()) {
+    SModelReference modelRef=importElement.getModelReference();
+    myHelper.addModelReference(modelRef);
+    Element elem=new Element(ModelPersistence.IMPORT_ELEMENT);
+    elem.setAttribute(ModelPersistence.MODEL_IMPORT_INDEX,"" + myHelper.getImportIndex(modelRef));
+    elem.setAttribute(ModelPersistence.MODEL_UID,modelRef.toString());
+    elem.setAttribute(ModelPersistence.VERSION,"" + importElement.getUsedVersion());
+    rootElement.addContent(elem);
+  }
+  for (  ImportElement importElement : sourceModel.getAdditionalModelVersions()) {
+    SModelReference modelRef=importElement.getModelReference();
+    myHelper.addModelReference(modelRef);
+    Element elem=new Element(ModelPersistence.IMPORT_ELEMENT);
+    elem.setAttribute(ModelPersistence.MODEL_IMPORT_INDEX,"" + myHelper.getImportIndex(modelRef));
+    elem.setAttribute(ModelPersistence.MODEL_UID,modelRef.toString());
+    elem.setAttribute(ModelPersistence.VERSION,"" + importElement.getUsedVersion());
+    elem.setAttribute(ModelPersistence.IMPLICIT,"yes");
+    rootElement.addContent(elem);
+  }
+  saveRootStubs(rootElement,sourceModel);
+  for (  SNode root : sourceModel.roots()) {
+    Element element=new Element(ModelPersistence.ROOT_CONTENT);
+    element.setAttribute(ModelPersistence.ID,root.getId());
+    for (    SNode childNode : root.getChildren()) {
+      saveNode(element,childNode,true);
+    }
+    rootElement.addContent(element);
+  }
+  return new Document(rootElement);
+}

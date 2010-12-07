@@ -1,5 +1,6 @@
 {
   Graph graph=layoutInfo.getGraph();
+  EdgesHistoryManager historyManager=new EdgesHistoryManager(graph);
   Set<Node> initialNodes=SetSequence.fromSet(new LinkedHashSet<Node>());
   SetSequence.fromSet(initialNodes).addSequence(ListSequence.fromList(graph.getNodes()));
   Set<Edge> initialEdges=SetSequence.fromSet(new LinkedHashSet<Edge>());
@@ -9,11 +10,12 @@
   for (  Edge edge : SetSequence.fromSet(initialEdges)) {
     if (edge.getSource() == edge.getTarget()) {
       SetSequence.fromSet(badEdges).addElement(edge);
-      edge.removeFromGraph();
+      graph.removeEdge(edge);
     }
   }
   BiconnectAugmentation.smartMakeBiconnected(graph);
-  EmbeddedGraph embeddedGraph=new ShortestPathEmbeddingFinder(new PQPlanarizationFinder()).find(graph);
+  IEmbeddingFinder embeddingFinder=EmbeddingFinderFactory.getFinder();
+  EmbeddedGraph embeddedGraph=embeddingFinder.find(graph);
   Map<Node,Face> facesMap=MapSequence.fromMap(new HashMap<Node,Face>());
   for (  Edge edge : SetSequence.fromSet(badEdges)) {
     Node node=edge.getSource();
@@ -28,23 +30,21 @@
         face=ListSequence.fromList(embeddedGraph.getAdjacentFaces(nodeEdge)).first();
       }
     }
-    Node newNode=graph.addNode();
-    List<Edge> newEdges=ListSequence.fromList(new LinkedList<Edge>());
-    ListSequence.fromList(newEdges).addElement(node.addEdgeTo(newNode));
-    ListSequence.fromList(newEdges).addElement(newNode.addEdgeTo(node));
-    embeddedGraph.setEdgesHistory(edge,newEdges);
+    List<Edge> newEdges=graph.splitEdge(edge);
     Face newFace=embeddedGraph.makeLoop(face,newEdges,node);
     MapSequence.fromMap(facesMap).put(node,newFace);
   }
   Set<Edge> newEdges=BiconnectAugmentation.smartMakeBiconnected(graph);
   for (  Edge edge : SetSequence.fromSet(newEdges)) {
-    edge.removeFromGraph();
+    graph.removeEdge(edge);
   }
   for (  Edge edge : SetSequence.fromSet(newEdges)) {
     ShortestPathEmbeddingFinder.restoreEdge(embeddedGraph,edge);
   }
+  myRealEdges=SetSequence.fromSet(new HashSet<Edge>());
   for (  Edge edge : SetSequence.fromSet(initialEdges)) {
-    MapSequence.fromMap(history).put(edge,embeddedGraph.findFullHistory(edge));
+    MapSequence.fromMap(history).put(edge,historyManager.getHistory(edge));
+    SetSequence.fromSet(myRealEdges).addSequence(ListSequence.fromList(MapSequence.fromMap(history).get(edge)));
   }
   Map<Edge,Edge> labeledEdges=MapSequence.fromMap(new HashMap<Edge,Edge>());
   LayoutInfo newInfo=new LayoutInfo(graph);

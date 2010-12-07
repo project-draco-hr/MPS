@@ -17,31 +17,12 @@
     String devkitNamespace=element.getAttributeValue(ModelPersistence.NAMESPACE);
     model.addDevKit(ModuleReference.fromString(devkitNamespace));
   }
-  int maxImportIndex=-1;
   for (  Element element : (List<Element>)rootElement.getChildren(ModelPersistence.IMPORT_ELEMENT)) {
     String indexValue=element.getAttributeValue(ModelPersistence.MODEL_IMPORT_INDEX);
-    int importIndex=Integer.parseInt(indexValue);
-    String usedModelVersionString=element.getAttributeValue(ModelPersistence.VERSION,"-1");
-    int usedModelVersion=-1;
-    try {
-      usedModelVersion=Integer.parseInt(usedModelVersionString);
-    }
- catch (    Throwable t) {
-      LOG.error(t);
-    }
+    int usedModelVersion=Integer.parseInt(element.getAttributeValue(ModelPersistence.VERSION,"-1"));
     String importedModelUIDString=element.getAttributeValue(ModelPersistence.MODEL_UID);
-    if (importedModelUIDString == null) {
-      LOG.error("Error loading import element for index " + importIndex + " in "+ model.getSModelReference());
-      continue;
-    }
-    SModelReference importedModelReference=upgradeModelUID(SModelReference.fromString(importedModelUIDString));
-    ImportElement impElem=new ImportElement(importedModelReference,importIndex,usedModelVersion);
-    myHelper.addImport(impElem);
-    if (element.getAttributeValue(ModelPersistence.IMPLICIT) == null)     model.addModelImport(impElem);
- else     model.addAdditionalModelVersion(impElem);
-    if (maxImportIndex < importIndex)     maxImportIndex=importIndex;
+    myHelper.addImport(model,indexValue,importedModelUIDString,usedModelVersion,element.getAttributeValue(ModelPersistence.IMPLICIT) != null);
   }
-  model.setMaxImportIndex(maxImportIndex);
   for (  Element child : (List<Element>)rootElement.getChildren(ModelPersistence.NODE)) {
     SNode snode=readNode(child,model);
     if (snode != null) {

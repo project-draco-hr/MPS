@@ -1,17 +1,17 @@
 {
-  boolean loading=mySModel.isLoading();
-  if (loading)   return;
-  BaseMPSModelRootManager manager=(BaseMPSModelRootManager)myModelRootManager;
-  SModel fullModel=manager.loadModel(this,ModelLoadingState.FULLY_LOADED).getModel();
-  try {
-    mySModel.setLoading(true);
+synchronized (myFullLoadSync) {
+    if (mySModel.isLoading())     return;
+    if (getLoadingState() == ModelLoadingState.FULLY_LOADED)     return;
+    SModel fullModel=load(ModelLoadingState.FULLY_LOADED).getModel();
     fullModel.setLoading(true);
-    new ModelLoader(mySModel,fullModel).update();
-    setLoadingState(ModelLoadingState.FULLY_LOADED);
-    updateOnLoad(mySModel,false);
-    fireModelStateChanged(ModelLoadingState.ROOTS_LOADED,ModelLoadingState.FULLY_LOADED);
-  }
+    try {
+      mySModel.setLoading(true);
+      new ModelLoader(mySModel,fullModel).update();
+      setLoadingState(ModelLoadingState.FULLY_LOADED);
+      fireModelStateChanged(ModelLoadingState.ROOTS_LOADED,ModelLoadingState.FULLY_LOADED);
+    }
   finally {
-    mySModel.setLoading(loading);
+      mySModel.setLoading(false);
+    }
   }
 }

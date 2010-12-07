@@ -1,0 +1,58 @@
+{
+  double time=System.currentTimeMillis();
+  curTime=time;
+  if (OrthogonalPointFlowLayouter.SHOW_TIME > 0) {
+    System.out.println("creating layout for graph with " + ListSequence.fromList(graph.getNodes()).count() + " nodes and "+ ListSequence.fromList(graph.getEdges()).count()+ " edges...");
+  }
+  Graph copy=new Graph();
+  Map<Node,Node> nodeMap=MapSequence.fromMap(new HashMap<Node,Node>());
+  Map<Edge,Edge> edgeMap=MapSequence.fromMap(new HashMap<Edge,Edge>());
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    MapSequence.fromMap(nodeMap).put(node,copy.createNode());
+  }
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    MapSequence.fromMap(edgeMap).put(edge,copy.connect(MapSequence.fromMap(nodeMap).get(edge.getSource()),MapSequence.fromMap(nodeMap).get(edge.getTarget())));
+  }
+  EdgesHistoryManager historyManager=new EdgesHistoryManager(copy);
+  BiconnectAugmentation.smartMakeBiconnected(copy);
+  EmbeddedGraph embeddedGraph=new ShortestPathEmbeddingFinder(new PQPlanarizationFinder()).find(copy);
+  Map<Edge,List<Edge>> history=MapSequence.fromMap(new HashMap<Edge,List<Edge>>());
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    Edge copyEdge=MapSequence.fromMap(edgeMap).get(edge);
+    MapSequence.fromMap(history).put(edge,historyManager.getHistory(copyEdge));
+    if (copyEdge.getSource() != MapSequence.fromMap(nodeMap).get(edge.getSource())) {
+      MapSequence.fromMap(history).put(edge,ListSequence.fromList(MapSequence.fromMap(history).get(edge)).reversedList());
+    }
+  }
+  if (OrthogonalPointFlowLayouter.SHOW_TIME > 0) {
+    long newTime=System.currentTimeMillis();
+    System.out.println("finding the embedding: " + ((newTime - curTime) / OrthogonalPointFlowLayouter.MILLIS));
+    System.out.println("graph now has " + ListSequence.fromList(copy.getNodes()).count() + " nodes and "+ ListSequence.fromList(copy.getEdges()).count()+ " edges");
+    curTime=newTime;
+  }
+  GraphPointLayout copyLayout=getFlowLayout(embeddedGraph,historyManager);
+  GraphPointLayout graphLayout=new GraphPointLayout(graph);
+  for (  Node node : ListSequence.fromList(graph.getNodes())) {
+    graphLayout.setLayoutFor(node,copyLayout.getLayoutFor(MapSequence.fromMap(nodeMap).get(node)));
+  }
+  for (  Edge graphEdge : ListSequence.fromList(graph.getEdges())) {
+    List<Point> edgeLayout=ListSequence.fromList(new ArrayList<Point>());
+    List<Edge> edgeHistory=MapSequence.fromMap(history).get(graphEdge);
+    Node cur=MapSequence.fromMap(nodeMap).get(graphEdge.getSource());
+    for (    Edge edge : ListSequence.fromList(edgeHistory)) {
+      if (cur == edge.getSource()) {
+        ListSequence.fromList(edgeLayout).addSequence(ListSequence.fromList(copyLayout.getLayoutFor(edge)));
+      }
+ else {
+        ListSequence.fromList(edgeLayout).addSequence(ListSequence.fromList(copyLayout.getLayoutFor(edge)).reversedList());
+      }
+      cur=edge.getOpposite(cur);
+    }
+    graphLayout.setLayoutFor(graphEdge,edgeLayout);
+  }
+  if (OrthogonalPointFlowLayouter.SHOW_TIME > 0) {
+    long newTime=System.currentTimeMillis();
+    System.out.println("all: " + ((newTime - time) / OrthogonalPointFlowLayouter.MILLIS));
+  }
+  return graphLayout;
+}

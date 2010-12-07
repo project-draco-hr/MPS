@@ -1,0 +1,92 @@
+{
+  if (type == ASMPrimitiveType.BOOLEAN) {
+    return BooleanType.newInstance(model);
+  }
+  if (type == ASMPrimitiveType.BYTE) {
+    return ByteType.newInstance(model);
+  }
+  if (type == ASMPrimitiveType.SHORT) {
+    return ShortType.newInstance(model);
+  }
+  if (type == ASMPrimitiveType.INT) {
+    return IntegerType.newInstance(model);
+  }
+  if (type == ASMPrimitiveType.LONG) {
+    return LongType.newInstance(model);
+  }
+  if (type == ASMPrimitiveType.FLOAT) {
+    return FloatType.newInstance(model);
+  }
+  if (type == ASMPrimitiveType.DOUBLE) {
+    return DoubleType.newInstance(model);
+  }
+  if (type == ASMPrimitiveType.VOID) {
+    return VoidType.newInstance(model);
+  }
+  if (type == ASMPrimitiveType.CHAR) {
+    return CharType.newInstance(model);
+  }
+  if (type instanceof ASMArrayType) {
+    ASMArrayType array=(ASMArrayType)type;
+    Type componentType=getTypeByASMType(array.getElementType(),method,classifier,model);
+    ArrayType result=ArrayType.newInstance(model);
+    result.setComponentType(componentType);
+    return result;
+  }
+  if (type instanceof ASMVarArgType) {
+    ASMVarArgType varArgType=(ASMVarArgType)type;
+    Type componentType=getTypeByASMType(varArgType.getElementType(),method,classifier,model);
+    VariableArityType result=VariableArityType.newInstance(model);
+    result.setComponentType(componentType);
+    return result;
+  }
+  if (type instanceof ASMTypeVariable) {
+    ASMTypeVariable tv=(ASMTypeVariable)type;
+    if (method != null && findTypeVariableDeclaration(method,tv.getName()) != null) {
+      return createTypeVariableReference(method,tv.getName());
+    }
+ else     if (findTypeVariableDeclaration(classifier,tv.getName()) != null) {
+      return createTypeVariableReference(classifier,tv.getName());
+    }
+ else {
+      return getTypeByASMType(ASMClassType.OBJECT,method,classifier,model);
+    }
+  }
+  if (type instanceof ASMClassType) {
+    ASMClassType c=(ASMClassType)type;
+    ClassifierType classifierType=ClassifierType.newInstance(model);
+    addClassifierReference(classifierType.getNode(),ClassifierType.CLASSIFIER,c);
+    return classifierType;
+  }
+  if (type instanceof ASMParameterizedType) {
+    ASMParameterizedType pt=(ASMParameterizedType)type;
+    ClassifierType rawType=(ClassifierType)getTypeByASMType(pt.getRawType(),method,classifier,model);
+    addTypeParameters(pt.getActualTypeArguments(),method,classifier,rawType);
+    return rawType;
+  }
+  if (type instanceof ASMExtendsType) {
+    ASMExtendsType e=(ASMExtendsType)type;
+    if (e.getBase() instanceof ASMClassType) {
+      ASMClassType ct=(ASMClassType)e.getBase();
+      if (ct.getName().equals("java.lang.Object")) {
+        return WildCardType.newInstance(model);
+      }
+    }
+    UpperBoundType r=UpperBoundType.newInstance(model);
+    r.setBound(getTypeByASMType(e.getBase(),method,classifier,model));
+    return r;
+  }
+  if (type instanceof ASMSuperType) {
+    ASMSuperType e=(ASMSuperType)type;
+    LowerBoundType r=LowerBoundType.newInstance(model);
+    r.setBound(getTypeByASMType(e.getBase(),method,classifier,model));
+    return r;
+  }
+  if (type instanceof ASMUnboundedType) {
+    WildCardType w=WildCardType.newInstance(model);
+    return w;
+  }
+  Type result=Type.newInstance(model);
+  LOG.error("Can't convert type " + type + " class : ",result);
+  return result;
+}

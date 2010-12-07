@@ -1,0 +1,41 @@
+{
+  SNode labelDeclaration=ruleNode.getReferent(BaseMappingRule.LABEL_DECLARATION);
+  String ruleMappingName=labelDeclaration != null ? labelDeclaration.getProperty(MappingLabelDeclaration.NAME) : null;
+  SNode ruleConsequence=ruleNode.getChild(Reduction_MappingRule.RULE_CONSEQUENCE);
+  if (ruleConsequence == null) {
+    environment.getGenerator().showErrorMessage(context.getInput(),null,ruleNode,"error processing reduction rule: no rule consequence");
+    return null;
+  }
+  TemplateContext conseqContext=GeneratorUtil.createTemplateContext(context.getInput(),context,environment.getReductionContext(),(RuleConsequence)ruleConsequence.getAdapter(),context.getInput(),environment.getGenerator());
+  List<Pair<SNode,String>> nodeAndMappingNamePairs=GeneratorUtil.getTemplateNodesFromRuleConsequence((RuleConsequence)ruleConsequence.getAdapter(),context.getInput(),ruleNode,environment.getReductionContext(),environment.getGenerator());
+  if (nodeAndMappingNamePairs == null) {
+    environment.getGenerator().showErrorMessage(context.getInput(),null,ruleConsequence,"error processing reduction rule consequence");
+    return null;
+  }
+  List<SNode> result=new ArrayList<SNode>(nodeAndMappingNamePairs.size());
+  TemplateProcessor templateProcessor=new TemplateProcessor(environment.getGenerator(),environment.getReductionContext());
+  for (  Pair<SNode,String> nodeAndMappingNamePair : nodeAndMappingNamePairs) {
+    SNode templateNode=nodeAndMappingNamePair.o1;
+    String mappingName=nodeAndMappingNamePair.o2 != null ? nodeAndMappingNamePair.o2 : ruleMappingName;
+    try {
+      result.addAll(templateProcessor.processTemplateNode(mappingName,templateNode,conseqContext));
+    }
+ catch (    DismissTopMappingRuleException e) {
+      throw e;
+    }
+catch (    TemplateProcessingFailureException e) {
+      environment.getGenerator().showErrorMessage(context.getInput(),templateNode,ruleNode,"error processing reduction rule");
+    }
+catch (    GenerationFailureException e) {
+      throw e;
+    }
+catch (    GenerationCanceledException e) {
+      throw e;
+    }
+catch (    Throwable t) {
+      environment.getGenerator().getLogger().handleException(t);
+      environment.getGenerator().showErrorMessage(context.getInput(),templateNode,ruleNode,"error processing reduction rule");
+    }
+  }
+  return result;
+}

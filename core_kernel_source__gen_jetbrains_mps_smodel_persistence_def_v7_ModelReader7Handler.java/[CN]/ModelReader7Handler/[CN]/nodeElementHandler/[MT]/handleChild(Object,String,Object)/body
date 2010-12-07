@@ -1,0 +1,35 @@
+{
+  SNode result=(SNode)resultObject;
+  if ("property".equals(tagName)) {
+    String[] child=(String[])value;
+    if (child[1] != null) {
+      result.setProperty(fieldhelper.readName(child[0]),child[1],false);
+    }
+    return;
+  }
+  if ("link".equals(tagName)) {
+    String[] child=(String[])value;
+    SNodePointer ptr=fieldhelper.readLinkId(child[1]);
+    if (ptr == null || ptr.getModelReference() == null) {
+      if (log.isErrorEnabled()) {
+        log.error("couldn't create reference '" + child[0] + "' from "+ child[1]);
+      }
+      return;
+    }
+    SReference ref;
+    if (ptr.getNodeId() == null) {
+      ref=new DynamicReference(fieldhelper.readRole(child[0]),result,ptr.getModelReference(),child[2]);
+    }
+ else {
+      ref=new StaticReference(fieldhelper.readRole(child[0]),result,ptr.getModelReference(),ptr.getNodeId(),child[2]);
+    }
+    result.addReference(ref);
+    return;
+  }
+  if ("node".equals(tagName)) {
+    SNode child=(SNode)value;
+    result.addChild(child.getRole_(),child);
+    return;
+  }
+  super.handleChild(resultObject,tagName,value);
+}

@@ -1,2 +1,27 @@
 {
+  if (!PlayRefactoringsFlag.refactoringsPlaybackEnabled())   return false;
+  if (!SModelStereotype.isUserModel(model))   return false;
+  boolean wasLoading=model.setLoading(true);
+  boolean result=false;
+  try {
+    boolean played;
+    do {
+      played=false;
+      for (      ImportElement importElement : SModelOperations.getAllImportElements(model)) {
+        SModelDescriptor usedModelDescriptor=SModelRepository.getInstance().getModelDescriptor(importElement.getModelReference());
+        if (!(usedModelDescriptor instanceof EditableSModelDescriptor))         continue;
+        if (importElement.getUsedVersion() >= ((EditableSModelDescriptor)usedModelDescriptor).getVersion())         continue;
+        if (!playUsedModelDescriptorsRefactoring(model,(EditableSModelDescriptor)usedModelDescriptor))         continue;
+        played=true;
+      }
+      if (played) {
+        result=true;
+      }
+    }
+ while (played);
+  }
+  finally {
+    model.setLoading(wasLoading);
+  }
+  return result;
 }

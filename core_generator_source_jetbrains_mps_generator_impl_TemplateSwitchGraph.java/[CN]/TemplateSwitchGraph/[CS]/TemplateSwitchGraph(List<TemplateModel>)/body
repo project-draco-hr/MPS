@@ -1,0 +1,38 @@
+{
+  for (  TemplateModel templateModel : templateModels) {
+    for (    TemplateSwitchMapping root : templateModel.getSwitches()) {
+      mySwitchToNode.put(root.getSwitchNode(),new Node(root));
+    }
+  }
+  for (  Node node : mySwitchToNode.values()) {
+    SNodePointer modifiesSwitchPtr=node.mySwitch.getModifiesSwitch();
+    if (modifiesSwitchPtr != null) {
+      Node modifiedSwitch=mySwitchToNode.get(modifiesSwitchPtr);
+      if (modifiedSwitch != null) {
+        node.myModified=modifiedSwitch;
+      }
+    }
+    if (node.myModified == null) {
+      node.myRules=new LinkedList<TemplateSwitchMapping>();
+    }
+  }
+  for (  Node node : mySwitchToNode.values()) {
+    Node bottom=node;
+    int i=256;
+    while (bottom.myModified != null && --i > 0) {
+      bottom=bottom.myModified;
+    }
+    if (node != bottom) {
+      node.myModified=bottom;
+      if (i == 0) {
+        throw new RuntimeException("Template switch loop in: " + node);
+      }
+    }
+    bottom.myRules.add(node.mySwitch);
+  }
+  for (  Node node : mySwitchToNode.values()) {
+    if (node.myModified == null) {
+      node.createFinder();
+    }
+  }
+}

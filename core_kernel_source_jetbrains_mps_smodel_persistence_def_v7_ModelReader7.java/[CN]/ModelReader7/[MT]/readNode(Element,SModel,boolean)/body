@@ -1,0 +1,40 @@
+{
+  String conceptFqName=myHelper.readType(nodeElement.getAttributeValue(ModelPersistence.TYPE));
+  SNode node=new SNode(model,conceptFqName);
+  String idValue=nodeElement.getAttributeValue(ModelPersistence.ID);
+  if (idValue != null) {
+    SNodeId id=SNodeId.fromString(idValue);
+    if (id == null) {
+      LOG.error("invalid id string");
+      return null;
+    }
+    node.setId(id);
+  }
+  for (  Element element : (List<Element>)nodeElement.getChildren(ModelPersistence.PROPERTY)) {
+    String propertyName=myHelper.readName(element.getAttributeValue(ModelPersistence.NAME));
+    String propertyValue=element.getAttributeValue(ModelPersistence.VALUE);
+    if (propertyValue != null) {
+      node.setProperty(propertyName,propertyValue,false);
+    }
+  }
+  for (  Element link : (List<Element>)nodeElement.getChildren(ModelPersistence.LINK)) {
+    String target=link.getAttributeValue(ModelPersistence.TARGET_NODE_ID);
+    String resolveInfo=link.getAttributeValue(ModelPersistence.RESOLVE_INFO);
+    String role=myHelper.readRole(link.getAttributeValue(ModelPersistence.ROLE));
+    SNodePointer ptr=myHelper.readLinkId(target);
+    if (ptr == null || ptr.getModelReference() == null) {
+      LOG.error("couldn't create reference '" + role + "' : from "+ target);
+      continue;
+    }
+    if (ptr.getNodeId() == null) {
+      DynamicReference ref=new DynamicReference(role,node,ptr.getModelReference(),resolveInfo);
+      node.addReference(ref);
+    }
+ else {
+      StaticReference ref=new StaticReference(role,node,ptr.getModelReference(),ptr.getNodeId(),resolveInfo);
+      node.addReference(ref);
+    }
+  }
+  if (!isRootStub)   readChildren(node,nodeElement);
+  return node;
+}

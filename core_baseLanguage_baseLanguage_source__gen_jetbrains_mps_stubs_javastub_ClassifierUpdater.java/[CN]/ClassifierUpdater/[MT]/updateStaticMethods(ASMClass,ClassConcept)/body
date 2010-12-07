@@ -1,0 +1,45 @@
+{
+  SModel model=cls.getModel();
+  for (  ASMMethod m : ac.getDeclaredMethods()) {
+    if (m.isPrivate() && ASMModelLoader.SKIP_PRIVATE) {
+      continue;
+    }
+    if (!(m.isStatic())) {
+      continue;
+    }
+    if (m.isCompilerGenerated()) {
+      continue;
+    }
+    if (cls instanceof EnumClass && isGeneratedEnumMethod(m)) {
+      continue;
+    }
+    StaticMethodDeclaration methodDeclaration=StaticMethodDeclaration.newInstance(model);
+    methodDeclaration.getNode().setId(ASMNodeId.createId(ac,m));
+    methodDeclaration.setBody(((StatementList)((StubStatementList)SNodeOperations.getAdapter((SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StubStatementList",null))))));
+    methodDeclaration.setVisibility(createVisibility(m,model));
+    methodDeclaration.setIsDeprecated(m.isDeprecated());
+    if (m.isFinal()) {
+      methodDeclaration.setIsFinal(true);
+    }
+    updateTypeVariables(m,model,methodDeclaration,cls);
+    methodDeclaration.setName(m.getName());
+    methodDeclaration.setReturnType(getTypeByASMType(m.getGenericReturnType(),methodDeclaration,cls,model));
+    List<ASMType> parameterTypes=m.getGenericParameterTypes();
+    List<String> parameterNames=m.getParameterNames();
+    for (int i=0; i < parameterTypes.size(); i++) {
+      ASMType paramType=parameterTypes.get(i);
+      ParameterDeclaration parameterDeclaration=ParameterDeclaration.newInstance(model);
+      parameterDeclaration.setName(parameterNames.get(i));
+      parameterDeclaration.setType(getTypeByASMType(paramType,methodDeclaration,cls,model));
+      addAnnotationsToParameter(parameterDeclaration,m.getParameterAnnotations().get(i));
+      methodDeclaration.addParameter(parameterDeclaration);
+    }
+    for (    ASMAnnotation annotation : m.getAnnotations()) {
+      methodDeclaration.addAnnotation(createAnnotation(annotation,model));
+    }
+    for (    ASMType exception : m.getExceptionTypes()) {
+      methodDeclaration.addThrowsItem(getTypeByASMType(exception,methodDeclaration,cls,model));
+    }
+    cls.addStaticMethod(methodDeclaration);
+  }
+}

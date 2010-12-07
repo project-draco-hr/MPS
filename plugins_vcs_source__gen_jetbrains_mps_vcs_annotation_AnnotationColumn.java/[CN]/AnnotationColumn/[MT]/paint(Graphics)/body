@@ -1,0 +1,49 @@
+{
+  graphics.setFont(myFont);
+  EditorComponent.turnOnAliasingIfPossible((Graphics2D)graphics);
+  final Map<AnnotationAspectSubcolumn,Integer> subcolumnToX=MapSequence.fromMap(new HashMap<AnnotationAspectSubcolumn,Integer>());
+  int x=1;
+  for (  AnnotationAspectSubcolumn subcolumn : ListSequence.fromList(myAspectSubcolumns)) {
+    MapSequence.fromMap(subcolumnToX).put(subcolumn,x);
+    if (subcolumn.isEnabled() || myShowAdditionalInfo) {
+      x+=subcolumn.getWidth() + mySubcolumnInterval;
+    }
+  }
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+synchronized (myCurrentPseudoLinesLock) {
+        assureCurrentPseudoLinesCalculated();
+        for (int pseudoLine=0; pseudoLine < ListSequence.fromList(myPseudoLinesY).count(); pseudoLine++) {
+          int fileLine=ListSequence.fromList(myPseudoLinesToFileLines).getElement(pseudoLine);
+          if (!(SetSequence.fromSet(myCurrentPseudoLines).contains(pseudoLine))) {
+            if (myAuthorAnnotationAspect != null && ViewAction.isSet(ViewAction.COLORS)) {
+              String author=myAuthorAnnotationAspect.getValue(fileLine);
+              graphics.setColor(MapSequence.fromMap(myAuthorsToColors).get(author));
+              int height=(pseudoLine == ListSequence.fromList(myPseudoLinesY).count() - 1 ? getEditorComponent().getHeight() - ListSequence.fromList(myPseudoLinesY).last() : ListSequence.fromList(myPseudoLinesY).getElement(pseudoLine + 1) - ListSequence.fromList(myPseudoLinesY).getElement(pseudoLine));
+              graphics.fillRect(0,ListSequence.fromList(myPseudoLinesY).getElement(pseudoLine),getWidth(),height);
+            }
+            graphics.setColor(ANNOTATION_COLOR);
+            if (myRevisionRange.isFileLineHighlighted(fileLine)) {
+              graphics.setFont(myFont.deriveFont(Font.BOLD));
+            }
+ else {
+              graphics.setFont(myFont);
+            }
+            for (            AnnotationAspectSubcolumn subcolumn : ListSequence.fromList(myAspectSubcolumns)) {
+              if (subcolumn.isEnabled() || myShowAdditionalInfo) {
+                String text=subcolumn.getTextForFileLine(fileLine);
+                int textX=MapSequence.fromMap(subcolumnToX).get(subcolumn);
+                FontMetrics metrics=graphics.getFontMetrics();
+                if (subcolumn.isRightAligned()) {
+                  textX+=subcolumn.getWidth() - metrics.stringWidth(text);
+                }
+                graphics.drawString(text,textX,metrics.getAscent() + ListSequence.fromList(myPseudoLinesY).getElement(pseudoLine));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+);
+}
