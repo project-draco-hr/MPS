@@ -11,27 +11,27 @@
     final QueryExecutionContext executionContext=getExecutionContext(inputNode);
     if (executionContext != null) {
       TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(this,new ReductionContext(executionContext),getOperationContext(),myGenerationTracer);
-      Root_MappingRule rootMappingRule=((TemplateRootMappingRuleInterpreted)rule).getNode();
-      if (executionContext.checkCondition(rootMappingRule.getConditionFunction(),false,inputNode,rootMappingRule.getNode())) {
-        myGenerationTracer.pushInputNode(inputNode);
-        myGenerationTracer.pushRule(rule.getRuleNode());
-        try {
-          SNode templateNode=BaseAdapter.fromAdapter(rootMappingRule.getTemplate());
-          if (templateNode != null) {
+      try {
+        if (executionContext.isApplicable(rule,environment,new DefaultTemplateContext(inputNode))) {
+          myGenerationTracer.pushInputNode(inputNode);
+          myGenerationTracer.pushRule(rule.getRuleNode());
+          try {
             boolean copyRootOnFailure=false;
             if (inputNode.isRoot() && !rule.keepSourceRoot()) {
               rootsToCopy.remove(inputNode);
               copyRootOnFailure=true;
             }
-            createRootNodeFromTemplate(GeneratorUtil.getMappingName(rootMappingRule,null),templateNode,inputNode,copyRootOnFailure,environment);
+            createRootNodeByRule(rule,inputNode,copyRootOnFailure,environment);
           }
- else {
-            myLogger.error(BaseAdapter.fromAdapter(rootMappingRule),"no template is defined for the rule");
-          }
-        }
   finally {
-          myGenerationTracer.closeInputNode(inputNode);
+            myGenerationTracer.closeInputNode(inputNode);
+          }
         }
+      }
+ catch (      GenerationException e) {
+        if (e instanceof GenerationCanceledException)         throw (GenerationCanceledException)e;
+        if (e instanceof GenerationFailureException)         throw (GenerationFailureException)e;
+        showErrorMessage(null,rule.getRuleNode().getNode(),"internal error: " + e.toString());
       }
     }
   }
