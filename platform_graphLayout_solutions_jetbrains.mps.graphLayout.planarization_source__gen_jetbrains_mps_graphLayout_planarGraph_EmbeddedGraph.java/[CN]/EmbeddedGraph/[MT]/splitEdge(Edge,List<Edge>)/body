@@ -5,22 +5,32 @@
   Node newNode=ListSequence.fromList(split).getElement(0).getTarget();
   List<Face> facesToProcess=ListSequence.fromList(new ArrayList<Face>());
   ListSequence.fromList(facesToProcess).addSequence(ListSequence.fromList(getAdjacentFaces(edge)));
+  List<Edge> addOrder=null;
   for (  Face face : ListSequence.fromList(facesToProcess)) {
     List<Dart> darts=face.getDarts();
-    int pos=0;
-    while (ListSequence.fromList(darts).getElement(pos).getEdge() != edge) {
-      pos++;
-    }
-    Dart dartToReplace=ListSequence.fromList(darts).getElement(pos);
-    for (    Edge newEdge : ListSequence.fromList(newEdges)) {
-      if (ListSequence.fromList(newEdge.getAdjacentNodes()).contains(dartToReplace.getSource())) {
-        this.setDart(face,pos,new Dart(newEdge,dartToReplace.getSource()));
+    int numDartsToRemove=ListSequence.fromList(darts).where(new IWhereFilter<Dart>(){
+      public boolean accept(      Dart it){
+        return it.getEdge() == edge;
       }
     }
-    for (    Edge newEdge : ListSequence.fromList(newEdges)) {
-      if (ListSequence.fromList(newEdge.getAdjacentNodes()).contains(dartToReplace.getTarget())) {
-        this.insertDart(face,pos + 1,new Dart(newEdge,newNode));
+).count();
+    for (int dartNum=0; dartNum < numDartsToRemove; dartNum++) {
+      int pos=0;
+      while (ListSequence.fromList(darts).getElement(pos).getEdge() != edge) {
+        pos++;
       }
+      Dart dartToReplace=ListSequence.fromList(darts).getElement(pos);
+      if (addOrder == null) {
+        addOrder=newEdges;
+        if (dartToReplace.getSource() != edge.getSource()) {
+          addOrder=ListSequence.fromList(newEdges).reversedList();
+        }
+      }
+ else {
+        addOrder=ListSequence.fromList(addOrder).reversedList();
+      }
+      setDart(face,pos,new Dart(ListSequence.fromList(addOrder).getElement(0),dartToReplace.getSource()));
+      insertDart(face,pos + 1,new Dart(ListSequence.fromList(addOrder).getElement(1),newNode));
     }
   }
   return newNode;

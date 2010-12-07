@@ -29,8 +29,8 @@
   }
   GroupedGraphModificationSynchronizer synchronizer=new GroupedGraphModificationSynchronizer(mySubclustersGraph,myGraph,invEdgeMap);
   mySubEmbeddedGraph=EmbeddingFinderFactory.getFinder().find(mySubclustersGraph);
+  synchronizer.disconnect();
   if (ListSequence.fromList(myOuterEdgesOrder).count() > 0) {
-    mySubclustersGraph.removeListener(synchronizer);
     List<Edge> subClusterBorder=ListSequence.fromList(new ArrayList<Edge>(ListSequence.fromList(myOuterEdgesOrder).count()));
     myClusterBorder=ListSequence.fromList(new ArrayList<Edge>(ListSequence.fromList(myOuterEdgesOrder).count()));
     List<Edge> subOuterEdges=ListSequence.fromList(new ArrayList<Edge>(ListSequence.fromList(myOuterEdgesOrder).count()));
@@ -70,7 +70,7 @@
       Edge subBorderEdge=mySubclustersGraph.connect(ListSequence.fromList(subBorderNodes).getElement(i),ListSequence.fromList(subBorderNodes).getElement(next));
       ListSequence.fromList(subClusterBorder).addElement(subBorderEdge);
       MapSequence.fromMap(invEdgeMap).put(subBorderEdge,realBorderEdge);
-      outerFace.addLast(new Dart(subBorderEdge,ListSequence.fromList(subBorderNodes).getElement(next)));
+      outerFace.addFirst(new Dart(subBorderEdge,ListSequence.fromList(subBorderNodes).getElement(next)));
     }
     Node borderFirstNode=ListSequence.fromList(subBorderNodes).first();
     Edge bridge=ListSequence.fromList(subOuterEdges).first();
@@ -91,7 +91,7 @@
     mySubEmbeddedGraph.addFace(outerFace);
     mySubEmbeddedGraph.setOuterFace(outerFace);
     if (ClusterEmbeddingConstructor.debugMode > 0) {
-      CheckEmbeddedGraph.checkEmbeddedGraph(mySubEmbeddedGraph);
+      CheckEmbeddedGraph.checkEmbeddedGraph(mySubEmbeddedGraph,false);
     }
     synchronizer=new GroupedGraphModificationSynchronizer(mySubclustersGraph,myGraph,invEdgeMap);
     for (    Edge edge : ListSequence.fromList(subOuterEdges)) {
@@ -99,8 +99,9 @@
         continue;
       }
       mySubclustersGraph.removeEdge(edge);
-      ShortestPathEmbeddingFinder.restoreEdge(mySubEmbeddedGraph,edge);
+      ShortestPathEmbeddingFinder.restoreEdge(mySubEmbeddedGraph,edge,true);
     }
+    synchronizer.disconnect();
   }
   myNodeMap=nodeMap;
   return invEdgeMap;
