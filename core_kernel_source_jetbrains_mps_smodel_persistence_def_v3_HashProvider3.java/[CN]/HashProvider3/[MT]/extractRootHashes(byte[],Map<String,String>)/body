@@ -1,0 +1,47 @@
+{
+  XmlFastScanner scanner=new XmlFastScanner(content);
+  int depth=0, token, rootStart=-1;
+  String rootId=null;
+  boolean isEmpty=true;
+  while ((token=scanner.next()) != XmlFastScanner.EOI) {
+switch (token) {
+case XmlFastScanner.OPEN_TAG:
+      depth++;
+    if (depth == 2 && ModelPersistence.NODE.equals(scanner.getName())) {
+      rootStart=scanner.getTokenOffset();
+      rootId=extractId(scanner.token());
+      if (rootId != null && isEmpty) {
+        rootHashes.put(ModelDigestHelper.HEADER,ModelDigestUtil.hash(scanner.getText(0,rootStart)));
+        isEmpty=false;
+      }
+    }
+  break;
+case XmlFastScanner.SIMPLE_TAG:
+if (depth == 1 && ModelPersistence.NODE.equals(scanner.getName())) {
+  rootId=extractId(scanner.token());
+  if (rootId != null) {
+    String s=scanner.getText(scanner.getTokenOffset(),scanner.getOffset());
+    rootHashes.put(rootId,ModelDigestUtil.hash(s));
+  }
+}
+break;
+case XmlFastScanner.CLOSE_TAG:
+if (depth == 2) {
+if (rootId != null && ModelPersistence.NODE.equals(scanner.getName())) {
+String s=scanner.getText(rootStart,scanner.getOffset());
+rootHashes.put(rootId,ModelDigestUtil.hash(s));
+}
+rootStart=-1;
+rootId=null;
+}
+depth--;
+break;
+}
+}
+if (depth != 0) {
+LOG.error("xml: bad data");
+}
+if (isEmpty) {
+rootHashes.put(ModelDigestHelper.HEADER,ModelDigestUtil.hash(content));
+}
+}

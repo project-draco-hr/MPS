@@ -18,10 +18,19 @@
   ListSequence.fromList(initialNodes).addSequence(SetSequence.fromSet(MapSequence.fromMap(nodeSizes).keySet()));
   Map<Dart,Integer> bends=MapSequence.fromMap(new HashMap<Dart,Integer>());
   Map<Dart,Integer> angles=MapSequence.fromMap(new HashMap<Dart,Integer>());
-  Set<Edge> freeEdges=SetSequence.fromSet(new HashSet<Edge>());
-  SetSequence.fromSet(freeEdges).addSequence(ListSequence.fromList(graph.getEdges()));
-  SetSequence.fromSet(freeEdges).removeSequence(SetSequence.fromSet(getRealEdges()));
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    if (ListSequence.fromList(embeddedGraph.getDarts(edge)).count() != 2) {
+      throw new RuntimeException("botva!!!");
+    }
+  }
   QuasiOrthogonalRepresentation.getRepresentation(embeddedGraph,bends,angles);
+  for (  Edge edge : ListSequence.fromList(graph.getEdges())) {
+    for (    Dart dart : ListSequence.fromList(embeddedGraph.getDarts(edge))) {
+      if (MapSequence.fromMap(angles).get(dart) < 0 || MapSequence.fromMap(angles).get(dart) > 3) {
+        throw new RuntimeException("botva!!!");
+      }
+    }
+  }
   QuasiRepresentationModifier quasiModifier=new QuasiRepresentationModifier(embeddedGraph,bends,angles);
   quasiModifier.reduceToOrthogonalRepresentation();
   List<QuasiRepresentationModifier.Modification> modifications=quasiModifier.getModifications();
@@ -218,7 +227,7 @@
     MapSequence.fromMap(edgeLengths).put(edge,Math.abs(sourcePoint.x - targetPoint.x) + Math.abs(sourcePoint.y - targetPoint.y));
   }
   coordinates=constraintsGraph.getCoordinates(edgeLengths,constraintEdgeLengths);
-  GraphLayout graphLayout=new GraphLayout(graph);
+  GraphLayout graphLayout=GraphLayoutFactory.createGraphLayout(graph);
   for (  Node node : ListSequence.fromList(initialNodes)) {
     Rectangle rect=this.getNodeLayout(coordinates,node,nodeDirectionSizes,nodeSizes);
     graphLayout.setLayoutFor(node,rect);

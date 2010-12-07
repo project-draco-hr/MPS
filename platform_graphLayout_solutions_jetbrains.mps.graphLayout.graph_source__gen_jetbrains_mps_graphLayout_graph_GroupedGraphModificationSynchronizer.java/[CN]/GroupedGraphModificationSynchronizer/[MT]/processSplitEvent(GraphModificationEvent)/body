@@ -1,0 +1,36 @@
+{
+  Edge splittedEdge=event.getEdge();
+  if (MapSequence.fromMap(myEdgeMap).containsKey(splittedEdge)) {
+    Edge syncEdge=MapSequence.fromMap(myEdgeMap).get(splittedEdge);
+    List<Edge> split=event.getSplit();
+    List<Edge> syncSplit=ListSequence.fromList(new ArrayList<Edge>(ListSequence.fromList(split).count()));
+    for (    Edge splitEdge : ListSequence.fromList(split)) {
+      if (MapSequence.fromMap(myEdgeMap).containsKey(splitEdge)) {
+        ListSequence.fromList(syncSplit).addElement(MapSequence.fromMap(myEdgeMap).get(splitEdge));
+      }
+ else {
+        Node source=splitEdge.getSource();
+        Node syncSource;
+        if (MapSequence.fromMap(myNodeMap).containsKey(source)) {
+          syncSource=MapSequence.fromMap(myNodeMap).get(source);
+        }
+ else {
+          syncSource=syncEdge.getSource();
+        }
+        Node target=splitEdge.getTarget();
+        Node syncTarget;
+        if (MapSequence.fromMap(myNodeMap).containsKey(target)) {
+          syncTarget=MapSequence.fromMap(myNodeMap).get(target);
+        }
+ else {
+          syncTarget=syncEdge.getTarget();
+        }
+        Edge syncSplitEdge=mySynchronizedGraph.connect(syncSource,syncTarget);
+        MapSequence.fromMap(myEdgeMap).put(splitEdge,syncSplitEdge);
+        ListSequence.fromList(syncSplit).addElement(syncSplitEdge);
+      }
+    }
+    System.out.println("splitted " + splittedEdge + " sync = "+ syncEdge);
+    mySynchronizedGraph.getModificationProcessor().fire(new GraphModificationEvent(GraphModificationEvent.Type.EDGE_SPLITTED,syncEdge,syncSplit));
+  }
+}

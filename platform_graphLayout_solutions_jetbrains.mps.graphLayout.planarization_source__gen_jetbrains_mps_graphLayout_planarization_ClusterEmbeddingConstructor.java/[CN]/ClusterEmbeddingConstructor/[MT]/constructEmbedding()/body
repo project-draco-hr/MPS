@@ -1,0 +1,46 @@
+{
+  Iterable<Node> subclusters=myGraph.getSubclusters(myCluster);
+  if (Sequence.fromIterable(subclusters).count() == 0) {
+    return new EmbeddedGraph(myGraph);
+  }
+  Map<Edge,Edge> invEdgeMap=constructSubclusterGraphEmbedding();
+  if (ClusterEmbeddingConstructor.showInfo > 0) {
+    System.out.println("for cluster " + myCluster + " border is: "+ myClusterBorder);
+  }
+  myEmbeddedGraph=new EmbeddedGraph(myGraph);
+  myFaceMap=MapSequence.fromMap(new HashMap<Face,Face>());
+  for (  Face face : ListSequence.fromList(mySubEmbeddedGraph.getFaces())) {
+    Face realFace=new Face(myGraph);
+    MapSequence.fromMap(myFaceMap).put(face,realFace);
+    for (    Dart dart : ListSequence.fromList(face.getDarts())) {
+      Edge edge=dart.getEdge();
+      Edge realEdge=MapSequence.fromMap(invEdgeMap).get(edge);
+      if (realEdge == null) {
+        throw new RuntimeException("wrong synchronized embedding");
+      }
+      Node source=dart.getSource();
+      Node realSource;
+      if (source == edge.getSource()) {
+        realSource=realEdge.getSource();
+      }
+ else {
+        realSource=realEdge.getTarget();
+      }
+      realFace.addLast(new Dart(realEdge,realSource));
+    }
+  }
+  for (  Node subcluster : Sequence.fromIterable(subclusters)) {
+    findSubclusterEmbedding(subcluster,invEdgeMap);
+  }
+  for (  Face face : SetSequence.fromSet(MapSequence.fromMap(myFaceMap).keySet())) {
+    Face realFace=MapSequence.fromMap(myFaceMap).get(face);
+    myEmbeddedGraph.addFace(realFace);
+    if (mySubEmbeddedGraph.isOuterFace(face)) {
+      myEmbeddedGraph.setOuterFace(realFace);
+    }
+  }
+  if (myClusterBorderMap != null && ListSequence.fromList(myClusterBorder).count() > 0) {
+    MapSequence.fromMap(myClusterBorderMap).put(myCluster,myClusterBorder);
+  }
+  return myEmbeddedGraph;
+}

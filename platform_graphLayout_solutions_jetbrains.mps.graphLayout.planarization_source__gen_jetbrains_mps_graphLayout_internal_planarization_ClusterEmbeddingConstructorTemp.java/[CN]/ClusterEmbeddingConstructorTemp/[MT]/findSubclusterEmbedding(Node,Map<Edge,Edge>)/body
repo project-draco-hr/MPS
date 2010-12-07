@@ -1,0 +1,75 @@
+{
+  Node node=MapSequence.fromMap(mySubclustersMap).get(subcluster);
+  List<Dart> darts=mySubEmbeddedGraph.getOrderedDarts(node);
+  List<Edge> subOuterEdgesOrder=ListSequence.fromList(new ArrayList<Edge>(ListSequence.fromList(darts).count()));
+  for (  Dart dart : ListSequence.fromList(darts)) {
+    Edge edge=dart.getEdge();
+    Edge realEdge=MapSequence.fromMap(invEdgeMap).get(edge);
+    List<Edge> history=myHistoryManager.getHistory(realEdge);
+    if (edge.getSource() == node) {
+      realEdge=ListSequence.fromList(history).first();
+    }
+ else {
+      realEdge=ListSequence.fromList(history).last();
+    }
+    ListSequence.fromList(subOuterEdgesOrder).addElement(realEdge);
+  }
+  ClusterEmbeddingConstructorTemp subProcessor=new ClusterEmbeddingConstructorTemp(myGraph,subcluster,subOuterEdgesOrder);
+  EmbeddedGraph subclusterEmbedding=subProcessor.constructEmbedding();
+  CheckEmbeddedGraph.checkEmbeddedGraph(subclusterEmbedding,false);
+  if (ListSequence.fromList(subclusterEmbedding.getFaces()).count() > 0) {
+    Face outerFace=subclusterEmbedding.getOuterFace();
+    for (    Face face : ListSequence.fromList(subclusterEmbedding.getFaces())) {
+      if (face == outerFace) {
+        continue;
+      }
+      myEmbeddedGraph.addFace(face);
+    }
+    Edge lastOuterEdge=ListSequence.fromList(darts).last().getEdge();
+    Tuples._2<Edge,Node> lastOuterEdgeInfo=getCurOuterEdge(lastOuterEdge,subclusterEmbedding);
+    int i=0;
+    Dart prev=ListSequence.fromList(darts).last();
+    Edge prevCurOuterEdge=lastOuterEdgeInfo._0();
+    Node prevBorderNode=lastOuterEdgeInfo._1();
+    outerFace.makeEndsWith(prevBorderNode);
+    Iterator<Dart> borderItr=ListSequence.fromList(outerFace.getDarts()).reversedList().iterator();
+    for (    Dart dart : ListSequence.fromList(darts)) {
+      final Edge outerEdge=ListSequence.fromList(subOuterEdgesOrder).getElement(i);
+      Tuples._2<Edge,Node> outerEdgeInfo=getCurOuterEdge(outerEdge,subclusterEmbedding);
+      Edge curOuterEdge=outerEdgeInfo._0();
+      Node borderNode=outerEdgeInfo._1();
+      Face face=MapSequence.fromMap(myFaceMap).get(mySubEmbeddedGraph.getFace(prev));
+      List<Dart> faceDarts=face.getDarts();
+      Dart outerEdgeDart=ListSequence.fromList(faceDarts).findFirst(new IWhereFilter<Dart>(){
+        public boolean accept(        Dart dart){
+          return dart.getEdge() == outerEdge;
+        }
+      }
+);
+      if (outerEdgeDart == null) {
+        throw new RuntimeException("error during merging subcluster's embeddings");
+      }
+      face.makeStartsWith(outerEdgeDart);
+      ListSequence.fromList(faceDarts).removeElementAt(0);
+      ListSequence.fromList(faceDarts).removeElementAt(0);
+      ListSequence.fromList(faceDarts).insertElement(0,new Dart(prevCurOuterEdge,prevBorderNode));
+      if (dart == ListSequence.fromList(darts).last()) {
+        while (borderItr.hasNext()) {
+          ListSequence.fromList(faceDarts).insertElement(0,borderItr.next());
+        }
+      }
+ else       if (prevBorderNode != borderNode) {
+        Dart cur=borderItr.next();
+        while (cur.getSource() != borderNode) {
+          ListSequence.fromList(faceDarts).insertElement(0,cur);
+          cur=borderItr.next();
+        }
+        ListSequence.fromList(faceDarts).insertElement(0,cur);
+      }
+      ListSequence.fromList(faceDarts).insertElement(0,new Dart(curOuterEdge,curOuterEdge.getOpposite(borderNode)));
+      prev=dart;
+      prevCurOuterEdge=curOuterEdge;
+      prevBorderNode=borderNode;
+    }
+  }
+}
