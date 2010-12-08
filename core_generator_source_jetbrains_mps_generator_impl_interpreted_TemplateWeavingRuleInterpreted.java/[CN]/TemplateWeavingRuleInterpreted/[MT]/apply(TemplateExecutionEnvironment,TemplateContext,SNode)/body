@@ -1,0 +1,35 @@
+{
+  SNode consequence=ruleNode.getChild(Weaving_MappingRule.RULE_CONSEQUENCE);
+  if (consequence == null) {
+    environment.getGenerator().showErrorMessage(context.getInput(),null,ruleNode,"weaving rule: no rule consequence");
+    return false;
+  }
+  RuleConsequence ruleConsequence=(RuleConsequence)consequence.getAdapter();
+  environment.getTracer().pushRuleConsequence(new SNodePointer(consequence));
+  if (ruleConsequence instanceof TemplateDeclarationReference) {
+    TemplateDeclaration template=((TemplateDeclarationReference)ruleConsequence).getTemplate();
+    weaveTemplateDeclaration(template,outputContextNode,GeneratorUtil.createTemplateContext(context.getInput(),null,environment.getReductionContext(),ruleConsequence,context.getInput(),environment.getGenerator()),environment);
+    return true;
+  }
+ else   if (ruleConsequence instanceof WeaveEach_RuleConsequence) {
+    WeaveEach_RuleConsequence weaveEach=(WeaveEach_RuleConsequence)ruleConsequence;
+    SourceSubstituteMacro_SourceNodesQuery query=weaveEach.getSourceNodesQuery();
+    if (query == null) {
+      environment.getGenerator().showErrorMessage(context.getInput(),ruleNode,"weaving rule: cannot create list of source nodes");
+      return false;
+    }
+    TemplateDeclaration template=weaveEach.getTemplate();
+    Collection<SNode> queryNodes=environment.getReductionContext().getQueryExecutor().evaluateSourceNodesQuery(context.getInput(),ruleNode,null,query,context);
+    if (queryNodes.isEmpty()) {
+      return false;
+    }
+    for (    SNode queryNode : queryNodes) {
+      weaveTemplateDeclaration(template,outputContextNode,GeneratorUtil.createTemplateContext(queryNode,null,environment.getReductionContext(),ruleConsequence,queryNode,environment.getGenerator()),environment);
+    }
+    return true;
+  }
+ else {
+    environment.getGenerator().showErrorMessage(context.getInput(),null,ruleConsequence.getNode(),"weaving rule: unsupported rule consequence");
+    return false;
+  }
+}
