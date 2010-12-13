@@ -1,0 +1,52 @@
+{
+  try {
+    final Set<IClassPathItem> classpaths=new HashSet<IClassPathItem>();
+    for (    Language language : this.myLanguages) {
+      IClassPathItem item=language.getClassPathItem();
+      classpaths.add(item);
+    }
+    String path=PathManager.getHomePath() + NameUtil.pathFromNamespace(".lib.") + "tools.jar";
+    classpaths.add(ClassPathFactory.getInstance().createFromPath(path));
+    Project project=myContext.getProject();
+    final String fullClassName=this.myAuxModel.getLongName() + "." + EVALUATOR_NAME;
+    InMemoryJavaGenerationHandler handler=new AbstractEvaluationModel.MyInMemoryJavaGenerationHandler(false,true,classpaths);
+    Project ideaProject=this.myAuxModule.getMPSProject().getProject();
+    DefaultMessageHandler messageHandler=new DefaultMessageHandler(ideaProject);
+    ProgressWindow progressWindow=new ProgressWindow(false,ideaProject);
+    GeneratorManager generatorManager=project.getComponent(GeneratorManager.class);
+    boolean successful=generatorManager.generateModels(Collections.singletonList(myAuxModel),myContext,handler,progressWindow,messageHandler,true,false);
+    Disposer.dispose(progressWindow);
+    String source=handler.getSources().get(fullClassName);
+    if (successful && StringUtils.isNotEmpty(source)) {
+      if (isDeveloperMode()) {
+        System.err.println(source);
+      }
+      ClassLoader parentClassLoader=this.myUiState.getClass().getClassLoader();
+      Class clazz=Class.forName(fullClassName,true,handler.getCompiler().getClassLoader(parentClassLoader));
+      Evaluator evaluator;
+      try {
+        evaluator=(Evaluator)clazz.getConstructor(JavaUiState.class).newInstance(this.myUiState);
+      }
+ catch (      InvocationTargetException e) {
+        myUiState=myDebugSession.refresh();
+        evaluator=(Evaluator)clazz.getConstructor(JavaUiState.class).newInstance(this.myUiState);
+      }
+      return evaluator;
+    }
+ else     if (StringUtils.isNotEmpty(source) && !(successful)) {
+      throw new EvaluationException("Errors during compilation.");
+    }
+ else {
+      throw new EvaluationException("Errors during generation.");
+    }
+  }
+ catch (  InvocationTargetException e) {
+    throw new InvocationTargetEvaluationException(e.getCause());
+  }
+catch (  EvaluationException e) {
+    throw e;
+  }
+catch (  Throwable t) {
+    throw new EvaluationException(t);
+  }
+}

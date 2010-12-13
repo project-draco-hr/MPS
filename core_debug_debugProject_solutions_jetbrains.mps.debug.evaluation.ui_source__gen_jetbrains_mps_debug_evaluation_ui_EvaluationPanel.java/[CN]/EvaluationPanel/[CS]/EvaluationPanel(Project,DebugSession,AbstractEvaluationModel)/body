@@ -1,0 +1,46 @@
+{
+  super(new BorderLayout());
+  myHighlighter=project.getComponent(Highlighter.class);
+  myDebugSession=session;
+  mySessionChangeListener=new EvaluationPanel.MySessionChangeListener();
+  myDebugSession.addChangeListener(mySessionChangeListener);
+  myEvaluationModel=evaluationModel;
+  if (myEvaluationModel.isDeveloperMode()) {
+    myEvaluationModel.addGenerationListener(new _FunctionTypes._void_P1_E0<SNode>(){
+      public void invoke(      SNode result){
+        EvaluationPanel.this.updateGenerationResultTab(result);
+      }
+    }
+);
+  }
+  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+    public void run(){
+      EvaluationPanel.this.myEditor=new EmbeddableEditor(new ModuleContext(EvaluationPanel.this.myEvaluationModel.getModule(),EvaluationPanel.this.myEvaluationModel.getModule().getMPSProject().getProject()),EvaluationPanel.this.myEvaluationModel.getModule(),EvaluationPanel.this.myEvaluationModel.getRootToShow(),myEvaluationModel.getNodeToShow(),true);
+      for (      Language language : EvaluationPanel.this.myEvaluationModel.getRequiredLanguages()) {
+        EvaluationPanel.this.myEditor.addLanguage(language);
+      }
+    }
+  }
+);
+  final Wrappers._T<EditableSModelDescriptor> d=new Wrappers._T<EditableSModelDescriptor>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      d.value=myEditor.getModel();
+    }
+  }
+);
+  myEvaluationModel.setModel(d.value);
+  JSplitPane splitPane=new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+  splitPane.setResizeWeight(0.5);
+  splitPane.setTopComponent(myEditor.getComponenet());
+  myTree=new EvaluationPanel.MyTree(session.getUiState().getStackFrame().getLocation().getUnitName(),session.getUiState().getThread().getThread());
+  splitPane.setBottomComponent(new JBScrollPane(myTree));
+  if (myEvaluationModel.isDeveloperMode()) {
+    myTabbedPane.addTab("Main",splitPane);
+    add(myTabbedPane);
+  }
+ else {
+    add(splitPane);
+  }
+  this.myHighlighter.addAdditionalEditor(myEditor.getEditor());
+}

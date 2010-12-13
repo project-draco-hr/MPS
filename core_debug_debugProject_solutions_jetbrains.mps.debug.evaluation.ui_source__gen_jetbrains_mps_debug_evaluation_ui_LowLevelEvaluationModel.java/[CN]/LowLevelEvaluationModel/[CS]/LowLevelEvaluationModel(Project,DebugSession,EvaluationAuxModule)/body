@@ -1,0 +1,37 @@
+{
+  super(project,session,module);
+  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+    public void run(){
+      SLinkOperations.setNewChild(myEvaluator,"evaluatedStatement","jetbrains.mps.baseLanguage.structure.BlockStatement");
+      SLinkOperations.setNewChild(SLinkOperations.getTarget(myEvaluator,"evaluatedStatement",true),AttributesRolesUtil.childRoleFromAttributeRole("toEvaluateAnnotation"),"jetbrains.mps.debug.evaluation.structure.ToEvaluateAnnotation");
+      SPropertyOperations.set(myEvaluator,"isRuntime","" + (true));
+    }
+  }
+);
+  ModelAccess.instance().runWriteAction(new Runnable(){
+    public void run(){
+      IModule locationModule=LowLevelEvaluationModel.this.getLocationModule();
+      IClassPathItem classPath=AbstractModule.getDependenciesClasspath(Collections.singleton(locationModule),true);
+      final Set<StubPath> pathsToAdd=SetSequence.fromSet(new HashSet<StubPath>());
+      classPath.accept(new EachClassPathItemVisitor(){
+        @Override public void visit(        JarFileClassPathItem item){
+          String path=item.getFile().getAbsolutePath();
+          StubPath stubPath=myAuxModule.addStubPath(path);
+          if (stubPath != null) {
+            SetSequence.fromSet(pathsToAdd).addElement(stubPath);
+          }
+        }
+        @Override public void visit(        FileClassPathItem item){
+          String path=item.getClassPath();
+          StubPath stubPath=myAuxModule.addStubPath(path);
+          if (stubPath != null) {
+            SetSequence.fromSet(pathsToAdd).addElement(stubPath);
+          }
+        }
+      }
+);
+      StubReloadManager.getInstance().loadImmediately(myAuxModule,pathsToAdd);
+    }
+  }
+);
+}

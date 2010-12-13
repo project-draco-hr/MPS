@@ -1,0 +1,43 @@
+{
+  super(context.getMainFrame(),"Evaluate");
+  setSize(new Dimension(500,500));
+  setModal(false);
+  myProvider=provider;
+  final DebugSession debugSession=provider.getDebugSession();
+  myEvaluationPanel=new EvaluationPanel(context.getProject(),debugSession,evalModel);
+  myEvaluationPanel.setErrorTextListener(new EvaluationPanel.IErrorTextListener(){
+    public void updateErrorText(    String text){
+      setErrorText(text);
+    }
+  }
+);
+  myMainPanel=new JPanel(new BorderLayout());
+  myMainPanel.add(myEvaluationPanel,BorderLayout.CENTER);
+  DefaultActionGroup group=new DefaultActionGroup();
+  group.add(new AnAction("Watch Expression","Add Expression To Watches Tool",Icons.WATCH){
+    public void actionPerformed(    AnActionEvent p0){
+      myProvider.watch(myEvaluationPanel.getEvaluationModel());
+    }
+  }
+);
+  myMainPanel.add(ActionManager.getInstance().createActionToolbar(ActionPlaces.UNKNOWN,group,true).getComponent(),BorderLayout.NORTH);
+  debugSession.addChangeListener(new SessionChangeAdapter(){
+    public void resumed(    final AbstractDebugSession session){
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        public void run(){
+          if (debugSession == session && session.isStopped()) {
+            dispose();
+          }
+        }
+      }
+);
+    }
+  }
+);
+  addWindowListener(new WindowAdapter(){
+    @Override public void windowClosed(    WindowEvent event){
+      myEvaluationPanel.dispose();
+    }
+  }
+);
+}
