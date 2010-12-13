@@ -1,0 +1,48 @@
+{
+  super(new BorderLayout());
+  myHighlighter=project.getComponent(Highlighter.class);
+  myClassFQName=uiState.getStackFrame().getLocation().getUnitName();
+  myThreadReference=uiState.getThread().getThread();
+  myDebugSession=provider.getDebugSession();
+  mySessionChangeListener=new EvaluationPanel.MySessionChangeListener();
+  myDebugSession.addChangeListener(mySessionChangeListener);
+  myEvaluationLogic=provider.createEvaluationLogic(project);
+  if (myEvaluationLogic.isDeveloperMode()) {
+    myEvaluationLogic.addGenerationListener(new _FunctionTypes._void_P1_E0<SNode>(){
+      public void invoke(      SNode result){
+        EvaluationPanel.this.updateGenerationResultTab(result);
+      }
+    }
+);
+  }
+  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+    public void run(){
+      EvaluationPanel.this.myEditor=new EmbeddableEditor(new ModuleContext(EvaluationPanel.this.myEvaluationLogic.getModule(),EvaluationPanel.this.myEvaluationLogic.getModule().getMPSProject().getProject()),EvaluationPanel.this.myEvaluationLogic.getModule(),EvaluationPanel.this.myEvaluationLogic.getRootToShow(),myEvaluationLogic.getNodeToShow(),true);
+      for (      Language language : EvaluationPanel.this.myEvaluationLogic.getRequiredLanguages()) {
+        EvaluationPanel.this.myEditor.addLanguage(language);
+      }
+    }
+  }
+);
+  final Wrappers._T<EditableSModelDescriptor> d=new Wrappers._T<EditableSModelDescriptor>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      d.value=myEditor.getModel();
+    }
+  }
+);
+  myEvaluationLogic.setModel(d.value);
+  JSplitPane splitPane=new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+  splitPane.setResizeWeight(0.5);
+  splitPane.setTopComponent(myEditor.getComponenet());
+  myTree=new EvaluationPanel.MyTree(myClassFQName,myThreadReference);
+  splitPane.setBottomComponent(new JBScrollPane(myTree));
+  if (myEvaluationLogic.isDeveloperMode()) {
+    myTabbedPane.addTab("Main",splitPane);
+    add(myTabbedPane);
+  }
+ else {
+    add(splitPane);
+  }
+  this.myHighlighter.addAdditionalEditor(myEditor.getEditor());
+}

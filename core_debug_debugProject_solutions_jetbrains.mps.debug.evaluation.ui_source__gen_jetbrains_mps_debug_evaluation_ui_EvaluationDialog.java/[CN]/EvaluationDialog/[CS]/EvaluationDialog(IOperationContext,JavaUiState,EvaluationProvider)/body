@@ -1,54 +1,32 @@
 {
   super(context.getMainFrame(),"Evaluate");
-  Project project=context.getProject();
-  myHighlighter=project.getComponent(Highlighter.class);
-  myClassFQName=uiState.getStackFrame().getLocation().getUnitName();
-  myThreadReference=uiState.getThread().getThread();
-  myDebugSession=provider.getDebugSession();
-  this.setSize(new Dimension(500,500));
-  this.setModal(false);
-  mySessionChangeListener=new EvaluationDialog.MySessionChangeListener();
-  myDebugSession.addChangeListener(mySessionChangeListener);
-  myEvaluationLogic=provider.createEvaluationLogic(project);
-  myContext=myEvaluationLogic.getContext();
-  if (myEvaluationLogic.isDeveloperMode()) {
-    myEvaluationLogic.addGenerationListener(new _FunctionTypes._void_P1_E0<SNode>(){
-      public void invoke(      SNode result){
-        EvaluationDialog.this.updateGenerationResultTab(result);
+  setSize(new Dimension(500,500));
+  setModal(false);
+  myEvaluationPanel=new EvaluationPanel(context.getProject(),uiState,provider);
+  myEvaluationPanel.setErrorTextListener(new EvaluationPanel.IErrorTextListener(){
+    public void updateErrorText(    String text){
+      setErrorText(text);
+    }
+  }
+);
+  final DebugSession debugSession=provider.getDebugSession();
+  debugSession.addChangeListener(new SessionChangeAdapter(){
+    public void resumed(    final AbstractDebugSession session){
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        public void run(){
+          if (debugSession == session && session.isStopped()) {
+            dispose();
+          }
+        }
       }
-    }
 );
-  }
-  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-    public void run(){
-      EvaluationDialog.this.myEditor=new EmbeddableEditor(new ModuleContext(EvaluationDialog.this.myEvaluationLogic.getModule(),EvaluationDialog.this.myEvaluationLogic.getModule().getMPSProject().getProject()),EvaluationDialog.this.myEvaluationLogic.getModule(),EvaluationDialog.this.myEvaluationLogic.getRootToShow(),myEvaluationLogic.getNodeToShow(),true);
-      for (      Language language : EvaluationDialog.this.myEvaluationLogic.getRequiredLanguages()) {
-        EvaluationDialog.this.myEditor.addLanguage(language);
-      }
     }
   }
 );
-  final Wrappers._T<EditableSModelDescriptor> d=new Wrappers._T<EditableSModelDescriptor>();
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      d.value=myEditor.getModel();
-    }
-  }
-);
-  myEvaluationLogic.setModel(d.value);
-  myPanel.add(this.myEditor.getComponenet(),BorderLayout.NORTH);
-  myTree=new EvaluationDialog.MyTree(myClassFQName,myThreadReference);
-  myPanel.add(new JScrollPane(myTree),BorderLayout.CENTER);
-  if (myEvaluationLogic.isDeveloperMode()) {
-    this.myTabbedPane.addTab("Main",myPanel);
-  }
   addWindowListener(new WindowAdapter(){
     @Override public void windowClosed(    WindowEvent event){
-      myDebugSession.removeChangeListener(mySessionChangeListener);
-      myHighlighter.removeAdditionalEditor(myEditor.getEditor());
-      myEditor.disposeEditor(false);
+      myEvaluationPanel.dispose();
     }
   }
 );
-  this.myHighlighter.addAdditionalEditor(myEditor.getEditor());
 }
