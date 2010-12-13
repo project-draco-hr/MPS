@@ -1,6 +1,17 @@
 {
   ScriptBuilder scb=new ScriptBuilder();
-  IScript scr=scb.withFacet(new IFacet.Name("Maker")).withFacet(new IFacet.Name("Generator")).withTarget(new ITarget.Name("Make")).toScript();
+  final IProgress pstub=context.mock(IProgress.class);
+  context.checking(new Expectations(){
+{
+      exactly(1).of(pstub).beginWork(with(equal("GENERATE")),with(same(100)),with(any(Integer.class)));
+      atMost(1).of(pstub).doneWork(with(equal("GENERATE")),with(same(50)));
+      exactly(1).of(pstub).finishWork(with(equal("GENERATE")));
+      allowing(pstub).workLeft();
+      will(returnValue(Integer.MAX_VALUE));
+    }
+  }
+);
+  IScript scr=scb.withFacet(new IFacet.Name("Maker")).withFacet(new IFacet.Name("Generator")).withTarget(new ITarget.Name("Make")).withMonitors(new IMonitors.Stub(new IConfigMonitor.Stub(),new IJobMonitor.Stub(pstub))).toScript();
   Assert.assertTrue(scr.isValid());
   ITarget dt=scr.defaultTarget();
   Assert.assertNotNull(dt);
