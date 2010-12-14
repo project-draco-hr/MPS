@@ -1,0 +1,34 @@
+{
+  Map<String,SNode> result=MapSequence.fromMap(new LinkedHashMap<String,SNode>(16,(float)0.75,false));
+  JavaStackFrame javaStackFrame=myUiState.getStackFrame();
+  if (javaStackFrame != null) {
+    StackFrame stackFrame=javaStackFrame.getStackFrame();
+    if (stackFrame != null) {
+      try {
+        List<LocalVariable> variables=stackFrame.visibleVariables();
+        for (        LocalVariable variable : ListSequence.fromList(variables)) {
+          String name=variable.name();
+          try {
+            SNode type=getMpsTypeFromJdiType(variable.type(),createClassifierType);
+            if (type == null) {
+              StackFrameContext.LOG.warning("Could not deduce type for a variable " + name);
+            }
+ else {
+              MapSequence.fromMap(result).put(name,type);
+            }
+          }
+ catch (          ClassNotLoadedException cne) {
+            StackFrameContext.LOG.warning("Exception when creating variable " + name,cne);
+          }
+        }
+      }
+ catch (      InvalidStackFrameException e) {
+        StackFrameContext.LOG.warning("InvalidStackFrameException",e);
+      }
+catch (      AbsentInformationException e) {
+        StackFrameContext.LOG.error(e);
+      }
+    }
+  }
+  return result;
+}

@@ -1,51 +1,44 @@
 {
-  JavaStackFrame javaStackFrame=myUiState.getStackFrame();
-  if (javaStackFrame != null) {
-    StackFrame stackFrame=javaStackFrame.getStackFrame();
-    if (stackFrame != null) {
-      try {
-        final Set<SNode> foundVars=SetSequence.fromSet(new HashSet<SNode>());
-        List<LocalVariable> variables=stackFrame.visibleVariables();
-        for (        LocalVariable variable : ListSequence.fromList(variables)) {
-          String name=variable.name();
-          try {
-            SNode lowLevelVarNode;
-            if (!(MapSequence.fromMap(myUsedVars).containsKey(name))) {
-              lowLevelVarNode=SConceptOperations.createNewNode("jetbrains.mps.debug.evaluation.structure.LowLevelVariable",null);
-              SPropertyOperations.set(lowLevelVarNode,"name",name);
-              ListSequence.fromList(SLinkOperations.getTargets(myEvaluator,"variables",true)).addElement(lowLevelVarNode);
-              MapSequence.fromMap(myUsedVars).put(name,lowLevelVarNode);
-            }
- else {
-              lowLevelVarNode=MapSequence.fromMap(myUsedVars).get(name);
-            }
-            SNode deducedType=getMpsTypeFromJdiType(((LocalVariable)variable).type());
-            if (deducedType == null) {
-              LOG.warning("Could not deduce type for variable " + name);
-              continue;
-            }
-            SLinkOperations.setTarget(lowLevelVarNode,"type",deducedType,true);
-            SetSequence.fromSet(foundVars).addElement(lowLevelVarNode);
-          }
- catch (          ClassNotLoadedException cne) {
-            LOG.warning("Exception when creating variable " + name,cne);
-          }
-        }
-        Sequence.fromIterable(MapSequence.fromMap(myUsedVars).values()).visitAll(new IVisitor<SNode>(){
-          public void visit(          SNode it){
-            SPropertyOperations.set(it,"isOutOfScope","" + (!(SetSequence.fromSet(foundVars).contains(it))));
-          }
-        }
-);
-        SLinkOperations.setTarget(myEvaluator,"staticContextType",createStaticContextType(),true);
-        SLinkOperations.setTarget(myEvaluator,"thisType",createThisClassifierType(),true);
-      }
- catch (      InvalidStackFrameException e) {
-        LOG.warning("InvalidStackFrameException",e);
-      }
-catch (      AbsentInformationException e) {
-        LOG.error(e);
+  SNode evaluatorConcept=myEvaluator;
+  try {
+    _FunctionTypes._return_P1_E0<? extends SNode,? super String> createClassifierType=new _FunctionTypes._return_P1_E0<SNode,String>(){
+      public SNode invoke(      String name){
+        return createClassifierType(name);
       }
     }
+;
+    Map<String,SNode> contextVariables=myContext.getVariables(createClassifierType);
+    final Set<SNode> foundVars=SetSequence.fromSet(new HashSet<SNode>());
+    for (    String variable : SetSequence.fromSet(MapSequence.fromMap(contextVariables).keySet())) {
+      String name=variable;
+      SNode lowLevelVarNode;
+      if (!(MapSequence.fromMap(myUsedVars).containsKey(name))) {
+        lowLevelVarNode=SConceptOperations.createNewNode("jetbrains.mps.debug.evaluation.structure.LowLevelVariable",null);
+        SPropertyOperations.set(lowLevelVarNode,"name",name);
+        ListSequence.fromList(SLinkOperations.getTargets(evaluatorConcept,"variables",true)).addElement(lowLevelVarNode);
+        MapSequence.fromMap(myUsedVars).put(name,lowLevelVarNode);
+      }
+ else {
+        lowLevelVarNode=MapSequence.fromMap(myUsedVars).get(name);
+      }
+      SNode deducedType=MapSequence.fromMap(contextVariables).get(name);
+      if (deducedType == null) {
+        LowLevelEvaluationModel.LOG.error("Could not deduce type for variable " + name);
+        continue;
+      }
+      SLinkOperations.setTarget(lowLevelVarNode,"type",deducedType,true);
+      SetSequence.fromSet(foundVars).addElement(lowLevelVarNode);
+    }
+    Sequence.fromIterable(MapSequence.fromMap(myUsedVars).values()).visitAll(new IVisitor<SNode>(){
+      public void visit(      SNode it){
+        SPropertyOperations.set(it,"isOutOfScope","" + (!(SetSequence.fromSet(foundVars).contains(it))));
+      }
+    }
+);
+    SLinkOperations.setTarget(evaluatorConcept,"staticContextType",myContext.getStaticContextType(createClassifierType),true);
+    SLinkOperations.setTarget(evaluatorConcept,"thisType",myContext.getThisClassifierType(createClassifierType),true);
+  }
+ catch (  InvalidStackFrameException e) {
+    LowLevelEvaluationModel.LOG.warning("InvalidStackFrameException",e);
   }
 }
