@@ -1,6 +1,7 @@
 {
   mySubclustersGraph=new Graph();
   Map<Node,Node> nodeMap=MapSequence.fromMap(new HashMap<Node,Node>());
+  myNodeMap=nodeMap;
   mySubclustersMap=MapSequence.fromMap(new HashMap<INode,Node>());
   List<Node> subclusters=myGraph.getSubclusters(myCluster);
   for (  Node subcluster : ListSequence.fromList(subclusters)) {
@@ -20,7 +21,13 @@
       }
     }
   }
+  if (showInfo > 0) {
+    System.out.println("i subgraph " + myCluster + ": "+ mySubclustersGraph.getEdges());
+  }
   Set<Edge> connectingEdges=ConnectivityComponents.makeConnected(mySubclustersGraph);
+  if (showInfo > 0) {
+    System.out.println("c subgraph " + myCluster + ": "+ mySubclustersGraph.getEdges());
+  }
   for (  Edge edge : SetSequence.fromSet(connectingEdges)) {
     Node source=this.getRealNode(edge.getSource(),nodeMap);
     Node target=getRealNode(edge.getTarget(),nodeMap);
@@ -29,8 +36,16 @@
   }
   GroupedGraphModificationSynchronizer synchronizer=new GroupedGraphModificationSynchronizer(mySubclustersGraph,myGraph,invEdgeMap);
   mySubEmbeddedGraph=EmbeddingFinderFactory.getFinder().find(mySubclustersGraph);
+  if (showInfo > 0) {
+    System.out.println("e subgraph " + myCluster + ": "+ mySubclustersGraph.getEdges());
+  }
   synchronizer.disconnect();
   if (ListSequence.fromList(myOuterEdgesOrder).count() > 0) {
+    int numShifts=0;
+    while (getSubcluster(ListSequence.fromList(myOuterEdgesOrder).first()) == getSubcluster(ListSequence.fromList(myOuterEdgesOrder).last()) && numShifts < ListSequence.fromList(myOuterEdgesOrder).count()) {
+      ListSequence.fromList(myOuterEdgesOrder).insertElement(0,ListSequence.fromList(myOuterEdgesOrder).removeLastElement());
+      numShifts++;
+    }
     List<Edge> subClusterBorder=ListSequence.fromList(new ArrayList<Edge>(ListSequence.fromList(myOuterEdgesOrder).count()));
     myClusterBorder=ListSequence.fromList(new ArrayList<Edge>(ListSequence.fromList(myOuterEdgesOrder).count()));
     List<Edge> subOuterEdges=ListSequence.fromList(new ArrayList<Edge>(ListSequence.fromList(myOuterEdgesOrder).count()));
@@ -72,30 +87,25 @@
       MapSequence.fromMap(invEdgeMap).put(subBorderEdge,realBorderEdge);
       outerFace.addFirst(new Dart(subBorderEdge,ListSequence.fromList(subBorderNodes).getElement(next)));
     }
-    Node borderFirstNode=ListSequence.fromList(subBorderNodes).first();
-    Edge bridge=ListSequence.fromList(subOuterEdges).first();
-    Node clusterFirstNode=bridge.getOpposite(borderFirstNode);
-    Face clusterOuterFace=mySubEmbeddedGraph.findContainingFace(ListSequence.fromListAndArray(new ArrayList<Node>(),clusterFirstNode));
-    clusterOuterFace.makeEndsWith(clusterFirstNode);
-    Face ringFace=new Face(mySubclustersGraph);
-    ringFace.addLast(new Dart(bridge,clusterFirstNode));
-    for (    Edge edge : ListSequence.fromList(subClusterBorder)) {
-      ringFace.addLast(new Dart(edge,edge.getSource()));
+    for (int i=0; i < numShifts; i++) {
+      ListSequence.fromList(myClusterBorder).addElement(ListSequence.fromList(myClusterBorder).removeElementAt(0));
     }
-    ringFace.addLast(new Dart(bridge,borderFirstNode));
-    for (    Dart dart : ListSequence.fromList(clusterOuterFace.getDarts())) {
-      ringFace.addLast(dart);
+    Set<Edge> addedEdges=SetSequence.fromSet(new HashSet<Edge>());
+    if (useSlowFaceFinder) {
+      addedEdges=createOuterFaceWithFaceSelection(subBorderNodes,subOuterEdges,subClusterBorder);
     }
-    mySubEmbeddedGraph.removeFace(clusterOuterFace);
-    mySubEmbeddedGraph.addFace(ringFace);
+ else {
+      Edge bridge=this.createOuterFace(subBorderNodes,subOuterEdges,subClusterBorder);
+      SetSequence.fromSet(addedEdges).addElement(bridge);
+    }
     mySubEmbeddedGraph.addFace(outerFace);
     mySubEmbeddedGraph.setOuterFace(outerFace);
-    if (ClusterEmbeddingConstructor.debugMode > 0) {
+    if (debugMode > 0) {
       CheckEmbeddedGraph.checkEmbeddedGraph(mySubEmbeddedGraph,false);
     }
     synchronizer=new GroupedGraphModificationSynchronizer(mySubclustersGraph,myGraph,invEdgeMap);
     for (    Edge edge : ListSequence.fromList(subOuterEdges)) {
-      if (edge == bridge) {
+      if (SetSequence.fromSet(addedEdges).contains(edge)) {
         continue;
       }
       mySubclustersGraph.removeEdge(edge);
@@ -103,6 +113,5 @@
     }
     synchronizer.disconnect();
   }
-  myNodeMap=nodeMap;
   return invEdgeMap;
 }

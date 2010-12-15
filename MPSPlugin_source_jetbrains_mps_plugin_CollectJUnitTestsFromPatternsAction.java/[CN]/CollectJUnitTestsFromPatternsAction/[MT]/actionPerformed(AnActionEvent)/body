@@ -47,30 +47,42 @@
       suiteClasses.add(filePathToJavaClass(p));
     }
   }
-  if (!suiteClasses.isEmpty()) {
-    final WriteAction<String> action=new WriteAction<String>(){
-      @Override protected void run(      Result<String> stringResult) throws Throwable {
-        stringResult.setResult(null);
-        StringBuilder sb=new StringBuilder("@SuiteClasses({");
-        String sep="";
-        for (        String sc : suiteClasses) {
-          sb.append(sep).append(sc).append(".class");
-          sep=",\n";
+  final WriteAction<String> action=new WriteAction<String>(){
+    @Override protected void run(    Result<String> stringResult) throws Throwable {
+      stringResult.setResult(null);
+      StringBuilder sb=new StringBuilder("@SuiteClasses({");
+      String sep="";
+      for (      String sc : suiteClasses) {
+        sb.append(sep).append(sc).append(".class");
+        sep=",\n";
+      }
+      sb.append("})");
+      try {
+        PsiJavaParserFacade javaParserFacade=JavaPsiFacade.getInstance(project).getParserFacade();
+        PsiAnnotation newann=javaParserFacade.createAnnotationFromText(sb.toString(),pc.getParent());
+        PsiAnnotation oldann=null;
+        for (        PsiAnnotation ann : pc.getModifierList().getAnnotations()) {
+          if (String.valueOf(ann.getQualifiedName()).contains("SuiteClasses")) {
+            oldann=ann;
+            break;
+          }
         }
-        sb.append("})");
-        try {
-          PsiElementFactoryImpl fact=new PsiElementFactoryImpl((PsiManagerEx)PsiManagerEx.getInstance(project));
-          PsiAnnotation ann=fact.createAnnotationFromText(sb.toString(),pc.getParent());
-          pc.getParent().addBefore(ann,pc);
+        if (oldann != null) {
+          oldann.replace(newann);
         }
- catch (        Exception ex) {
-          stringResult.setResult(ex.toString());
+ else {
+          pc.getParent().addBefore(newann,pc);
         }
       }
+ catch (      Exception ex) {
+        stringResult.setResult(ex.toString());
+      }
     }
+  }
 ;
+  if (!suiteClasses.isEmpty()) {
     CommandProcessor.getInstance().executeCommand(project,new Runnable(){
-      @Override public void run(){
+      public void run(){
         String error=action.execute().getResultObject();
         if (error != null) {
           errors.add(error);

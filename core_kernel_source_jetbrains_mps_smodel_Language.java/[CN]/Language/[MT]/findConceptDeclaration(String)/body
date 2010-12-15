@@ -1,22 +1,26 @@
 {
   if (myNamesLoadingState == ModelLoadingState.FULLY_LOADED)   return myNameToConceptCache.get(conceptName);
   if (myNameToConceptCache.containsKey(conceptName))   return myNameToConceptCache.get(conceptName);
+  if (myNamesWithNoConcepts.contains(conceptName))   return null;
   SModelDescriptor structureModelDescriptor=getStructureModelDescriptor();
   if (structureModelDescriptor == null)   return null;
   SModel structureModel=structureModelDescriptor.getSModel();
   if (myNamesLoadingState.compareTo(ModelLoadingState.FULLY_LOADED) < 0) {
     for (    SNode root : structureModel.roots()) {
-      if (root.getAdapter() instanceof AbstractConceptDeclaration) {
-        myNameToConceptCache.put(root.getName(),(AbstractConceptDeclaration)root.getAdapter());
-      }
+      String name=getConceptName(root);
+      if (name == null)       continue;
+      myNameToConceptCache.putIfAbsent(name,(AbstractConceptDeclaration)root.getAdapter());
     }
     if (myNameToConceptCache.containsKey(conceptName))     return myNameToConceptCache.get(conceptName);
   }
-  myNameToConceptCache.put(conceptName,null);
   for (  SNode node : structureModel.nodes()) {
-    if (node.getAdapter() instanceof AbstractConceptDeclaration) {
-      myNameToConceptCache.put(node.getName(),(AbstractConceptDeclaration)node.getAdapter());
-    }
+    String name=getConceptName(node);
+    if (name == null)     continue;
+    myNameToConceptCache.putIfAbsent(name,(AbstractConceptDeclaration)node.getAdapter());
   }
-  return myNameToConceptCache.get(conceptName);
+  AbstractConceptDeclaration result=myNameToConceptCache.get(conceptName);
+  if (result == null) {
+    myNamesWithNoConcepts.add(conceptName);
+  }
+  return result;
 }

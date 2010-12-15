@@ -1,0 +1,46 @@
+{
+  if (mySubEmbeddedGraph.isEmpty()) {
+    Node node=ListSequence.fromList(mySubclustersGraph.getNodes()).first();
+    Edge prev=ListSequence.fromList(subOuterEdges).last();
+    Edge borderEdge=ListSequence.fromList(subClusterBorder).last();
+    Iterator<Edge> borderEdgeItr=ListSequence.fromList(subClusterBorder).iterator();
+    for (    Edge edge : ListSequence.fromList(subOuterEdges)) {
+      Face face=new Face(mySubclustersGraph);
+      face.addLast(new Dart(borderEdge,borderEdge.getSource()));
+      face.addLast(new Dart(edge,edge.getOpposite(node)));
+      face.addLast(new Dart(prev,node));
+      mySubEmbeddedGraph.addFace(face);
+      prev=edge;
+      borderEdge=borderEdgeItr.next();
+    }
+    Set<Edge> addedEdges=SetSequence.fromSet(new HashSet<Edge>());
+    SetSequence.fromSet(addedEdges).addSequence(ListSequence.fromList(subOuterEdges));
+    return addedEdges;
+  }
+  Tuples._2<Face,List<Tuples._2<Integer,Integer>>> bestFaceInfo=findBestFace();
+  Face bestFace=bestFaceInfo._0();
+  mySubEmbeddedGraph.removeFace(bestFace);
+  List<Tuples._2<Integer,Integer>> positions=bestFaceInfo._1();
+  List<Dart> darts=ListSequence.fromList(bestFace.getDarts()).reversedList();
+  positions=shiftLists(positions,darts,subBorderNodes,subOuterEdges,subClusterBorder);
+  checkPos(positions);
+  ClusterEmbeddingConstructor.ListParser<Dart> dartParser=new ClusterEmbeddingConstructor.ListParser(darts);
+  ClusterEmbeddingConstructor.ListParser<Edge> edgeParser=new ClusterEmbeddingConstructor.ListParser(subClusterBorder);
+  Tuples._2<Integer,Integer> prev=MultiTuple.<Integer,Integer>from(-1,-1);
+  Set<Edge> addedEdges=SetSequence.fromSet(new HashSet<Edge>());
+  for (  Tuples._2<Integer,Integer> pos : ListSequence.fromList(positions)) {
+    if (prev._0() == -1) {
+      prev=pos;
+      continue;
+    }
+    List<Dart> curDarts=dartParser.getNext(pos._1());
+    List<Edge> curEdges=edgeParser.getNext(pos._0());
+    this.addFace(subOuterEdges,prev,subBorderNodes,curEdges,pos,curDarts,addedEdges);
+    prev=pos;
+  }
+  List<Dart> curDarts=dartParser.getEnd();
+  List<Edge> curEdges=edgeParser.getEnd();
+  Tuples._2<Integer,Integer> pos=ListSequence.fromList(positions).first();
+  addFace(subOuterEdges,prev,subBorderNodes,curEdges,pos,curDarts,addedEdges);
+  return addedEdges;
+}
