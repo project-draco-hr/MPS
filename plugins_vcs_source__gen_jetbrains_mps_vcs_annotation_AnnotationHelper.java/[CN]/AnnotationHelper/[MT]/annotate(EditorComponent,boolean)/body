@@ -1,15 +1,14 @@
 {
   final LeftEditorHighlighter leftEditorHighlighter=editorComponent.getLeftEditorHighlighter();
-  if (MapSequence.fromMap(myEditorToColumn).containsKey(editorComponent)) {
+  if (findAnnotationColumn(editorComponent) != null) {
     if (!(dryRun)) {
-      leftEditorHighlighter.removeTextColumn(MapSequence.fromMap(myEditorToColumn).get(editorComponent));
-      MapSequence.fromMap(myEditorToColumn).removeKey(editorComponent);
+      leftEditorHighlighter.removeLeftColumn(findAnnotationColumn(editorComponent));
     }
     return true;
   }
   final SNode root=editorComponent.getEditedNode();
-  SModel model=check_3wfzcf_a0d0c(root);
-  SModelDescriptor modelDescriptor=check_3wfzcf_a0e0c(model);
+  SModel model=check_19hp0u_a0d0b(root);
+  SModelDescriptor modelDescriptor=check_19hp0u_a0e0b(model);
   if (!((modelDescriptor instanceof EditableSModelDescriptor))) {
     return false;
   }
@@ -18,7 +17,8 @@
     return false;
   }
   final VirtualFile file=VirtualFileUtils.getVirtualFile(modelFile);
-  final AbstractVcs vcs=myProjectLevelVcsManager.getVcsFor(file);
+  final Project project=editorComponent.getOperationContext().getProject();
+  final AbstractVcs vcs=ProjectLevelVcsManager.getInstance(project).getVcsFor(file);
   if (vcs == null) {
     return false;
   }
@@ -28,10 +28,10 @@
     }
   }
 ;
-  if (checkFileStatus.invoke(FileStatusManager.getInstance(myProject).getStatus(file))) {
+  if (checkFileStatus.invoke(FileStatusManager.getInstance(project).getStatus(file))) {
     return false;
   }
-  if (checkFileStatus.invoke(RootNodeFileStatusManager.getInstance(myProject).getStatus(root))) {
+  if (checkFileStatus.invoke(RootNodeFileStatusManager.getInstance(project).getStatus(root))) {
     return false;
   }
   final AnnotationProvider annotationProvider=vcs.getAnnotationProvider();
@@ -41,7 +41,7 @@
   if (dryRun) {
     return true;
   }
-  Task.Backgroundable annotateTask=new Task.Backgroundable(myProject,"Retrieving annotations",true,BackgroundFromStartOption.getInstance()){
+  Task.Backgroundable annotateTask=new Task.Backgroundable(project,"Retrieving annotations",true,BackgroundFromStartOption.getInstance()){
     private FileAnnotation myFileAnnotation;
     private VcsException myException;
     public void run(    @NotNull ProgressIndicator indicator){
@@ -57,13 +57,13 @@
     }
     @Override public void onSuccess(){
       if (myException != null) {
-        AbstractVcsHelper.getInstance(myProject).showErrors(Arrays.asList(myException),"Exception on retrieving annotation");
+        AbstractVcsHelper.getInstance(project).showErrors(Arrays.asList(myException),"Exception on retrieving annotation");
       }
       if (myFileAnnotation != null) {
         ModelAccess.instance().runReadAction(new Runnable(){
           public void run(){
-            MapSequence.fromMap(myEditorToColumn).put(editorComponent,new AnnotationColumn(leftEditorHighlighter,root,myFileAnnotation,vcs,file));
-            leftEditorHighlighter.addTextColumn(MapSequence.fromMap(myEditorToColumn).get(editorComponent));
+            AnnotationColumn annotationColumn=new AnnotationColumn(leftEditorHighlighter,root,myFileAnnotation,vcs,file);
+            leftEditorHighlighter.addLeftColumn(annotationColumn);
           }
         }
 );
