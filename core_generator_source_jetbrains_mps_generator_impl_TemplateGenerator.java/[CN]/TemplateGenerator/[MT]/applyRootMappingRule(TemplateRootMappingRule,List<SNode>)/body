@@ -1,0 +1,38 @@
+{
+  String applicableConcept=rule.getApplicableConcept();
+  if (applicableConcept == null) {
+    showErrorMessage(null,null,rule.getRuleNode().getNode(),"rule has no applicable concept defined");
+    return;
+  }
+  boolean includeInheritors=rule.applyToInheritors();
+  Iterable<SNode> inputNodes=myInputModel.getFastNodeFinder().getNodes(applicableConcept,includeInheritors);
+  for (  SNode inputNode : inputNodes) {
+    if (getGeneratorSessionContext().isCopiedRoot(inputNode))     continue;
+    final QueryExecutionContext executionContext=getExecutionContext(inputNode);
+    if (executionContext != null) {
+      TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(this,new ReductionContext(executionContext),getOperationContext(),myGenerationTracer);
+      try {
+        if (executionContext.isApplicable(rule,environment,new DefaultTemplateContext(inputNode))) {
+          myGenerationTracer.pushInputNode(inputNode);
+          myGenerationTracer.pushRule(rule.getRuleNode());
+          try {
+            boolean copyRootOnFailure=false;
+            if (inputNode.isRoot() && !rule.keepSourceRoot()) {
+              rootsToCopy.remove(inputNode);
+              copyRootOnFailure=true;
+            }
+            createRootNodeByRule(rule,inputNode,copyRootOnFailure,environment);
+          }
+  finally {
+            myGenerationTracer.closeInputNode(inputNode);
+          }
+        }
+      }
+ catch (      GenerationException e) {
+        if (e instanceof GenerationCanceledException)         throw (GenerationCanceledException)e;
+        if (e instanceof GenerationFailureException)         throw (GenerationFailureException)e;
+        showErrorMessage(null,rule.getRuleNode().getNode(),"internal error: " + e.toString());
+      }
+    }
+  }
+}

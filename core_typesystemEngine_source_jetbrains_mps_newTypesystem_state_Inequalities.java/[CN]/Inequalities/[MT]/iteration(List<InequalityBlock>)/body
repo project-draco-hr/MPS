@@ -1,0 +1,58 @@
+{
+  solveOnlyConcrete=false;
+  Set<SNode> nodes=new LinkedHashSet<SNode>();
+  ManyToManyMap<SNode,SNode> inputsToOutputs=new ManyToManyMap<SNode,SNode>();
+  ManyToManyMap<SNode,InequalityBlock> nodesToBlocks=new ManyToManyMap<SNode,InequalityBlock>();
+  for (  InequalityBlock inequality : inequalities) {
+    SNode input=myState.getRepresentative(inequality.getInput());
+    SNode output=myState.getRepresentative(inequality.getOutput());
+    if (input != null) {
+      if (input != output) {
+        inputsToOutputs.addLink(input,output);
+        nodesToBlocks.addLink(input,inequality);
+        nodes.add(input);
+      }
+      nodesToBlocks.addLink(output,inequality);
+      nodes.add(output);
+    }
+  }
+  if (nodes.isEmpty()) {
+    return;
+  }
+  List<SNode> sortedNodes=sort(inputsToOutputs,nodes);
+  for (  SNode node : sortedNodes) {
+    if (!TypesUtil.isVariable(node)) {
+      continue;
+    }
+    Set<InequalityBlock> blocks=nodesToBlocks.getByFirst(node);
+    Set<SNode> superTypes=new LinkedHashSet<SNode>();
+    Set<SNode> subTypes=new LinkedHashSet<SNode>();
+    for (    InequalityBlock block : blocks) {
+      if (block.getRelationKind().isCheckOnly()) {
+        continue;
+      }
+      SNode left=myState.getRepresentative(block.getLeftNode());
+      SNode right=myState.getRepresentative(block.getRightNode());
+      if (right == left) {
+        continue;
+      }
+      if (left == node) {
+        superTypes.add(right);
+      }
+      if (right == node) {
+        subTypes.add(left);
+      }
+    }
+    SubTyping subTyping=new SubTyping(myState);
+    if (TypesUtil.isVariable(node)) {
+      if (!subTypes.isEmpty()) {
+        myState.addEquation(node,subTyping.createMeet(subTypes),null);
+      }
+      if (!superTypes.isEmpty()) {
+        myState.addEquation(node,subTyping.createLCS(superTypes),null);
+      }
+    }
+ else {
+    }
+  }
+}

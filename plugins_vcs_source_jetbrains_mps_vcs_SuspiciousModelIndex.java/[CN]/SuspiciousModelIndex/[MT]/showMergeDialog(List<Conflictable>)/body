@@ -1,5 +1,5 @@
 {
-  Map<Project,List<VirtualFile>> toMerge=new HashMap<Project,List<VirtualFile>>();
+  final Map<Project,List<VirtualFile>> toMerge=new HashMap<Project,List<VirtualFile>>();
   Map<VirtualFile,Conflictable> fileToConflictable=new LinkedHashMap<VirtualFile,Conflictable>();
   Set<Conflictable> toReload=new HashSet<Conflictable>();
   for (  Conflictable conflictable : conflictableList) {
@@ -22,8 +22,14 @@
     }
   }
   ModelChangesWatcher.instance().suspendTasksProcessing();
-  for (  Project project : toMerge.keySet()) {
-    List<VirtualFile> virtualFileList=AbstractVcsHelper.getInstance(project).showMergeDialog(toMerge.get(project));
+  for (  final Project project : toMerge.keySet()) {
+    final List<VirtualFile> virtualFileList=new ArrayList<VirtualFile>();
+    ApplicationManager.getApplication().invokeAndWait(new Runnable(){
+      @Override public void run(){
+        virtualFileList.addAll(AbstractVcsHelper.getInstance(project).showMergeDialog(toMerge.get(project)));
+      }
+    }
+,ModalityState.defaultModalityState());
     for (    VirtualFile vfile : virtualFileList) {
       Conflictable conflictable=fileToConflictable.get(vfile);
       if (conflictable != null) {

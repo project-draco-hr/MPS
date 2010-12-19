@@ -3,15 +3,18 @@
   String oldConceptFQName="";
   String oldFeatureName="";
   ConceptFeatureKind kind=ConceptFeatureKind.NONE;
+  RenameType renameType=null;
   if (adapter instanceof LinkDeclaration) {
     LinkDeclaration linkDeclaration=(LinkDeclaration)adapter;
     oldConceptFQName=NameUtil.nodeFQName(linkDeclaration.getParent());
     oldFeatureName=linkDeclaration.getRole();
     if (linkDeclaration.getMetaClass() == LinkMetaclass.aggregation) {
       kind=ConceptFeatureKind.CHILD;
+      renameType=RenameType.CHILD;
     }
  else {
       kind=ConceptFeatureKind.REFERENCE;
+      renameType=RenameType.REFERENCE;
     }
     if (delete) {
       linkDeclaration.delete();
@@ -26,6 +29,7 @@
     oldConceptFQName=NameUtil.nodeFQName(adapter.getParent());
     oldFeatureName=adapter.getName();
     kind=ConceptFeatureKind.PROPERTY;
+    renameType=RenameType.PROPERTY;
     if (delete) {
       adapter.delete();
     }
@@ -39,6 +43,7 @@
     oldConceptFQName=NameUtil.nodeFQName(adapter);
     oldFeatureName=adapter.getName();
     kind=ConceptFeatureKind.CONCEPT;
+    renameType=RenameType.CONCEPT;
     if (delete) {
       adapter.delete();
     }
@@ -49,6 +54,13 @@
     }
   }
   if (kind != ConceptFeatureKind.NONE) {
-    myData.addToConceptFeatureMap(kind,oldConceptFQName,oldFeatureName,newConceptFQName,delete ? null : newFeatureName);
+    myConceptFeatureMap.put(new ConceptFeature(oldConceptFQName,kind,oldFeatureName),delete ? null : new ConceptFeature(newConceptFQName,kind,newFeatureName));
+    myCachesAreUpToDate=false;
+    if (newFeatureName == null)     return;
+    if (!newFeatureName.equals(oldFeatureName)) {
+      myLoggedData.getData().add(new RenameNode(new SNodePointer(feature),renameType,newFeatureName,oldFeatureName));
+    }
+ else     if (kind == ConceptFeatureKind.CONCEPT && !oldConceptFQName.equals(newConceptFQName)) {
+    }
   }
 }

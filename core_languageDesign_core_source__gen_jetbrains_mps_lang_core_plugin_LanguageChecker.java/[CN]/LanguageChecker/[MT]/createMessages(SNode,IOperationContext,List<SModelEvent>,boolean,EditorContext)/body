@@ -1,6 +1,15 @@
 {
   EditorComponent editorComponent=editorContext.getNodeEditorComponent();
   SNode root=node.getContainingRoot();
+  Set<EditorMessage> result=SetSequence.fromSet(new HashSet<EditorMessage>());
+  if (root == null) {
+    LOG.error("containing root for node " + node + " is null");
+    return result;
+  }
+  SModelDescriptor descriptor=SNodeOperations.getModel(root).getModelDescriptor();
+  if (descriptor == null) {
+    return result;
+  }
   LanguageErrorsComponent errorsComponent=MapSequence.fromMap(myRootsToComponents).get(root);
   if (errorsComponent == null) {
     errorsComponent=new LanguageErrorsComponent(editorComponent.getEditedNode());
@@ -10,14 +19,12 @@
     SetSequence.fromSet(myEditorComponents).addElement(editorComponent);
     editorComponent.addDisposeListener(myDisposeListener);
   }
-  SModelDescriptor descriptor=SNodeOperations.getModel(root).getModelDescriptor();
   addModelListener(descriptor);
   if (!(wasCheckedOnce)) {
     errorsComponent.clear();
   }
   boolean changed=errorsComponent.check(node,myRules,operationContext);
   myMessagesChanged=changed;
-  Set<EditorMessage> result=SetSequence.fromSet(new HashSet<EditorMessage>());
   for (  IErrorReporter errorReporter : errorsComponent.getErrors()) {
     MessageStatus status=errorReporter.getMessageStatus();
     String errorString=errorReporter.reportError();

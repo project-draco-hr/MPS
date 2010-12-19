@@ -1,21 +1,22 @@
 {
   IFile refactoringsFile=getRefactoringsFile(modelFile);
-  if (!refactoringsFile.exists()) {
-    return null;
-  }
+  if (!refactoringsFile.exists())   return null;
   try {
-    Element root=JDOMUtil.loadDocument(refactoringsFile).getRootElement();
-    if (StructureModificationHistory.REFACTORING_HISTORY.equals(root.getName())) {
-      return new StructureModificationHistory().fromElement(root);
-    }
-    return null;
+    HistoryReaderHandler handler=new HistoryReaderHandler();
+    JDOMUtil.createSAXParser().parse(JDOMUtil.loadSource(refactoringsFile),handler);
+    return handler.getResult();
   }
- catch (  IOException e) {
+ catch (  SAXParseException e) {
+    LOG.warning(refactoringsFile.getAbsolutePath() + " line " + e.getLineNumber());
+  }
+catch (  IOException e) {
     LOG.error(e);
-    return null;
   }
-catch (  JDOMException e) {
+catch (  SAXException e) {
     LOG.error(e);
-    return null;
   }
+catch (  ParserConfigurationException e) {
+    LOG.error(e);
+  }
+  return null;
 }
