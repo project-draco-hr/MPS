@@ -1,26 +1,33 @@
 {
   Language language=SModelUtil_new.getDeclaringLanguage(conceptDeclaration,scope);
   List<SNode> rules=new ArrayList<SNode>();
+  List<AbstractRule> overriding=new ArrayList<AbstractRule>();
   if (language != null && LanguageAspect.TYPESYSTEM.get(language) != null) {
     SModelDescriptor helginsDescriptor=LanguageAspect.TYPESYSTEM.get(language);
     if (helginsDescriptor != null) {
       Condition<SNode> cond=new Condition<SNode>(){
         public boolean met(        SNode n){
-          INodeAdapter object=BaseAdapter.fromNode(n);
-          if (!(object instanceof AbstractRule))           return false;
-          AbstractRule rule=(AbstractRule)object;
-          if (exactConcept) {
-            return maybeApplicableExact(conceptDeclaration,rule.getApplicableNode(),scope);
-          }
- else {
-            return maybeApplicable_new(conceptDeclaration,rule.getApplicableNode(),scope);
-          }
+          return isApplicable(n,conceptDeclaration,false);
         }
       }
 ;
       Iterable<SNode> iter=new ConditionalIterable<SNode>(helginsDescriptor.getSModel().roots(),cond);
       for (      SNode node : iter) {
         rules.add(node);
+        if (node.getAdapter() instanceof InferenceRule) {
+          InferenceRule inferenceRule=(InferenceRule)node.getAdapter();
+          if (inferenceRule.getOverrides()) {
+            overriding.add(inferenceRule);
+          }
+        }
+      }
+    }
+  }
+  for (  AbstractRule overridingRule : overriding) {
+    AbstractConceptDeclaration subConcept=getApplicableConcept(overridingRule.getApplicableNode());
+    for (    SNode ruleNode : new ArrayList<SNode>(rules)) {
+      if (ruleNode.getAdapter().getClass() == overridingRule.getClass() && isApplicable(ruleNode,subConcept,true)) {
+        rules.remove(ruleNode);
       }
     }
   }
