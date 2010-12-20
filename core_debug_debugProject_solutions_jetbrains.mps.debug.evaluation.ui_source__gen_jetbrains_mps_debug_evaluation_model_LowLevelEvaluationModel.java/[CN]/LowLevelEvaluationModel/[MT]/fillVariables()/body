@@ -8,18 +8,22 @@
     }
 ;
     Map<String,SNode> contextVariables=myEvaluationContext.getVariables(createClassifierType);
+    Map<String,SNode> declaredVariables=MapSequence.fromMap(new LinkedHashMap<String,SNode>(16,(float)0.75,false));
+    for (    SNode var : ListSequence.fromList(SLinkOperations.getTargets(evaluatorConcept,"variables",true))) {
+      MapSequence.fromMap(declaredVariables).put(SPropertyOperations.getString(var,"name"),var);
+    }
     final Set<SNode> foundVars=SetSequence.fromSet(new HashSet<SNode>());
     for (    String variable : SetSequence.fromSet(MapSequence.fromMap(contextVariables).keySet())) {
       String name=variable;
       SNode lowLevelVarNode;
-      if (!(MapSequence.fromMap(myUsedVars).containsKey(name))) {
+      if (!(MapSequence.fromMap(declaredVariables).containsKey(name))) {
         lowLevelVarNode=SConceptOperations.createNewNode("jetbrains.mps.debug.evaluation.structure.LowLevelVariable",null);
         SPropertyOperations.set(lowLevelVarNode,"name",name);
         ListSequence.fromList(SLinkOperations.getTargets(evaluatorConcept,"variables",true)).addElement(lowLevelVarNode);
-        MapSequence.fromMap(myUsedVars).put(name,lowLevelVarNode);
+        MapSequence.fromMap(declaredVariables).put(name,lowLevelVarNode);
       }
  else {
-        lowLevelVarNode=MapSequence.fromMap(myUsedVars).get(name);
+        lowLevelVarNode=MapSequence.fromMap(declaredVariables).get(name);
       }
       SNode deducedType=MapSequence.fromMap(contextVariables).get(name);
       if (deducedType == null) {
@@ -29,7 +33,7 @@
       SLinkOperations.setTarget(lowLevelVarNode,"type",deducedType,true);
       SetSequence.fromSet(foundVars).addElement(lowLevelVarNode);
     }
-    Sequence.fromIterable(MapSequence.fromMap(myUsedVars).values()).visitAll(new IVisitor<SNode>(){
+    Sequence.fromIterable(MapSequence.fromMap(declaredVariables).values()).visitAll(new IVisitor<SNode>(){
       public void visit(      SNode it){
         SPropertyOperations.set(it,"isOutOfScope","" + (!(SetSequence.fromSet(foundVars).contains(it))));
       }
