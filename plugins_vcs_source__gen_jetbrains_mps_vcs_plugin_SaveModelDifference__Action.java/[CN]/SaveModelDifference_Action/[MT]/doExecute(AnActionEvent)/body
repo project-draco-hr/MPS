@@ -1,0 +1,42 @@
+{
+  try {
+    int number=1;
+    File rootDir=new File(System.getProperty("user.home"),"mydiffs");
+    File thisDir;
+    while (true) {
+      thisDir=new File(rootDir,Integer.toString(number));
+      if (!(thisDir.exists())) {
+        break;
+      }
+      number++;
+    }
+    thisDir.mkdir();
+    try {
+      final Wrappers._T<SModelDescriptor> model=new Wrappers._T<SModelDescriptor>();
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          model.value=SaveModelDifference_Action.this.node.getModel().getModelDescriptor();
+        }
+      }
+);
+      VirtualFile file=VirtualFileUtils.getVirtualFile(((EditableSModelDescriptor)model.value).getModelFile());
+      AbstractVcs vcs=ProjectLevelVcsManager.getInstance(SaveModelDifference_Action.this.project).getVcsFor(file);
+      VcsRevisionNumber revisionNumber=vcs.getDiffProvider().getCurrentRevision(file);
+      ContentRevision content=vcs.getDiffProvider().createFileContent(revisionNumber,file);
+      FileWriter fw=new FileWriter(new File(thisDir,model.value.getSModelReference().getSModelFqName().getCompactPresentation() + ".old.mps"));
+      fw.write(content.getContent());
+      fw.close();
+      FileUtil.copyFile(new File(file.getPath()),new File(thisDir,model.value.getSModelReference().getSModelFqName().getCompactPresentation() + ".new.mps"));
+    }
+ catch (    Exception e) {
+      if (log.isErrorEnabled()) {
+        log.error("",e);
+      }
+    }
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "SaveModelDifference",t);
+    }
+  }
+}
