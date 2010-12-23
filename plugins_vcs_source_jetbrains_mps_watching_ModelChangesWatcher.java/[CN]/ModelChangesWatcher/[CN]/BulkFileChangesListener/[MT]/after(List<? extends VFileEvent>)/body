@@ -1,0 +1,31 @@
+{
+  final Application application=ApplicationManager.getApplication();
+  if (application.isDisposeInProgress() || application.isDisposed()) {
+    return;
+  }
+synchronized (myLock) {
+    if (myReloadSession == null) {
+      myReloadSession=new ReloadSession(getReloadListeners());
+    }
+    for (    final VFileEvent event : events) {
+      String path=event.getPath();
+      LOG.debug("Got event " + event);
+      File file=new File(path);
+      if (file.isDirectory() && file.exists() && (file.listFiles() != null)) {
+        if (isUnderSignificantRoots(file)) {
+          FileUtil.processFilesRecursively(file,new Processor<File>(){
+            public boolean process(            File file){
+              processAfterEvent(file.getAbsolutePath(),new VFileEventDecorator(event,file.getAbsolutePath()),myReloadSession);
+              return true;
+            }
+          }
+);
+        }
+      }
+      processAfterEvent(path,event,myReloadSession);
+    }
+    if (myBans == 0) {
+      myTimer.resume();
+    }
+  }
+}
