@@ -4,36 +4,45 @@
       Iterable<IResource> _output_wf1ya0_a0a=null;
 switch (0) {
 case 0:
-        for (        IResource resource : Sequence.fromIterable(input)) {
-          TResource tres=new TResource().assignFrom((TResource)resource);
-          if (tres.module() == null) {
-            return new IResult.FAILURE(_output_wf1ya0_a0a);
-          }
-          if (!(tres.module().isCompileInMPS())) {
-            continue;
-          }
-          MPSCompilationResult cr=new ModuleMaker().make(CollectionUtil.set(tres.module()),new EmptyProgressIndicator());
-          if (cr == null || !(cr.isOk())) {
-            if (cr != null) {
-              if (cr.getErrors() > 0) {
-                monitor.reportFeedback(new IFeedback.ERROR(String.valueOf(cr)));
-              }
- else               if (cr.getWarnings() > 0) {
-                monitor.reportFeedback(new IFeedback.WARNING(String.valueOf(cr)));
-              }
- else {
-                monitor.reportFeedback(new IFeedback.INFORMATION(String.valueOf(cr)));
-              }
-            }
-            return new IResult.FAILURE(_output_wf1ya0_a0a);
-          }
-          if (tres.module().reloadClassesAfterGeneration()) {
-            _output_wf1ya0_a0a=Sequence.fromIterable(_output_wf1ya0_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(tres)));
+        int work=Sequence.fromIterable(input).foldLeft(0,new ILeftCombinator<IResource,Integer>(){
+          public Integer combine(          Integer s,          IResource it){
+            return s + ((((TResource)it).module().isCompileInMPS() ? 100 : 0));
           }
         }
+);
+      monitor.currentProgress().beginWork("Compiling...",work,monitor.currentProgress().workLeft());
+    for (    IResource resource : Sequence.fromIterable(input)) {
+      TResource tres=new TResource().assignFrom((TResource)resource);
+      if (tres.module() == null) {
+        return new IResult.FAILURE(_output_wf1ya0_a0a);
+      }
+      if (!(tres.module().isCompileInMPS())) {
+        continue;
+      }
+      MPSCompilationResult cr=new ModuleMaker().make(CollectionUtil.set(tres.module()),new EmptyProgressIndicator());
+      if (cr == null || !(cr.isOk())) {
+        if (cr != null) {
+          if (cr.getErrors() > 0) {
+            monitor.reportFeedback(new IFeedback.ERROR(String.valueOf(cr)));
+          }
+ else           if (cr.getWarnings() > 0) {
+            monitor.reportFeedback(new IFeedback.WARNING(String.valueOf(cr)));
+          }
+ else {
+            monitor.reportFeedback(new IFeedback.INFORMATION(String.valueOf(cr)));
+          }
+        }
+        return new IResult.FAILURE(_output_wf1ya0_a0a);
+      }
+      monitor.currentProgress().advanceWork("Compiling...",100);
+      if (tres.module().reloadClassesAfterGeneration()) {
+        _output_wf1ya0_a0a=Sequence.fromIterable(_output_wf1ya0_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(tres)));
+      }
+    }
+  monitor.currentProgress().finishWork("Compiling...");
 default :
-      return new IResult.SUCCESS(_output_wf1ya0_a0a);
-  }
+return new IResult.SUCCESS(_output_wf1ya0_a0a);
+}
 }
 }
 ;
