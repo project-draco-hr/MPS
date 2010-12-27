@@ -1,0 +1,37 @@
+{
+  try {
+    String path=((VirtualFile)MapSequence.fromMap(_params).get("selectedFile")).getParent().getPath();
+    MoveFileDialog dialog=new MoveFileDialog(((Project)MapSequence.fromMap(_params).get("project")),path,((VirtualFile)MapSequence.fromMap(_params).get("selectedFile")).isDirectory());
+    dialog.show();
+    if (!(dialog.isOK())) {
+      return;
+    }
+    final String result=dialog.getResult();
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        try {
+          if (MoveFileOrDirectory_Action.this.isNotValid(result,_params)) {
+            return;
+          }
+          VirtualFile virtualFile=LocalFileSystem.getInstance().findFileByPath(result);
+          ((VirtualFile)MapSequence.fromMap(_params).get("selectedFile")).move(null,virtualFile);
+          ProjectView.getInstance(((Project)MapSequence.fromMap(_params).get("project"))).refresh();
+          SwingUtilities.invokeLater(new Runnable(){
+            public void run(){
+              ProjectView.getInstance(((Project)MapSequence.fromMap(_params).get("project"))).getProjectViewPaneById(BaseDirectoryProjectView.ID).select(null,((VirtualFile)MapSequence.fromMap(_params).get("selectedFile")),true);
+            }
+          }
+);
+        }
+ catch (        IOException e) {
+        }
+      }
+    }
+);
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "MoveFileOrDirectory",t);
+    }
+  }
+}

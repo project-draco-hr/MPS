@@ -1,0 +1,26 @@
+{
+  try {
+    IGenerationHandler genHandler=GeneratorFacade.getInstance().getDefaultGenerationHandler();
+    final Wrappers._T<List<SModelDescriptor>> models=new Wrappers._T<List<SModelDescriptor>>(ListSequence.fromList(new ArrayList<SModelDescriptor>()));
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        ListSequence.fromList(models.value).addSequence(ListSequence.fromList(((Generator)((IModule)MapSequence.fromMap(_params).get("module"))).getGeneratorModels()));
+        if (!(GenerateTemplateQueries_Action.this.regenerate)) {
+          models.value=ListSequence.fromList(models.value).where(new IWhereFilter<SModelDescriptor>(){
+            public boolean accept(            SModelDescriptor it){
+              return ModelGenerationStatusManager.getInstance().generationRequired(it,ProjectOperationContext.get(((Project)MapSequence.fromMap(_params).get("project"))),false,true);
+            }
+          }
+).toListSequence();
+        }
+      }
+    }
+);
+    GeneratorFacade.getInstance().generateModels(((IOperationContext)MapSequence.fromMap(_params).get("context")),models.value,genHandler,true,false);
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "GenerateTemplateQueries",t);
+    }
+  }
+}

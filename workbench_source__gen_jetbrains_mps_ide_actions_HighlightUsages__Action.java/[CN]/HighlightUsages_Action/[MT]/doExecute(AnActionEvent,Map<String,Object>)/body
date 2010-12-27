@@ -1,0 +1,42 @@
+{
+  try {
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        NodeHighlightManager highlightManager=((EditorComponent)MapSequence.fromMap(_params).get("editorComponent")).getHighlightManager();
+        EditorMessageOwner messageOwner=((EditorComponent)MapSequence.fromMap(_params).get("editorComponent")).getHighlightMessagesOwner();
+        SNode node=((EditorCell)MapSequence.fromMap(_params).get("editorCell")).getSNodeWRTReference();
+        Set<SReference> usages=new ModelFindOperations(((SModelDescriptor)MapSequence.fromMap(_params).get("model"))).findUsages(node);
+        boolean highlight=highlightManager.getMessagesFor(node,messageOwner).isEmpty();
+        if (SNodeOperations.getContainingRoot(node) == ((EditorComponent)MapSequence.fromMap(_params).get("editorComponent")).getRootCell().getSNode().getContainingRoot()) {
+          if (highlight) {
+            highlightManager.mark(node,HighlightConstants.NODE_COLOR,"source node",messageOwner);
+          }
+ else {
+            for (            EditorMessage message : ListSequence.fromList(highlightManager.getMessagesFor(node,messageOwner))) {
+              highlightManager.unmark(message);
+            }
+          }
+        }
+        for (        SReference ref : SetSequence.fromSet(usages)) {
+          if (ref.getSourceNode().getContainingRoot() == ((EditorComponent)MapSequence.fromMap(_params).get("editorComponent")).getRootCell().getSNode().getContainingRoot()) {
+            if (highlight) {
+              highlightManager.mark(ref.getSourceNode(),HighlightConstants.USAGES_COLOR,"usage",messageOwner);
+            }
+ else {
+              for (              EditorMessage message : ListSequence.fromList(highlightManager.getMessagesFor(ref.getSourceNode(),messageOwner))) {
+                highlightManager.unmark(message);
+              }
+            }
+          }
+        }
+        highlightManager.repaintAndRebuildEditorMessages();
+      }
+    }
+);
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "HighlightUsages",t);
+    }
+  }
+}

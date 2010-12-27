@@ -1,0 +1,40 @@
+{
+  BaseGroup group=new BaseGroup("");
+  List<Pair<Intention,SNode>> groupItems=new ArrayList<Pair<Intention,SNode>>();
+  IntentionsManager.QueryDescriptor query=new IntentionsManager.QueryDescriptor();
+  query.setIntentionClass(SurroundWithIntention.class);
+  query.setInstantiate(true);
+  query.setCurrentNodeOnly(true);
+  Collection<Pair<Intention,SNode>> intentions=IntentionsManager.getInstance().getAvailableIntentions(query,((SNode)MapSequence.fromMap(_params).get("selectedNode")),((EditorContext)MapSequence.fromMap(_params).get("editorContext")));
+  groupItems.addAll(intentions);
+  if (groupItems.isEmpty()) {
+    return null;
+  }
+  Collections.sort(groupItems,new Comparator<Pair<Intention,SNode>>(){
+    public int compare(    Pair<Intention,SNode> p0,    Pair<Intention,SNode> p1){
+      Intention intention1=p0.getFirst();
+      Intention intention2=p1.getFirst();
+      SNode node1=p0.getSecond();
+      SNode node2=p1.getSecond();
+      return intention1.getDescription(node1,((EditorContext)MapSequence.fromMap(_params).get("editorContext"))).compareTo(intention2.getDescription(node2,((EditorContext)MapSequence.fromMap(_params).get("editorContext"))));
+    }
+  }
+);
+  final EditorContext context=((EditorContext)MapSequence.fromMap(_params).get("editorContext"));
+  for (  final Pair<Intention,SNode> pair : groupItems) {
+    BaseAction action=new BaseAction(pair.getFirst().getDescription(pair.getSecond(),((EditorContext)MapSequence.fromMap(_params).get("editorContext")))){
+      protected void doExecute(      AnActionEvent p0){
+        ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+          public void run(){
+            pair.getFirst().execute(pair.getSecond(),context);
+          }
+        }
+);
+      }
+    }
+;
+    action.setExecuteOutsideCommand(true);
+    group.add(action);
+  }
+  return group;
+}

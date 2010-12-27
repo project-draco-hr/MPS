@@ -1,0 +1,45 @@
+{
+  try {
+    IFinder finder;
+    if (SNodeOperations.isInstanceOf(((SNode)MapSequence.fromMap(_params).get("node")),"jetbrains.mps.baseLanguage.structure.Interface")) {
+      finder=new ImplementingClasses_Finder();
+    }
+ else     if (SNodeOperations.isInstanceOf(((SNode)MapSequence.fromMap(_params).get("node")),"jetbrains.mps.baseLanguage.structure.ClassConcept") && SPropertyOperations.getBoolean(SNodeOperations.cast(((SNode)MapSequence.fromMap(_params).get("node")),"jetbrains.mps.baseLanguage.structure.ClassConcept"),"abstractClass")) {
+      finder=new DerivedClasses_Finder();
+    }
+ else     if (SNodeOperations.isInstanceOf(((SNode)MapSequence.fromMap(_params).get("node")),"jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration") && SNodeOperations.isInstanceOf(SNodeOperations.getParent(((SNode)MapSequence.fromMap(_params).get("node"))),"jetbrains.mps.baseLanguage.structure.Interface") && SNodeOperations.hasRole(((SNode)MapSequence.fromMap(_params).get("node")),"jetbrains.mps.baseLanguage.structure.Interface","method")) {
+      finder=new InterfaceMethodImplementations_Finder();
+    }
+ else     if (SNodeOperations.isInstanceOf(((SNode)MapSequence.fromMap(_params).get("node")),"jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration") && SNodeOperations.isInstanceOf(SNodeOperations.getParent(((SNode)MapSequence.fromMap(_params).get("node"))),"jetbrains.mps.baseLanguage.structure.Classifier")) {
+      finder=new DerivedMethods_Finder();
+    }
+ else {
+      return;
+    }
+    final List<SNode> nodes=new ArrayList<SNode>();
+    ListSequence.fromList(nodes).addElement(((SNode)MapSequence.fromMap(_params).get("node")));
+    SearchResults<SNode> searchResults=finder.find(new SearchQuery(((SNode)MapSequence.fromMap(_params).get("node")),GlobalScope.getInstance()),new EmptyProgressIndicator());
+    for (    SearchResult<SNode> searchResult : searchResults.getSearchResults()) {
+      SNode foundNode=searchResult.getObject();
+      if ((foundNode != null)) {
+        ListSequence.fromList(nodes).addElement(foundNode);
+      }
+    }
+    ModelAccess.instance().runWriteActionInCommandAsync(new Runnable(){
+      public void run(){
+        String title="Definition of " + ((SNode)MapSequence.fromMap(_params).get("node")).getPresentation();
+        ShowImplementationComponent component=new ShowImplementationComponent(nodes,((IOperationContext)MapSequence.fromMap(_params).get("context")));
+        JBPopup popup=JBPopupFactory.getInstance().createComponentPopupBuilder(component,component.getPrefferedFocusableComponent()).setRequestFocus(true).setProject(((Project)MapSequence.fromMap(_params).get("project"))).setMovable(true).setResizable(true).setTitle(title).createPopup();
+        popup.show(new RelativePoint(((EditorCell)MapSequence.fromMap(_params).get("cell")).getEditor(),new Point(((EditorCell)MapSequence.fromMap(_params).get("cell")).getX(),((EditorCell)MapSequence.fromMap(_params).get("cell")).getY())));
+        component.getPrefferedFocusableComponent().setRequestFocusEnabled(true);
+        component.setPopup(popup);
+      }
+    }
+,((Project)MapSequence.fromMap(_params).get("project")));
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "ShowImplementations",t);
+    }
+  }
+}
