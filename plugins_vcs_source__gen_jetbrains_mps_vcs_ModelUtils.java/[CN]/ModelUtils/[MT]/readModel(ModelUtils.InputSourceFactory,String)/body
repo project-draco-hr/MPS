@@ -1,0 +1,40 @@
+{
+  int index=path.lastIndexOf("/");
+  String shortName=path;
+  if (index != -1) {
+    shortName=path.substring(index + 1);
+  }
+  index=shortName.lastIndexOf("\\");
+  if (index != -1) {
+    shortName=shortName.substring(index + 1);
+  }
+  final String modelName=ModelPersistence.extractModelName(shortName);
+  final String modelStereotype=ModelPersistence.extractModelStereotype(shortName);
+  try {
+    if (inputSourceFactory == null) {
+      return new SModel(SModelReference.fromString(modelName + "@" + modelStereotype));
+    }
+    final Ref<IOException> ex=new Ref<IOException>();
+    SModel model=ModelAccess.instance().runReadAction(new Computable<SModel>(){
+      @Override public SModel compute(){
+        try {
+          return ModelPersistence.readModel(ModelPersistence.getPersistenceVersion(inputSourceFactory.create()),inputSourceFactory.create(),modelName,modelStereotype);
+        }
+ catch (        IOException e) {
+          ex.set(e);
+          return null;
+        }
+      }
+    }
+);
+    if (model == null) {
+      throw ex.get();
+    }
+ else {
+      return model;
+    }
+  }
+ catch (  Exception t) {
+    throw new ModelDiffTool.ReadException(t);
+  }
+}

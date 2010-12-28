@@ -1,0 +1,41 @@
+{
+  ModelMergeRequest mrequest=(ModelMergeRequest)request;
+  try {
+    DiffContent[] contents=mrequest.getContents();
+    final SModel baseModel=ModelDiffTool.readModel(contents[ModelMergeRequestConstants.ORIGINAL],mrequest.getFile().getPath());
+    final SModel mineModel=ModelDiffTool.readModel(contents[ModelMergeRequestConstants.CURRENT],mrequest.getFile().getPath());
+    final SModel newModel=ModelDiffTool.readModel(contents[ModelMergeRequestConstants.LAST_REVISION],mrequest.getFile().getPath());
+    final MergeModelsDialog dialog=ModelAccess.instance().runReadAction(new Computable<MergeModelsDialog>(){
+      public MergeModelsDialog compute(){
+        SModelDescriptor modelDescriptor=SModelRepository.getInstance().getModelDescriptor(baseModel.getSModelReference());
+        if (modelDescriptor == null) {
+          modelDescriptor=SModelRepository.getInstance().getModelDescriptor(mineModel.getSModelFqName());
+        }
+        IOperationContext context=new ModuleContext(modelDescriptor.getModule(),request.getProject());
+        return new MergeModelsDialog(context,baseModel,mineModel,newModel);
+      }
+    }
+);
+    SwingUtilities.invokeLater(new Runnable(){
+      public void run(){
+        dialog.toFront();
+      }
+    }
+);
+    dialog.showDialog();
+    if (dialog.getResultModel() != null) {
+      byte[] bytes=ModelUtils.modelToBytes(dialog.getResultModel());
+      mrequest.resolved(bytes);
+    }
+  }
+ catch (  ModelDiffTool.ReadException e) {
+    LOG.warning("Can't read models. Using text based diff...",e);
+    DiffTool ideaDiffTool=DiffManager.getInstance().getIdeaDiffTool();
+    if (ideaDiffTool.canShow(request)) {
+      ideaDiffTool.show(request);
+    }
+  }
+catch (  IOException e) {
+    LOG.error(e);
+  }
+}
