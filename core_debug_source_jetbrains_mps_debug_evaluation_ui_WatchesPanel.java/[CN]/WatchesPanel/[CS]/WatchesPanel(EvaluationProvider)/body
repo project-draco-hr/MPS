@@ -1,19 +1,22 @@
 {
-  super(new BorderLayout());
-  final DebugSession debugSession=provider.getDebugSession();
-  final Project project=debugSession.getProject();
-  myTabsPane=new JBTabsImpl(project);
-  provider.addWatchListener(new IWatchListener(){
-    @Override public void watchAdded(    AbstractEvaluationModel model){
-      EvaluationPanel evaluationPanel=new EvaluationPanel(project,debugSession,model,true);
-      myPanels.add(evaluationPanel);
-      TabInfo info=new TabInfo(evaluationPanel);
-      info.setText("This is a watch.");
-      myTabsPane.addTab(info);
+  super(provider.getDebugSession(),true);
+  myProvider=provider;
+  final Project project=myDebugSession.getProject();
+  myProvider.addWatchListener(new IWatchListener(){
+    @Override public void watchAdded(    final AbstractEvaluationModel model){
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        @Override public void run(){
+          EditableSModelDescriptor descriptorFor=ProjectModels.createDescriptorFor(((EvaluationProvider)model.getDebugSession().getEvaluationProvider()).getAuxModule());
+          model.createNodesToShow(descriptorFor);
+        }
+      }
+,project);
+      myTree.addModel(model);
+      evaluate(model);
     }
   }
 );
-  mySessionStopDisposer=new SessionStopDisposer(debugSession){
+  mySessionStopDisposer=new SessionStopDisposer(myDebugSession){
     @Override public void doDispose(){
       ApplicationManager.getApplication().invokeLater(new Runnable(){
         @Override public void run(){
@@ -24,5 +27,5 @@
     }
   }
 ;
-  add(myTabsPane,BorderLayout.CENTER);
+  add(new JBScrollPane(myTree),BorderLayout.CENTER);
 }
