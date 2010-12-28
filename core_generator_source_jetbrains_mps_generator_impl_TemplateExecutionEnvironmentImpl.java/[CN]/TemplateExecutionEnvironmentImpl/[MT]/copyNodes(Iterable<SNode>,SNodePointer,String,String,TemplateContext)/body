@@ -1,0 +1,30 @@
+{
+  Collection<SNode> outputNodes=null;
+  for (  SNode newInputNode : inputNodes) {
+    Collection<SNode> _outputNodes=newInputNode.getModel() == generator.getInputModel() && newInputNode.isRegistered() ? generator.copyNodeFromInputNode(mappingName,templateNode,templateId,newInputNode,reductionContext,new boolean[]{false}) : generator.copyNodeFromExternalNode(mappingName,templateNode,templateId,newInputNode,reductionContext);
+    if (_outputNodes != null) {
+      for (      SNode outputNode : _outputNodes) {
+        Language outputNodeLang=outputNode.getNodeLanguage();
+        if (!generator.getGeneratorSessionContext().getGenerationPlan().isCountedLanguage(outputNodeLang)) {
+          if (!outputNodeLang.getGenerators().isEmpty()) {
+            SNode tNode=templateNode.getNode();
+            generator.getLogger().error(outputNode,"language of output node is '" + outputNodeLang.getModuleFqName() + "' - this language did not show up when computing generation steps!",GeneratorUtil.describe(tNode,"template"),GeneratorUtil.describe(templateContext.getInput(),"input"),new ProblemDescription(null,"workaround: add the language '" + outputNodeLang.getModuleFqName() + "' to list of 'Languages Engaged On Generation' in model '"+ generator.getGeneratorSessionContext().getOriginalInputModel().getSModelFqName()+ "'"));
+          }
+        }
+      }
+      if (outputNodes == null) {
+        outputNodes=Collections.unmodifiableCollection(_outputNodes);
+      }
+ else       if (!(outputNodes instanceof ArrayList)) {
+        Collection<SNode> old=outputNodes;
+        outputNodes=new ArrayList<SNode>(old.size() + _outputNodes.size() + 16);
+        outputNodes.addAll(old);
+        outputNodes.addAll(_outputNodes);
+      }
+ else {
+        outputNodes.addAll(_outputNodes);
+      }
+    }
+  }
+  return outputNodes == null ? Collections.<SNode>emptyList() : outputNodes;
+}
