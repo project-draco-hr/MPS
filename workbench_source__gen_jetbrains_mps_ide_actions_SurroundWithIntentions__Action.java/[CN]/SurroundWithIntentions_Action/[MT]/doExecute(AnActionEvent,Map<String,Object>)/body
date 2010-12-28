@@ -7,21 +7,23 @@
       y+=((EditorCell_Label)selectedCell).getHeight();
     }
     final DataContext dataContext=DataManager.getInstance().getDataContext(((EditorContext)MapSequence.fromMap(_params).get("editorContext")).getNodeEditorComponent(),x,y);
-    ListPopup popup=ModelAccess.instance().runReadAction(new Computable<ListPopup>(){
-      public ListPopup compute(){
-        ActionGroup group=SurroundWithIntentions_Action.this.getIntentionGroup(_params);
-        ListPopup popup=null;
-        if (group != null) {
-          popup=JBPopupFactory.getInstance().createActionGroupPopup("Surround with",group,dataContext,JBPopupFactory.ActionSelectionAid.ALPHA_NUMBERING,false);
+    final Wrappers._T<ListPopup> popup=new Wrappers._T<ListPopup>(null);
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        ActionGroup group=ActionFactory.getInstance().acquireRegisteredGroup("jetbrains.mps.ide.actions.SurroundWithIntentions_ActionGroup","jetbrains.mps.ide");
+        group.update(event);
+        if (group.getChildren(event).length == 0) {
+          return;
         }
-        return popup;
+        popup.value=JBPopupFactory.getInstance().createActionGroupPopup("Surround with",group,dataContext,JBPopupFactory.ActionSelectionAid.ALPHA_NUMBERING,false);
       }
     }
 );
-    RelativePoint relativePoint=new RelativePoint(((EditorContext)MapSequence.fromMap(_params).get("editorContext")).getNodeEditorComponent(),new Point(x,y));
-    if (popup != null) {
-      popup.show(relativePoint);
+    if (popup.value == null) {
+      return;
     }
+    RelativePoint relativePoint=new RelativePoint(((EditorContext)MapSequence.fromMap(_params).get("editorContext")).getNodeEditorComponent(),new Point(x,y));
+    popup.value.show(relativePoint);
   }
  catch (  Throwable t) {
     if (log.isErrorEnabled()) {
