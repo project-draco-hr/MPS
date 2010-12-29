@@ -1,0 +1,41 @@
+{
+  try {
+    String inputResult=Messages.showInputDialog(ShowDifference_Action.this.project,"Input name","Name",null);
+    File rootDir=new File(System.getProperty("user.home"),"mydiffs");
+    File thisDir=new File(rootDir,inputResult);
+    final File oldFile=Sequence.fromIterable(Sequence.fromArray(thisDir.listFiles())).findFirst(new IWhereFilter<File>(){
+      public boolean accept(      File f){
+        return f.getName().endsWith(".old.mps");
+      }
+    }
+);
+    final File newFile=Sequence.fromIterable(Sequence.fromArray(thisDir.listFiles())).findFirst(new IWhereFilter<File>(){
+      public boolean accept(      File f){
+        return f.getName().endsWith(".new.mps");
+      }
+    }
+);
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        try {
+          final SModel oldModel=ModelUtils.readModel(oldFile.getAbsolutePath());
+          final SModel newModel=ModelUtils.readModel(newFile.getAbsolutePath());
+          for (          ModelChange change : ListSequence.fromList(ChangeSetBuilder.buildChangeSet(oldModel,newModel).getModelChanges())) {
+            System.out.println(change);
+          }
+        }
+ catch (        IOException e) {
+          if (log.isErrorEnabled()) {
+            log.error("",e);
+          }
+        }
+      }
+    }
+);
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "ShowDifference",t);
+    }
+  }
+}
