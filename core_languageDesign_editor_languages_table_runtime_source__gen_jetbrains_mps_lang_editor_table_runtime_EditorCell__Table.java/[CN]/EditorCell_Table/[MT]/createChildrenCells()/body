@@ -1,8 +1,11 @@
 {
-  for (int row=0; row < myModel.getRowsNumber(); row++) {
+  for (int row=0; row < myModel.getRowCount(); row++) {
     EditorCell_Collection rowCell=this.createRowCell(row);
+    String rowId=myUniquePrefix + "_row_" + row;
+    rowCell.setCellId(rowId);
+    rowCell.addEditorCell(createRowEndingCell(row,rowId + "_firstCell"));
     final int finalRow=row;
-    for (int column=0; column < myModel.getColumnsNumber(); column++) {
+    for (int column=0; column < myModel.getColumnCount(); column++) {
       final int finalColumn=column;
       SNode value=myModel.getValueAt(row,column);
       EditorCell editorCell;
@@ -10,6 +13,19 @@
         editorCell=getEditorContext().createNodeCell(value);
         editorCell.setAction(CellActionType.DELETE,new EditorCellAction(){
           public void execute(          EditorContext editorContext){
+            myModel.deleteColumn(finalColumn);
+          }
+        }
+);
+        editorCell.setAction(CellActionType.INSERT,new EditorCellAction(){
+          public void execute(          EditorContext editorContext){
+            myModel.insertColumn(finalColumn + 1);
+          }
+        }
+);
+        editorCell.setAction(CellActionType.INSERT_BEFORE,new EditorCellAction(){
+          public void execute(          EditorContext editorContext){
+            myModel.insertColumn(finalColumn);
           }
         }
 );
@@ -23,18 +39,14 @@
         }
 );
       }
+      if (editorCell.getCellId() == null) {
+        editorCell.setCellId(rowId + "_column_" + column);
+      }
       editorCell.setLeftGap(4);
       editorCell.setRightGap(4);
       rowCell.addEditorCell(editorCell);
     }
-    EditorCell_Constant lastCell=new EditorCell_Constant(getEditorContext(),getSNode(),"");
-    lastCell.setAction(CellActionType.INSERT,new EditorCellAction(){
-      public void execute(      EditorContext p0){
-        myModel.insertRow(finalRow + 1);
-      }
-    }
-);
-    rowCell.addEditorCell(lastCell);
+    rowCell.addEditorCell(createRowEndingCell(row + 1,rowId + "_lastCell"));
     this.addEditorCell(rowCell);
   }
 }
