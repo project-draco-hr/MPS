@@ -1,24 +1,16 @@
 {
   Set<IRefactoring> result=new HashSet<IRefactoring>();
-  if (myCachedRefactorings != null) {
-    result.addAll(myCachedRefactorings);
-    return result;
-  }
 {
-    SModelDescriptor scriptsModelDescriptor=LanguageAspect.SCRIPTS.get(this);
+    SModelDescriptor scriptsModelDescriptor=LanguageAspect.SCRIPTS.get(language);
     if (scriptsModelDescriptor != null) {
       SModel scriptsModel=scriptsModelDescriptor.getSModel();
       String packageName=scriptsModel.getLongName();
       for (      OldRefactoring refactoring : scriptsModel.getRootsAdapters(OldRefactoring.class)) {
         try {
           String fqName=packageName + "." + refactoring.getName();
-          Class<AbstractLoggableRefactoring> cls=getClass(fqName);
-          SNodePointer pointer=new SNodePointer(refactoring.getNode());
+          Class<AbstractLoggableRefactoring> cls=language.getClass(fqName);
           if (cls == null) {
-            if (!myNotFoundRefactorings.contains(pointer)) {
-              LOG.error("Can't find " + fqName);
-              myNotFoundRefactorings.add(pointer);
-            }
+            LOG.error("Can't find " + fqName);
             continue;
           }
           Constructor<AbstractLoggableRefactoring> constructor=cls.getConstructor();
@@ -32,20 +24,16 @@
       }
     }
   }
-  SModelDescriptor refModelDescriptor=LanguageAspect.REFACTORINGS.get(this);
+  SModelDescriptor refModelDescriptor=LanguageAspect.REFACTORINGS.get(language);
   if (refModelDescriptor != null) {
     SModel refactoringsModel=refModelDescriptor.getSModel();
     String packageName=refactoringsModel.getLongName();
     for (    Refactoring refactoring : refactoringsModel.getRootsAdapters(Refactoring.class)) {
       try {
         String fqName=packageName + "." + refactoring.getName();
-        Class<IRefactoring> cls=getClass(fqName);
-        SNodePointer pointer=new SNodePointer(refactoring.getNode());
+        Class<IRefactoring> cls=language.getClass(fqName);
         if (cls == null) {
-          if (!myNotFoundRefactorings.contains(pointer)) {
-            LOG.error("Can't find " + fqName);
-            myNotFoundRefactorings.add(pointer);
-          }
+          LOG.error("Can't find " + fqName);
           continue;
         }
         Constructor<IRefactoring> constructor=cls.getConstructor();
@@ -57,6 +45,5 @@
       }
     }
   }
-  myCachedRefactorings=new HashSet<IRefactoring>(result);
   return result;
 }
