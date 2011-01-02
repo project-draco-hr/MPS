@@ -4,10 +4,10 @@
     LOG.error("attempt to execute invalid script");
     throw new IllegalStateException("invalid script");
   }
-  LOG.info("Beginning to execute script");
+  LOG.debug("Beginning to execute script");
   final CompositeResult results=new CompositeResult();
   final Script.ParametersPool pool=new Script.ParametersPool();
-  LOG.info("Initializing");
+  LOG.debug("Initializing");
   if (init != null) {
     init.invoke(pool);
   }
@@ -19,10 +19,10 @@
   mons.runConfigWithMonitor(new _FunctionTypes._void_P1_E0<IConfigMonitor>(){
     public void invoke(    IConfigMonitor cmon){
       for (      ITarget trg : Sequence.fromIterable(toExecute)) {
-        LOG.info("Configuring " + trg.getName());
+        LOG.debug("Configuring " + trg.getName());
         IConfig cfg=trg.createConfig();
         if (cfg != null && !(cfg.configure(cmon,pool))) {
-          LOG.info("Configuration failed");
+          LOG.debug("Configuration failed");
           results.addResult(trg.getName(),new IResult.FAILURE(null));
           return;
         }
@@ -35,8 +35,16 @@
   }
   mons.runJobWithMonitor(new _FunctionTypes._void_P1_E0<IJobMonitor>(){
     public void invoke(    IJobMonitor monit){
+      String scriptName="Script";
+      int work=Sequence.fromIterable(toExecute).foldLeft(0,new ILeftCombinator<ITarget,Integer>(){
+        public Integer combine(        Integer s,        ITarget it){
+          return s + ((it.requiresInput() || it.producesOutput() ? 1000 : 10));
+        }
+      }
+);
+      monit.currentProgress().beginWork(scriptName,work,monit.currentProgress().workLeft());
       for (      ITarget trg : Sequence.fromIterable(toExecute)) {
-        LOG.info("Executing " + trg.getName());
+        LOG.debug("Executing " + trg.getName());
         Iterable<ITarget> impre=targetRange.immediatePrecursors(trg.getName());
         Iterable<IResource> input=(Iterable<IResource>)((Sequence.fromIterable(impre).isEmpty() ? scriptInput : Sequence.fromIterable(impre).<IResult>select(new ISelector<ITarget,IResult>(){
           public IResult select(          ITarget t){
@@ -49,14 +57,15 @@
           }
         }
 ).distinct().toListSequence()));
-        LOG.info("Input: " + input);
+        LOG.debug("Input: " + input);
         if (trg.requiresInput()) {
           if (Sequence.fromIterable(input).isEmpty()) {
-            LOG.info("No input. Stopping");
+            LOG.debug("No input. Stopping");
             results.addResult(trg.getName(),new IResult.FAILURE(null));
             return;
           }
         }
+        monit.currentProgress().beginWork(trg.getName().toString(),1000,(trg.requiresInput() || trg.producesOutput() ? 1000 : 10));
         IJob job=trg.createJob();
         IResult jr=job.execute(input,monit,pool);
         if (!(trg.producesOutput())) {
@@ -64,13 +73,15 @@
         }
         results.addResult(trg.getName(),jr);
         if (!(jr.isSucessful()) || monit.pleaseStop()) {
-          LOG.info((jr.isSucessful() ? "Stop requested" : "Execution failed"));
+          LOG.debug((jr.isSucessful() ? "Stop requested" : "Execution failed"));
           return;
         }
+        monit.currentProgress().finishWork(trg.getName().toString());
       }
+      monit.currentProgress().finishWork(scriptName);
     }
   }
 );
-  LOG.info("Finished executing script");
+  LOG.debug("Finished executing script");
   return results;
 }
