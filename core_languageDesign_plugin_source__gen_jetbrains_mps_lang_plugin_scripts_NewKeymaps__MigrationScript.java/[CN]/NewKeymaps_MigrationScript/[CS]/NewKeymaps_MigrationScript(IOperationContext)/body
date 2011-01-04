@@ -1,0 +1,36 @@
+{
+  super("Move Key Strokes to Keymaps");
+  this.addRefactoring(new AbstractMigrationRefactoring(operationContext){
+    public String getName(){
+      return "Move Key Strokes to Keymaps";
+    }
+    public String getAdditionalInfo(){
+      return "Move Key Strokes to Keymaps";
+    }
+    public String getFqNameOfConceptToSearchInstances(){
+      return "jetbrains.mps.lang.plugin.structure.ActionDeclaration";
+    }
+    public boolean isApplicableInstanceNode(    SNode node){
+      return (SLinkOperations.getTarget(node,"keystroke",true) != null);
+    }
+    public void doUpdateInstanceNode(    SNode node){
+      SNode keymap=ListSequence.fromList(SModelOperations.getRoots(SNodeOperations.getModel(node),"jetbrains.mps.lang.plugin.structure.KeymapChangesDeclaration")).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return SPropertyOperations.hasValue(it,"keymap","$default","$default");
+        }
+      }
+).first();
+      if (keymap == null) {
+        keymap=SModelOperations.createNewRootNode(SNodeOperations.getModel(node),"jetbrains.mps.lang.plugin.structure.KeymapChangesDeclaration",null);
+        SPropertyOperations.set(keymap,"keymap","$default");
+        SPropertyOperations.set(keymap,"name","Default");
+      }
+      ListSequence.fromList(SLinkOperations.getTargets(keymap,"shortcutChange",true)).addElement(new NewKeymaps_MigrationScript.QuotationClass_ft56mw_a0a0d0e0a0a0b0a().createNode(SLinkOperations.getTarget(node,"keystroke",true),node));
+      SNodeOperations.deleteNode(SLinkOperations.getTarget(node,"keystroke",true));
+    }
+    public boolean isShowAsIntention(){
+      return false;
+    }
+  }
+);
+}
