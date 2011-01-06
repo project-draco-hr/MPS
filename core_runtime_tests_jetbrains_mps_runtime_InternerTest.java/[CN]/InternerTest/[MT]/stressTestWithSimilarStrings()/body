@@ -1,0 +1,30 @@
+{
+  final int maxObjects=5000;
+  final int maxThreads=Runtime.getRuntime().availableProcessors() * 20;
+  final int maxRepetitions=100000;
+  long[] refTime=computeMedian(new LongProducer(){
+    public long[] produce(){
+      return new long[]{computePerformanceBenchmark(maxThreads)};
+    }
+  }
+);
+  long[] stats=computeMedian(new LongProducer(){
+    public long[] produce(){
+      long baseLine=computeUsedHeap();
+      final Interner interner=new Interner(maxObjects);
+      final List<List<String>> listOfLists=new ArrayList<List<String>>();
+      long time=loadTestWithSimilarStrings(Collections.synchronizedList(listOfLists),interner,maxObjects,maxThreads,maxRepetitions);
+      long used=computeUsedHeap() - baseLine;
+      int totalSize=0;
+      for (int idx=listOfLists.size() - 1; idx >= 0; --idx) {
+        totalSize+=listOfLists.get(idx).size();
+      }
+      return new long[]{time,interner.size(),used,totalSize};
+    }
+  }
+);
+  double perfRatio=stats[0] / (double)refTime[0];
+  Assert.assertTrue("Interner perfomance is not within bounds: " + perfRatio,0.45 < perfRatio && perfRatio < 1.95);
+  double memRatio=stats[2] / (double)stats[3] / 4./ 50.;
+  Assert.assertTrue("Interner memory consumption is not within bounds: " + memRatio,0.65 < memRatio && memRatio < 1.35);
+}

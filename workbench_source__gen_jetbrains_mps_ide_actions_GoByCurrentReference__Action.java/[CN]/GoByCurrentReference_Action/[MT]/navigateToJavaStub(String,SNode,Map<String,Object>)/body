@@ -1,0 +1,47 @@
+{
+  SModelReference ref=SNodeOperations.getModel(targetNode).getSModelReference();
+  boolean isClassifier=SNodeOperations.isInstanceOf(targetNode,"jetbrains.mps.baseLanguage.structure.Classifier");
+  boolean isConstructor=SNodeOperations.isInstanceOf(targetNode,"jetbrains.mps.baseLanguage.structure.ConstructorDeclaration");
+  boolean isMethod=SNodeOperations.isInstanceOf(targetNode,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration") && SNodeOperations.isInstanceOf(SNodeOperations.getParent(targetNode),"jetbrains.mps.baseLanguage.structure.Classifier");
+  boolean isField=(SNodeOperations.isInstanceOf(targetNode,"jetbrains.mps.baseLanguage.structure.FieldDeclaration") || SNodeOperations.isInstanceOf(targetNode,"jetbrains.mps.baseLanguage.structure.StaticFieldDeclaration")) && SNodeOperations.isInstanceOf(SNodeOperations.getParent(targetNode),"jetbrains.mps.baseLanguage.structure.Classifier");
+  if (!(isClassifier || isConstructor || isMethod|| isField)) {
+    return false;
+  }
+  if (isClassifier) {
+    String fqName=ref.getLongName() + "." + SPropertyOperations.getString(SNodeOperations.cast(targetNode,"jetbrains.mps.baseLanguage.structure.Classifier"),"name");
+    for (    NavigationProvider np : NavigationProvider.EP_NAME.getExtensions()) {
+      if (np.openClass(projectPath,fqName)) {
+        return true;
+      }
+    }
+  }
+ else   if (isConstructor) {
+    String classifierName=GoByCurrentReference_Action.this.getClassifierName(targetNode,ref,_params);
+    int paramCount=ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(targetNode,"jetbrains.mps.baseLanguage.structure.ConstructorDeclaration"),"parameter",true)).count();
+    for (    NavigationProvider np : NavigationProvider.EP_NAME.getExtensions()) {
+      if (np.openClass(projectPath,classifierName)) {
+        if (np.openConstructor(projectPath,classifierName,paramCount)) {
+          return true;
+        }
+      }
+    }
+  }
+ else   if (isMethod) {
+    String classifierName=GoByCurrentReference_Action.this.getClassifierName(targetNode,ref,_params);
+    SNode method=SNodeOperations.cast(targetNode,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration");
+    for (    NavigationProvider np : NavigationProvider.EP_NAME.getExtensions()) {
+      if (np.openMethod(projectPath,classifierName,SPropertyOperations.getString(method,"name"),ListSequence.fromList(SLinkOperations.getTargets(method,"parameter",true)).count())) {
+        return true;
+      }
+    }
+  }
+ else {
+    String classifierName=GoByCurrentReference_Action.this.getClassifierName(targetNode,ref,_params);
+    for (    NavigationProvider np : NavigationProvider.EP_NAME.getExtensions()) {
+      if (np.openField(projectPath,classifierName,targetNode.getName())) {
+        return true;
+      }
+    }
+  }
+  return false;
+}

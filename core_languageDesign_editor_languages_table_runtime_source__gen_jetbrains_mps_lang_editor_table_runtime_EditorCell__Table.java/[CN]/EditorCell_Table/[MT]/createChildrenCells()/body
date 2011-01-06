@@ -3,7 +3,7 @@
     EditorCell_Collection rowCell=this.createRowCell(row);
     String rowId=myUniquePrefix + "_row_" + row;
     rowCell.setCellId(rowId);
-    rowCell.addEditorCell(createRowEndingCell(row,rowId + "_firstCell"));
+    rowCell.addEditorCell(createRowOutermostCell(row,rowId,true));
     final int finalRow=row;
     for (int column=0; column < myModel.getColumnCount(); column++) {
       final int finalColumn=column;
@@ -31,10 +31,30 @@
 );
       }
  else {
-        editorCell=new EditorCell_Constant(getEditorContext(),getSNode(),"");
+        editorCell=new EditorCell_Constant(getEditorContext(),getSNode(),"",true);
         editorCell.setAction(CellActionType.INSERT,new EditorCellAction(){
           public void execute(          EditorContext editorContext){
             myModel.createElement(finalRow,finalColumn);
+          }
+        }
+);
+        editorCell.setSubstituteInfo(new AbstractNodeSubstituteInfo(getEditorContext()){
+          protected List<INodeSubstituteAction> createActions(){
+            List<INodeSubstituteAction> result=ListSequence.fromList(new ArrayList<INodeSubstituteAction>());
+            ListSequence.fromList(result).addElement(new AbstractNodeSubstituteAction(null,getSNode()){
+              protected SNode doSubstitute(              String p0){
+                myModel.createElement(finalRow,finalColumn);
+                return null;
+              }
+              @Override protected String getMatchingText(              String string,              boolean b1,              boolean b2){
+                return "create new cell node";
+              }
+              @Override protected String getDescriptionText(              String string,              boolean b){
+                return super.getDescriptionText(string,b);
+              }
+            }
+);
+            return result;
           }
         }
 );
@@ -46,7 +66,7 @@
       editorCell.setRightGap(4);
       rowCell.addEditorCell(editorCell);
     }
-    rowCell.addEditorCell(createRowEndingCell(row + 1,rowId + "_lastCell"));
+    rowCell.addEditorCell(createRowOutermostCell(row,rowId,false));
     this.addEditorCell(rowCell);
   }
 }

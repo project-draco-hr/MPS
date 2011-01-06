@@ -1,0 +1,45 @@
+{
+  try {
+    final Language language=((Language)((IModule)MapSequence.fromMap(_params).get("module")));
+    final List<SModelReference> models=ListSequence.fromList(new ArrayList<SModelReference>());
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        List<SModelDescriptor> descriptors=GlobalScope.getInstance().getModelDescriptors();
+        ListSequence.fromList(models).addSequence(ListSequence.fromList(descriptors).<SModelReference>select(new ISelector<SModelDescriptor,SModelReference>(){
+          public SModelReference select(          SModelDescriptor it){
+            return it.getSModelReference();
+          }
+        }
+));
+      }
+    }
+);
+    final SModelReference result=CommonChoosers.showDialogModelChooser(((Frame)MapSequence.fromMap(_params).get("frame")),models,null);
+    if (result == null) {
+      return;
+    }
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        LanguageDescriptor descriptor;
+        descriptor=language.getModuleDescriptor();
+        descriptor.getAccessoryModels().add(result);
+        language.setLanguageDescriptor(descriptor,true);
+        IScope scope=language.getScope();
+        if (scope.getModelDescriptor(result) == null) {
+          int res=JOptionPane.showConfirmDialog(((Frame)MapSequence.fromMap(_params).get("frame")),"<html>Model <b>" + result.getLongName() + "</b> is added to accessories</html>\n\n"+ "Do you want to automatically the module add to dependency?","Add Dependency",JOptionPane.YES_NO_OPTION);
+          if (res == JOptionPane.YES_OPTION) {
+            SModelDescriptor md=SModelRepository.getInstance().getModelDescriptor(result);
+            language.addDependency(md.getModule().getModuleReference(),false);
+          }
+        }
+        language.save();
+      }
+    }
+);
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "AddAccessoryModel",t);
+    }
+  }
+}
