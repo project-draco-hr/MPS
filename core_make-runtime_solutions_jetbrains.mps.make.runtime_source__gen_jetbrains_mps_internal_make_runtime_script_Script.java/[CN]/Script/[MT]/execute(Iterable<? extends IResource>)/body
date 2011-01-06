@@ -34,7 +34,7 @@
     return results;
   }
   mons.runJobWithMonitor(new _FunctionTypes._void_P1_E0<IJobMonitor>(){
-    public void invoke(    IJobMonitor monit){
+    public void invoke(    final IJobMonitor monit){
       String scriptName="Script";
       int work=Sequence.fromIterable(toExecute).foldLeft(0,new ILeftCombinator<ITarget,Integer>(){
         public Integer combine(        Integer s,        ITarget it){
@@ -67,12 +67,17 @@
         }
         monit.currentProgress().beginWork(trg.getName().toString(),1000,(trg.requiresInput() || trg.producesOutput() ? 1000 : 10));
         IJob job=trg.createJob();
-        IResult jr=job.execute(input,monit,pool);
+        IResult jr=job.execute(Sequence.fromIterable(input).where(new IWhereFilter<IResource>(){
+          public boolean accept(          IResource it){
+            return !(monit.stopRequested());
+          }
+        }
+),monit,pool);
         if (!(trg.producesOutput())) {
           jr=new Script.SubsOutputResult(jr,(trg.requiresInput() ? null : input));
         }
         results.addResult(trg.getName(),jr);
-        if (!(jr.isSucessful()) || monit.pleaseStop()) {
+        if (!(jr.isSucessful()) || monit.stopRequested()) {
           LOG.debug((jr.isSucessful() ? "Stop requested" : "Execution failed"));
           return;
         }
