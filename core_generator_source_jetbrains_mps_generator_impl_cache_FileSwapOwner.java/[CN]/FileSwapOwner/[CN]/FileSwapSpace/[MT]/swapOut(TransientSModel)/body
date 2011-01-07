@@ -1,0 +1,39 @@
+{
+  if (mySpaceDir == null || !mySpaceDir.exists())   throw new IllegalStateException("no swap dir");
+  String modelId=model.getSModelReference().getSModelId().toString();
+  if (modelId == null || modelId.isEmpty()) {
+    LOG.error("Bad model id <" + modelId + ">");
+    return false;
+  }
+  modelId=modelId.replaceAll(":","-");
+  File swapFile=new File(mySpaceDir,modelId);
+  if (swapFile.exists() && !swapFile.delete()) {
+    LOG.error("Couldn't delete swap file");
+    return false;
+  }
+  TransientModelPersistence trmp=new TransientModelPersistence(model.getSModelReference());
+  ArrayList<SNode> roots=new ArrayList<SNode>();
+  for (Iterator<SNode> it=model.rootsIterator(); it.hasNext(); ) {
+    roots.add(it.next());
+  }
+  ModelOutputStream mos=null;
+  IOException ioex=null;
+  try {
+    mos=new ModelOutputStream(new FileOutputStream(swapFile));
+    trmp.saveModel(roots,mos);
+  }
+ catch (  IOException e) {
+    ioex=e;
+    LOG.error(e);
+  }
+ finally {
+    if (mos != null) {
+      try {
+        mos.close();
+      }
+ catch (      IOException ignore) {
+      }
+    }
+  }
+  return ioex == null;
+}
