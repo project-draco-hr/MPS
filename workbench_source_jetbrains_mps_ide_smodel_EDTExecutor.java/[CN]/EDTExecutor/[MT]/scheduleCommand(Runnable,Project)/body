@@ -1,0 +1,23 @@
+{
+  if (p == null || r == null) {
+    throw new IllegalArgumentException();
+  }
+synchronized (myLock) {
+    if (myTasks.isEmpty()) {
+      myLock.notifyAll();
+    }
+    myTasks.offer(new Task(){
+      @Override public boolean tryRun() throws TaskIsOutdated {
+        boolean ok=myModelAccess.tryWriteInCommand(r,p);
+        if (p.isDisposed()) {
+          throw new TaskIsOutdated();
+        }
+        return ok;
+      }
+      @Override public boolean needsWrite(){
+        return true;
+      }
+    }
+);
+  }
+}

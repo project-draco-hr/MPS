@@ -1,0 +1,34 @@
+{
+  if (!workerStarted) {
+    return;
+  }
+  try {
+    long deadline=System.currentTimeMillis() + MAX_EXECUTION_TIME;
+    do {
+      Task t=myTasks.peek();
+      if (t == null) {
+        return;
+      }
+      try {
+        if (!t.tryRun()) {
+          return;
+        }
+      }
+ catch (      TaskIsOutdated e) {
+      }
+catch (      Exception e) {
+        LOG.error(e);
+      }
+synchronized (myLock) {
+        myTasks.remove();
+      }
+    }
+ while (deadline > System.currentTimeMillis());
+  }
+  finally {
+synchronized (myLock) {
+      workerStarted=false;
+      myLock.notifyAll();
+    }
+  }
+}
