@@ -1,0 +1,30 @@
+{
+  Map<SNode,Set<SNode>> components=new HashMap<SNode,Set<SNode>>();
+  Map<Set<SNode>,Set<InequalityBlock>> groupsToInequalities=new HashMap<Set<SNode>,Set<InequalityBlock>>();
+  for (  Block block : inequalities) {
+    InequalityBlock inequality=(InequalityBlock)block;
+    inequality.expand(myState);
+    List<SNode> variables=TypesUtil.getVariables(inequality.getRightNode());
+    variables.addAll(TypesUtil.getVariables(inequality.getLeftNode()));
+    if (variables.size() == 0) {
+      continue;
+    }
+    Set<SNode> currentResult=new HashSet<SNode>(variables);
+    Set<InequalityBlock> currentInequalities=new HashSet<InequalityBlock>();
+    currentInequalities.add(inequality);
+    for (    SNode var : variables) {
+      var=myState.getRepresentative(var);
+      Set<SNode> varGroup=components.get(var);
+      if (varGroup != null) {
+        currentResult.addAll(varGroup);
+      }
+      components.put(var,currentResult);
+      Set<InequalityBlock> remove=groupsToInequalities.remove(varGroup);
+      if (remove != null) {
+        currentInequalities.addAll(remove);
+      }
+    }
+    groupsToInequalities.put(currentResult,currentInequalities);
+  }
+  return groupsToInequalities;
+}
