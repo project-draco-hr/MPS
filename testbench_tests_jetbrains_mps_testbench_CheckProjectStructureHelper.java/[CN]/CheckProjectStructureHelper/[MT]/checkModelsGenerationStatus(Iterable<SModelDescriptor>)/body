@@ -1,0 +1,38 @@
+{
+  final List<String> errors=new ArrayList<String>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      SModelDescriptor sm : models) {
+        if (!(sm instanceof EditableSModelDescriptor) || GeneratorManager.isDoNotGenerate(sm))         continue;
+        EditableSModelDescriptor esm=(EditableSModelDescriptor)sm;
+        if (esm.isPackaged())         continue;
+        if (SModelStereotype.isStubModelStereotype(sm.getStereotype()))         continue;
+        IModule module=sm.getModule();
+        if (module == null) {
+          errors.add("Model without a module: " + sm.getSModelReference().toString());
+          continue;
+        }
+        String genHash=ModelGenerationStatusManager.getLastGenerationHash(sm);
+        if (genHash == null) {
+          errors.add("No generated hash for " + sm.getSModelReference().toString());
+          continue;
+        }
+        IFile file=((EditableSModelDescriptor)sm).getModelFile();
+        if (file == null) {
+          errors.add("no model file for " + sm.getSModelReference().toString());
+          continue;
+        }
+        String realHash=ModelGenerationStatusManager.getContentHash(sm);
+        if (realHash == null) {
+          errors.add("cannot gen cache for " + sm.getSModelReference().toString());
+          continue;
+        }
+        if (!realHash.equals(genHash)) {
+          errors.add("model requires generation: " + sm.getSModelReference().toString() + " last genHash:"+ genHash+ " modelHash:"+ realHash);
+        }
+      }
+    }
+  }
+);
+  return errors;
+}
