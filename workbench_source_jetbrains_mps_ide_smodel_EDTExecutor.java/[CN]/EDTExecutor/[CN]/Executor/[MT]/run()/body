@@ -1,33 +1,26 @@
 {
-  long nextReadRun=0;
-  long nextWriteRun=0;
-  long nextCommandRun=0;
   try {
     while (true) {
-      try {
-        boolean scheduleRead, scheduleWrite, scheduleCommand;
+      boolean schedule, needsWrite;
 synchronized (myLock) {
-          if (myToExecuteRead.isEmpty() && myToExecuteCommand.isEmpty() && myToExecuteWrite.isEmpty()) {
-            myLock.wait(100);
+        if (workerStarted || myTasks.isEmpty()) {
+          try {
+            myLock.wait();
           }
-          scheduleRead=!hasReadWorker && !myToExecuteRead.isEmpty();
-          scheduleWrite=!hasWriteWorker && !myToExecuteWrite.isEmpty();
-          scheduleCommand=!hasCommandWorker && !myToExecuteCommand.isEmpty();
+ catch (          InterruptedException e) {
+          }
         }
-        if (scheduleRead && nextReadRun < System.currentTimeMillis()) {
-          LaterInvocator.invokeLater(new ReadRunnable(),ModalityState.NON_MODAL);
-          nextReadRun=System.currentTimeMillis() + INTERVAL;
+        if (workerStarted) {
+          continue;
         }
-        if (scheduleWrite && nextWriteRun < System.currentTimeMillis()) {
-          LaterInvocator.invokeLater(new WriteRunnable(),ModalityState.NON_MODAL);
-          nextWriteRun=System.currentTimeMillis() + INTERVAL;
-        }
-        if (scheduleCommand && nextCommandRun < System.currentTimeMillis()) {
-          LaterInvocator.invokeLater(new CommandRunnable(),ModalityState.NON_MODAL);
-          nextCommandRun=System.currentTimeMillis() + INTERVAL;
-        }
+        Task first=myTasks.peek();
+        schedule=first != null;
+        needsWrite=schedule && first.needsWrite();
       }
- catch (      InterruptedException e) {
+      if (schedule) {
+        myModelAccess.waitLock(needsWrite);
+        workerStarted=true;
+        LaterInvocator.invokeLater(myWorker,ModalityState.NON_MODAL);
       }
     }
   }

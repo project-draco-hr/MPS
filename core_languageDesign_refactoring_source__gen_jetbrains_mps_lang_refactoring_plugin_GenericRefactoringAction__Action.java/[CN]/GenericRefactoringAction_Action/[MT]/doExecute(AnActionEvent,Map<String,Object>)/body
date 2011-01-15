@@ -1,0 +1,30 @@
+{
+  try {
+    ModelAccess.instance().runWriteAction(new Runnable(){
+      public void run(){
+        SModelRepository.getInstance().saveAll();
+      }
+    }
+);
+    boolean isOneTarget=!(GenericRefactoringAction_Action.this.refactoring.getRefactoringTarget().allowMultipleTargets());
+    final RefactoringContext context=new RefactoringContext(GenericRefactoringAction_Action.this.refactoring);
+    context.setCurrentOperationContext(event.getData(MPSDataKeys.OPERATION_CONTEXT));
+    context.setSelectedNode(event.getData(MPSDataKeys.NODE));
+    context.setSelectedNodes(GenericRefactoringHelper.getNodes(event,isOneTarget));
+    context.setSelectedModel(event.getData(MPSDataKeys.CONTEXT_MODEL));
+    context.setSelectedModels(GenericRefactoringHelper.getModels(event,isOneTarget));
+    context.setSelectedModule(event.getData(MPSDataKeys.MODULE));
+    context.setSelectedModules(GenericRefactoringHelper.getModules(event,isOneTarget));
+    context.setSelectedProject(event.getData(PlatformDataKeys.PROJECT));
+    context.setCurrentScope(event.getData(MPSDataKeys.SCOPE));
+    new Thread(){
+      public void run(){
+        new RefactoringFacade().execute(GenericRefactoringAction_Action.this.refactoring,context);
+      }
+    }
+.start();
+  }
+ catch (  Throwable t) {
+    LOG.error("User's action execute method failed. Action:" + "GenericRefactoringAction",t);
+  }
+}
