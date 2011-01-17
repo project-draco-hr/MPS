@@ -1,21 +1,14 @@
 {
-  if (subType == null) {
-    return false;
-  }
-  Boolean answer=getCacheAnswer(subType,superType,isWeak);
-  if (answer != null) {
-    return answer;
-  }
   Set<SNode> frontier=new HashSet<SNode>();
   Set<SNode> newFrontier=new HashSet<SNode>();
   Set<SNode> yetPassed=new HashSet<SNode>();
-  frontier.add(subType);
+  frontier.add(left);
   while (!frontier.isEmpty()) {
     Set<SNode> yetPassedRaw=new HashSet<SNode>();
     Set<SNode> ancestors=new HashSet<SNode>();
     for (    SNode node : frontier) {
       TypeCheckingContextNew typeCheckingContextNew=myState == null ? null : myState.getTypeCheckingContext();
-      Set<SNode> result=collectImmediateSuperTypes(node,isWeak,typeCheckingContextNew,superType.getConceptFQName());
+      Set<SNode> result=collectImmediateSuperTypes(node,true,typeCheckingContextNew,"");
       for (      SNode test : result) {
         boolean found=false;
         for (        SNode anc : yetPassed) {
@@ -29,17 +22,9 @@
       }
       yetPassedRaw.add(node);
     }
-    ArrayList<SNode> ancestorsSorted=new ArrayList<SNode>(ancestors);
-    Collections.sort(ancestorsSorted,new Comparator<SNode>(){
-      public int compare(      SNode o1,      SNode o2){
-        return TypesUtil.depth(o2) - TypesUtil.depth(o1);
-      }
-    }
-);
-    for (    SNode ancestor : ancestorsSorted) {
-      if (superType.matchesWith(ancestor)) {
-        addToCache(subType,superType,true,isWeak);
-        return true;
+    for (    SNode ancestor : ancestors) {
+      if (isSubType(right,ancestor)) {
+        return ancestor;
       }
     }
     for (    SNode passedNodeRaw : yetPassedRaw) {
@@ -53,6 +38,5 @@
     frontier=newFrontier;
     newFrontier=new HashSet<SNode>();
   }
-  addToCache(subType,superType,false,isWeak);
-  return false;
+  return null;
 }
