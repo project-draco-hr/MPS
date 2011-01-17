@@ -1,0 +1,29 @@
+{
+  super(project,session,module,context,isInContext);
+  ModelAccess.instance().runWriteAction(new Runnable(){
+    public void run(){
+      IClassPathItem classPath=myEvaluationContext.getClassPathItem();
+      final Set<StubPath> pathsToAdd=SetSequence.fromSet(new HashSet<StubPath>());
+      classPath.accept(new EachClassPathItemVisitor(){
+        @Override public void visit(        JarFileClassPathItem item){
+          String path=item.getFile().getAbsolutePath();
+          StubPath stubPath=myAuxModule.addStubPath(path);
+          if (stubPath != null) {
+            SetSequence.fromSet(pathsToAdd).addElement(stubPath);
+          }
+        }
+        @Override public void visit(        FileClassPathItem item){
+          String path=item.getClassPath();
+          StubPath stubPath=myAuxModule.addStubPath(path);
+          if (stubPath != null) {
+            SetSequence.fromSet(pathsToAdd).addElement(stubPath);
+          }
+        }
+      }
+);
+      StubReloadManager.getInstance().loadImmediately(myAuxModule,pathsToAdd);
+      createNodesToShow(myAuxModel);
+    }
+  }
+);
+}
