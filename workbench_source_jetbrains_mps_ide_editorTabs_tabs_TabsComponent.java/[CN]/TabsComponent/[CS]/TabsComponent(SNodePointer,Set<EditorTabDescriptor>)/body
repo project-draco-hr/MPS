@@ -1,0 +1,54 @@
+{
+  myBaseNode=baseNode;
+  myPossibleTabs=possibleTabs;
+  registerKeyboardAction(new AbstractAction(){
+    public void actionPerformed(    ActionEvent e){
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          prevTab();
+        }
+      }
+);
+    }
+  }
+,KeyStroke.getKeyStroke("ctrl alt shift LEFT"),JComponent.WHEN_IN_FOCUSED_WINDOW);
+  registerKeyboardAction(new AbstractAction(){
+    public void actionPerformed(    ActionEvent e){
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          nextTab();
+        }
+      }
+);
+    }
+  }
+,KeyStroke.getKeyStroke("ctrl alt shift RIGHT"),JComponent.WHEN_IN_FOCUSED_WINDOW);
+  GlobalSModelEventsManager.getInstance().addGlobalCommandListener(new SModelCommandListener(){
+    public void eventsHappenedInCommand(    List<SModelEvent> events){
+      outer:       for (      EditorTabDescriptor d : myPossibleTabs) {
+        for (        EditorTab tab : myRealTabs) {
+          if (tab.getDescriptor() == d)           continue outer;
+        }
+        if (d.getNodes(myBaseNode.getNode()).isEmpty())         continue;
+        updateTabs();
+      }
+    }
+  }
+);
+  setLayout(new BorderLayout());
+  AddConceptTab button=new AddConceptTab(myBaseNode,myPossibleTabs){
+    protected SNode getCurrentAspect(){
+      return myLastNode.getNode();
+    }
+    protected void aspectCreated(    SNode aspect){
+      onNodeChange(aspect);
+    }
+  }
+;
+  DefaultActionGroup group=new DefaultActionGroup();
+  group.add(button.getAction(this));
+  JComponent tab=ActionManager.getInstance().createActionToolbar(ActionPlaces.UNKNOWN,group,true).getComponent();
+  add(tab,BorderLayout.EAST);
+  addListeners();
+  updateTabs();
+}
