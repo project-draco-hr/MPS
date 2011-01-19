@@ -1,0 +1,47 @@
+{
+  super(provider.getDebugSession(),true);
+  myProvider=provider;
+  myProvider.addWatchListener(new WatchAdapter(){
+    @Override public void watchAdded(    final AbstractEvaluationModel model){
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        @Override public void run(){
+          myTree.addModel(model);
+          evaluate(model);
+          myTree.rebuildLater();
+        }
+      }
+);
+    }
+    @Override public void watchUpdated(    final AbstractEvaluationModel model){
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        @Override public void run(){
+          evaluate(model);
+        }
+      }
+);
+    }
+    @Override public void watchRemoved(    final AbstractEvaluationModel model){
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        @Override public void run(){
+          myTree.removeModel(model);
+          myTree.rebuildLater();
+        }
+      }
+);
+    }
+  }
+);
+  mySessionStopDisposer=new SessionStopDisposer(myDebugSession){
+    @Override public void doDispose(){
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        @Override public void run(){
+          WatchesPanel.this.dispose();
+        }
+      }
+);
+    }
+  }
+;
+  add(ActionManager.getInstance().createActionToolbar(ActionPlaces.UNKNOWN,new DefaultActionGroup(new AddWatchAction(),new RemoveWatchAction()),false).getComponent(),BorderLayout.WEST);
+  add(new JBScrollPane(myTree),BorderLayout.CENTER);
+}
