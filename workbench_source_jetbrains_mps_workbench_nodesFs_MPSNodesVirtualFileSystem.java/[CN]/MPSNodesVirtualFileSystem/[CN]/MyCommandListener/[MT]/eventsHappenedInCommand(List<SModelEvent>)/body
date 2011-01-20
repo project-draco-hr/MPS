@@ -1,10 +1,29 @@
 {
+  final MyModelEventVisitor visitor=new MyModelEventVisitor();
+  for (  SModelEvent e : events) {
+    e.accept(visitor);
+  }
+  if (visitor.myDeletedFiles.isEmpty() && visitor.myRenamedFiles.isEmpty()) {
+    return;
+  }
   SwingUtilities.invokeLater(new Runnable(){
     public void run(){
       ModelAccess.instance().runWriteActionInCommand(new Runnable(){
         public void run(){
-          for (          SModelEvent e : events) {
-            e.accept(new MyModelEventVisitor());
+          for (          MPSNodeVirtualFile deletedFile : visitor.myDeletedFiles) {
+            if (deletedFile.isValid()) {
+              fireBeforeFileDeletion(this,deletedFile);
+            }
+            fireFileDeleted(this,deletedFile,deletedFile.getName(),null);
+            myVirtualFiles.remove(deletedFile.getSNodePointer());
+          }
+          for (          Pair<MPSNodeVirtualFile,String> renamedFile : visitor.myRenamedFiles) {
+            MPSNodeVirtualFile vf=renamedFile.o1;
+            String oldName=vf.getName();
+            String newName=renamedFile.o2;
+            fireBeforePropertyChange(this,vf,VirtualFile.PROP_NAME,oldName,newName);
+            vf.updateFields();
+            firePropertyChanged(this,vf,VirtualFile.PROP_NAME,oldName,newName);
           }
         }
       }
