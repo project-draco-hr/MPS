@@ -1,0 +1,42 @@
+{
+  Set<SNode> frontier=new HashSet<SNode>();
+  Set<SNode> newFrontier=new HashSet<SNode>();
+  Set<SNode> yetPassed=new HashSet<SNode>();
+  frontier.add(left);
+  while (!frontier.isEmpty()) {
+    Set<SNode> yetPassedRaw=new HashSet<SNode>();
+    Set<SNode> ancestors=new HashSet<SNode>();
+    for (    SNode node : frontier) {
+      TypeCheckingContextNew typeCheckingContextNew=myState == null ? null : myState.getTypeCheckingContext();
+      Set<SNode> result=collectImmediateSuperTypesSet(node,true,typeCheckingContextNew,"");
+      for (      SNode test : result) {
+        boolean found=false;
+        for (        SNode anc : yetPassed) {
+          if (TypesUtil.match(anc,test)) {
+            found=true;
+          }
+        }
+        if (!found) {
+          ancestors.add(test);
+        }
+      }
+      yetPassedRaw.add(node);
+    }
+    for (    SNode ancestor : ancestors) {
+      if (isSubtype(right,ancestor,true)) {
+        return ancestor;
+      }
+    }
+    for (    SNode passedNodeRaw : yetPassedRaw) {
+      yetPassed.add(passedNodeRaw);
+    }
+    for (    SNode passedNode : yetPassed) {
+      ancestors.remove(passedNode);
+    }
+    newFrontier.addAll(ancestors);
+    yetPassed.addAll(ancestors);
+    frontier=newFrontier;
+    newFrontier=new HashSet<SNode>();
+  }
+  return null;
+}
