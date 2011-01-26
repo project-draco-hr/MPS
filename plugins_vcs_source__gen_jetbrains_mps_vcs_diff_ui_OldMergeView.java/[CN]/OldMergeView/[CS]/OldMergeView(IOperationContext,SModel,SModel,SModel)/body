@@ -1,0 +1,47 @@
+{
+  setLayout(new BorderLayout());
+  myContext=context;
+  JPanel controlsPanel=createControlsPanel();
+  final JPanel panel=new JPanel(new GridLayout(1,2));
+  ModelAccess.instance().runWriteAction(new Runnable(){
+    public void run(){
+      myMerger=new Merger(baseModel,mine,repo);
+      myMerger.doRebuild(new Runnable(){
+        public void run(){
+        }
+      }
+);
+      OldModelDifferenceComponent mineModelDiff=new OldModelDifferenceComponent(context);
+      mineModelDiff.showDifference(baseModel,mine,myMerger.getBaseMineChanges());
+      myMineChangesTree=mineModelDiff.getModelTree();
+      panel.add(new HeaderWrapper("My Changes",mineModelDiff));
+      myResultView=new OldMergeResultView(context,baseModel,mine,repo,myMerger){
+        @Override protected void showConflict(        Conflict conflict){
+          SNode node;
+          node=mine.getNodeById(conflict.getChange2().getAffectedNodeId());
+          if (node == null) {
+            node=baseModel.getNodeById(conflict.getChange2().getAffectedNodeId());
+          }
+          TreeNode treeNode1=myMineChangesTree.findNodeWith(node);
+          myMineChangesTree.selectNode(treeNode1);
+          node=repo.getNodeById(conflict.getChange1().getAffectedNodeId());
+          if (node == null) {
+            node=baseModel.getNodeById(conflict.getChange1().getAffectedNodeId());
+          }
+          TreeNode treeNode2=myRepoChangesTree.findNodeWith(node);
+          myRepoChangesTree.selectNode(treeNode2);
+        }
+      }
+;
+      panel.add(new HeaderWrapper("Merge Result",myResultView));
+      OldModelDifferenceComponent repoModelDiff=new OldModelDifferenceComponent(context);
+      repoModelDiff.showDifference(baseModel,repo,myMerger.getBaseRepoChanges());
+      myRepoChangesTree=repoModelDiff.getModelTree();
+      panel.add(new HeaderWrapper("Repository Changes",repoModelDiff));
+      updateView();
+    }
+  }
+);
+  add(panel);
+  add(controlsPanel,BorderLayout.PAGE_END);
+}
