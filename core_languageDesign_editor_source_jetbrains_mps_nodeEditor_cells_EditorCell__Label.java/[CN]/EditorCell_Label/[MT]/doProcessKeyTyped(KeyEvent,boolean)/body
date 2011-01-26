@@ -13,7 +13,13 @@
   myCaretIsVisible=true;
   if (isEditable()) {
     final boolean result[]=new boolean[1];
-    getEditorContext().executeCommand(new Runnable(){
+    String groupId=ModelAccess.instance().runReadAction(new Computable<String>(){
+      @Override public String compute(){
+        return getCellId() + "_" + getSNode().getId();
+      }
+    }
+);
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
       public void run(){
         if (processMutableKeyTyped(keyEvent,allowErrors)) {
           getEditorContext().flushEvents();
@@ -30,7 +36,8 @@
         }
       }
     }
-);
+,null,groupId,UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION,getOperationContext().getProject());
+    getEditor().relayout();
     if (result[0]) {
       return true;
     }

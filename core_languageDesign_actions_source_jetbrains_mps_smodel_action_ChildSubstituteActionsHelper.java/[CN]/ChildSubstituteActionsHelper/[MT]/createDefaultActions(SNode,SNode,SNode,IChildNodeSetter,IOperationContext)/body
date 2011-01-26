@@ -1,3 +1,25 @@
 {
-  return createDefaultActions((ConceptDeclaration)applicableConcept.getAdapter(),parentNode,currentChild,setter,operationContext);
+  String conceptFqName=NameUtil.nodeFQName(applicableConcept);
+  SNode link=null;
+  if (setter instanceof DefaultChildNodeSetter) {
+    DefaultChildNodeSetter defaultSetter=(DefaultChildNodeSetter)setter;
+    link=defaultSetter.getLinkDeclaration();
+  }
+  IScope scope=operationContext.getScope();
+  if (!ModelConstraintsManager.getInstance().canBeChild(conceptFqName,operationContext,parentNode,link)) {
+    return new ArrayList<INodeSubstituteAction>();
+  }
+  SNode smartRef=ReferenceConceptUtil.getCharacteristicReference(applicableConcept);
+  if (smartRef != null) {
+    List<INodeSubstituteAction> smartActions=createSmartReferenceActions(applicableConcept,smartRef,parentNode,currentChild,setter,operationContext);
+    if (smartActions != null) {
+      return smartActions;
+    }
+ else {
+      return Collections.emptyList();
+    }
+  }
+ else {
+    return Arrays.asList((INodeSubstituteAction)new DefaultChildNodeSubstituteAction(applicableConcept,parentNode,currentChild,setter,scope));
+  }
 }
