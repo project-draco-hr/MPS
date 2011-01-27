@@ -1,0 +1,28 @@
+{
+  myCompiler=createJavaCompiler();
+  for (  String key : myJavaSources) {
+    myCompiler.addSource(getJavaNameFromKey(key),mySources.get(key));
+  }
+  progress.setText2("Compiling...");
+  InMemoryJavaGenerationHandler.MyCompilationResultListener innerListener=new InMemoryJavaGenerationHandler.MyCompilationResultListener();
+  myCompiler.addCompilationResultListener(innerListener);
+  if (listener != null) {
+    myCompiler.addCompilationResultListener(listener);
+  }
+  myCompiler.compile(getClassPath(myContextModules));
+  if (listener != null) {
+    myCompiler.removeCompilationResultListener(listener);
+  }
+  myCompiler.removeCompilationResultListener(innerListener);
+  progress.setText2("Compilation finished.");
+  if (!(myKeepSources)) {
+    mySources.clear();
+    myJavaSources.clear();
+  }
+  myContextModules.clear();
+  progress.setText2("reloading MPS classes...");
+  if (myReloadClasses && !(innerListener.hasErrors())) {
+    ClassLoaderManager.getInstance().reloadAll(new EmptyProgressIndicator());
+  }
+  return !(innerListener.hasErrors());
+}
