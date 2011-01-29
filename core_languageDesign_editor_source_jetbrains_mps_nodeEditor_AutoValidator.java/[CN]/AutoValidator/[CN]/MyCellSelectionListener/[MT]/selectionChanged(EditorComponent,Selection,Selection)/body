@@ -1,0 +1,42 @@
+{
+  if (!(oldSelection instanceof SingularSelection)) {
+    return;
+  }
+  final EditorCell editorCell=((SingularSelection)oldSelection).getEditorCell();
+  if (editorComponent.isCellSwapInProgress()) {
+    return;
+  }
+  if (!editorCell.isErrorState() && !(editorCell instanceof EditorCell_STHint)) {
+    return;
+  }
+  if (newSelection instanceof SingularSelection) {
+    if (((SingularSelection)newSelection).getEditorCell() == editorCell) {
+      return;
+    }
+  }
+  final SNode node=editorCell.getSNode();
+  final CellInfo cellInfo=editorCell.getCellInfo();
+  SwingUtilities.invokeLater(new Runnable(){
+    public void run(){
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          if (editorCell.isErrorState()) {
+            EditorCell cell=cellInfo.findCell(editorComponent);
+            if (cell != null) {
+              Object memento=editorComponent.getEditorContext().createMemento();
+              cell.validate(true,false);
+              editorComponent.flushEvents();
+              editorComponent.getEditorContext().setMemento(memento);
+            }
+          }
+          if (editorCell instanceof EditorCell_STHint) {
+            SNodeEditorUtil.removeRightTransformHint(node);
+            SNodeEditorUtil.removeLeftTransformHint(node);
+          }
+        }
+      }
+);
+    }
+  }
+);
+}
