@@ -1,0 +1,78 @@
+{
+  if (myInvalidationWasPerformedNT) {
+    return myInvalidationResultNT;
+  }
+  Set<Pair<SNode,NonTypesystemRule_Runtime>> invalidatedNodesAndRules=new HashSet<Pair<SNode,NonTypesystemRule_Runtime>>(1);
+  for (  SNode node : myCurrentNodesToInvalidateNonTypesystem) {
+    Map<NonTypesystemRule_Runtime,WeakSet<SNode>> nodesAndRules=myNodesToDependentNodesWithNTRules.get(node);
+    if (nodesAndRules != null) {
+      for (      NonTypesystemRule_Runtime ruleOfNode : nodesAndRules.keySet()) {
+        Set<SNode> nodes=nodesAndRules.get(ruleOfNode);
+        if (nodes != null) {
+          for (          SNode depNode : nodes) {
+            invalidatedNodesAndRules.add(new Pair<SNode,NonTypesystemRule_Runtime>(depNode,ruleOfNode));
+          }
+        }
+      }
+    }
+  }
+  for (  Pair<SNode,String> pair : myCurrentPropertiesToInvalidateNonTypesystem) {
+    Map<NonTypesystemRule_Runtime,WeakSet<SNode>> nodesAndRules=myPropertiesToDependentNodesWithNTRules.get(pair);
+    if (nodesAndRules != null) {
+      for (      NonTypesystemRule_Runtime ruleOfNode : nodesAndRules.keySet()) {
+        WeakSet<SNode> nodes=nodesAndRules.get(ruleOfNode);
+        if (nodes != null) {
+          for (          SNode depNode : nodes) {
+            invalidatedNodesAndRules.add(new Pair<SNode,NonTypesystemRule_Runtime>(depNode,ruleOfNode));
+          }
+        }
+      }
+    }
+  }
+  for (  SNode node : myCurrentTypedTermsToInvalidateNonTypesystem) {
+    Map<NonTypesystemRule_Runtime,WeakSet<SNode>> nodesAndRules=myTypedTermsToDependentNodesWithNTRules.get(node);
+    if (nodesAndRules != null) {
+      for (      NonTypesystemRule_Runtime ruleOfNode : nodesAndRules.keySet()) {
+        Set<SNode> nodes=nodesAndRules.get(ruleOfNode);
+        if (nodes != null) {
+          for (          SNode depNode : nodes) {
+            invalidatedNodesAndRules.add(new Pair<SNode,NonTypesystemRule_Runtime>(depNode,ruleOfNode));
+          }
+        }
+      }
+    }
+  }
+  if (myCacheWasCurrentlyRebuiltNonTypesystem) {
+    for (    SNode nodeOfRule : myNodesDependentOnCachesWithNTRules.keySet()) {
+      Set<NonTypesystemRule_Runtime> rules=myNodesDependentOnCachesWithNTRules.get(nodeOfRule);
+      if (rules != null) {
+        for (        NonTypesystemRule_Runtime rule : rules) {
+          invalidatedNodesAndRules.add(new Pair<SNode,NonTypesystemRule_Runtime>(nodeOfRule,rule));
+        }
+      }
+    }
+  }
+  boolean result=!invalidatedNodesAndRules.isEmpty();
+  for (  Pair<SNode,NonTypesystemRule_Runtime> nodeAndRule : invalidatedNodesAndRules) {
+    myCheckedNodesNonTypesystem.remove(nodeAndRule);
+    Map<NonTypesystemRule_Runtime,Set<IErrorReporter>> rulesAndErrors=myNodesAndNTRulesToErrors.get(nodeAndRule.o1);
+    if (rulesAndErrors != null) {
+      Set<IErrorReporter> errors=rulesAndErrors.get(nodeAndRule.o2);
+      if (errors != null) {
+        for (        IErrorReporter errorReporter : errors) {
+          List<IErrorReporter> iErrorReporters=myNodesToNonTypesystemErrorsMap.get(errorReporter.getSNode());
+          if (iErrorReporters != null) {
+            iErrorReporters.remove(errorReporter);
+          }
+        }
+      }
+    }
+  }
+  myCurrentNodesToInvalidateNonTypesystem.clear();
+  myCurrentPropertiesToInvalidateNonTypesystem.clear();
+  myCurrentTypedTermsToInvalidateNonTypesystem.clear();
+  myCacheWasCurrentlyRebuiltNonTypesystem=false;
+  myInvalidationWasPerformedNT=true;
+  myInvalidationResultNT=result;
+  return result;
+}
