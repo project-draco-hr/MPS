@@ -1,0 +1,43 @@
+{
+  if (template == null) {
+    environment.getGenerator().showErrorMessage(context.getInput(),null,ruleNode,"couldn't evaluate weaving rule: no template");
+    return;
+  }
+  List<SNode> templateFragments=GeneratorUtilEx.getTemplateFragments(template);
+  if (templateFragments.isEmpty()) {
+    environment.getGenerator().showErrorMessage(context.getInput(),template,ruleNode,"nothing to weave: no template fragments found in template");
+    return;
+  }
+  checkTemplateFragmentsForWeaving(template,templateFragments,environment);
+  String ruleMappingName=RuleUtil.getBaseRuleLabel(ruleNode);
+  TemplateProcessor templateProcessor=new TemplateProcessor(environment.getGenerator(),environment.getReductionContext());
+  for (  SNode templateFragment : templateFragments) {
+    SNode templateFragmentNode=templateFragment.getParent();
+    SNode contextParentNode=null;
+    try {
+      contextParentNode=environment.getReductionContext().getQueryExecutor().getContextNodeForTemplateFragment(templateFragmentNode,outputContextNode,context);
+    }
+ catch (    Exception e) {
+      environment.getGenerator().getLogger().handleException(e);
+    }
+    if (contextParentNode != null) {
+      try {
+        List<SNode> outputNodesToWeave=templateProcessor.processTemplateNode(GeneratorUtilEx.getMappingName(templateFragment,ruleMappingName),templateFragmentNode,context);
+        String childRole=templateFragmentNode.getRole_();
+        for (        SNode outputNodeToWeave : outputNodesToWeave) {
+          environment.weaveNode(contextParentNode,childRole,outputNodeToWeave,new SNodePointer(templateFragment),context.getInput());
+        }
+      }
+ catch (      DismissTopMappingRuleException e) {
+        environment.getGenerator().showErrorMessage(context.getInput(),templateFragment,ruleNode,"wrong template: dismission of weaving rule is not supported");
+      }
+catch (      TemplateProcessingFailureException e) {
+        environment.getGenerator().showErrorMessage(context.getInput(),templateFragment,ruleNode,"error processing template fragment");
+        environment.getGenerator().getLogger().info(contextParentNode," -- was output context node:");
+      }
+    }
+ else {
+      environment.getGenerator().showErrorMessage(context.getInput(),templateFragment,ruleNode,"couldn't define 'context' for template fragment");
+    }
+  }
+}

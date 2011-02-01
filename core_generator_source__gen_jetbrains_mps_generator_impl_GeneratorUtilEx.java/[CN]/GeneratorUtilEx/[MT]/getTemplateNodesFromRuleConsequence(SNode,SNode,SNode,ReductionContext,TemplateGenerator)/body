@@ -1,0 +1,60 @@
+{
+  if (ruleConsequence == null) {
+    generator.showErrorMessage(inputNode,null,ruleNode,"no rule consequence");
+    return null;
+  }
+  generator.getGenerationTracer().pushRuleConsequence(new SNodePointer(ruleConsequence));
+  if (SNodeOperations.isInstanceOf(ruleConsequence,"jetbrains.mps.lang.generator.structure.DismissTopMappingRule")) {
+    SNode message=SLinkOperations.getTarget(SNodeOperations.cast(ruleConsequence,"jetbrains.mps.lang.generator.structure.DismissTopMappingRule"),"generatorMessage",true);
+    DismissTopMappingRuleException.MessageType messageType=processGeneratorMessage(message,inputNode,null,ruleNode,generator);
+    throw new DismissTopMappingRuleException(messageType);
+  }
+ else   if (SNodeOperations.isInstanceOf(ruleConsequence,"jetbrains.mps.lang.generator.structure.AbandonInput_RuleConsequence")) {
+    throw new AbandonRuleInputException();
+  }
+ else   if (SNodeOperations.isInstanceOf(ruleConsequence,"jetbrains.mps.lang.generator.structure.TemplateDeclarationReference") || SNodeOperations.isInstanceOf(ruleConsequence,"jetbrains.mps.lang.generator.structure.InlineTemplateWithContext_RuleConsequence")) {
+    SNode templateContainer;
+    if (SNodeOperations.isInstanceOf(ruleConsequence,"jetbrains.mps.lang.generator.structure.TemplateDeclarationReference")) {
+      templateContainer=SLinkOperations.getTarget(SNodeOperations.cast(ruleConsequence,"jetbrains.mps.lang.generator.structure.TemplateDeclarationReference"),"template",false);
+    }
+ else {
+      templateContainer=ruleConsequence;
+    }
+    List<SNode> fragments=getTemplateFragments(templateContainer);
+    if (GeneratorUtilEx.checkIfOneOrMaryAdjacentFragments(fragments,templateContainer,inputNode,ruleNode,generator)) {
+      List<Pair<SNode,String>> result=new ArrayList<Pair<SNode,String>>(fragments.size());
+      for (      SNode fragment : fragments) {
+        result.add(new Pair<SNode,String>(SNodeOperations.getParent(fragment),getMappingName(fragment,null)));
+      }
+      return result;
+    }
+  }
+ else   if (SNodeOperations.isInstanceOf(ruleConsequence,"jetbrains.mps.lang.generator.structure.InlineTemplate_RuleConsequence")) {
+    SNode templateNode=SLinkOperations.getTarget(SNodeOperations.cast(ruleConsequence,"jetbrains.mps.lang.generator.structure.InlineTemplate_RuleConsequence"),"templateNode",true);
+    if (templateNode != null) {
+      return Collections.singletonList(new Pair<SNode,String>(templateNode,null));
+    }
+ else {
+      generator.showErrorMessage(inputNode,null,ruleConsequence,"no template node");
+    }
+  }
+ else   if (SNodeOperations.isInstanceOf(ruleConsequence,"jetbrains.mps.lang.generator.structure.InlineSwitch_RuleConsequence")) {
+    SNode inlineSwitch=SNodeOperations.cast(ruleConsequence,"jetbrains.mps.lang.generator.structure.InlineSwitch_RuleConsequence");
+    for (    SNode switchCase : SLinkOperations.getTargets(inlineSwitch,"case",true)) {
+      if (reductionContext.getQueryExecutor().checkCondition(SLinkOperations.getTarget(switchCase,"conditionFunction",true),true,inputNode,switchCase)) {
+        return GeneratorUtilEx.getTemplateNodesFromRuleConsequence(SLinkOperations.getTarget(switchCase,"caseConsequence",true),inputNode,switchCase,reductionContext,generator);
+      }
+    }
+    SNode defaultConsequence=SLinkOperations.getTarget(inlineSwitch,"defaultConsequence",true);
+    if (defaultConsequence == null) {
+      generator.showErrorMessage(inputNode,null,inlineSwitch,"no default consequence in switch");
+    }
+ else {
+      return GeneratorUtilEx.getTemplateNodesFromRuleConsequence(defaultConsequence,inputNode,defaultConsequence,reductionContext,generator);
+    }
+  }
+ else {
+    generator.showErrorMessage(inputNode,null,ruleConsequence,"unsupported rule consequence");
+  }
+  return null;
+}

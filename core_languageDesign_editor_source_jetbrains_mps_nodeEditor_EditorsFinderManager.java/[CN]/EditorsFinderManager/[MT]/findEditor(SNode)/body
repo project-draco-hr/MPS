@@ -1,0 +1,51 @@
+{
+  return NodeReadAccessCasterInEditor.runReadTransparentAction(new Computable<INodeEditor>(){
+    public INodeEditor compute(){
+      AbstractConceptDeclaration abstractConcept=(AbstractConceptDeclaration)BaseAdapter.fromNode(nodeToEdit.getConceptDeclarationNode());
+      if (abstractConcept == null) {
+        LOG.error("error loading editor for node " + nodeToEdit.getDebugText() + "\n"+ "couldn't find node concept");
+        return null;
+      }
+      if (abstractConcept instanceof InterfaceConceptDeclaration) {
+        return new DefaultInterfaceEditor();
+      }
+      List<AbstractConceptDeclaration> currentConcepts=new ArrayList<AbstractConceptDeclaration>();
+      List<AbstractConceptDeclaration> newFrontier=new ArrayList<AbstractConceptDeclaration>();
+      Set<AbstractConceptDeclaration> processed=new HashSet<AbstractConceptDeclaration>();
+      currentConcepts.add(abstractConcept);
+      ConceptDeclaration baseConcept=(ConceptDeclaration)BaseAdapter.fromNode(SModelUtil.getBaseConcept());
+      while (!currentConcepts.isEmpty()) {
+        for (        AbstractConceptDeclaration currentConcept : currentConcepts) {
+          if (processed.contains(currentConcept)) {
+            continue;
+          }
+          INodeEditor nodeEditor=findEditor(currentConcept);
+          if (nodeEditor != null) {
+            return nodeEditor;
+          }
+          if (currentConcept instanceof ConceptDeclaration) {
+            ConceptDeclaration conceptDeclaration=(ConceptDeclaration)currentConcept;
+            ConceptDeclaration anExtends=conceptDeclaration.getExtends();
+            if (anExtends != null && !(anExtends == baseConcept)) {
+              newFrontier.add(anExtends);
+            }
+            for (            InterfaceConceptReference reference : conceptDeclaration.getImplementses()) {
+              newFrontier.add(reference.getIntfc());
+            }
+          }
+ else           if (currentConcept instanceof InterfaceConceptDeclaration) {
+            InterfaceConceptDeclaration interfaceConcept=(InterfaceConceptDeclaration)currentConcept;
+            for (            InterfaceConceptReference reference : interfaceConcept.getExtendses()) {
+              newFrontier.add(reference.getIntfc());
+            }
+          }
+          processed.add(currentConcept);
+        }
+        currentConcepts=newFrontier;
+        newFrontier=new ArrayList<AbstractConceptDeclaration>();
+      }
+      return findEditor(baseConcept);
+    }
+  }
+);
+}
