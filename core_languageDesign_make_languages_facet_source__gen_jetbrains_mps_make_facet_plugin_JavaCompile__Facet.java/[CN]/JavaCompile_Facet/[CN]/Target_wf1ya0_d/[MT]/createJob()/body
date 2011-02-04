@@ -1,0 +1,57 @@
+{
+  return new IJob(){
+    public IResult execute(    final Iterable<IResource> input,    final IJobMonitor monitor,    final IParametersPool pool){
+      Iterable<IResource> _output_wf1ya0_a0d=null;
+switch (0) {
+case 0:
+        final JavaCompiler jc=new JavaCompiler();
+      Set<IModule> modules=SetSequence.fromSet(new HashSet<IModule>());
+    for (    IResource r : Sequence.fromIterable(input)) {
+      FResource fres=new FResource().assignFrom(((FResource)r));
+      MapSequence.fromMap(fres.contents()).visitAll(new IVisitor<IMapping<String,String>>(){
+        public void visit(        IMapping<String,String> m){
+          jc.addSource(m.key(),m.value());
+        }
+      }
+);
+      if (fres.module() != null) {
+        SetSequence.fromSet(modules).addElement(fres.module());
+      }
+    }
+  pool.parameters(Target_wf1ya0_d.this.getName(),JavaCompile_Facet.Target_wf1ya0_d.Parameters.class).errors(false);
+jc.addCompilationResultListener(new CompilationResultAdapter(){
+  public void onCompilationResult(  CompilationResult cr){
+    if (cr.hasErrors()) {
+      pool.parameters(Target_wf1ya0_d.this.getName(),JavaCompile_Facet.Target_wf1ya0_d.Parameters.class).errors(true);
+      CategorizedProblem[] categorizedProblems=cr.getErrors();
+      for (int i=0; i < 3 && i < categorizedProblems.length; i++) {
+        monitor.reportFeedback(new IFeedback.ERROR(String.valueOf(String.valueOf(categorizedProblems[i]))));
+      }
+    }
+  }
+}
+);
+final CompositeClassPathItem ccp=(CompositeClassPathItem)AbstractModule.getDependenciesClasspath(modules,true);
+Sequence.fromIterable(pool.parameters(Target_wf1ya0_d.this.getName(),JavaCompile_Facet.Target_wf1ya0_d.Parameters.class).classPath()).visitAll(new IVisitor<IClassPathItem>(){
+public void visit(IClassPathItem cpi){
+ccp.add(cpi);
+}
+}
+);
+jc.compile(ccp);
+if (pool.parameters(Target_wf1ya0_d.this.getName(),JavaCompile_Facet.Target_wf1ya0_d.Parameters.class).errors()) {
+return new IResult.FAILURE(_output_wf1ya0_a0d);
+}
+_output_wf1ya0_a0d=Sequence.fromIterable(_output_wf1ya0_a0d).concat(Sequence.fromIterable(Sequence.<IResource>singleton(new CResource(new IClassesData(){
+public ClassLoader getClassLoader(ClassLoader parent){
+return jc.getClassLoader(parent);
+}
+}
+))));
+default :
+return new IResult.SUCCESS(_output_wf1ya0_a0d);
+}
+}
+}
+;
+}

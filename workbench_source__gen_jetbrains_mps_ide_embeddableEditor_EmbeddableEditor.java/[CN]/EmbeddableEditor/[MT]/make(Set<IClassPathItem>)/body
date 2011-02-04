@@ -1,0 +1,23 @@
+{
+  IScript scr=new ScriptBuilder().withFacets(new IFacet.Name("Generate"),new IFacet.Name("TextGen"),new IFacet.Name("JavaCompile"),new IFacet.Name("Make")).withTarget(new ITarget.Name("compileToMemory")).toScript();
+  scr=new IScript.StubBoss(scr){
+    @Override public void init(    IParametersPool ppool){
+      Tuples._1<Iterable<IClassPathItem>> params=(Tuples._1<Iterable<IClassPathItem>>)ppool.parameters(new ITarget.Name("compileToMemory"),Object.class);
+      params._0(classPath);
+      super.init(ppool);
+    }
+  }
+;
+  IConfigMonitor cmon=new IConfigMonitor(){
+    public <T extends IOption>T relayQuery(    IQuery<T> query){
+      return query.defaultOption();
+    }
+  }
+;
+  IResult res=new WorkbenchMakeService(myContext,cmon,true).make(new ModelsToResources(myContext,Sequence.<SModelDescriptor>singleton(myModel)).resources(false),scr);
+  if (res.isSucessful()) {
+    CResource out=new CResource().assignFrom((CResource)Sequence.fromIterable(res.output()).first());
+    return out.classes();
+  }
+  return null;
+}
