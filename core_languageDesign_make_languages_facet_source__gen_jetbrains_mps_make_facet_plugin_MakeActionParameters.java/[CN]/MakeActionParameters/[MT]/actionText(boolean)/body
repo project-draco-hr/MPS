@@ -4,15 +4,39 @@
   IModule module=this.moduleToMake();
   SModelDescriptor model=this.modelToMake();
   if (model != null) {
+    if (!(isUserEditableModel(model))) {
+      return null;
+    }
     sb.append("Model '").append(model.getSModelReference().getSModelFqName().getCompactPresentation()).append("'");
   }
  else   if (this.models != null && this.models.size() > 1) {
+    Iterable<SModelDescriptor> mds=this.models;
+    if (!(Sequence.fromIterable(mds).any(new IWhereFilter<SModelDescriptor>(){
+      public boolean accept(      SModelDescriptor md){
+        return isUserEditableModel(md);
+      }
+    }
+))) {
+      return null;
+    }
     sb.append("Selected Models");
   }
  else   if (module != null) {
+    if (module.isPackaged()) {
+      return null;
+    }
     sb.append(NameUtil.shortNameFromLongName(module.getClass().getName().replaceAll("\\$.*",""))).append(" '").append(NameUtil.compactNamespace(module.getModuleReference().getModuleFqName())).append("'");
   }
  else   if (this.modules != null && this.modules.size() > 1) {
+    Iterable<IModule> mods=this.modules;
+    if (Sequence.fromIterable(mods).all(new IWhereFilter<IModule>(){
+      public boolean accept(      IModule m){
+        return m.isPackaged();
+      }
+    }
+)) {
+      return null;
+    }
     sb.append("Selected Modules");
   }
  else {
