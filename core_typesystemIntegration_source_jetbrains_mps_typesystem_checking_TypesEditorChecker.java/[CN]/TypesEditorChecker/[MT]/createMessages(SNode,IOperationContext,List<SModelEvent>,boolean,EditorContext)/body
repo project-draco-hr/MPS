@@ -58,6 +58,9 @@
                       public void run(){
                         EditorCell selectedCell=editorContext.getSelectedCell();
                         if (selectedCell == null)                         return;
+                        boolean restoreCaretPosition=selectedCell.getSNode().getAncestors(true).contains(quickFixNode);
+                        int caretX=selectedCell.getCaretX();
+                        int caretY=selectedCell.getBaseline();
                         ModelAccess.instance().runWriteActionInCommand(new Runnable(){
                           public void run(){
                             CommandProcessor.getInstance().runUndoTransparentAction(new Runnable(){
@@ -69,7 +72,15 @@
                           }
                         }
 );
-                        editorContext.flushEvents();
+                        if (restoreCaretPosition) {
+                          editorContext.flushEvents();
+                          EditorCell rootCell=editorContext.getNodeEditorComponent().getRootCell();
+                          EditorCell leaf=rootCell.findLeaf(caretX,caretY);
+                          if (leaf != null) {
+                            editorContext.getNodeEditorComponent().changeSelection(leaf);
+                            leaf.setCaretX(caretX);
+                          }
+                        }
                       }
                     }
 ,ModalityState.NON_MODAL);
