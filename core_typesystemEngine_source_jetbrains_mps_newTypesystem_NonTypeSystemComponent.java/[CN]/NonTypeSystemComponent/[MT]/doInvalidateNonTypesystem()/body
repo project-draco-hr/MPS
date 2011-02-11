@@ -1,0 +1,48 @@
+{
+  if (myInvalidationWasPerformed) {
+    return myInvalidationResultNT;
+  }
+  Set<Pair<SNode,NonTypesystemRule_Runtime>> invalidatedNodesAndRules=new HashSet<Pair<SNode,NonTypesystemRule_Runtime>>(1);
+  for (  SNode node : myCurrentNodesToInvalidate) {
+    doInvalidate(myNodesToDependentNodesWithNTRules.get(node),invalidatedNodesAndRules);
+  }
+  for (  Pair<SNode,String> pair : myCurrentPropertiesToInvalidate) {
+    doInvalidate(myPropertiesToDependentNodesWithNTRules.get(pair),invalidatedNodesAndRules);
+  }
+  for (  SNode node : myCurrentTypedTermsToInvalidate) {
+    doInvalidate(myTypedTermsToDependentNodesWithNTRules.get(node),invalidatedNodesAndRules);
+  }
+  if (myCacheWasRebuilt) {
+    for (    SNode nodeOfRule : myNodesDependentOnCachesWithNTRules.keySet()) {
+      Set<NonTypesystemRule_Runtime> rules=myNodesDependentOnCachesWithNTRules.get(nodeOfRule);
+      if (rules != null) {
+        for (        NonTypesystemRule_Runtime rule : rules) {
+          invalidatedNodesAndRules.add(new Pair<SNode,NonTypesystemRule_Runtime>(nodeOfRule,rule));
+        }
+      }
+    }
+  }
+  boolean result=!invalidatedNodesAndRules.isEmpty();
+  for (  Pair<SNode,NonTypesystemRule_Runtime> nodeAndRule : invalidatedNodesAndRules) {
+    myCheckedNodesNonTypesystem.remove(nodeAndRule);
+    Map<NonTypesystemRule_Runtime,Set<IErrorReporter>> rulesAndErrors=myNodesAndNTRulesToErrors.get(nodeAndRule.o1);
+    if (rulesAndErrors != null) {
+      Set<IErrorReporter> errors=rulesAndErrors.get(nodeAndRule.o2);
+      if (errors != null) {
+        for (        IErrorReporter errorReporter : errors) {
+          List<IErrorReporter> iErrorReporters=myNodesToNonTypesystemErrorsMap.get(errorReporter.getSNode());
+          if (iErrorReporters != null) {
+            iErrorReporters.remove(errorReporter);
+          }
+        }
+      }
+    }
+  }
+  myCurrentNodesToInvalidate.clear();
+  myCurrentPropertiesToInvalidate.clear();
+  myCurrentTypedTermsToInvalidate.clear();
+  myCacheWasRebuilt=false;
+  myInvalidationWasPerformed=true;
+  myInvalidationResultNT=result;
+  return result;
+}
