@@ -1,9 +1,25 @@
 {
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
-      for (      MPSFileNodeEditor editor : EditorsHelper.getAllEditors(myManager)) {
-        if (editor.isValid() && editor.getNodeEditor() instanceof TabbedEditor) {
+      editors:       for (      MPSFileNodeEditor editor : EditorsHelper.getAllEditors(myManager)) {
+        if (!editor.isValid())         continue;
+        if (editor.getNodeEditor() instanceof TabbedEditor) {
           editor.recreateEditor();
+        }
+ else         if (editor.getNodeEditor() instanceof NodeEditor) {
+          ArrayList<BaseProjectPlugin> plugins;
+synchronized (myPluginsLock) {
+            plugins=new ArrayList<BaseProjectPlugin>(mySortedPlugins);
+          }
+          for (          BaseProjectPlugin p : plugins) {
+            for (            EditorTabDescriptor tab : p.getTabDescriptors()) {
+              SNode node=editor.getNodeEditor().getCurrentlyEditedNode().getNode();
+              if (tab.getBaseNode(node) != null) {
+                editor.recreateEditor();
+                continue editors;
+              }
+            }
+          }
         }
       }
     }
