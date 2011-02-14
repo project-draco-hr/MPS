@@ -9,6 +9,20 @@
     if (modelDescriptor == null) {
       modelDescriptor=SModelRepository.getInstance().getModelDescriptor(mineModel.getSModelFqName());
     }
+    String errorMsg=null;
+    if (modelDescriptor == null) {
+      errorMsg="Model " + mineModel.getLongName() + " is not in model repository.";
+    }
+ else     if (modelDescriptor.getModule() == null) {
+      errorMsg="Model " + mineModel.getLongName() + " is not owned by any module.";
+    }
+    if (errorMsg != null) {
+      int result=Messages.showYesNoDialog(request.getProject(),errorMsg + " If you want to merge it using MPS merger," + " you need to cancel it now and invoke merge tool from project where this model"+ "is owned by any visible module. Also, you can use text merge.\n"+ "Do you want to use text merge tool?","Can't Merge Model",Messages.getErrorIcon());
+      if (result == 0) {
+        showTextMerge(request);
+      }
+      return;
+    }
     IOperationContext context=new ModuleContext(modelDescriptor.getModule(),request.getProject());
     if (MergeModelsDialog.isNewMergeEnabled()) {
       final MergeModelsDialog dialog=new MergeModelsDialog(request.getProject(),context,baseModel,mineModel,newModel,mrequest.getContentTitles());
@@ -41,10 +55,7 @@
   }
  catch (  ModelDiffTool.ReadException e) {
     LOG.warning("Can't read models. Using text based diff...",e);
-    DiffTool ideaDiffTool=DiffManager.getInstance().getIdeaDiffTool();
-    if (ideaDiffTool.canShow(request)) {
-      ideaDiffTool.show(request);
-    }
+    showTextMerge(request);
   }
 catch (  IOException e) {
     LOG.error(e);
