@@ -1,0 +1,34 @@
+{
+  return NodeReadAccessCasterInEditor.runReadTransparentAction(new Computable<SNode>(){
+    public SNode compute(){
+      String expectedReferentRole=null;
+      String alias=concept.getConceptProperty("alias");
+      if (alias != null) {
+        if (!alias.matches(".*<\\{.+\\}>.*")) {
+          return null;
+        }
+        String[] matches=alias.split("<\\{|\\}>");
+        expectedReferentRole=matches[1];
+      }
+      List<SNode> links=SModelSearchUtil.getReferenceLinkDeclarations(concept);
+      if (expectedReferentRole != null) {
+        for (        SNode link : links) {
+          if (expectedReferentRole.equals(SModelUtil.getLinkDeclarationRole(link))) {
+            return link;
+          }
+        }
+        LOG.warning("the '" + alias + "' doesn't match any reference link in "+ concept.getDebugText());
+      }
+ else {
+        if (links.size() == 1) {
+          SNode genuineLinkDeclaration=SModelUtil.getGenuineLinkDeclaration(links.get(0));
+          if (SNodeUtil.getLinkDeclaration_IsExactlyOneMultiplicity(genuineLinkDeclaration)) {
+            return links.get(0);
+          }
+        }
+      }
+      return null;
+    }
+  }
+);
+}

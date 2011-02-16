@@ -1,0 +1,37 @@
+{
+  Set<T> result=new HashSet<T>();
+  Set<SNode> frontier=new HashSet<SNode>();
+  Set<SNode> newFrontier=new HashSet<SNode>();
+  frontier.add(concept);
+  while (!frontier.isEmpty()) {
+    for (    SNode abstractConcept : frontier) {
+      Set<T> rules=myRules.get(abstractConcept);
+      boolean overrides=false;
+      if (rules != null) {
+        result.addAll(rules);
+        for (        T rule : rules) {
+          if (rule instanceof ICheckingRule_Runtime && ((ICheckingRule_Runtime)rule).overrides()) {
+            overrides=true;
+          }
+        }
+      }
+      if (overrides) {
+        continue;
+      }
+      if (SNodeUtil.isInstanceOfConceptDeclaration(abstractConcept)) {
+        newFrontier.add(SNodeUtil.getConceptDeclaration_Extends(abstractConcept));
+        for (        SNode interfaceConceptReference : SNodeUtil.getConceptDeclaration_Implements(abstractConcept)) {
+          newFrontier.add(interfaceConceptReference);
+        }
+      }
+      if (SNodeUtil.isInstanceOfInterfaceConceptDeclaration(abstractConcept)) {
+        for (        SNode interfaceConceptReference : SNodeUtil.getInterfaceConceptDeclaration_Extends(abstractConcept)) {
+          newFrontier.add(interfaceConceptReference);
+        }
+      }
+    }
+    frontier=newFrontier;
+    newFrontier=new HashSet<SNode>();
+  }
+  return result;
+}
