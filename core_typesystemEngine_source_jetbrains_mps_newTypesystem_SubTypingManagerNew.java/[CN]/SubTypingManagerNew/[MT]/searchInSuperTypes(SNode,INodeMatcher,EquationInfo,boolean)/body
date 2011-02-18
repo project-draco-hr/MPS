@@ -1,0 +1,41 @@
+{
+  TypeCheckingContextNew typeCheckingContextNew=myState == null ? null : myState.getTypeCheckingContext();
+  StructuralNodeSet<?> frontier=new StructuralNodeSet();
+  StructuralNodeSet<?> newFrontier=new StructuralNodeSet();
+  StructuralNodeSet<?> yetPassed=new StructuralNodeSet();
+  frontier.add(subType);
+  while (!frontier.isEmpty()) {
+    Set<SNode> yetPassedRaw=new HashSet<SNode>();
+    StructuralNodeSet<?> ancestors=new StructuralNodeSet();
+    for (    SNode node : frontier) {
+      collectImmediateSuperTypes(node,isWeak,ancestors,typeCheckingContextNew);
+      yetPassedRaw.add(node);
+    }
+    ArrayList<SNode> ancestorsSorted;
+    ancestorsSorted=new ArrayList<SNode>(ancestors);
+    Collections.sort(ancestorsSorted,new Comparator<SNode>(){
+      public int compare(      SNode o1,      SNode o2){
+        return TypesUtil.depth(o2) - TypesUtil.depth(o1);
+      }
+    }
+);
+    for (    SNode ancestor : ancestorsSorted) {
+      if (superType.matchesWith(ancestor)) {
+        addToCache(subType,superType,true,isWeak);
+        return true;
+      }
+    }
+    for (    SNode passedNodeRaw : yetPassedRaw) {
+      yetPassed.add(passedNodeRaw);
+    }
+    for (    SNode passedNode : yetPassed) {
+      ancestors.removeStructurally(passedNode);
+    }
+    newFrontier.addAllStructurally(ancestors);
+    yetPassed.addAllStructurally(ancestors);
+    frontier=newFrontier;
+    newFrontier=new StructuralNodeSet();
+  }
+  addToCache(subType,superType,false,isWeak);
+  return false;
+}

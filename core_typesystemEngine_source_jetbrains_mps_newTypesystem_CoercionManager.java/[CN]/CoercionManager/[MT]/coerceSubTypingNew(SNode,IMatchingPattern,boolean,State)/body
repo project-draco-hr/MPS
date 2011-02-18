@@ -1,0 +1,54 @@
+{
+  if (subtype == null)   return null;
+  if (pattern.match(subtype))   return subtype;
+  if ("jetbrains.mps.lang.typesystem.structure.MeetType".equals(subtype.getConceptFqName())) {
+    List<SNode> children=subtype.getChildren("argument");
+    for (    SNode child : children) {
+      SNode result=coerceSubTypingNew(child,pattern,isWeak,state);
+      if (result != null)       return result;
+    }
+    return null;
+  }
+  if ("jetbrains.mps.lang.typesystem.structure.JoinType".equals(subtype.getConceptFqName())) {
+    List<SNode> children=subtype.getChildren("argument");
+    SNode lcs=mySubTyping.createLCS(children);
+    return coerceSubTypingNew(lcs,pattern,isWeak,state);
+  }
+  return NodeReadAccessCasterInEditor.runReadTransparentAction(new Computable<SNode>(){
+    public SNode compute(){
+      SubtypingCache cache=myTypeChecker.getSubtypingCache();
+      if (cache != null) {
+        Pair<Boolean,SNode> nodePair=cache.getCoerced(subtype,pattern,isWeak);
+        if (nodePair.o1) {
+          return nodePair.o2;
+        }
+      }
+      cache=myTypeChecker.getGlobalSubtypingCache();
+      if (cache != null) {
+        Pair<Boolean,SNode> nodePair=cache.getCoerced(subtype,pattern,isWeak);
+        if (nodePair.o1) {
+          return nodePair.o2;
+        }
+      }
+      CoercionMatcher coercionMatcher=new CoercionMatcher(pattern);
+      boolean success=mySubTyping.searchInSuperTypes(subtype,coercionMatcher,null,isWeak);
+      SNode result;
+      if (!success) {
+        result=null;
+      }
+ else {
+        result=coercionMatcher.getResult();
+      }
+      SubtypingCache subtypingCache=myTypeChecker.getSubtypingCache();
+      if (subtypingCache != null) {
+        subtypingCache.addCacheEntry(subtype,pattern,result,isWeak);
+      }
+      subtypingCache=myTypeChecker.getGlobalSubtypingCache();
+      if (subtypingCache != null) {
+        subtypingCache.addCacheEntry(subtype,pattern,result,isWeak);
+      }
+      return result;
+    }
+  }
+);
+}
