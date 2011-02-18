@@ -1,15 +1,49 @@
 {
   try {
-    String stereotype="java_stub";
-    HashSet<ModuleReference> modules=new HashSet<ModuleReference>();
-    for (    SModelDescriptor d : ListSequence.fromList(SModelRepository.getInstance().getModelDescriptors())) {
-      if (d.getStereotype().equals(stereotype)) {
-        for (        ModuleReference ref : SetSequence.fromSet(modules)) {
-          d.getModule().addDependency(ref,false);
-        }
-        d.getModule().save();
+    final String stereotype=JOptionPane.showInputDialog("stereotype: ","java_stub");
+    if (StringUtils.isEmpty(stereotype)) {
+      return;
+    }
+    List<Solution> ps=((MPSProject)MapSequence.fromMap(_params).get("project")).getProjectSolutions();
+    List<Solution> as=ModelAccess.instance().runReadAction(new Computable<List<Solution>>(){
+      public List<Solution> compute(){
+        return MPSModuleRepository.getInstance().getAllSolutions();
       }
     }
+);
+    final List<ModuleReference> modules=CommonChoosers.showDialogModuleCollectionChooser(((Frame)MapSequence.fromMap(_params).get("frame")),"solution",ListSequence.fromList(ps).<ModuleReference>select(new ISelector<Solution,ModuleReference>(){
+      public ModuleReference select(      Solution it){
+        return it.getModuleReference();
+      }
+    }
+).toListSequence(),ListSequence.fromList(as).<ModuleReference>select(new ISelector<Solution,ModuleReference>(){
+      public ModuleReference select(      Solution it){
+        return it.getModuleReference();
+      }
+    }
+).toListSequence());
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        outer:         for (        SModelDescriptor d : SModelRepository.getInstance().getModelDescriptors()) {
+          if (!(d.getStereotype().equals(stereotype))) {
+            continue;
+          }
+          for (          ModuleReference ref : ListSequence.fromList(modules)) {
+            for (            IModule m : d.getModule().getDependenciesManager().getAllDependOnModules()) {
+              if (m.getModuleReference().equals(ref)) {
+                continue outer;
+              }
+            }
+            Dependency md=new Dependency();
+            md.setModuleRef(ref);
+            md.setReexport(false);
+            ((List<Dependency>)d.getModule().getModuleDescriptor().getDependencies()).add(md);
+          }
+          d.getModule().save();
+        }
+      }
+    }
+);
   }
  catch (  Throwable t) {
     LOG.error("User's action execute method failed. Action:" + "UpdateModuleStubDeps",t);
