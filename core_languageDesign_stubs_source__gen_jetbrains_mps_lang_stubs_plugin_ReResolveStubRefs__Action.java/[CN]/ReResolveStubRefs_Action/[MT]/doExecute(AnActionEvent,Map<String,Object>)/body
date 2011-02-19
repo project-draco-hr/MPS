@@ -1,5 +1,6 @@
 {
   try {
+    int i=0;
     for (    SModelDescriptor d : SModelRepository.getInstance().getModelDescriptors()) {
       if (!(d instanceof EditableSModelDescriptor)) {
         continue;
@@ -15,21 +16,36 @@
         continue;
       }
       for (      SNode node : d.getSModel().nodes()) {
-        Set<SReference> refs=new HashSet();
         for (        SReference ref : node.getReferences()) {
-          if (ref.getTargetSModelReference().getSModelId() instanceof SModelId.RegularSModelId) {
-            return;
+          SModelId modelId=ref.getTargetSModelReference().getSModelId();
+          SNodeId nodeId=ref.getTargetNodeId();
+          if (modelId instanceof SModelId.RegularSModelId) {
+            continue;
           }
           if (ref.getTargetNode() != null) {
             continue;
           }
-          refs.add(ref);
+          for (          SModelDescriptor md : module.getScope().getModelDescriptors()) {
+            SModelId tryModelId=md.getSModelReference().getSModelId();
+            if (tryModelId instanceof SModelId.RegularSModelId) {
+              continue;
+            }
+            if (!(ReResolveStubRefs_Action.this.matches(((SModelId.ForeignSModelId)modelId).getId(),((SModelId.ForeignSModelId)tryModelId).getId(),_params))) {
+              continue;
+            }
+            if (md.getSModel().getNodeById(nodeId) == null) {
+              continue;
+            }
+            ref.setTargetSModelReference(md.getSModelReference());
+            d.getSModel().addModelImport(md.getSModelReference(),false);
+            d.getSModel().deleteModelImport(ref.getTargetSModelReference());
+            i++;
+            break;
+          }
         }
-        ModuleContext context=new ModuleContext(module,((Project)MapSequence.fromMap(_params).get("project")));
-        List<ResolveResult> result=new ArrayList();
-        Resolver.resolveReferences(refs,context,result,false);
       }
     }
+    JOptionPane.showMessageDialog(((Frame)MapSequence.fromMap(_params).get("frame")),i + " problems fixed");
   }
  catch (  Throwable t) {
     LOG.error("User's action execute method failed. Action:" + "ReResolveStubRefs",t);
