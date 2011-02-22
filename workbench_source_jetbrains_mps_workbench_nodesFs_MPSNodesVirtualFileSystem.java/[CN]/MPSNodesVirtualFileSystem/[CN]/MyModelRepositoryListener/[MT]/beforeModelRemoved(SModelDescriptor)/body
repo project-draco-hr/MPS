@@ -1,18 +1,15 @@
 {
   if (modelDescriptor.getLoadingState() == ModelLoadingState.NOT_LOADED)   return;
-  for (  final SNode root : modelDescriptor.getSModel().roots()) {
-    final SNodePointer pointer=new SNodePointer(root);
-    final VirtualFile vf=myVirtualFiles.get(pointer);
+  Collection<MPSNodeVirtualFile> deletedFiles=new ArrayList<MPSNodeVirtualFile>();
+  for (  SNode root : modelDescriptor.getSModel().roots()) {
+    SNodePointer pointer=new SNodePointer(root);
+    MPSNodeVirtualFile vf=myVirtualFiles.get(pointer);
     if (vf == null)     continue;
-    ModelAccess.instance().runWriteInEDT(new Runnable(){
-      public void run(){
-        if (vf.isValid()) {
-          fireBeforeFileDeletion(this,vf);
-        }
-        fireFileDeleted(this,vf,vf.getName(),null);
-        myVirtualFiles.remove(pointer);
-      }
-    }
-);
+    deletedFiles.add(vf);
+    myVirtualFiles.remove(pointer);
+  }
+  VFSNotifier vfsNotifier=new VFSNotifier(deletedFiles,Collections.<Pair<MPSNodeVirtualFile,String>>emptyList());
+  if (vfsNotifier.hasPendingNotifications()) {
+    ModelAccess.instance().runWriteInEDT(vfsNotifier);
   }
 }
