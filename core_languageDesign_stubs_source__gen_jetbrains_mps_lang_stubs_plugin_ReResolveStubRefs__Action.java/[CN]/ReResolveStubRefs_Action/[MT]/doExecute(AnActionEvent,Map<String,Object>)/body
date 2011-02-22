@@ -15,6 +15,7 @@
       if (module == null) {
         continue;
       }
+      Set<SModelReference> toRemove=new HashSet<SModelReference>();
       for (      SNode node : d.getSModel().nodes()) {
         for (        SReference ref : node.getReferences()) {
           SModelId modelId=ref.getTargetSModelReference().getSModelId();
@@ -26,7 +27,8 @@
             continue;
           }
           for (          SModelDescriptor md : module.getScope().getModelDescriptors()) {
-            SModelId tryModelId=md.getSModelReference().getSModelId();
+            SModelReference mr=md.getSModelReference();
+            SModelId tryModelId=mr.getSModelId();
             if (tryModelId instanceof SModelId.RegularSModelId) {
               continue;
             }
@@ -36,13 +38,16 @@
             if (md.getSModel().getNodeById(nodeId) == null) {
               continue;
             }
-            ref.setTargetSModelReference(md.getSModelReference());
-            d.getSModel().addModelImport(md.getSModelReference(),false);
-            d.getSModel().deleteModelImport(ref.getTargetSModelReference());
+            toRemove.add(ref.getTargetSModelReference());
+            d.getSModel().addModelImport(mr,false);
+            ref.setTargetSModelReference(mr);
             i++;
             break;
           }
         }
+      }
+      for (      SModelReference ref : toRemove) {
+        d.getSModel().deleteModelImport(ref);
       }
     }
     JOptionPane.showMessageDialog(((Frame)MapSequence.fromMap(_params).get("frame")),i + " problems fixed");
