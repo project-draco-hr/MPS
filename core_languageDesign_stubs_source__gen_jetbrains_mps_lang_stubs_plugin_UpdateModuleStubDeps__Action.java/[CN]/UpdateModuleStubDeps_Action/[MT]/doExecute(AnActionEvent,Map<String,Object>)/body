@@ -1,45 +1,23 @@
 {
   try {
-    final String stereotype=JOptionPane.showInputDialog("stereotype: ","java_stub");
-    if (StringUtils.isEmpty(stereotype)) {
-      return;
-    }
-    List<Solution> ps=((MPSProject)MapSequence.fromMap(_params).get("project")).getProjectSolutions();
-    List<Solution> as=ModelAccess.instance().runReadAction(new Computable<List<Solution>>(){
-      public List<Solution> compute(){
-        return MPSModuleRepository.getInstance().getAllSolutions();
-      }
-    }
-);
-    final List<ModuleReference> modules=CommonChoosers.showDialogModuleCollectionChooser(((Frame)MapSequence.fromMap(_params).get("frame")),"solution",ListSequence.fromList(ps).<ModuleReference>select(new ISelector<Solution,ModuleReference>(){
-      public ModuleReference select(      Solution it){
-        return it.getModuleReference();
-      }
-    }
-).toListSequence(),ListSequence.fromList(as).<ModuleReference>select(new ISelector<Solution,ModuleReference>(){
-      public ModuleReference select(      Solution it){
-        return it.getModuleReference();
-      }
-    }
-).toListSequence());
-    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-      public void run(){
-        outer:         for (        SModelDescriptor d : SModelRepository.getInstance().getModelDescriptors()) {
-          if (!(d.getStereotype().equals(stereotype))) {
-            continue;
-          }
-          for (          ModuleReference ref : ListSequence.fromList(modules)) {
-            for (            IModule m : d.getModule().getDependenciesManager().getAllDependOnModules()) {
-              if (m.getModuleReference().equals(ref)) {
-                continue outer;
+    ModelAccess.instance().runWriteAction(new Runnable(){
+      @Override public void run(){
+        for (        Language l : MPSModuleRepository.getInstance().getAllLanguages()) {
+          Set<SModelReference> toRemove=new HashSet<SModelReference>();
+          Set<SModelReference> toAdd=new HashSet<SModelReference>();
+          List<SModelReference> acc=l.getModuleDescriptor().getAccessoryModels();
+          for (          SModelReference ref : acc) {
+            if (!(ref.getSModelId() instanceof ForeignSModelId))             continue;
+            toRemove.add(ref);
+            for (            SModelDescriptor md : l.getScope().getModelDescriptors()) {
+              if (md.getLongName().equals(ref.getLongName())) {
+                toAdd.add(md.getSModelReference());
               }
             }
-            Dependency md=new Dependency();
-            md.setModuleRef(ref);
-            md.setReexport(false);
-            ((List<Dependency>)d.getModule().getModuleDescriptor().getDependencies()).add(md);
           }
-          d.getModule().save();
+          acc.removeAll(toRemove);
+          acc.addAll(toAdd);
+          l.save();
         }
       }
     }
