@@ -1,0 +1,27 @@
+{
+  try {
+    for (    Language l : MPSModuleRepository.getInstance().getAllLanguages()) {
+      Set<SModelReference> toRemove=SetSequence.fromSet(new HashSet<SModelReference>());
+      Set<SModelReference> toAdd=SetSequence.fromSet(new HashSet<SModelReference>());
+      List<SModelReference> acc=l.getModuleDescriptor().getAccessoryModels();
+      for (      SModelReference ref : acc) {
+        if (!(ref.getSModelId() instanceof SModelId.ForeignSModelId)) {
+          continue;
+        }
+        SetSequence.fromSet(toRemove).addElement(ref);
+        for (        SModelDescriptor md : l.getScope().getModelDescriptors()) {
+          if (md.getLongName().equals(ref.getLongName())) {
+            SetSequence.fromSet(toAdd).addElement(md.getSModelReference());
+            break;
+          }
+        }
+      }
+      acc.removeAll(toRemove);
+      acc.addAll(toAdd);
+      l.save();
+    }
+  }
+ catch (  Throwable t) {
+    LOG.error("User's action execute method failed. Action:" + "UpdateLanguageAccessories",t);
+  }
+}

@@ -1,7 +1,7 @@
 {
   try {
     int i=0;
-    for (    SModelDescriptor d : SModelRepository.getInstance().getModelDescriptors()) {
+    for (    final SModelDescriptor d : SModelRepository.getInstance().getModelDescriptors()) {
       if (!(d instanceof EditableSModelDescriptor)) {
         continue;
       }
@@ -15,7 +15,7 @@
       if (module == null) {
         continue;
       }
-      Set<SModelReference> toRemove=new HashSet<SModelReference>();
+      Set<SModelReference> toRemove=SetSequence.fromSet(new HashSet<SModelReference>());
       for (      SNode node : d.getSModel().nodes()) {
         for (        SReference ref : node.getReferences()) {
           SModelId modelId=ref.getTargetSModelReference().getSModelId();
@@ -27,18 +27,19 @@
             continue;
           }
           for (          SModelDescriptor md : module.getScope().getModelDescriptors()) {
-            SModelReference mr=md.getSModelReference();
-            SModelId tryModelId=mr.getSModelId();
-            if (tryModelId instanceof SModelId.RegularSModelId) {
+            SModelReference mdRef=md.getSModelReference();
+            SModelId mdId=mdRef.getSModelId();
+            if (mdId instanceof SModelId.RegularSModelId) {
               continue;
             }
-            if (!(ReResolveStubRefs_Action.this.matches(((SModelId.ForeignSModelId)modelId).getId(),((SModelId.ForeignSModelId)tryModelId).getId(),_params))) {
+            if (!(ReResolveStubRefs_Action.this.matches(((SModelId.ForeignSModelId)modelId).getId(),((SModelId.ForeignSModelId)mdId).getId(),_params))) {
               continue;
             }
             if (md.getSModel().getNodeById(nodeId) == null) {
               continue;
             }
-            toRemove.add(ref.getTargetSModelReference());
+            SetSequence.fromSet(toRemove).addElement(ref.getTargetSModelReference());
+            SModelReference mr=md.getSModelReference();
             d.getSModel().addModelImport(mr,false);
             ref.setTargetSModelReference(mr);
             i++;
@@ -46,9 +47,12 @@
           }
         }
       }
-      for (      SModelReference ref : toRemove) {
-        d.getSModel().deleteModelImport(ref);
+      SetSequence.fromSet(toRemove).visitAll(new IVisitor<SModelReference>(){
+        public void visit(        SModelReference it){
+          d.getSModel().deleteModelImport(it);
+        }
       }
+);
     }
     JOptionPane.showMessageDialog(((Frame)MapSequence.fromMap(_params).get("frame")),i + " problems fixed");
   }
