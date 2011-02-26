@@ -2,10 +2,26 @@
   for (  SNode root : sm.getSModel().roots()) {
     updateModificationStamp(root);
   }
-  ModelAccess.instance().runWriteInEDT(new Runnable(){
-    public void run(){
-      onModelReplaced(sm);
+  Collection<MPSNodeVirtualFile> deletedFiles=new ArrayList<MPSNodeVirtualFile>();
+  Collection<Pair<MPSNodeVirtualFile,String>> renamedFiles=new ArrayList<Pair<MPSNodeVirtualFile,String>>();
+  for (  Entry<SNodePointer,MPSNodeVirtualFile> entry : myVirtualFiles.entrySet()) {
+    if (entry.getKey().getModel() != sm)     continue;
+    SNode node=entry.getKey().getNode();
+    MPSNodeVirtualFile file=entry.getValue();
+    if (node == null) {
+      deletedFiles.add(file);
+      myVirtualFiles.remove(file);
+    }
+ else {
+      String oldName=file.getName();
+      String newName=node.getPresentation();
+      if (!oldName.equals(newName)) {
+        renamedFiles.add(new Pair<MPSNodeVirtualFile,String>(file,newName));
+      }
     }
   }
-);
+  VFSNotifier vfsNotifier=new VFSNotifier(deletedFiles,renamedFiles);
+  if (vfsNotifier.hasPendingNotifications()) {
+    ModelAccess.instance().runWriteInEDT(vfsNotifier);
+  }
 }
