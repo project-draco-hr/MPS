@@ -1,0 +1,62 @@
+{
+  try {
+    int i=0;
+    for (    final SModelDescriptor d : SModelRepository.getInstance().getModelDescriptors()) {
+      if (!(d instanceof EditableSModelDescriptor)) {
+        continue;
+      }
+      if (!(SModelStereotype.isUserModel(d))) {
+        continue;
+      }
+      if (d == null) {
+        continue;
+      }
+      IModule module=d.getModule();
+      if (module == null) {
+        continue;
+      }
+      Set<SModelReference> toRemove=SetSequence.fromSet(new HashSet<SModelReference>());
+      for (      SNode node : d.getSModel().nodes()) {
+        for (        SReference ref : node.getReferences()) {
+          SModelId modelId=ref.getTargetSModelReference().getSModelId();
+          SNodeId nodeId=ref.getTargetNodeId();
+          if (modelId instanceof SModelId.RegularSModelId) {
+            continue;
+          }
+          if (ref.getTargetNode() != null) {
+            continue;
+          }
+          for (          SModelDescriptor md : module.getScope().getModelDescriptors()) {
+            SModelReference mdRef=md.getSModelReference();
+            SModelId mdId=mdRef.getSModelId();
+            if (mdId instanceof SModelId.RegularSModelId) {
+              continue;
+            }
+            if (!(ReResolveStubRefs_Action.this.matches(((SModelId.ForeignSModelId)modelId).getId(),((SModelId.ForeignSModelId)mdId).getId(),_params))) {
+              continue;
+            }
+            if (md.getSModel().getNodeById(nodeId) == null) {
+              continue;
+            }
+            SetSequence.fromSet(toRemove).addElement(ref.getTargetSModelReference());
+            SModelReference mr=md.getSModelReference();
+            d.getSModel().addModelImport(mr,false);
+            ref.setTargetSModelReference(mr);
+            i++;
+            break;
+          }
+        }
+      }
+      SetSequence.fromSet(toRemove).visitAll(new IVisitor<SModelReference>(){
+        public void visit(        SModelReference it){
+          d.getSModel().deleteModelImport(it);
+        }
+      }
+);
+    }
+    JOptionPane.showMessageDialog(((Frame)MapSequence.fromMap(_params).get("frame")),i + " problems fixed");
+  }
+ catch (  Throwable t) {
+    LOG.error("User's action execute method failed. Action:" + "ReResolveStubRefs",t);
+  }
+}
