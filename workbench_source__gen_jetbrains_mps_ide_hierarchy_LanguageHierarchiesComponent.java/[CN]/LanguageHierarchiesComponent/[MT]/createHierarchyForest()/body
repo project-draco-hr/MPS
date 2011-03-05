@@ -1,0 +1,27 @@
+{
+  List<LanguageHierarchiesComponent.ConceptContainer> result=new ArrayList<LanguageHierarchiesComponent.ConceptContainer>();
+  Map<SNode,LanguageHierarchiesComponent.ConceptContainer> processed=new HashMap<SNode,LanguageHierarchiesComponent.ConceptContainer>();
+  SModel structureModel=myLanguage.getStructureModelDescriptor().getSModel();
+  SNode baseConcept=SConceptOperations.findConceptDeclaration("jetbrains.mps.lang.core.structure.BaseConcept");
+  outer:   for (  SNode concept : SModelOperations.getRoots(structureModel,"jetbrains.mps.lang.structure.structure.ConceptDeclaration")) {
+    SNode parentConcept=concept;
+    LanguageHierarchiesComponent.ConceptContainer prevConceptContainer=null;
+    while (parentConcept != null && parentConcept != baseConcept && !((mySkipAncestors && SNodeOperations.getModel(parentConcept) != structureModel))) {
+      LanguageHierarchiesComponent.ConceptContainer newConceptContainer=processed.get(parentConcept);
+      if (newConceptContainer == null) {
+        newConceptContainer=new LanguageHierarchiesComponent.ConceptContainer(parentConcept,this,SNodeOperations.getModel(parentConcept) != structureModel);
+      }
+      newConceptContainer.addChild(prevConceptContainer);
+      prevConceptContainer=newConceptContainer;
+      if (processed.containsKey(parentConcept)) {
+        continue outer;
+      }
+      processed.put(parentConcept,newConceptContainer);
+      parentConcept=SLinkOperations.getTarget(parentConcept,"extends",false);
+    }
+    if (prevConceptContainer != null) {
+      result.add(prevConceptContainer);
+    }
+  }
+  return result;
+}
