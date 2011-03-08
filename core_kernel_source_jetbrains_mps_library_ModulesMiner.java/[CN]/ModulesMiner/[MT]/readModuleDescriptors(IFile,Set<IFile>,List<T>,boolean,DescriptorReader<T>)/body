@@ -1,20 +1,18 @@
 {
-  assertCanWrite();
   if (refreshFiles) {
     FileSystem.getInstance().refresh(dir);
   }
-  List<IModule> result=new ArrayList<IModule>();
   String dirName=dir.getName();
-  if (FileTypeManager.getInstance().isFileIgnored(dirName))   return result;
+  if (FileTypeManager.getInstance().isFileIgnored(dirName))   return;
   List<IFile> files=dir.list();
   if (files == null) {
-    return result;
+    return;
   }
   for (  IFile file : files) {
     if (hasModuleExtension(file.getName())) {
-      IModule module=readModuleDescriptor_internal(file,owner,getModuleExtension(file.getName()),excludes);
-      if (module != null) {
-        result.add(module);
+      T descriptor=reader.read(file,excludes);
+      if (descriptor != null) {
+        result.add(descriptor);
       }
     }
   }
@@ -24,9 +22,8 @@
     if (excludes.contains(childDir))     continue;
     if (childDir.getName().endsWith(MPSExtentions.MPS_ARCH)) {
       IFile dirInJar=FileSystem.getInstance().getFileByPath(childDir.getAbsolutePath() + "!/" + AbstractModule.MODULE_DIR);
-      result.addAll(readModuleDescriptors(dirInJar,owner,excludes,refreshFiles));
+      readModuleDescriptors(dirInJar,excludes,result,refreshFiles,reader);
     }
-    result.addAll(readModuleDescriptors(childDir,owner,excludes,refreshFiles));
+    readModuleDescriptors(childDir,excludes,result,refreshFiles,reader);
   }
-  return result;
 }
