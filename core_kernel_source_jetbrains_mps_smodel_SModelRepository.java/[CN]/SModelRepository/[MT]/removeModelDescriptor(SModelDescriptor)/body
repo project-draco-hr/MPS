@@ -1,14 +1,16 @@
 {
-  fireBeforeModelRemoved(md);
-  myModelsWithOwners.remove(md);
-  if (md.getSModelReference().getSModelId() != null) {
-    myIdToModelDescriptorMap.remove(md.getSModelReference().getSModelId());
+synchronized (myModelsLock) {
+    fireBeforeModelRemoved(md);
+    myModelsWithOwners.remove(md);
+    if (md.getSModelReference().getSModelId() != null) {
+      myIdToModelDescriptorMap.remove(md.getSModelReference().getSModelId());
+    }
+    if (md instanceof EditableSModelDescriptor) {
+      boolean result=removeModelFromFileCache(((EditableSModelDescriptor)md));
+      LOG.assertLog(result,"model " + md + " do not have a path in file cache");
+    }
+    removeListeners(md);
+    fireModelRemoved(md);
+    md.dispose();
   }
-  if (md instanceof EditableSModelDescriptor) {
-    boolean result=removeModelFromFileCache(((EditableSModelDescriptor)md));
-    LOG.assertLog(result,"model " + md + " do not have a path in file cache");
-  }
-  removeListeners(md);
-  fireModelRemoved(md);
-  md.dispose();
 }

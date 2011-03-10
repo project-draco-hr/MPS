@@ -1,16 +1,18 @@
 {
   if (modelReference == null)   return null;
-  SModelId id=modelReference.getSModelId();
-  SModelDescriptor model=myIdToModelDescriptorMap.get(id);
-  if (model != null)   return model;
-  if (!(id instanceof RegularSModelId))   return null;
-  SModelFqName fqName=modelReference.getSModelFqName();
-  if (fqName == null)   return null;
-  LOG.warning("getModelDescriptor() is executed by fqName. This is likely to cause problems. And it is veeery slow.",new Throwable());
 synchronized (myModelsLock) {
-    for (    SModelDescriptor d : myModelsWithOwners.keySet()) {
-      if (EqualUtil.equals(fqName,d.getSModelReference().getSModelFqName()))       return d;
+    SModelId id=modelReference.getSModelId();
+    if (id == null) {
+      SModelFqName fqName=modelReference.getSModelFqName();
+      if (fqName == null)       return null;
+      if (!myWasError) {
+        myWasError=true;
+      }
+      for (      SModelDescriptor d : myModelsWithOwners.keySet()) {
+        if (EqualUtil.equals(fqName,d.getSModelReference().getSModelFqName()))         return d;
+      }
+      return null;
     }
+    return myIdToModelDescriptorMap.get(id);
   }
-  return null;
 }
