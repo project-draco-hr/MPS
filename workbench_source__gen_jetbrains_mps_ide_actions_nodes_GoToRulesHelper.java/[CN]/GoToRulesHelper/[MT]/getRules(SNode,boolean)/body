@@ -1,0 +1,33 @@
+{
+  Language language=getDeclaringLanguage(conceptDeclaration);
+  List<SNode> rules=new ArrayList<SNode>();
+  List<SNode> overriding=new ArrayList<SNode>();
+  if (language != null && LanguageAspect.TYPESYSTEM.get(language) != null) {
+    SModelDescriptor helginsDescriptor=LanguageAspect.TYPESYSTEM.get(language);
+    if (helginsDescriptor != null) {
+      Condition<SNode> cond=new Condition<SNode>(){
+        public boolean met(        SNode n){
+          return GoToRulesHelper.isApplicable(n,conceptDeclaration,false);
+        }
+      }
+;
+      Iterable<SNode> iter=new ConditionalIterable<SNode>(helginsDescriptor.getSModel().roots(),cond);
+      for (      SNode node : iter) {
+        rules.add(node);
+        SNode inferenceRule=SNodeOperations.as(node,"jetbrains.mps.lang.typesystem.structure.InferenceRule");
+        if ((inferenceRule != null) && SPropertyOperations.getBoolean(inferenceRule,"overrides")) {
+          overriding.add(inferenceRule);
+        }
+      }
+    }
+  }
+  for (  SNode overridingRule : overriding) {
+    SNode subConcept=getApplicableConcept(SLinkOperations.getTarget(overridingRule,"applicableNode",true));
+    for (    SNode ruleNode : new ArrayList<SNode>(rules)) {
+      if (SNodeOperations.getConceptDeclaration(ruleNode) == SNodeOperations.getConceptDeclaration(overridingRule) && isApplicable(ruleNode,subConcept,true)) {
+        rules.remove(ruleNode);
+      }
+    }
+  }
+  return rules;
+}
