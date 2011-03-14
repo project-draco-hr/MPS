@@ -1,9 +1,19 @@
 {
-  State state=myCurrentContext.getState();
-  AbstractOperation rootDifference=myCurrentContext.getOperation();
-  Object difference=node.getUserObject();
-  State copy=new State(state.getTypeCheckingContext());
-  copy.executeOperationsBeforeAnchor(rootDifference,difference);
-  new ShowTypeSystemState(copy,myOperationContext,myFrame);
-  state.reset();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      State state=TraceSettings.isGenerationMode() ? myGenerationStateCopy : myStateCopy;
+      AbstractOperation rootDifference=myCurrentContext.getOperation();
+      Object difference=newNode.getUserObject();
+      if (myOldOperation == null) {
+        state.clear(false);
+        state.executeOperationsBeforeAnchor(rootDifference,difference);
+      }
+ else {
+        state.updateState(myOldOperation,(AbstractOperation)difference);
+      }
+      myParent.resetState(state);
+      myOldOperation=(AbstractOperation)difference;
+    }
+  }
+);
 }

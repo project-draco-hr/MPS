@@ -1,0 +1,66 @@
+{
+  final Semaphore semaphore=new Semaphore();
+  semaphore.down();
+  final boolean[] connectorIsReady={false};
+  final DebugProcessMulticaster processMulticaster=myDebugVMEventsProcessor.getMulticaster();
+  processMulticaster.addListener(new DebugProcessAdapter(){
+    public void connectorIsReady(){
+      LOG.debug("Connector is ready.");
+      connectorIsReady[0]=true;
+      semaphore.up();
+      processMulticaster.removeListener(this);
+    }
+  }
+);
+  myDebuggerManagerThread.schedule(new DebuggerCommand(){
+    protected void action(){
+      VirtualMachine vm=null;
+      try {
+        final long time=System.currentTimeMillis();
+        while (System.currentTimeMillis() - time < LOCAL_START_TIMEOUT) {
+          try {
+            vm=doCreateVirtualMachine();
+            LOG.debug("Created VM " + vm);
+            break;
+          }
+ catch (          Throwable t) {
+            createVmFailed(t);
+            break;
+          }
+        }
+      }
+  finally {
+        semaphore.up();
+      }
+      if (vm != null) {
+        final VirtualMachine vm1=vm;
+        executeAfterProcessStarted(new Runnable(){
+          public void run(){
+            LOG.debug("Schedule commit command.");
+            myDebuggerManagerThread.schedule(new DebuggerCommand(){
+              protected void action() throws Exception {
+                myDebugVMEventsProcessor.commitVM(vm1);
+              }
+            }
+);
+          }
+        }
+);
+      }
+ else {
+        LOG.debug("VM is null.");
+      }
+    }
+    protected void commandCancelled(){
+      try {
+        super.commandCancelled();
+        LOG.debug("Command cancelled.");
+      }
+  finally {
+        semaphore.up();
+      }
+    }
+  }
+);
+  semaphore.waitFor();
+}

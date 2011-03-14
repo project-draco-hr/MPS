@@ -1,0 +1,52 @@
+{
+  try {
+    if (myArguments != null) {
+      throw new IOException("debugger already listening");
+    }
+    if (myConnectionSettings.isServerMode()) {
+      LOG.debug("Virtual Machine creation: server mode.");
+      ListeningConnector connector=(ListeningConnector)findConnector(myConnectionSettings.isUseSockets() ? SOCKET_LISTENING_CONNECTOR_NAME : SHMEM_LISTENING_CONNECTOR_NAME);
+      fillConnectorArguments(connector);
+      LOG.debug("Start listening");
+      connector.startListening(myArguments);
+      myDebugVMEventsProcessor.getMulticaster().connectorIsReady();
+      try {
+        LOG.debug("Start accepting.");
+        return connector.accept(myArguments);
+      }
+ catch (      IOException ex) {
+        throw new RunFailedException(ex);
+      }
+ finally {
+        if (myArguments != null) {
+          try {
+            connector.stopListening(myArguments);
+          }
+ catch (          IllegalArgumentException e) {
+          }
+catch (          IllegalConnectorArgumentsException e) {
+          }
+        }
+      }
+    }
+ else {
+      AttachingConnector connector=(AttachingConnector)findConnector(myConnectionSettings.isUseSockets() ? SOCKET_ATTACHING_CONNECTOR_NAME : SHMEM_ATTACHING_CONNECTOR_NAME);
+      fillConnectorArguments(connector);
+      try {
+        return connector.attach(myArguments);
+      }
+ catch (      IOException ex) {
+        throw new RunFailedException(ex);
+      }
+    }
+  }
+ catch (  IOException e) {
+    throw new RunFailedException(e);
+  }
+catch (  IllegalConnectorArgumentsException e) {
+    throw new RunFailedException(e);
+  }
+ finally {
+    myArguments=null;
+  }
+}

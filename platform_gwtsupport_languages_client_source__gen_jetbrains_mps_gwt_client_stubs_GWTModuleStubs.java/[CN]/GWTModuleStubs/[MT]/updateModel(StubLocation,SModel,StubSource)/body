@@ -1,0 +1,53 @@
+{
+  String pkg=model.getSModelFqName().getLongName();
+  PathItem pi=GWTModulePathItem.getPathItem(location.getPath());
+  List<Tuples._3<String,String,SNode>> modlst=ListSequence.fromList(new ArrayList<Tuples._3<String,String,SNode>>());
+  SNode sample=SConceptOperations.createNewNode("jetbrains.mps.gwt.client.structure.GWTModule",null);
+  for (  String modres : ListSequence.fromList(pi.resources(pkg))) {
+    SNodeId id=GWTModuleReader.createId(pi.baseName(modres));
+    SNode module=(SNode)model.getNodeById(id);
+    if ((module == null)) {
+      module=SConceptOperations.createNewNode(NameUtil.nodeFQName(SConceptOperations.findConceptDeclaration("jetbrains.mps.gwt.client.structure.GWTModule")),sample);
+      module.setId(id);
+      SPropertyOperations.set(module,"name",pi.baseName(modres));
+      SModelOperations.addRootNode(model,module);
+    }
+    ListSequence.fromList(modlst).addElement(MultiTuple.<String,String,SNode>from(pkg,modres,module));
+  }
+  final StubModelDescriptors descs=new StubModelDescriptors(SModelStereotype.getStubStereotypeForId("gwt"),GWTModuleStubs.this,location);
+  GWTModuleReader reader=new GWTModuleReader(new GWTModuleReader.Resolver(){
+    public SModelReference stubModelReference(    String pk){
+      return descs.javaStubRef(pk);
+    }
+  }
+,new GWTModuleReader.Resolver(){
+    public SModelReference stubModelReference(    String pk){
+      return descs.smodelRefWithId(pk);
+    }
+  }
+);
+  for (  Tuples._3<String,String,SNode> modpair : ListSequence.fromList(modlst)) {
+    InputStream is=null;
+    try {
+      is=pi.openResource(modpair._0(),modpair._1());
+      reader.read(modpair._2(),new SAXBuilder().build(is));
+    }
+ catch (    IOException e) {
+      e.printStackTrace();
+    }
+catch (    JDOMException e) {
+      e.printStackTrace();
+    }
+catch (    GWTModuleFormatException e) {
+      e.printStackTrace();
+    }
+    if (is != null) {
+      try {
+        is.close();
+      }
+ catch (      IOException e) {
+      }
+    }
+  }
+  SNodeOperations.deleteNode(sample);
+}

@@ -1,0 +1,45 @@
+{
+  List<INodeSubstituteAction> result=ListSequence.fromList(new ArrayList<INodeSubstituteAction>());
+{
+    SNode conceptToAdd=SConceptOperations.findConceptDeclaration("jetbrains.mps.platform.conf.structure.Separator");
+    List<INodeSubstituteAction> defaultActions=ChildSubstituteActionsHelper.createDefaultActions(conceptToAdd,_context.getParentNode(),_context.getCurrentTargetNode(),_context.getChildSetter(),operationContext);
+    ListSequence.fromList(result).addSequence(ListSequence.fromList(defaultActions));
+  }
+{
+    SNode outputConcept=SConceptOperations.findConceptDeclaration("jetbrains.mps.platform.conf.structure.ActionReference");
+    SNode childConcept=(SNode)_context.getChildConcept();
+    if (SConceptOperations.isSuperConceptOf(childConcept,NameUtil.nodeFQName(outputConcept))) {
+      Calculable calc=new Calculable(){
+        public Object calculate(){
+          return ListSequence.fromList(SModelOperations.getNodesIncludingImported(_context.getModel(),operationContext.getScope(),"jetbrains.mps.platform.conf.structure.AbstractAction")).where(new IWhereFilter<SNode>(){
+            public boolean accept(            SNode aa){
+              return SPropertyOperations.getString(aa,"id") != null;
+            }
+          }
+).toListSequence();
+        }
+      }
+;
+      Iterable<SNode> queryResult=(Iterable)calc.calculate();
+      if (queryResult != null) {
+        for (        final SNode item : queryResult) {
+          ListSequence.fromList(result).addElement(new DefaultChildNodeSubstituteAction(outputConcept,item,_context.getParentNode(),_context.getCurrentTargetNode(),_context.getChildSetter(),operationContext.getScope()){
+            public SNode createChildNode(            Object parameterObject,            SModel model,            String pattern){
+              SNode ar=SConceptOperations.createNewNode("jetbrains.mps.platform.conf.structure.ActionReference",null);
+              SLinkOperations.setTarget(ar,"action",(item),false);
+              return ar;
+            }
+            public String getMatchingText(            String pattern){
+              return SConceptPropertyOperations.getString((item),"alias") + " " + SPropertyOperations.getString((item),"id");
+            }
+            public String getVisibleMatchingText(            String pattern){
+              return this.getMatchingText(pattern);
+            }
+          }
+);
+        }
+      }
+    }
+  }
+  return result;
+}

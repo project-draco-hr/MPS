@@ -1,0 +1,29 @@
+{
+  if (refreshFiles) {
+    FileSystem.getInstance().refresh(dir);
+  }
+  String dirName=dir.getName();
+  if (FileTypeManager.getInstance().isFileIgnored(dirName))   return;
+  List<IFile> files=dir.list();
+  if (files == null) {
+    return;
+  }
+  for (  IFile file : files) {
+    if (hasModuleExtension(file.getName())) {
+      T descriptor=reader.read(file,excludes);
+      if (descriptor != null) {
+        result.add(descriptor);
+      }
+    }
+  }
+  for (  IFile childDir : files) {
+    if (FileTypeManager.getInstance().isFileIgnored(childDir.getName()))     continue;
+    if (hasModuleExtension(childDir.getName()))     continue;
+    if (excludes.contains(childDir))     continue;
+    if (childDir.getName().endsWith(MPSExtentions.MPS_ARCH)) {
+      IFile dirInJar=FileSystem.getInstance().getFileByPath(childDir.getAbsolutePath() + "!/" + AbstractModule.MODULE_DIR);
+      readModuleDescriptors(dirInJar,excludes,result,refreshFiles,reader);
+    }
+    readModuleDescriptors(childDir,excludes,result,refreshFiles,reader);
+  }
+}
