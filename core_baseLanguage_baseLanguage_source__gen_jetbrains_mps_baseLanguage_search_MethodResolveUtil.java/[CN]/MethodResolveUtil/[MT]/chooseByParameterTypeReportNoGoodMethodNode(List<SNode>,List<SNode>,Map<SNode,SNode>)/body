@@ -1,0 +1,35 @@
+{
+  Map<SNode,SNode> nodesAndTypes=new HashMap<SNode,SNode>();
+  int i=1;
+  Boolean good=true;
+  for (boolean mostSpecific=false; i <= 2; mostSpecific=!(mostSpecific), i++) {
+    int indexOfArg=0;
+    for (    SNode actualArg : actualArgs) {
+      final SNode term=actualArg;
+      SNode typeOfArg;
+      if (nodesAndTypes.containsKey(term)) {
+        typeOfArg=nodesAndTypes.get(term);
+      }
+ else {
+        typeOfArg=TypeContextManager.getInstance().runResolveAction(new Computable<SNode>(){
+          public SNode compute(){
+            return TypeChecker.getInstance().getTypeOf(term);
+          }
+        }
+);
+        nodesAndTypes.put(term,typeOfArg);
+      }
+      List<SNode> candidates1=MethodResolveUtil.selectByParameterTypeNode(typeOfArg,indexOfArg,candidates,typeByTypeVar,mostSpecific);
+      if (candidates1.isEmpty()) {
+        good=false;
+        break;
+      }
+      if (candidates1.size() == 1) {
+        return new Pair<SNode,Boolean>(candidates1.get(0),good);
+      }
+      candidates=candidates1;
+      indexOfArg++;
+    }
+  }
+  return new Pair<SNode,Boolean>(ListSequence.fromList(candidates).first(),good);
+}

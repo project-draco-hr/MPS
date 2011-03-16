@@ -1,0 +1,40 @@
+{
+  int minParmCountDiff=Integer.MAX_VALUE;
+  int[] parmCountDiffs=new int[ListSequence.fromList(methods).count()];
+  boolean[] varargs=new boolean[ListSequence.fromList(methods).count()];
+  int index=0;
+  for (  SNode method : methods) {
+    int parmCountDiff;
+    int count=ListSequence.fromList(SLinkOperations.getTargets(method,"parameter",true)).count();
+    int actualArgsCount=ListSequence.fromList(actualArgs).count();
+    boolean vararg=false;
+    if (count > 0 && SNodeOperations.isInstanceOf(SLinkOperations.getTarget(ListSequence.fromList(SLinkOperations.getTargets(method,"parameter",true)).last(),"type",true),"jetbrains.mps.baseLanguage.structure.VariableArityType")) {
+      vararg=true;
+      parmCountDiff=Math.max(0,(count - 1) - actualArgsCount);
+    }
+ else {
+      parmCountDiff=Math.abs(count - actualArgsCount);
+    }
+    varargs[index]=vararg;
+    parmCountDiffs[index++]=parmCountDiff;
+    minParmCountDiff=Math.min(minParmCountDiff,parmCountDiff);
+  }
+  boolean good=true;
+  List<SNode> result=new ArrayList<SNode>();
+  for (int i=0; i < parmCountDiffs.length; i++) {
+    if (minParmCountDiff == parmCountDiffs[i]) {
+      SNode method=ListSequence.fromList(methods).getElement(i);
+      if (varargs[i]) {
+        ListSequence.fromList(result).addElement(method);
+      }
+ else {
+        ListSequence.fromList(result).insertElement(0,method);
+      }
+      if (minParmCountDiff > 0) {
+        good=false;
+        break;
+      }
+    }
+  }
+  return new Pair<List<SNode>,Boolean>(result,good);
+}
