@@ -1,0 +1,61 @@
+{
+  String oldText=myTextLine.getText();
+  int caretPosition=myTextLine.getCaretPosition();
+  if (myActionType == CellActionType.BACKSPACE) {
+    if (myTextLine.hasNonTrivialSelection()) {
+      deleteSelection();
+      deleteIfPossible();
+      return true;
+    }
+    if (caretPosition > 0) {
+      String newText=oldText.substring(0,caretPosition - 1) + oldText.substring(caretPosition);
+      if (!myAllowErrors && !isValidText(newText)) {
+        return false;
+      }
+      changeText(newText);
+      if (!isCaretPositionAllowed(caretPosition - 1))       return false;
+      setCaretPosition(caretPosition - 1);
+      ensureCaretVisible();
+      deleteIfPossible();
+      return true;
+    }
+ else {
+      if (myAllowErrors && canDeleteFrom(getPrevLeaf())) {
+        EditorCell_Label label=(EditorCell_Label)getPrevLeaf();
+        getEditorContext().getNodeEditorComponent().changeSelection(label);
+        label.end();
+        label.executeTextAction(myActionType,true);
+        return true;
+      }
+      return false;
+    }
+  }
+ else   if (myActionType == CellActionType.DELETE) {
+    if (myTextLine.hasNonTrivialSelection()) {
+      deleteSelection();
+      deleteIfPossible();
+      return true;
+    }
+ else     if (caretPosition < oldText.length()) {
+      String newText=oldText.substring(0,caretPosition) + oldText.substring(caretPosition + 1);
+      if (!myAllowErrors && !isValidText(newText)) {
+        return false;
+      }
+      changeText(newText);
+      ensureCaretVisible();
+      deleteIfPossible();
+      return true;
+    }
+ else {
+      if (myAllowErrors && canDeleteFrom(getNextLeaf())) {
+        EditorCell_Label label=(EditorCell_Label)getNextLeaf();
+        getEditorContext().getNodeEditorComponent().changeSelection(label);
+        label.home();
+        label.executeTextAction(myActionType,true);
+        return true;
+      }
+      return false;
+    }
+  }
+  return false;
+}
