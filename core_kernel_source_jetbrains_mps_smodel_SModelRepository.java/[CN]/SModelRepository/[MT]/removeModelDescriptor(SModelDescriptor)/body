@@ -1,14 +1,18 @@
 {
-synchronized (myModelsLock) {
-    fireBeforeModelRemoved(md);
-    myModelsWithOwners.remove(md);
+  ModelAccess.assertLegalWrite();
+  fireBeforeModelRemoved(md);
+  myModelsToOwners.clearFirst(md);
+  myModelDescriptors.remove(md);
+  if (md instanceof EditableSModelDescriptor) {
+    boolean result=removeModelFromFileCache(((EditableSModelDescriptor)md));
+    LOG.assertLog(result,"model " + md + " do not have a path in file cache");
+  }
+  if (md.getSModelReference().getSModelId() != null) {
     if (md.getSModelReference().getSModelId() != null) {
       myIdToModelDescriptorMap.remove(md.getSModelReference().getSModelId());
     }
-    if (md instanceof EditableSModelDescriptor) {
-      boolean result=removeModelFromFileCache(((EditableSModelDescriptor)md));
-      LOG.assertLog(result,"model " + md + " do not have a path in file cache");
-    }
+    myFqNameToModelDescriptorMap.remove(md.getSModelReference().getSModelFqName());
+    myModelsWithNoOwners.remove(md);
     removeListeners(md);
     fireModelRemoved(md);
     md.dispose();

@@ -1,22 +1,21 @@
 {
+  SModelReference modelReference=modelDescriptor.getSModelReference();
+  SModelDescriptor registeredModel=getModelDescriptor(modelReference);
+  LOG.assertLog(registeredModel == null || registeredModel == modelDescriptor,"Another model \"" + modelReference + "\" is already registered!");
+  SModelDescriptor modelDescByName=getModelDescriptor(modelReference.getSModelFqName());
 synchronized (myModelsLock) {
-    List<ModelOwner> owners=myModelsWithOwners.get(modelDescriptor);
-    if (owners != null && owners.contains(owner))     return;
-    SModelReference modelReference=modelDescriptor.getSModelReference();
-    SModelDescriptor registeredModel=getModelDescriptor(modelReference);
-    LOG.assertLog(registeredModel == null || registeredModel == modelDescriptor,"Another model \"" + modelReference + "\" is already registered for "+ owner);
-    LOG.assertLog(owners == null || !owners.contains(owner),"Another model \"" + modelReference + "\" is already registered for "+ owner);
-    if (owners == null) {
-      owners=new ArrayList<ModelOwner>(1);
-      myModelsWithOwners.put(modelDescriptor,owners);
-    }
-    owners.add(owner);
+    Set<ModelOwner> owners=myModelsToOwners.getByFirst(modelDescriptor);
+    LOG.assertLog(owners == null || !owners.contains(owner),"Another model \"" + modelReference + "\" is already registered!");
+    myModelsToOwners.addLink(modelDescriptor,owner);
     if (modelReference.getSModelId() != null) {
       myIdToModelDescriptorMap.put(modelReference.getSModelId(),modelDescriptor);
     }
+    myFqNameToModelDescriptorMap.put(modelReference.getSModelFqName(),modelDescriptor);
+    myModelDescriptors.add(modelDescriptor);
     if (modelDescriptor instanceof EditableSModelDescriptor) {
       addModelToFileCache(((EditableSModelDescriptor)modelDescriptor));
     }
+    myModelsWithNoOwners.remove(modelDescriptor);
     addListeners(modelDescriptor);
   }
   fireModelAdded(modelDescriptor);
