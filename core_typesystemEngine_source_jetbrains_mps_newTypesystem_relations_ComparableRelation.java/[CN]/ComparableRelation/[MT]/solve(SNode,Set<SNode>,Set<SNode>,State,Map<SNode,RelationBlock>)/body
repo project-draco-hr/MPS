@@ -1,15 +1,29 @@
 {
-  SNode result=null;
-  EquationInfo info=null;
-  if (!leftTypes.isEmpty()) {
-    result=leftTypes.iterator().next();
+  EquationInfo info;
+  List<SNode> nodes=new LinkedList<SNode>();
+  nodes.addAll(leftTypes);
+  nodes.addAll(rightTypes);
+  if (nodes.isEmpty()) {
+    return false;
   }
- else   if (!rightTypes.isEmpty()) {
-    result=rightTypes.iterator().next();
+  SubTypingManagerNew subTypingManager=(SubTypingManagerNew)state.getTypeCheckingContext().getTypeChecker().getSubtypingManager();
+  nodes=subTypingManager.eliminateSuperTypes(nodes);
+  List<SNode> types=new LinkedList<SNode>();
+  SNode result=null;
+  for (  SNode type : nodes) {
+    for (    SNode toCompare : types) {
+      if (!subTypingManager.isComparable(type,toCompare,true)) {
+        result=type;
+      }
+    }
+    types.add(type);
+  }
+  if (result == null) {
+    result=subTypingManager.createMeet(nodes);
   }
   if (result != null) {
     RelationBlock block=typesToBlocks.get(result);
-    info=(block != null) ? block.getEquationInfo() : typesToBlocks.get(rightTypes.iterator().next()).getEquationInfo();
+    info=(block != null) ? block.getEquationInfo() : typesToBlocks.get(nodes.iterator().next()).getEquationInfo();
     state.addEquation(node,result,info);
   }
   return result != null;

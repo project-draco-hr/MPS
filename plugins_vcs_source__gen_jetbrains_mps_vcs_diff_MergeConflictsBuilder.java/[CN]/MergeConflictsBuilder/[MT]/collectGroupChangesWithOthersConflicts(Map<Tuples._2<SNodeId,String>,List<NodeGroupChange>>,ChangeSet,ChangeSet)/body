@@ -1,0 +1,42 @@
+{
+  Map<SNodeId,DeleteRootChange> deleteRootChanges=arrangeDeleteRootChanges(thisChangeSet);
+  for (  ModelChange change : ListSequence.fromList(otherChangeSet.getModelChanges())) {
+    if (MapSequence.fromMap(myConflictingChanges).containsKey(change)) {
+      continue;
+    }
+    SNodeId nodeId=null;
+    if (change instanceof NodeChange) {
+      nodeId=((NodeChange)change).getAffectedNodeId();
+    }
+ else     if (change instanceof NodeGroupChange) {
+      nodeId=((NodeGroupChange)change).getParentNodeId();
+    }
+    if (nodeId == null) {
+      continue;
+    }
+    SNode node=myBaseModel.getNodeById(nodeId);
+    while (node != null) {
+      if (SNodeOperations.getParent(node) == null) {
+        DeleteRootChange conflicting=MapSequence.fromMap(deleteRootChanges).get(nodeId);
+        if (conflicting != null) {
+          addConflict(change,conflicting);
+        }
+      }
+ else {
+        Tuples._2<SNodeId,String> nodeRole=MultiTuple.<SNodeId,String>from(SNodeOperations.getParent(node).getSNodeId(),SNodeOperations.getContainingLinkRole(node));
+        final int index=SNodeOperations.getIndexInParent(node);
+        NodeGroupChange conflicting=ListSequence.fromList(MapSequence.fromMap(arrangedChanges).get(nodeRole)).findFirst(new IWhereFilter<NodeGroupChange>(){
+          public boolean accept(          NodeGroupChange ch){
+            return ch.getBegin() <= index && index < ch.getEnd();
+          }
+        }
+);
+        if (conflicting != null) {
+          addConflict(change,conflicting);
+          break;
+        }
+      }
+      node=SNodeOperations.getParent(node);
+    }
+  }
+}

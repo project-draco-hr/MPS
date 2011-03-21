@@ -1,0 +1,34 @@
+{
+  setupEnvironment();
+  Map<File,List<String>> mpsProjects=myWhatToDo.getMPSProjectFiles();
+  for (  File file : mpsProjects.keySet()) {
+    if (!(file.getName().endsWith(MPSExtentions.DOT_MPS_PROJECT))) {
+      continue;
+    }
+    MPSProject p;
+    try {
+      Class<?> cls=Class.forName("jetbrains.mps.TestMain");
+      Method meth=cls.getMethod("loadProject",File.class);
+      p=(MPSProject)meth.invoke(null,file);
+    }
+ catch (    Exception ex) {
+      throw new RuntimeException(ex);
+    }
+    info("Loaded project " + p);
+    executeTask(p,new MpsWorker.ObjectsToProcess(Collections.singleton(p),new HashSet<IModule>(),new HashSet<SModelDescriptor>()));
+    disposeProject(p);
+    dispose();
+  }
+  LinkedHashSet<IModule> modules=new LinkedHashSet<IModule>();
+  LinkedHashSet<SModelDescriptor> models=new LinkedHashSet<SModelDescriptor>();
+  collectFromModuleFiles(modules);
+  collectFromModelFiles(models);
+  MpsWorker.ObjectsToProcess go=new MpsWorker.ObjectsToProcess(Collections.EMPTY_SET,modules,models);
+  if (go.hasAnythingToGenerate()) {
+    MPSProject project=createDummyProject();
+    executeTask(project,go);
+  }
+  generatePerformanceReport();
+  dispose();
+  showStatistic();
+}

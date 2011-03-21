@@ -6,7 +6,6 @@ switch (0) {
 case 0:
         monitor.currentProgress().beginWork("Writing",Sequence.fromIterable(input).count() * 100,monitor.currentProgress().workLeft());
       for (      IResource resource : Sequence.fromIterable(input)) {
-        final FileProcessor fileProc=new FileProcessor();
         GResource gres=(GResource)resource;
         monitor.currentProgress().advanceWork("Writing",50,gres.status().getInputModel().getSModelReference().getSModelFqName().getLongName());
         if (!(gres.status().isOk())) {
@@ -14,7 +13,8 @@ case 0:
           return new IResult.FAILURE(_output_21gswx_a0a);
         }
         IFile targetDir=FileSystem.getInstance().getFileByPath(gres.module().getOutputFor(gres.model()));
-        JavaStreamHandler javaStreamHandler=new JavaStreamHandler(gres.model(),targetDir,fileProc);
+        FilesDelta delta=new FilesDelta(targetDir);
+        final JavaStreamHandler javaStreamHandler=new JavaStreamHandler(gres.model(),targetDir,delta);
         boolean ok;
         try {
           ok=new TextGenerator(javaStreamHandler,ModelGenerationStatusManager.getInstance().getCacheGenerator(),BLDependenciesCache.getInstance().getGenerator(),TraceInfoCache.getInstance().getGenerator(),GenerationDependenciesCache.getInstance().getGenerator()).handleOutput(pool.parameters(new ITarget.Name("checkParameters"),Generate_Facet.Target_fi61u2_a.Variables.class).operationContext(),gres.status());
@@ -39,12 +39,12 @@ case 0:
         }
         ModelAccess.instance().writeFilesInEDT(new Runnable(){
           public void run(){
-            fileProc.flushChanges();
+            javaStreamHandler.flush();
           }
         }
 );
         monitor.currentProgress().advanceWork("Writing",50);
-        _output_21gswx_a0a=Sequence.fromIterable(_output_21gswx_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(new TResource(gres.module()))));
+        _output_21gswx_a0a=Sequence.fromIterable(_output_21gswx_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(new TResource(gres.module(),delta))));
       }
     monitor.currentProgress().finishWork("Writing");
 default :

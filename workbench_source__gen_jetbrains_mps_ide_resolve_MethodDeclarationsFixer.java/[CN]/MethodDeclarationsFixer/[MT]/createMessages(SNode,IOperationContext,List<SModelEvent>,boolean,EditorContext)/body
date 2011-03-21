@@ -2,18 +2,13 @@
   if (DISABLED) {
     return new HashSet<EditorMessage>();
   }
-  if (rootNode.getModel().getModelDescriptor() == null) {
-    return new HashSet<EditorMessage>(0);
-  }
-  if (rootNode.getModel().isTransient()) {
-    return new HashSet<EditorMessage>(0);
-  }
-  if (rootNode.getModel().isDisposed()) {
+  SModel model=SNodeOperations.getModel(rootNode);
+  if (model.getModelDescriptor() == null || model.isTransient() || model.isDisposed()) {
     return new HashSet<EditorMessage>(0);
   }
   final Map<SNode,SNode> reResolvedTargets=new HashMap<SNode,SNode>();
   if (!(wasCheckedOnce)) {
-    for (    SNode methodCall : rootNode.getDescendants(new IsInstanceCondition(IMethodCall.concept))) {
+    for (    SNode methodCall : SNodeOperations.getDescendants(rootNode,"jetbrains.mps.baseLanguage.structure.IMethodCall",false,new String[]{})) {
       testAndFixMethodCall(methodCall,reResolvedTargets);
     }
   }
@@ -36,17 +31,16 @@ synchronized (myRecalculatedTypesLock) {
       public void visitReferenceEvent(      SModelReferenceEvent event){
         SReference reference=event.getReference();
         SNode sourceNode=reference.getSourceNode();
-        if (SNodeOperations.isInstanceOf(sourceNode,IMethodCall.concept) && IMethodCall.BASE_METHOD_DECLARATION.equals(reference.getRole())) {
-          methodCallDeclarationChanged(sourceNode,reResolvedTargets);
+        if (SNodeOperations.isInstanceOf(sourceNode,"jetbrains.mps.baseLanguage.structure.IMethodCall") && "baseMethodDeclaration".equals(reference.getRole())) {
+          methodCallDeclarationChanged(SNodeOperations.cast(sourceNode,"jetbrains.mps.baseLanguage.structure.IMethodCall"),reResolvedTargets);
         }
       }
       public void visitPropertyEvent(      SModelPropertyEvent event){
         SNode node=event.getNode();
-        if (SNodeOperations.isInstanceOf(node,BaseMethodDeclaration.concept)) {
-          if (BaseMethodDeclaration.NAME.equals(event.getPropertyName())) {
-            methodDeclarationNameChanged(node,reResolvedTargets);
-            methodDeclarationSignatureChanged(node,reResolvedTargets);
-          }
+        SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration");
+        if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration") && "name".equals(event.getPropertyName())) {
+          methodDeclarationNameChanged(node,reResolvedTargets);
+          methodDeclarationSignatureChanged(node,reResolvedTargets);
         }
       }
     }
@@ -73,7 +67,7 @@ synchronized (myRecalculatedTypesLock) {
               for (              SNode methodCall : reResolvedTargets.keySet()) {
                 SNode referent=reResolvedTargets.get(methodCall);
                 if (referent != null && !(referent.shouldHaveBeenDisposed())) {
-                  methodCall.setReferent(IMethodCall.BASE_METHOD_DECLARATION,referent);
+                  SLinkOperations.setTarget(methodCall,"baseMethodDeclaration",referent,false);
                 }
               }
             }
