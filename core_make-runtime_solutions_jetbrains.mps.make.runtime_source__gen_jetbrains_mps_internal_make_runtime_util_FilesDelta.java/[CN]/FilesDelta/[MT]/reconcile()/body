@@ -1,7 +1,55 @@
 {
-  for (  IFile file : dir.list()) {
-    if (!(MapSequence.fromMap(files).containsKey(file)) || MapSequence.fromMap(files).get(file) == IDelta.Status.DELETED) {
-      file.delete();
+  String[] pathsToKeep=MapSequence.fromMap(files).where(new IWhereFilter<IMapping<IFile,IDelta.Status>>(){
+    public boolean accept(    IMapping<IFile,IDelta.Status> f){
+      return f.value() != IDelta.Status.DELETED;
     }
+  }
+).<String>select(new ISelector<IMapping<IFile,IDelta.Status>,String>(){
+    public String select(    IMapping<IFile,IDelta.Status> f){
+      return urlToPath(f.key().getAbsolutePath());
+    }
+  }
+).sort(new ISelector<String,Comparable<?>>(){
+    public Comparable<?> select(    String p){
+      return p;
+    }
+  }
+,true).toListSequence().toGenericArray(String.class);
+  List<IFile> toDelete=ListSequence.fromList(new ArrayList<IFile>());
+  Queue<IFile> dirs=QueueSequence.fromQueueAndArray(new LinkedList<IFile>(),rootDir);
+  while (QueueSequence.fromQueue(dirs).isNotEmpty()) {
+    IFile dir=QueueSequence.fromQueue(dirs).removeFirstElement();
+    for (    Tuples._2<IFile,String> fp : Sequence.fromIterable(((Iterable<IFile>)dir.list())).<Tuples._2<IFile,String>>select(new ISelector<IFile,Tuples._2<IFile,String>>(){
+      public Tuples._2<IFile,String> select(      IFile f){
+        return MultiTuple.<IFile,String>from(f,urlToPath(f.getAbsolutePath()));
+      }
+    }
+).sort(new ISelector<Tuples._2<IFile,String>,Comparable<?>>(){
+      public Comparable<?> select(      Tuples._2<IFile,String> t){
+        return t._1();
+      }
+    }
+,true)) {
+      int idx=Arrays.binarySearch(pathsToKeep,fp._1());
+      if (fp._0().isDirectory()) {
+        idx=(idx < 0 ? 1 - idx : idx);
+        if (idx >= pathsToKeep.length || !(pathsToKeep[idx].startsWith(fp._1()))) {
+          ListSequence.fromList(toDelete).addElement(fp._0());
+          if (idx >= pathsToKeep.length) {
+            break;
+          }
+        }
+ else         if (idx < pathsToKeep.length) {
+          QueueSequence.fromQueue(dirs).addLastElement(dir);
+        }
+      }
+ else       if (idx < 0) {
+        ListSequence.fromList(toDelete).addElement(fp._0());
+      }
+    }
+  }
+  for (  IFile td : toDelete) {
+    System.out.println("Reconciled: deleting " + td);
+    td.delete();
   }
 }
