@@ -1,2 +1,40 @@
 {
+  boolean result=TestMain.testOnProjectCopy(sourceZip,tempDir,TEST_PERSISTENCE_PROJECT,new ProjectRunnable(){
+    public boolean execute(    final MPSProject project){
+      final File tempFile=new File(tempDir,"testModel");
+      final IFile file=FileSystem.getInstance().getFileByPath(tempFile.getAbsolutePath());
+      final boolean success[]={true};
+      ModelAccess.instance().runWriteInEDT(new Runnable(){
+        public void run(){
+          try {
+            EditableSModelDescriptor testModel=(EditableSModelDescriptor)TestMain.getModel(project,TEST_MODEL);
+            assertTrue(testModel.getPersistenceVersion() == START_PERSISTENCE_TEST_VERSION);
+            SModel model=testModel.getSModel();
+            for (int i=START_PERSISTENCE_TEST_VERSION; i <= PersistenceSettings.MAX_VERSION; ++i) {
+              try {
+                filter.start();
+                ModelPersistence.saveModel(model,file,false,i);
+              }
+  finally {
+                filter.stop();
+              }
+              ModelLoadResult result=ModelPersistence.readModel(i,file,ModelLoadingState.FULLY_LOADED);
+              assertTrue(result.getState() == ModelLoadingState.FULLY_LOADED);
+              ModelAssert.assertDeepModelEquals(model,result.getModel());
+              result.getModel().dispose();
+            }
+          }
+ catch (          AssertionFailedError e) {
+            e.printStackTrace();
+            success[0]=false;
+          }
+        }
+      }
+);
+      ModelAccess.instance().flushEventQueue();
+      return success[0];
+    }
+  }
+);
+  assertTrue(result);
 }

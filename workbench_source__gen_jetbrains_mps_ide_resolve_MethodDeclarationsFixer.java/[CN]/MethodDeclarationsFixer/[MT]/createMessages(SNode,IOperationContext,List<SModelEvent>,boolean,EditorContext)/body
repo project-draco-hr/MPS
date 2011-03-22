@@ -1,0 +1,83 @@
+{
+  if (DISABLED) {
+    return new HashSet<EditorMessage>();
+  }
+  SModel model=SNodeOperations.getModel(rootNode);
+  if (model.getModelDescriptor() == null || model.isTransient() || model.isDisposed()) {
+    return new HashSet<EditorMessage>(0);
+  }
+  final Map<SNode,SNode> reResolvedTargets=new HashMap<SNode,SNode>();
+  if (!(wasCheckedOnce)) {
+    for (    SNode methodCall : SNodeOperations.getDescendants(rootNode,"jetbrains.mps.baseLanguage.structure.IMethodCall",false,new String[]{})) {
+      testAndFixMethodCall(methodCall,reResolvedTargets);
+    }
+  }
+ else {
+    Set<SNode> expressionsWithChangedTypes;
+synchronized (myRecalculatedTypesLock) {
+      expressionsWithChangedTypes=new HashSet<SNode>(myCurrentExpressionsWithChangedTypes);
+      myCurrentExpressionsWithChangedTypes.clear();
+    }
+    SModelEventVisitor visitor=new SModelEventVisitorAdapter(){
+      public void visitChildEvent(      SModelChildEvent event){
+        SNode child=event.getChild();
+        if (event.isAdded()) {
+          nodeAdded(child,reResolvedTargets);
+        }
+ else {
+          nodeRemoved(child,event.getParent(),reResolvedTargets);
+        }
+      }
+      public void visitReferenceEvent(      SModelReferenceEvent event){
+        SReference reference=event.getReference();
+        SNode sourceNode=reference.getSourceNode();
+        if (SNodeOperations.isInstanceOf(sourceNode,"jetbrains.mps.baseLanguage.structure.IMethodCall") && "baseMethodDeclaration".equals(reference.getRole())) {
+          methodCallDeclarationChanged(SNodeOperations.cast(sourceNode,"jetbrains.mps.baseLanguage.structure.IMethodCall"),reResolvedTargets);
+        }
+      }
+      public void visitPropertyEvent(      SModelPropertyEvent event){
+        SNode node=event.getNode();
+        SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration");
+        if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration") && "name".equals(event.getPropertyName())) {
+          methodDeclarationNameChanged(node,reResolvedTargets);
+          methodDeclarationSignatureChanged(node,reResolvedTargets);
+        }
+      }
+    }
+;
+    for (    SModelEvent event : events) {
+      if (event.getAffectedRoot() != rootNode) {
+        continue;
+      }
+      event.accept(visitor);
+    }
+    for (    SNode expressionWithChangedType : expressionsWithChangedTypes) {
+      expressionTypeChanged(expressionWithChangedType,reResolvedTargets);
+    }
+  }
+  ThreadUtils.runInUIThreadNoWait(new Runnable(){
+    public void run(){
+      if (reResolvedTargets.isEmpty()) {
+        return;
+      }
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          CommandProcessor.getInstance().runUndoTransparentAction(new Runnable(){
+            public void run(){
+              for (              SNode methodCall : reResolvedTargets.keySet()) {
+                SNode referent=reResolvedTargets.get(methodCall);
+                if (referent != null && !(referent.shouldHaveBeenDisposed())) {
+                  SLinkOperations.setTarget(methodCall,"baseMethodDeclaration",referent,false);
+                }
+              }
+            }
+          }
+);
+        }
+      }
+);
+    }
+  }
+);
+  return new HashSet<EditorMessage>();
+}

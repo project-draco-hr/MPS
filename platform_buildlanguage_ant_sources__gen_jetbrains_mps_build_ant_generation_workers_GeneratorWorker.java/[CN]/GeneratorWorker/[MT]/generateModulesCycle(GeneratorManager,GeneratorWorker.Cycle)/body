@@ -1,0 +1,26 @@
+{
+  ModelAccess.instance().runWriteAction(new Runnable(){
+    public void run(){
+      info("Start " + cycle);
+      cycle.generate(gm,new JavaGenerationHandler(){
+        @Override public long estimateCompilationMillis(        List<Pair<IModule,List<SModelDescriptor>>> input){
+          if (requiresCompilationAfterGeneration()) {
+            return super.estimateCompilationMillis(input);
+          }
+          return ModelsProgressUtil.estimateReloadAllTimeMillis();
+        }
+        @Override protected boolean compileModuleInMPS(        IModule module,        ITaskProgressHelper progressHelper) throws IOException, GenerationCanceledException {
+          return !(requiresCompilationAfterGeneration()) || super.compileModuleInMPS(module,progressHelper);
+        }
+        private boolean requiresCompilationAfterGeneration(){
+          return Boolean.parseBoolean(myWhatToDo.getProperty(GenerateTask.COMPILE));
+        }
+      }
+,myMessageHandler);
+      info("Reloading classes...");
+      ClassLoaderManager.getInstance().reloadAll(new EmptyProgressIndicator());
+      info("Finished " + cycle);
+    }
+  }
+);
+}

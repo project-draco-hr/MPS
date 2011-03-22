@@ -1,19 +1,19 @@
 {
-  boolean insertion=myContextMethod != null && myContextMethod.getParent() == myBehavior;
+  boolean insertion=(myContextMethod != null) && SNodeOperations.getParent(myContextMethod) == myBehavior;
   List<StratergyAddMethodDialog.ContainerStrategy.MethodAddition> methods=new ArrayList<StratergyAddMethodDialog.ContainerStrategy.MethodAddition>();
   for (  SNode methodNode : baseMethods) {
-    SNode behaviorNode=myBehavior.getNode();
-    ConceptMethodDeclaration method=(ConceptMethodDeclaration)ResolveUtil.processMethodToImplement(behaviorNode,methodNode).getAdapter();
-    methods.add(new StratergyAddMethodDialog.ContainerStrategy.MethodAddition(((BaseMethodDeclaration)methodNode.getAdapter()),method));
-    method.setIsAbstract(false);
-    method.setBody(StatementList.newInstance(myBehavior.getModel()));
-    method.setOverriddenMethod((ConceptMethodDeclaration)methodNode.getAdapter());
+    SNode behaviorNode=myBehavior;
+    SNode method=ResolveUtil.processMethodToImplement(behaviorNode,methodNode);
+    methods.add(new StratergyAddMethodDialog.ContainerStrategy.MethodAddition(SNodeOperations.cast(methodNode,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration"),method));
+    SPropertyOperations.set(method,"isAbstract","" + false);
+    SLinkOperations.setTarget(method,"body",SNodeFactoryOperations.createNewNode(SNodeOperations.getModel(myBehavior),"jetbrains.mps.baseLanguage.structure.StatementList",null),true);
+    SLinkOperations.setTarget(method,"overriddenMethod",SNodeOperations.cast(methodNode,"jetbrains.mps.lang.behavior.structure.ConceptMethodDeclaration"),false);
     if (insertion) {
-      myBehavior.insertMethod(myContextMethod,method);
+      ListSequence.fromList(SLinkOperations.getTargets(myBehavior,"method",true)).insertElement(ListSequence.fromList(SLinkOperations.getTargets(myBehavior,"method",true)).indexOf(myContextMethod) + 1,method);
     }
  else {
-      myBehavior.addMethod(method);
+      ListSequence.fromList(SLinkOperations.getTargets(myBehavior,"method",true)).addElement(method);
     }
   }
-  return (List<StratergyAddMethodDialog.ContainerStrategy.MethodAddition>)methods;
+  return methods;
 }
