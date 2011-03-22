@@ -1,10 +1,14 @@
 {
   ModelAccess.assertLegalWrite();
+  List<EditableSModelDescriptor> modelsToRefresh;
 synchronized (myModelsLock) {
-    for (    SModelDescriptor md : myModelsWithOwners.keySet()) {
-      if (!(md instanceof EditableSModelDescriptor))       continue;
-      EditableSModelDescriptor emd=((EditableSModelDescriptor)md);
-      if (!emd.isChanged())       continue;
+    modelsToRefresh=getModelsToSave();
+  }
+  for (  EditableSModelDescriptor emd : modelsToRefresh) {
+    FileSystem.getInstance().refresh(emd.getModelFile());
+  }
+synchronized (myModelsLock) {
+    for (    EditableSModelDescriptor emd : getModelsToSave()) {
       try {
         emd.save();
         emd.setChanged(false);
