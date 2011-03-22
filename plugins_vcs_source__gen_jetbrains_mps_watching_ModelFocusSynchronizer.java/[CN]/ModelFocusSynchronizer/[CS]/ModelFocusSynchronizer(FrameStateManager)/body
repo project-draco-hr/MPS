@@ -1,0 +1,37 @@
+{
+  frameStateManager.addListener(new FrameStateListener(){
+    public void onFrameDeactivated(){
+    }
+    public void onFrameActivated(){
+      ModelAccess.instance().runReadInEDT(new Runnable(){
+        public void run(){
+          Set<SModel> models=SetSequence.fromSet(new HashSet<SModel>());
+          for (          Project project : ProjectManager.getInstance().getOpenProjects()) {
+            for (            VirtualFile vf : FileEditorManager.getInstance(project).getSelectedFiles()) {
+              if (vf instanceof MPSNodeVirtualFile) {
+                MPSNodeVirtualFile nvf=((MPSNodeVirtualFile)vf);
+                SNode node=MPSEditorUtil.getCurrentEditedNode(project,nvf);
+                if (node == null) {
+                  node=nvf.getNode();
+                }
+                if (node != null) {
+                  SetSequence.fromSet(models).addElement(node.getModel());
+                }
+              }
+            }
+          }
+          RefreshSession session=RefreshQueue.getInstance().createSession(true,false,null);
+          for (          SModel model : SetSequence.fromSet(models)) {
+            SModelDescriptor descriptor=model.getModelDescriptor();
+            if (descriptor instanceof EditableSModelDescriptor) {
+              session.addFile(VirtualFileUtils.getVirtualFile(((EditableSModelDescriptor)descriptor).getModelFile()));
+            }
+          }
+          session.launch();
+        }
+      }
+);
+    }
+  }
+);
+}
