@@ -14,8 +14,16 @@
 );
         List<EditableSModelDescriptor> list=new ArrayList<EditableSModelDescriptor>(1);
         list.add(testModel);
-        if (version[0] > START_PERSISTENCE_TEST_VERSION)         new PersistenceUpdater().upgradePersistence(list,version[0]);
-        ModelAccess.instance().flushEventQueue();
+        if (version[0] > START_PERSISTENCE_TEST_VERSION) {
+          try {
+            filter.start();
+            new PersistenceUpdater().upgradePersistence(list,version[0]);
+            ModelAccess.instance().flushEventQueue();
+          }
+  finally {
+            filter.stop();
+          }
+        }
         assertTrue(testModel.getModelFile() != null);
         assertTrue(testModel.getPersistenceVersion() == version[0]);
         final ModelLoadResult resultFrom=ModelAccess.instance().runReadAction(new Computable<ModelLoadResult>(){
@@ -29,11 +37,11 @@
         try {
           filter.start();
           new PersistenceUpdater().upgradePersistence(list,version[1]);
+          ModelAccess.instance().flushEventQueue();
         }
   finally {
           filter.stop();
         }
-        ModelAccess.instance().flushEventQueue();
         assertTrue(testModel.getModelFile() != null);
         assertTrue(testModel.getPersistenceVersion() == version[1]);
         final ModelLoadResult resultTo=ModelAccess.instance().runReadAction(new Computable<ModelLoadResult>(){
