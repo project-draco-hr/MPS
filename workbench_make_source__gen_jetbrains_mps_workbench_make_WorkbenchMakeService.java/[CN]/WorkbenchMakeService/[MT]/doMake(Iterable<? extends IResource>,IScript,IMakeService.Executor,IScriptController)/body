@@ -3,8 +3,8 @@
   String scrName=((cleanMake ? "Rebuild" : "Make"));
   if (Sequence.fromIterable(inputRes).isEmpty()) {
     if (cleanMake) {
-      String msg=scrName + " aborted";
-      mh.handle(new Message(MessageKind.ERROR,msg + ": nothing to do."));
+      String msg=scrName + " aborted: nothing to do";
+      this.showError(mh,msg);
       this.displayInfo(msg);
       return new IResult.FAILURE(null);
     }
@@ -15,7 +15,7 @@
   }
   if (!(script.isValid())) {
     String msg=scrName + " failed";
-    mh.handle(new Message(MessageKind.ERROR,msg + ". Invalid script."));
+    showError(mh,msg + ". Invalid script.");
     this.displayInfo(msg);
     return new IResult.FAILURE(null);
   }
@@ -25,11 +25,11 @@
     }
   }
 );
-  final Tuples._2<IScript.Setup,IMonitors> scrParams=this.scriptParameters(scrName,setup);
+  final IScriptController ctl=this.completeController(scrName,mh,controller);
   final Wrappers._T<IResult> res=new Wrappers._T<IResult>();
   executor.doExecute(new Runnable(){
     public void run(){
-      res.value=script.execute(scrParams._0(),scrParams._1(),inputRes);
+      res.value=script.execute(ctl,inputRes);
     }
   }
 );
@@ -39,7 +39,7 @@
   }
  else   if (!(res.value.isSucessful())) {
     String msg=scrName + " failed";
-    mh.handle(new Message(MessageKind.ERROR,msg + ". See previous messages for details."));
+    showError(mh,msg + ". See previous messages for details.");
     this.displayInfo(msg);
   }
  else {
