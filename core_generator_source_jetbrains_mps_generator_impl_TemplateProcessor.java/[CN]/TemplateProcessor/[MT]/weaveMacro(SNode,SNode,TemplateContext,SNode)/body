@@ -1,0 +1,43 @@
+{
+  if (template == null) {
+    myGenerator.showErrorMessage(context.getInput(),macro,"couldn't evaluate weave macro: no template");
+    return;
+  }
+  List<SNode> templateFragments=GeneratorUtilEx.getTemplateFragments(template);
+  if (templateFragments.isEmpty()) {
+    myGenerator.showErrorMessage(context.getInput(),template,macro,"nothing to weave: no template fragments found in template");
+    return;
+  }
+  TemplateWeavingRuleInterpreted.checkTemplateFragmentsForWeaving(template,templateFragments,myGenerator);
+  TemplateProcessor templateProcessor=new TemplateProcessor(myGenerator,myReductionContext);
+  for (  SNode templateFragment : templateFragments) {
+    SNode templateFragmentNode=templateFragment.getParent();
+    SNode contextParentNode=null;
+    try {
+      contextParentNode=myReductionContext.getQueryExecutor().getContextNodeForTemplateFragment(templateFragmentNode,outputContextNode,context);
+    }
+ catch (    Exception e) {
+      myGenerator.getLogger().handleException(e);
+    }
+    if (contextParentNode != null) {
+      try {
+        List<SNode> outputNodesToWeave=templateProcessor.processTemplateNode(GeneratorUtilEx.getMappingName(templateFragment,null),templateFragmentNode,context);
+        String childRole=templateFragmentNode.getRole_();
+        TemplateExecutionEnvironment env=new TemplateExecutionEnvironmentImpl(myGenerator,myReductionContext,null,null);
+        for (        SNode outputNodeToWeave : outputNodesToWeave) {
+          env.weaveNode(contextParentNode,childRole,outputNodeToWeave,new SNodePointer(templateFragment),context.getInput());
+        }
+      }
+ catch (      DismissTopMappingRuleException e) {
+        myGenerator.showErrorMessage(context.getInput(),templateFragment,macro,"wrong template: dismission in weave macro is not supported");
+      }
+catch (      TemplateProcessingFailureException e) {
+        myGenerator.showErrorMessage(context.getInput(),templateFragment,macro,"error processing template fragment");
+        myGenerator.getLogger().info(contextParentNode," -- was output context node:");
+      }
+    }
+ else {
+      myGenerator.showErrorMessage(context.getInput(),templateFragment,macro,"couldn't define 'context' for template fragment");
+    }
+  }
+}

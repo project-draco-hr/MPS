@@ -59,6 +59,36 @@
     }
     return outputNodes;
   }
+ else   if (macroConceptFQName.equals(RuleUtil.concept_WeaveMacro)) {
+    List<SNode> _outputNodes=createOutputNodesForTemplateNode(mappingName,templateNode,templateContext.subContext(mappingName),nodeMacrosToSkip + 1);
+    if (_outputNodes != null && _outputNodes.size() > 0) {
+      if (_outputNodes.size() == 1) {
+        SNode contextNode=_outputNodes.get(0);
+        List<SNode> nodesToWeave=getNewInputNodes(macro,templateContext);
+        for (        SNode node : nodesToWeave) {
+          try {
+            generationTracer.pushInputNode(node);
+            generationTracer.pushRuleConsequence(new SNodePointer(macro));
+            SNode consequence=RuleUtil.getWeaveMacro_Consequence(macro);
+            if (consequence == null) {
+              myGenerator.showErrorMessage(templateContext.getInput(),macro,"couldn't evaluate weave macro: no consequence");
+              break;
+            }
+            SNode template=RuleUtil.getTemplateDeclarationReference_Template(consequence);
+            weaveMacro(template,contextNode,templateContext.subContext(null,node),macro);
+          }
+  finally {
+            generationTracer.closeInputNode(node);
+          }
+        }
+      }
+ else {
+        myGenerator.getLogger().error(templateContext.getInput(),"cannot apply $WEAVE$ to a list of nodes",GeneratorUtil.describe(macro,"template"),GeneratorUtil.describe(templateContext.getInput(),"input"));
+      }
+      outputNodes.addAll(_outputNodes);
+    }
+    return outputNodes;
+  }
  else   if (macroConceptFQName.equals(RuleUtil.concept_LabelMacro)) {
     List<SNode> _outputNodes=createOutputNodesForTemplateNode(mappingName,templateNode,templateContext.subContext(mappingName),nodeMacrosToSkip + 1);
     if (_outputNodes != null)     outputNodes.addAll(_outputNodes);
