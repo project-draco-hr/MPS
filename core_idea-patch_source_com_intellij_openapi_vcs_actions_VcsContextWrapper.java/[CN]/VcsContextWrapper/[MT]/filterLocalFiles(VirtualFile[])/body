@@ -1,0 +1,26 @@
+{
+  ArrayList<VirtualFile> result=new ArrayList<VirtualFile>();
+  for (  final VirtualFile virtualFile : fileArray) {
+    if (isLocal(virtualFile)) {
+      result.add(virtualFile);
+    }
+ else     if (virtualFile instanceof MPSNodeVirtualFile) {
+      return ModelAccess.instance().runReadAction(new Computable<VirtualFile[]>(){
+        public VirtualFile[] compute(){
+          SNode node=((MPSNodeVirtualFile)virtualFile).getNode();
+          if (node == null)           return null;
+          SModelDescriptor md=node.getModel().getModelDescriptor();
+          if (md == null)           return null;
+          if (!(md instanceof EditableSModelDescriptor))           return null;
+          IFile ifile=((EditableSModelDescriptor)md).getModelFile();
+          if (ifile == null || !ifile.exists())           return null;
+          VirtualFile vfile=VirtualFileUtils.getVirtualFile(ifile);
+          if (vfile == null)           return null;
+          return new VirtualFile[]{vfile};
+        }
+      }
+);
+    }
+  }
+  return VfsUtil.toVirtualFileArray(result);
+}
