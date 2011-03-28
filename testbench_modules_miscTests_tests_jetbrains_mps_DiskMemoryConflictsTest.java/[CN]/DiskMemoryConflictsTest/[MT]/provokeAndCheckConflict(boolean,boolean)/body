@@ -1,0 +1,43 @@
+{
+  setFieldNameInModel(FIELD_NAME_IN_MODEL);
+  setFieldNameInFile(FIELD_NAME_IN_FILE);
+  refreshVfs();
+  final boolean[] dialogWasInvoked=new boolean[1];
+  Messages.setTestDialog(new TestDialog(){
+    @Override public int show(    String message){
+      dialogWasInvoked[0]=true;
+      return memory ? 1 : 0;
+    }
+  }
+);
+  if (save) {
+    ModelAccess.instance().runCommandInEDT(new Runnable(){
+      @Override public void run(){
+        SModelRepository.getInstance().saveAll();
+      }
+    }
+,ourProject);
+  }
+ else {
+    ModelAccess.instance().runWriteInEDT(new Runnable(){
+      public void run(){
+        ourModelDescriptor.reloadFromDiskSafe();
+      }
+    }
+);
+  }
+  ModelAccess.instance().flushEventQueue();
+  try {
+    SwingUtilities.invokeAndWait(new Runnable(){
+      @Override public void run(){
+      }
+    }
+);
+  }
+ catch (  InterruptedException e) {
+  }
+catch (  InvocationTargetException e) {
+  }
+  Assert.assertTrue(dialogWasInvoked[0]);
+  checkSynchronizedState(memory ? FIELD_NAME_IN_MODEL : FIELD_NAME_IN_FILE);
+}

@@ -1,0 +1,37 @@
+{
+  final Ref<String> result=new Ref<String>();
+  final boolean[] finished={false};
+  ModelAccess.instance().runCommandInEDT(new Runnable(){
+    @Override public void run(){
+      try {
+        final SModelDescriptor modelDescriptor=ourModelDescriptor;
+        Assert.assertNotNull(modelDescriptor);
+        SNode node=modelDescriptor.getSModel().getNodeById("6010389230754495469");
+        Assert.assertNotNull(node);
+        if (nameToWrite == null) {
+          result.set(node.getProperty("name"));
+        }
+ else {
+          node.setProperty("name",nameToWrite);
+        }
+      }
+ catch (      Throwable ignored) {
+      }
+      finished[0]=true;
+synchronized (result) {
+        result.notifyAll();
+      }
+    }
+  }
+,ourProject);
+synchronized (result) {
+    while (!finished[0]) {
+      try {
+        result.wait();
+      }
+ catch (      InterruptedException e) {
+      }
+    }
+  }
+  return result.get();
+}
