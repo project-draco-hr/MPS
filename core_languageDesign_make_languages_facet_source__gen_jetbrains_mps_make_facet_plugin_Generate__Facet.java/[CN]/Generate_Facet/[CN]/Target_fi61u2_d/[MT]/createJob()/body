@@ -20,7 +20,17 @@ final Map<IModule,Iterable<SModelDescriptor>> retainedModels=MapSequence.fromMap
 Sequence.fromIterable(input).visitAll(new IVisitor<IResource>(){
 public void visit(IResource it){
 MResource mres=((MResource)it);
-MapSequence.fromMap(retainedModels).put(mres.module(),Sequence.fromIterable(((Iterable<SModelDescriptor>)mres.module().getEditableUserModels())).subtract(Sequence.fromIterable(mres.models())).toListSequence());
+IModule module=mres.module();
+Iterable<SModelDescriptor> modelsToRetain=((Iterable<SModelDescriptor>)module.getEditableUserModels());
+if (module instanceof Language) {
+  for (  Generator g : ((Language)module).getGenerators()) {
+    modelsToRetain=Sequence.fromIterable(modelsToRetain).concat(ListSequence.fromList(g.getEditableUserModels()));
+  }
+}
+ else if (module instanceof Generator) {
+  modelsToRetain=Sequence.fromIterable(modelsToRetain).concat(ListSequence.fromList(((Generator)module).getSourceLanguage().getEditableUserModels()));
+}
+MapSequence.fromMap(retainedModels).put(mres.module(),Sequence.fromIterable(modelsToRetain).subtract(Sequence.fromIterable(mres.models())).toListSequence());
 }
 }
 );
