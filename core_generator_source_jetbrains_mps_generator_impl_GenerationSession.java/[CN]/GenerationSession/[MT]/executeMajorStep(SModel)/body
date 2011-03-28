@@ -1,6 +1,7 @@
 {
   myMinorStep=-1;
-  if (myGenerationPlan.getMappingConfigurations(myMajorStep).isEmpty()) {
+  List<TemplateMappingConfiguration> mappingConfigurations=new ArrayList<TemplateMappingConfiguration>(myGenerationPlan.getMappingConfigurations(myMajorStep));
+  if (mappingConfigurations.isEmpty()) {
     if (inputModel.rootsCount() > 0) {
       myLogger.warning("skip model \"" + inputModel.getSModelFqName() + "\" : no generator available");
     }
@@ -11,7 +12,23 @@
   }
   mySessionContext=new GenerationSessionContext(myInvocationContext,myGenerationTracer,myTransientModelsModule,inputModel,myGenerationPlan,mySessionContext);
   myLogger.setOperationContext(mySessionContext);
-  RuleManager ruleManager=new RuleManager(myGenerationPlan,myMajorStep);
+  Iterator<TemplateMappingConfiguration> it=mappingConfigurations.iterator();
+  TemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,myProgressMonitor,myLogger,null,inputModel,null,myGenerationOptions,myDependenciesBuilder,ttrace);
+  while (it.hasNext()) {
+    TemplateMappingConfiguration c=it.next();
+    try {
+      if (!c.isApplicable(templateGenerator)) {
+        it.remove();
+      }
+    }
+ catch (    GenerationException e) {
+      throw (GenerationFailureException)e;
+    }
+  }
+  if (mappingConfigurations.isEmpty()) {
+    return inputModel;
+  }
+  RuleManager ruleManager=new RuleManager(myGenerationPlan,mappingConfigurations);
   SModel outputModel=executeMajorStepInternal(inputModel,ruleManager);
   if (myLogger.getErrorCount() > 0) {
     myLogger.warning("model \"" + inputModel.getSModelFqName() + "\" has been generated with errors");
