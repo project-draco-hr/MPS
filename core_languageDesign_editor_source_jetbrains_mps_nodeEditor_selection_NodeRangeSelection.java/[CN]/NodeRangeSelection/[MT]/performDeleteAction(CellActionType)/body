@@ -1,0 +1,33 @@
+{
+  final EditorContext editorContext=myEditorComponent.getEditorContext();
+  if (mySelectedCells.size() > 1) {
+    editorContext.executeCommand(new Runnable(){
+      public void run(){
+        new DeleteNodesHelper(getSelectedNodes(),editorContext.getOperationContext(),false).deleteNodes(false);
+      }
+    }
+);
+  }
+ else   if (mySelectedCells.size() == 1) {
+    EditorCell nodeCell=getFirstCell();
+    final EditorCellAction action=nodeCell.getAction(CellActionType.DELETE);
+    if (action == null)     return;
+    if (!ModelAccess.instance().runReadAction(new Computable<Boolean>(){
+      public Boolean compute(){
+        return action.canExecute(editorContext);
+      }
+    }
+))     return;
+    if (action.executeInCommand()) {
+      editorContext.executeCommand(new Runnable(){
+        public void run(){
+          action.execute(editorContext);
+        }
+      }
+);
+    }
+ else {
+      action.execute(editorContext);
+    }
+  }
+}
