@@ -1,3 +1,26 @@
 {
-  return null;
+  final Object element=parent.getValue();
+  if (!(element instanceof ConceptTreeElement))   return Collections.emptyList();
+  return ModelAccess.instance().runReadAction(new Computable<Collection<Group>>(){
+    public Collection<Group> compute(){
+      SNodePointer np=((ConceptTreeElement)element).getValue();
+      Collection<Group> result=new ArrayList<Group>();
+      for (      final EditorTabDescriptor tab : StructureUtil.getApplicableTabs(myProject,np.getNode())) {
+        List<SNode> aspectNodes=tab.getNodes(np.getNode());
+        if (aspectNodes.isEmpty())         continue;
+        Collection<TreeElement> childElements=new ArrayList<TreeElement>();
+        for (        TreeElement te : children) {
+          if (!(te instanceof AspectTreeElement))           continue;
+          AspectTreeElement ate=(AspectTreeElement)te;
+          if (!aspectNodes.contains(ate.myNode.getNode()))           continue;
+          childElements.add(ate);
+        }
+        if (!childElements.isEmpty()) {
+          result.add(new MyGroup(tab,childElements));
+        }
+      }
+      return result;
+    }
+  }
+);
 }
