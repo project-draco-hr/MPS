@@ -1,13 +1,26 @@
 {
   DataManager.getInstance().getDataContextFromFocus().doWhenDone(new Handler<DataContext>(){
-    public void run(    DataContext dataContext){
+    public void run(    final DataContext dataContext){
       Project p=MPSDataKeys.PROJECT.getData(dataContext);
       if (p == null)       return;
-      SModel model=myNode.getModel();
-      if (model == null)       return;
-      IModule module=model.getModelDescriptor().getModule();
+      IModule module=ModelAccess.instance().runReadAction(new Computable<IModule>(){
+        public IModule compute(){
+          SNode node=myNode.getNode();
+          if (node == null)           return null;
+          SModel model=node.getModel();
+          if (model == null)           return null;
+          return model.getModelDescriptor().getModule();
+        }
+      }
+);
+      SNode node=ModelAccess.instance().runReadAction(new Computable<SNode>(){
+        public SNode compute(){
+          return myNode.getNode();
+        }
+      }
+);
       if (module == null)       return;
-      new MPSEditorOpener(p).editNode(myNode,new ModuleContext(module,p));
+      new MPSEditorOpener(p).editNode(node,new ModuleContext(module,p));
     }
   }
 );
