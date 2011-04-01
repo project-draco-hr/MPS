@@ -13,12 +13,24 @@
     s.append(m);
   }
   info(s.toString());
-  final GeneratorManager gm=project.getProject().getComponent(GeneratorManager.class);
-  final GenerationListener generationListener=getGenerationListener();
-  gm.addGenerationListener(generationListener);
-  List<GeneratorWorker.Cycle> order=computeGenerationOrder(project,go);
-  for (  final GeneratorWorker.Cycle cycle : order) {
-    generateModulesCycle(gm,cycle);
+  final ProjectOperationContext ctx=ProjectOperationContext.get(project.getProject());
+  final Iterable<IResource> resources=collectResources(ctx,go);
+  IdeEventQueue.getInstance().flushQueue();
+  ThreadUtils.runInUIThreadAndWait(new Runnable(){
+    public void run(){
+    }
   }
-  gm.removeGenerationListener(generationListener);
+);
+  ThreadUtils.runInUIThreadAndWait(new Runnable(){
+    public void run(){
+      new BuildMakeService(ctx,myMessageHandler).make(resources);
+    }
+  }
+);
+  IdeEventQueue.getInstance().flushQueue();
+  ThreadUtils.runInUIThreadAndWait(new Runnable(){
+    public void run(){
+    }
+  }
+);
 }
