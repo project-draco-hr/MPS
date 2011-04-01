@@ -7,32 +7,46 @@
         }
         IModule module=MPSModuleRepository.getInstance().getModuleForModelFile(FileUtil.getCanonicalPath(virtualFile.getPath()));
         if (module != null) {
-          myChangedModules.add(module);
+          SetSequence.fromSet(myChangedModules).addElement(module);
         }
       }
-      for (      String path : myDeletedModels) {
-        IModule module=MPSModuleRepository.getInstance().getModuleForModelFile(path);
-        if (module != null) {
-          myChangedModules.add(module);
-        }
-      }
-      Set<SModelDescriptor> skip=new HashSet<SModelDescriptor>();
-      for (      SModelDescriptor modelDescriptor : myChangedModels) {
+      for (      SModelDescriptor modelDescriptor : myDeletedModels) {
         IModule module=modelDescriptor.getModule();
-        if (myChangedModules.contains(module)) {
-          ReloadSession.LOG.debug("Skip model " + modelDescriptor + " since we want to reload "+ module);
-          skip.add(modelDescriptor);
+        if (module != null) {
+          SetSequence.fromSet(myChangedModules).addElement(module);
+        }
+      }
+      Set<EditableSModelDescriptor> skip=SetSequence.fromSet(new HashSet<EditableSModelDescriptor>());
+      for (      EditableSModelDescriptor modelDescriptor : myChangedModels) {
+        IModule module=modelDescriptor.getModule();
+        if (SetSequence.fromSet(myChangedModules).contains(module)) {
+          if (log.isDebugEnabled()) {
+            log.debug("Skip model " + modelDescriptor + " since we want to reload "+ module);
+          }
+          SetSequence.fromSet(skip).addElement(modelDescriptor);
           break;
         }
       }
-      Set<Generator> generators=CollectionUtil.filter(Generator.class,myChangedModules);
-      myChangedModules.removeAll(generators);
-      for (      Generator gen : generators) {
-        ReloadSession.LOG.debug("Skip generator " + gen + " since we want to reload "+ gen.getSourceLanguage());
-        myChangedModules.add(gen.getSourceLanguage());
+      Iterable<Generator> generators=SetSequence.fromSet(myChangedModules).where(new IWhereFilter<IModule>(){
+        public boolean accept(        IModule m){
+          return m instanceof Generator;
+        }
       }
-      myChangedModules.removeAll(myDeletedModules);
-      myChangedModels.removeAll(skip);
+).<Generator>select(new ISelector<IModule,Generator>(){
+        public Generator select(        IModule m){
+          return (Generator)m;
+        }
+      }
+);
+      for (      Generator gen : generators) {
+        if (log.isDebugEnabled()) {
+          log.debug("Skip generator " + gen + " since we want to reload "+ gen.getSourceLanguage());
+        }
+        SetSequence.fromSet(myChangedModules).removeElement(gen);
+        SetSequence.fromSet(myChangedModules).addElement(gen.getSourceLanguage());
+      }
+      SetSequence.fromSet(myChangedModules).removeSequence(SetSequence.fromSet(myDeletedModules));
+      SetSequence.fromSet(myChangedModels).removeSequence(SetSequence.fromSet(skip));
     }
   }
 );
