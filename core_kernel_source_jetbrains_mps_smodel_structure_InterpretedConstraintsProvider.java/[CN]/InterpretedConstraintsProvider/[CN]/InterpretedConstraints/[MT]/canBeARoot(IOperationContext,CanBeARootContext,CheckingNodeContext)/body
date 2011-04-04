@@ -1,18 +1,24 @@
 {
-  SNode concept=SModelUtil.findConceptDeclaration(fqName,operationContext.getScope());
-  if (!(SNodeUtil.isInstanceOfConceptDeclaration(concept) && SNodeUtil.getConceptDeclaration_IsRootable(concept))) {
-    if (checkingNodeContext != null) {
-      checkingNodeContext.breakingNodePointer=new SNodePointer(concept);
+  if (!ModelAccess.instance().runReadAction(new Computable<Boolean>(){
+    @Override public Boolean compute(){
+      SNode concept=SModelUtil.findConceptDeclaration(fqName,operationContext.getScope());
+      if (!(SNodeUtil.isInstanceOfConceptDeclaration(concept) && SNodeUtil.getConceptDeclaration_IsRootable(concept))) {
+        if (checkingNodeContext != null) {
+          checkingNodeContext.breakingNodePointer=new SNodePointer(concept);
+        }
+        return false;
+      }
+ else {
+        return true;
+      }
     }
+  }
+)) {
     return false;
   }
   boolean result=invokeCanBeASomethingMethod(canBeARootMethod,operationContext,_context);
   if (checkingNodeContext != null && !result) {
-    SNode constraints=getConceptConstraints(canBeARootMethod);
-    if (constraints == null) {
-      throw new RuntimeException("Empty concept constraints");
-    }
-    checkingNodeContext.breakingNodePointer=new SNodePointer(SConstraintsUtil.getConceptConstraints_CanBeRoot(constraints));
+    checkingNodeContext.breakingNodePointer=getConceptConstraint(canBeARootMethod,operationContext,"canBeRoot");
   }
   return result;
 }
