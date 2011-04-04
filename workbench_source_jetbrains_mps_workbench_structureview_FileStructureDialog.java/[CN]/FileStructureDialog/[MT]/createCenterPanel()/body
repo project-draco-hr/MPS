@@ -1,0 +1,53 @@
+{
+  myCommanderPanel=new MyCommanderPanel(myProject);
+  myTreeStructure=new MyStructureTreeStructure();
+  List<FileStructureFilter> fileStructureFilters=new ArrayList<FileStructureFilter>();
+  if (myTreeActionsOwner != null) {
+    for (    Filter filter : myBaseTreeModel.getFilters()) {
+      if (filter instanceof FileStructureFilter) {
+        final FileStructureFilter fsFilter=(FileStructureFilter)filter;
+        myTreeActionsOwner.setFilterIncluded(fsFilter,true);
+        fileStructureFilters.add(fsFilter);
+      }
+    }
+  }
+  ProjectListBuilder projectListBuilder=new ProjectListBuilder(myProject,myCommanderPanel,myTreeStructure,null,false){
+    protected boolean nodeIsAcceptableForElement(    AbstractTreeNode node,    Object element){
+      return Comparing.equal(((StructureViewTreeElement)node.getValue()).getValue(),element);
+    }
+    protected void refreshSelection(){
+      myCommanderPanel.scrollSelectionInView();
+      if (myShouldNarrowDown) {
+        myCommanderPanel.updateSpeedSearch();
+      }
+    }
+    protected List<AbstractTreeNode> getAllAcceptableNodes(    final Object[] childElements,    VirtualFile file){
+      ArrayList<AbstractTreeNode> result=new ArrayList<AbstractTreeNode>();
+      for (      Object childElement : childElements) {
+        result.add((AbstractTreeNode)childElement);
+      }
+      return result;
+    }
+  }
+;
+  myCommanderPanel.setBuilder(projectListBuilder);
+  myCommanderPanel.setTitlePanelVisible(false);
+  new AnAction(){
+    public void actionPerformed(    AnActionEvent e){
+      final boolean succeeded=myCommanderPanel.navigateSelectedElement();
+      if (succeeded) {
+        unregisterCustomShortcutSet(myCommanderPanel);
+      }
+    }
+  }
+.registerCustomShortcutSet(ActionManager.getInstance().getAction(IdeActions.ACTION_EDIT_SOURCE).getShortcutSet(),myCommanderPanel);
+  myCommanderPanel.setPreferredSize(new Dimension(400,500));
+  JPanel panel=new JPanel(new GridBagLayout());
+  addNarrowDownCheckbox(panel);
+  for (  FileStructureFilter filter : fileStructureFilters) {
+    addFilterCheckbox(panel,filter);
+  }
+  myCommanderPanel.setBorder(IdeBorderFactory.createBorder(SideBorder.TOP));
+  panel.add(myCommanderPanel,new GridBagConstraints(0,GridBagConstraints.RELATIVE,1,1,1,1,GridBagConstraints.WEST,GridBagConstraints.BOTH,new Insets(0,0,0,0),0,0));
+  return panel;
+}
