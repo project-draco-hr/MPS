@@ -1,37 +1,26 @@
 {
-  final Ref<String> result=new Ref<String>();
-  final boolean[] finished={false};
+  final String[] result=new String[1];
   ModelAccess.instance().runCommandInEDT(new Runnable(){
     @Override public void run(){
-      try {
-        final SModelDescriptor modelDescriptor=myModelDescriptor;
-        Assert.assertNotNull(modelDescriptor);
-        SNode node=modelDescriptor.getSModel().getNodeById("6010389230754495469");
-        Assert.assertNotNull(node);
-        if (nameToWrite == null) {
-          result.set(node.getProperty("name"));
-        }
+      if (SModelRepository.getInstance().getModelDescriptor(myModelDescriptor.getSModelReference()) != null) {
+        try {
+          final SModelDescriptor modelDescriptor=myModelDescriptor;
+          Assert.assertNotNull(modelDescriptor);
+          SNode node=modelDescriptor.getSModel().getNodeById("6010389230754495469");
+          Assert.assertNotNull(node);
+          if (nameToWrite == null) {
+            result[0]=node.getProperty("name");
+          }
  else {
-          node.setProperty("name",nameToWrite);
+            node.setProperty("name",nameToWrite);
+          }
+        }
+ catch (        Throwable ignored) {
         }
       }
- catch (      Throwable ignored) {
-      }
-      finished[0]=true;
-synchronized (result) {
-        result.notifyAll();
-      }
     }
   }
-,ourProject);
-synchronized (result) {
-    while (!finished[0]) {
-      try {
-        result.wait();
-      }
- catch (      InterruptedException e) {
-      }
-    }
-  }
-  return result.get();
+,myProject);
+  waitEDT();
+  return result[0];
 }

@@ -1,22 +1,32 @@
 {
   setFieldNameInModel(FIELD_NAME_IN_MODEL);
-  setFieldNameInFile(FIELD_NAME_IN_FILE);
+  if (DiskModification.MODIFY == diskModification) {
+    setFieldNameInFile(FIELD_NAME_IN_FILE);
+  }
+ else {
+    deleteFile();
+  }
   refreshVfs();
   final boolean[] dialogWasInvoked=new boolean[1];
   Messages.setTestDialog(new TestDialog(){
     @Override public int show(    String message){
       dialogWasInvoked[0]=true;
-      return memory ? 1 : 0;
+      if (DiskModification.DELETE == diskModification) {
+        return VersionToChoose.MEMORY == versionToChoose ? 0 : 1;
+      }
+ else {
+        return VersionToChoose.MEMORY == versionToChoose ? 1 : 0;
+      }
     }
   }
 );
-  if (save) {
+  if (Action.SAVE == action) {
     ModelAccess.instance().runCommandInEDT(new Runnable(){
       @Override public void run(){
         SModelRepository.getInstance().saveAll();
       }
     }
-,ourProject);
+,myProject);
   }
  else {
     ModelAccess.instance().runWriteInEDT(new Runnable(){
@@ -39,5 +49,17 @@
 catch (  InvocationTargetException e) {
   }
   Assert.assertTrue(dialogWasInvoked[0]);
-  checkSynchronizedState(memory ? FIELD_NAME_IN_MODEL : FIELD_NAME_IN_FILE);
+  String expectedFieldName;
+  if (VersionToChoose.MEMORY == versionToChoose) {
+    expectedFieldName=FIELD_NAME_IN_MODEL;
+  }
+ else {
+    if (DiskModification.MODIFY == diskModification) {
+      expectedFieldName=FIELD_NAME_IN_FILE;
+    }
+ else {
+      expectedFieldName=null;
+    }
+  }
+  checkSynchronizedState(expectedFieldName);
 }

@@ -1,21 +1,33 @@
 {
+  final Action[] startedAction=new Action[1];
+  final DiskModification[] startedDiskModification=new DiskModification[1];
+  final VersionToChoose[] startedVersion=new VersionToChoose[1];
   final boolean result=TestMain.testOnProjectCopy(PROJECT_ARCHIVE,DESTINATION_PROJECT_DIR,PROJECT_FILE,new ProjectRunnable(){
     public boolean execute(    final MPSProject project){
       final boolean[] resultArr=new boolean[1];
       try {
-        ourProject=project.getProject();
-        SModelDescriptor modelDescriptor=SModelRepository.getInstance().getModelDescriptor(MODEL_REFERENCE);
-        Assert.assertTrue(modelDescriptor instanceof EditableSModelDescriptor);
-        myModelDescriptor=(EditableSModelDescriptor)modelDescriptor;
+        myProject=project.getProject();
+        ApplicationManager.getApplication().getComponent(PersistenceSettings.class).setMaxPersistenceVersion();
+        myModelDescriptor=(EditableSModelDescriptor)SModelRepository.getInstance().getModelDescriptor(MODEL_REFERENCE);
+        myModule=(Solution)myModelDescriptor.getModule();
+        ModelAccess.instance().runReadAction(new Runnable(){
+          @Override public void run(){
+            myNodeBackup=CopyUtil.copyAndPreserveId(myModelDescriptor.getSModel().rootsIterator().next());
+          }
+        }
+);
         checkInitialState();
-        provokeAndCheckConflict(true,true);
-        restoreAndCheckOriginalState();
-        provokeAndCheckConflict(true,false);
-        restoreAndCheckOriginalState();
-        provokeAndCheckConflict(false,true);
-        restoreAndCheckOriginalState();
-        provokeAndCheckConflict(false,false);
-        restoreAndCheckOriginalState();
+        for (        Action a : Action.values()) {
+          for (          DiskModification dm : DiskModification.values()) {
+            for (            VersionToChoose v : VersionToChoose.values()) {
+              startedAction[0]=a;
+              startedVersion[0]=v;
+              startedDiskModification[0]=dm;
+              provokeAndCheckConflict(a,dm,v);
+              restoreAndCheckOriginalState();
+            }
+          }
+        }
         resultArr[0]=true;
       }
  catch (      Throwable e) {
@@ -27,6 +39,6 @@
   }
 ,"jetbrains.mps.vcs");
   if (!result) {
-    Assert.fail();
+    Assert.fail("Last started check action=" + startedAction[0] + ", disk modification="+ startedDiskModification[0]+ ", version="+ startedVersion[0]);
   }
 }
