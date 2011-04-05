@@ -19,6 +19,9 @@
   Queue<IFile> dirs=QueueSequence.fromQueueAndArray(new LinkedList<IFile>(),rootDir);
   while (QueueSequence.fromQueue(dirs).isNotEmpty()) {
     IFile dir=QueueSequence.fromQueue(dirs).removeFirstElement();
+    String dirpath=straighten(urlToPath(dir.getAbsolutePath()));
+    int diridx=Arrays.binarySearch(pathsToKeep,dirpath);
+    diridx=(diridx < 0 ? -1 - diridx : diridx);
     for (    Tuples._2<IFile,String> fp : Sequence.fromIterable(((Iterable<IFile>)dir.list())).<Tuples._2<IFile,String>>select(new ISelector<IFile,Tuples._2<IFile,String>>(){
       public Tuples._2<IFile,String> select(      IFile f){
         return MultiTuple.<IFile,String>from(f,straighten(urlToPath(f.getAbsolutePath())));
@@ -30,20 +33,20 @@
       }
     }
 ,true)) {
-      int idx=Arrays.binarySearch(pathsToKeep,fp._1());
+      int fidx=Arrays.binarySearch(pathsToKeep,fp._1());
       if (fp._0().isDirectory()) {
-        idx=(idx < 0 ? -1 - idx : idx);
-        if (idx >= pathsToKeep.length || !(startsWith(pathsToKeep[idx],fp._1()))) {
+        fidx=(fidx < 0 ? -1 - fidx : fidx);
+        if (fidx >= pathsToKeep.length || !(startsWith(pathsToKeep[fidx],fp._1()))) {
           ListSequence.fromList(toDelete).addElement(fp._0());
-          if (idx >= pathsToKeep.length) {
+          if (fidx >= pathsToKeep.length) {
             break;
           }
         }
- else         if (idx < pathsToKeep.length && !(startsWith(fp._1(),pathsToKeep[idx]))) {
+ else         if (fidx < pathsToKeep.length) {
           QueueSequence.fromQueue(dirs).addLastElement(fp._0());
         }
       }
- else       if (idx < 0) {
+ else       if (fidx < 0 && (diridx >= pathsToKeep.length || !(same(dirpath,pathsToKeep[diridx])))) {
         ListSequence.fromList(toDelete).addElement(fp._0());
       }
     }
