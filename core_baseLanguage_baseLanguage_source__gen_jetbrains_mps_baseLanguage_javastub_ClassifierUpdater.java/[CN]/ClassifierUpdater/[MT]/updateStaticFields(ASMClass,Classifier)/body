@@ -1,0 +1,49 @@
+{
+  SModel model=cls.getModel();
+  for (  ASMField field : ac.getDeclaredFields()) {
+    if (field.isPrivate() && ASMModelLoader.SKIP_PRIVATE) {
+      continue;
+    }
+    if (!(field.isStatic())) {
+      continue;
+    }
+    if (field.isCompilerGenerated()) {
+      continue;
+    }
+    if (field.isEnumConstant()) {
+      EnumClass enumClass=(EnumClass)cls;
+      EnumConstantDeclaration enumConstantDeclaration=EnumConstantDeclaration.newInstance(model);
+      enumConstantDeclaration.getNode().setId(ASMNodeId.createId(ac,field));
+      enumConstantDeclaration.setName(field.getName());
+      enumClass.addEnumConstant(enumConstantDeclaration);
+    }
+ else {
+      StaticFieldDeclaration decl=StaticFieldDeclaration.newInstance(model);
+      decl.getNode().setId(ASMNodeId.createId(ac,field));
+      decl.setVisibility(createVisibility(field,model));
+      decl.setName(field.getName());
+      decl.setType(getTypeByASMType(field.getGenericType(),null,cls,model));
+      decl.setIsDeprecated(field.isDeprecated());
+      for (      ASMAnnotation annotation : field.getAnnotations()) {
+        decl.addAnnotation(createAnnotation(annotation,model));
+      }
+      if (field.isFinal()) {
+        decl.setIsFinal(true);
+        if (field.hasValue()) {
+          Object value=field.getValue();
+          if (value instanceof Integer) {
+            IntegerConstant initialValue=IntegerConstant.newInstance(model);
+            initialValue.setValue((Integer)value);
+            decl.setInitializer(initialValue);
+          }
+ else           if (value instanceof String) {
+            StringLiteral initialValue=StringLiteral.newInstance(model);
+            initialValue.setValue((String)value);
+            decl.setInitializer(initialValue);
+          }
+        }
+      }
+      cls.addStaticField(decl);
+    }
+  }
+}
