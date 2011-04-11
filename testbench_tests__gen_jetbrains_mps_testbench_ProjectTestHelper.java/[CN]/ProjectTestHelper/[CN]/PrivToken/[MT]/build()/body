@@ -1,0 +1,33 @@
+{
+  final GenerationOptions.OptionsBuilder optBuilder=GenerationOptions.fromSettings(GenerationSettings.getInstance());
+  boolean isParallel="true".equalsIgnoreCase(System.getProperty("parallel.generation"));
+  if (isParallel) {
+    optBuilder.strictMode(true).generateInParallel(isParallel,8);
+  }
+  final IScriptController ctl=new IScriptController.Stub(){
+    @Override public void setup(    IParametersPool ppool){
+      Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>> bparams=(Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>>)ppool.parameters(new ITarget.Name("copyBinaries"),Object.class);
+      bparams._0(new _FunctionTypes._return_P1_E0<IFile,String>(){
+        public IFile invoke(        String path){
+          return tmpFile(path);
+        }
+      }
+);
+      Tuples._2<Boolean,GenerationOptions.OptionsBuilder> params=(Tuples._2<Boolean,GenerationOptions.OptionsBuilder>)ppool.parameters(new ITarget.Name("configure"),Object.class);
+      params._1(optBuilder);
+    }
+  }
+;
+  final Wrappers._T<IResult> result=new Wrappers._T<IResult>();
+  ModelAccess.instance().flushEventQueue();
+  ThreadUtils.runInUIThreadAndWait(new Runnable(){
+    public void run(){
+      ProjectOperationContext context=ProjectOperationContext.get(project.getProject());
+      IScript scr=defaultScriptBuilder().toScript();
+      result.value=new TestMakeService(context,myMessageHandler).make(collectResources(context,project),scr,ctl);
+    }
+  }
+);
+  ModelAccess.instance().flushEventQueue();
+  return result.value.isSucessful();
+}
