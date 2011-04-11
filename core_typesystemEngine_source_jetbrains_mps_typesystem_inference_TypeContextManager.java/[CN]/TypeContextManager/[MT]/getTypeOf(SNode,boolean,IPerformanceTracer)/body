@@ -1,38 +1,39 @@
 {
   if (node == null)   return null;
-  TypeCheckingContext context;
+  ITypeContextOwner owner=new ITypeContextOwner(){
+  }
+;
+  SNode root=node.getContainingRoot();
   Stack<Object> resolve=myResolveStack.get();
   if (resolve == null) {
     resolve=new Stack<Object>();
     myResolveStack.set(resolve);
   }
-  if (resolve.size() > 20) {
-    throw new TypeSystemException("typechecking failed");
-  }
-  if (!resolve.isEmpty()) {
-    context=generationMode ? null : getContextForEditedRootNode(node.getContainingRoot(),TypeContextManager.DEFAULT_OWNER,false);
-    if (context == null || !context.isNonTypesystemComputation()) {
-      context=createTypeCheckingContextForResolve(node);
-      SNode type=context.getTypeOf(node,myTypeChecker);
+  if (resolve.size() > 20)   throw new TypeSystemException("typechecking failed");
+  if (generationMode) {
+    TypeCheckingContext context=tracer == null ? createTypeCheckingContext(node) : createTracingTypeCheckingContext(node);
+    if (context == null)     return null;
+    try {
+      return context.getTypeOf(node,myTypeChecker);
+    }
+  finally {
       context.dispose();
-      return type;
     }
   }
-  if (generationMode) {
-    if (tracer == null) {
-      context=createTypeCheckingContext(node);
+  TypeCheckingContext context=getOrCreateContext(root,owner,true);
+  try {
+    if (!resolve.isEmpty()) {
+      if (context == null || !context.isNonTypesystemComputation()) {
+        TypeCheckingContext resolveContext=createTypeCheckingContextForResolve(node);
+        SNode type=resolveContext.getTypeOf(node,myTypeChecker);
+        resolveContext.dispose();
+        return type;
+      }
     }
- else {
-      context=createTracingTypeCheckingContext(node);
-    }
+    if (context == null)     return null;
+    return context.getTypeOf(node,myTypeChecker);
   }
- else {
-    context=getContextForEditedRootNode(node.getContainingRoot(),TypeContextManager.DEFAULT_OWNER);
+  finally {
+    removeOwnerForRootNodeContext(node,owner);
   }
-  if (context == null)   return null;
-  SNode type=context.getTypeOf(node,myTypeChecker);
-  if (generationMode) {
-    context.dispose();
-  }
-  return type;
 }
