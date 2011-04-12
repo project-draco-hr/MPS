@@ -1,0 +1,28 @@
+{
+  List<SearchResult<SNode>> results=new ArrayList<SearchResult<SNode>>();
+  List<SNode> mappingConfigs=(List<SNode>)GenerationFacade.getOwnMappings(myGenerator);
+  List<SNode> nodesToCheck=new ArrayList<SNode>();
+  for (  SNode mappingConfig : mappingConfigs) {
+    for (    SNode rule : ListSequence.fromList(SNodeOperations.getChildren(mappingConfig)).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return SNodeOperations.isInstanceOf(it,"jetbrains.mps.lang.generator.structure.BaseMappingRule");
+      }
+    }
+)) {
+      nodesToCheck.add(rule);
+      collectChildrenThatMayHaveReferenceOnTemplate(rule,nodesToCheck);
+    }
+    nodesToCheck.addAll(SLinkOperations.getTargets(mappingConfig,"createRootRule",true));
+  }
+  for (  SNode node : nodesToCheck) {
+    List<SReference> references=node.getReferences();
+    for (    SReference reference : references) {
+      if (myNodeToFindUsages.getSNodeId().equals(reference.getTargetNodeId())) {
+        SearchResult<SNode> result=new SearchResult<SNode>(node,"");
+        results.add(result);
+        break;
+      }
+    }
+  }
+  return new SearchResults<SNode>(CollectionUtil.set(myNodeToFindUsages),results);
+}
