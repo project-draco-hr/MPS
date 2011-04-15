@@ -61,12 +61,17 @@
   for (  SNode parentConcept : chs.getConcepts()) {
     component.addDependency(parentConcept);
   }
-  List<PropertyDeclaration> props=chs.getAdapters(PropertyDeclaration.class);
-  for (  PropertyDeclaration p : ListSequence.fromList(props)) {
-    final PropertySupport ps=PropertySupport.getPropertySupport(p.getNode());
-    final String propertyName=p.getName();
+  List<SNode> props=((List<SNode>)chs.getNodes(new Condition<SNode>(){
+    public boolean met(    SNode n){
+      return SNodeOperations.isInstanceOf(n,"jetbrains.mps.lang.structure.structure.PropertyDeclaration");
+    }
+  }
+));
+  for (  SNode p : ListSequence.fromList(props)) {
+    final PropertySupport ps=PropertySupport.getPropertySupport(p);
+    final String propertyName=SPropertyOperations.getString(p,"name");
     if (propertyName == null) {
-      LOG.error("Property declaration has a null name, declaration id: " + p.getNode().getSNodeId() + ", model: "+ p.getModel().getSModelFqName());
+      LOG.error("Property declaration has a null name, declaration id: " + p.getSNodeId() + ", model: "+ SNodeOperations.getModel(p).getSModelFqName());
       continue;
     }
     final String value=ps.fromInternalValue(node.getProperty(propertyName));
@@ -78,10 +83,10 @@
     }
 );
     if (!(canSetValue)) {
-      if ("name".equals(p.getName()) && "AnonymousClass".equals(SPropertyOperations.getString(concept,"name"))) {
+      if ("name".equals(SPropertyOperations.getString(p,"name")) && "AnonymousClass".equals(SPropertyOperations.getString(concept,"name"))) {
         continue;
       }
-      component.addError(node,"Property constraint violation for property \"" + p.getName() + "\"",null,new PropertyMessageTarget(p.getName()));
+      component.addError(node,"Property constraint violation for property \"" + SPropertyOperations.getString(p,"name") + "\"",null,new PropertyMessageTarget(SPropertyOperations.getString(p,"name")));
     }
   }
 }
