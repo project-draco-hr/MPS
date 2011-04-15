@@ -1,0 +1,25 @@
+{
+  List<SearchResult<ModelCheckerIssue>> results=ListSequence.fromList(new ArrayList<SearchResult<ModelCheckerIssue>>());
+  String title="Checking " + SModelOperations.getModelName(model) + " for adapter usages...";
+  for (  SNode node : ListSequence.fromList(SModelOperations.getNodes(model,null))) {
+    if (!(progressContext.checkAndUpdateIndicator(title))) {
+      break;
+    }
+    for (    SReference ref : Sequence.fromIterable(SNodeOperations.getReferences(node))) {
+      SModelReference targetSModelReference=ref.getTargetSModelReference();
+      if (targetSModelReference != null && targetSModelReference.getStereotype().equals("java_stub")) {
+        SNode target=SLinkOperations.getTargetNode(ref);
+        if ((target != null) && SNodeOperations.isInstanceOf(target,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
+          String qualifiedName=INamedConcept_Behavior.call_getFqName_1213877404258(SNodeOperations.cast(target,"jetbrains.mps.baseLanguage.structure.ClassConcept"));
+          if ("jetbrains.mps.smodel.INodeAdapter".equals(qualifiedName) || "jetbrains.mps.smodel.BaseAdapter".equals(qualifiedName)) {
+            addIssue(results,node,"Reference to " + qualifiedName + " in role `"+ SLinkOperations.getRole(ref)+ "'",ModelChecker.SEVERITY_ERROR,"adapter class usage",null);
+          }
+          if (targetSModelReference.getLongName().endsWith(".structure") && SModelUtil.findConceptDeclaration(qualifiedName,GlobalScope.getInstance()) != null) {
+            addIssue(results,node,"Using adapter of " + qualifiedName + " concept in role `"+ SLinkOperations.getRole(ref)+ "'",ModelChecker.SEVERITY_ERROR,"adapter class usage",null);
+          }
+        }
+      }
+    }
+  }
+  return results;
+}
