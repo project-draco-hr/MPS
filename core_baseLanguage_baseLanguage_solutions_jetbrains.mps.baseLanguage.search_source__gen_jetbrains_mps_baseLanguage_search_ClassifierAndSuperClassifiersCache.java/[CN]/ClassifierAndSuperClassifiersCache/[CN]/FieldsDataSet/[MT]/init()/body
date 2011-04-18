@@ -1,39 +1,35 @@
 {
-  this.myFieldsByName=new HashMap<String,FieldDeclaration>();
-  this.myStaticFieldsByName=new HashMap<String,StaticFieldDeclaration>();
-  List<VariableDeclaration> allFields=new ArrayList<VariableDeclaration>();
-  List<Classifier> classifiers=((ClassifierAndSuperClassifiersCache)this.getOwnerCache()).getClassifiers();
-  for (  Classifier classifier : classifiers) {
-    List<StaticFieldDeclaration> staticFields=classifier.getStaticFields();
+  this.myFieldsByName=MapSequence.fromMap(new HashMap<String,SNode>());
+  this.myStaticFieldsByName=MapSequence.fromMap(new HashMap<String,SNode>());
+  List<SNode> allFields=new ArrayList<SNode>();
+  List<SNode> classifiers=((ClassifierAndSuperClassifiersCache)this.getOwnerCache()).getClassifierNodes();
+  for (  SNode classifier : classifiers) {
+    List<SNode> staticFields=SLinkOperations.getTargets(classifier,"staticField",true);
     allFields.addAll(staticFields);
-    for (    StaticFieldDeclaration staticField : staticFields) {
-      String name=staticField.getName();
+    for (    SNode staticField : staticFields) {
+      String name=SPropertyOperations.getString(staticField,"name");
       if (name == null) {
         name="";
       }
-      if (!(this.myStaticFieldsByName.containsKey(name))) {
-        this.myStaticFieldsByName.put(name,staticField);
+      if (!(MapSequence.fromMap(myStaticFieldsByName).containsKey(name))) {
+        MapSequence.fromMap(myStaticFieldsByName).put(name,staticField);
       }
     }
-    if (classifier instanceof ClassConcept) {
-      List<FieldDeclaration> fields=((ClassConcept)classifier).getFields();
-      allFields.addAll(fields);
-      for (      FieldDeclaration field : fields) {
-        String name=field.getName();
+    if (SNodeOperations.isInstanceOf(classifier,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
+      List<SNode> fields=SLinkOperations.getTargets((SNodeOperations.cast(classifier,"jetbrains.mps.baseLanguage.structure.ClassConcept")),"field",true);
+      ListSequence.fromList(allFields).addSequence(ListSequence.fromList(fields));
+      for (      SNode field : fields) {
+        String name=SPropertyOperations.getString(field,"name");
         if (name == null) {
           name="";
         }
-        if (!(this.myFieldsByName.containsKey(name))) {
-          this.myFieldsByName.put(name,field);
+        if (!(MapSequence.fromMap(myFieldsByName).containsKey(name))) {
+          MapSequence.fromMap(myFieldsByName).put(name,field);
         }
       }
     }
   }
-  this.myDependsOnNodes=new HashSet<SNode>();
-  for (  Classifier classifier : classifiers) {
-    this.myDependsOnNodes.add(classifier.getNode());
-  }
-  for (  VariableDeclaration field : allFields) {
-    this.myDependsOnNodes.add(field.getNode());
-  }
+  myDependsOnNodes=SetSequence.fromSet(new HashSet<SNode>());
+  SetSequence.fromSet(myDependsOnNodes).addSequence(ListSequence.fromList(classifiers));
+  SetSequence.fromSet(myDependsOnNodes).addSequence(ListSequence.fromList(allFields));
 }
