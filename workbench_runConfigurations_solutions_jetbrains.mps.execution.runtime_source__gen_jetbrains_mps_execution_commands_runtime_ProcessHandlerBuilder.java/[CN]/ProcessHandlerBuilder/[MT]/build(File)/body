@@ -1,0 +1,26 @@
+{
+  if (!(workingDirectory.exists())) {
+    throw new ExecutionException("Working directory " + workingDirectory + " does not exist.");
+  }
+  ProcessBuilder builder=new ProcessBuilder(ListSequence.fromList(myCommandLine).toGenericArray(String.class));
+  builder.directory(workingDirectory);
+  try {
+    Process process=builder.start();
+    DefaultProcessHandler processHandler=new DefaultProcessHandler(process,ListSequence.fromList(myCommandLine).foldLeft("",new ILeftCombinator<String,String>(){
+      public String combine(      String s,      String it){
+        return (StringUtils.isEmpty(s) ? it : s + " " + it);
+      }
+    }
+));
+    return processHandler;
+  }
+ catch (  IOException e) {
+    throw new ProcessNotCreatedException("Start process failed",e,getCommandLine(workingDirectory.getAbsolutePath()));
+  }
+catch (  NullPointerException e) {
+    throw new ProcessNotCreatedException("Start process failed: one of the command line arguments is null",e,getCommandLine(workingDirectory.getAbsolutePath()));
+  }
+catch (  Throwable t) {
+    throw new ProcessNotCreatedException("Start process failed",t,getCommandLine(workingDirectory.getAbsolutePath()));
+  }
+}
