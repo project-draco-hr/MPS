@@ -2,11 +2,17 @@
   if (ListSequence.fromList(myWhatToTest).isEmpty()) {
     throw new ExecutionException("Nothing to test.");
   }
-  String workingDir=myConfigurationRunParameters.getWorkingDirectory();
-  myCurrentProcess=OutputRedirector.redirect(new Junit_Command().setJrePath(myConfigurationRunParameters.getAlternativeJRE()).setVirtualMachineParameter(myConfigurationRunParameters.getVMParameters()).setWorkingDirectory((StringUtils.isNotEmpty(workingDir) ? new File(workingDir) : null)).setTests(myWhatToTest).createProcess(),new UnitTestProcessListener(myDispatcher));
-  if (myCurrentProcess == null) {
-    myState.terminate();
+  UnitTestRunner testRunner=null;
+  try {
+    testRunner=new UnitTestRunner(this.myWhatToTest,this.myConfigurationRunParameters);
+  }
+ catch (  NullPointerException npe) {
+    npe.printStackTrace();
+  }
+  this.myCurrentProcess=testRunner.run();
+  if (this.myCurrentProcess == null) {
+    this.myState.terminate();
     return null;
   }
-  return myCurrentProcess;
+  return new UnitTestProcessHandler(this.myDispatcher,this.myCurrentProcess,testRunner.getCommandString());
 }
