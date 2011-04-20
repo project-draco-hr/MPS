@@ -5,12 +5,11 @@
   for (  final IEditorChecker checker : checkersToRecheck) {
     final LinkedHashSet<EditorMessage> messages=new LinkedHashSet<EditorMessage>();
     final EditorMessageOwner[] owners=new EditorMessageOwner[1];
-    final boolean[] messagesChangedContainer={false};
-    Runnable runnable=new Runnable(){
-      public void run(){
-        if (myStopThread)         return;
+    boolean changed=ModelAccess.instance().runReadAction(new Computable<Boolean>(){
+      public Boolean compute(){
+        if (myStopThread)         return false;
         SNode node=editor.getEditedNode();
-        if (node == null || node.isDisposed())         return;
+        if (node == null || node.isDisposed())         return false;
         owners[0]=checker.getOwner(node,editor);
         EditorContext editorContext=editor.getEditorContext();
         if (editorContext != null) {
@@ -18,7 +17,7 @@
           if (operationContext.isValid()) {
             try {
               messages.addAll(checker.createMessages(node,events,wasCheckedOnce,editorContext));
-              messagesChangedContainer[0]=messagesChangedContainer[0] || checker.messagesChanged();
+              return checker.messagesChanged();
             }
  catch (            IndexNotReadyException ex) {
               highlightManager.clearForOwner(owners[0],true);
@@ -27,16 +26,15 @@
             }
           }
         }
+        return false;
       }
     }
-;
-    ModelAccess.instance().runReadAction(runnable);
+);
     if (myStopThread)     return false;
-    boolean messagesChanged=messagesChangedContainer[0];
     if (editor instanceof InspectorEditorComponent && recreateInspectorMessages) {
-      messagesChanged=true;
+      changed=true;
     }
-    if (messagesChanged) {
+    if (changed) {
       anyMessageChanged=true;
       EditorMessageOwner owner=owners[0];
       if (owner != null) {
@@ -48,26 +46,20 @@
     }
   }
   for (  final IEditorChecker checker : checkersToRemove) {
-    final EditorMessageOwner[] owners=new EditorMessageOwner[1];
-    Runnable runnable=new Runnable(){
-      public void run(){
-        if (myStopThread)         return;
+    EditorMessageOwner owner=ModelAccess.instance().runReadAction(new Computable<EditorMessageOwner>(){
+      public EditorMessageOwner compute(){
+        if (myStopThread)         return null;
         SNode node=editor.getEditedNode();
-        if (node == null)         return;
-        owners[0]=checker.getOwner(node,editor);
+        if (node == null)         return null;
+        return checker.getOwner(node,editor);
       }
     }
-;
-    ModelAccess.instance().runReadAction(runnable);
-    if (myStopThread) {
-      return false;
-    }
-    highlightManager.clearForOwner(owners[0],false);
+);
+    if (myStopThread)     return false;
+    highlightManager.clearForOwner(owner,false);
     anyMessageChanged=true;
   }
-  if (myStopThread) {
-    return false;
-  }
+  if (myStopThread)   return false;
   if (anyMessageChanged) {
     highlightManager.repaintAndRebuildEditorMessages();
     editor.updateStatusBarMessage();
