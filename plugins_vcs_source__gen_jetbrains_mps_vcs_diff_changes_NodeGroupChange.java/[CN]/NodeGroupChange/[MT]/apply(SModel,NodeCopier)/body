@@ -1,11 +1,19 @@
 {
-  SNode parent=model.getNodeById(myParentNodeId);
-  SNode anchor=deleteOldNodesAndReturnAnchor(model);
+  prepare();
+  ListSequence.fromList(myPreparedIdsToDelete).visitAll(new IVisitor<SNodeId>(){
+    public void visit(    SNodeId id){
+      model.getNodeById(id).delete();
+    }
+  }
+);
+  myPreparedIdsToDelete=null;
   List<SNode> nodesToAdd=ListSequence.fromList(new ArrayList<SNode>());
   List<SNode> newChildren=getChangeSet().getNewModel().getNodeById(myParentNodeId).getChildren(myRole);
   for (int i=myResultBegin; i < myResultEnd; i++) {
     ListSequence.fromList(nodesToAdd).addElement(nodeCopier.copyNode(newChildren.get(i)));
   }
+  SNode anchor=(myPreparedAnchorId == null ? null : model.getNodeById(myPreparedAnchorId));
+  SNode parent=model.getNodeById(myParentNodeId);
   for (  SNode newNode : ListSequence.fromList(nodesToAdd).reversedList()) {
     parent.insertChild(anchor,myRole,newNode);
   }
