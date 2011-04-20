@@ -1,0 +1,68 @@
+{
+  BaseAdapter adapter=feature.getAdapter();
+  String oldConceptFQName="";
+  String oldFeatureName="";
+  StructureModificationData.ConceptFeatureKind kind=StructureModificationData.ConceptFeatureKind.NONE;
+  StructureModification.RenameNode.RenameType renameType=null;
+  if (adapter instanceof LinkDeclaration) {
+    LinkDeclaration linkDeclaration=(LinkDeclaration)adapter;
+    oldConceptFQName=NameUtil.nodeFQName(linkDeclaration.getParent());
+    oldFeatureName=linkDeclaration.getRole();
+    if (linkDeclaration.getMetaClass() == LinkMetaclass.aggregation) {
+      kind=StructureModificationData.ConceptFeatureKind.CHILD;
+      renameType=StructureModification.RenameNode.RenameType.CHILD;
+    }
+ else {
+      kind=StructureModificationData.ConceptFeatureKind.REFERENCE;
+      renameType=StructureModification.RenameNode.RenameType.REFERENCE;
+    }
+    if (delete) {
+      linkDeclaration.delete();
+    }
+ else {
+      if (newFeatureName != null && !(newFeatureName.equals(oldFeatureName))) {
+        linkDeclaration.setRole(newFeatureName);
+      }
+    }
+  }
+  if (adapter instanceof PropertyDeclaration) {
+    oldConceptFQName=NameUtil.nodeFQName(adapter.getParent());
+    oldFeatureName=adapter.getName();
+    kind=StructureModificationData.ConceptFeatureKind.PROPERTY;
+    renameType=StructureModification.RenameNode.RenameType.PROPERTY;
+    if (delete) {
+      adapter.delete();
+    }
+ else {
+      if (newFeatureName != null && !(newFeatureName.equals(oldFeatureName))) {
+        feature.setName(newFeatureName);
+      }
+    }
+  }
+  if (adapter instanceof AbstractConceptDeclaration) {
+    oldConceptFQName=NameUtil.nodeFQName(adapter);
+    oldFeatureName=adapter.getName();
+    kind=StructureModificationData.ConceptFeatureKind.CONCEPT;
+    renameType=StructureModification.RenameNode.RenameType.CONCEPT;
+    if (delete) {
+      adapter.delete();
+    }
+ else {
+      if (newFeatureName != null && !(newFeatureName.equals(oldFeatureName))) {
+        feature.setName(newFeatureName);
+      }
+    }
+  }
+  if (kind != StructureModificationData.ConceptFeatureKind.NONE) {
+    myConceptFeatureMap.put(new StructureModificationData.ConceptFeature(oldConceptFQName,kind,oldFeatureName),(delete ? null : new StructureModificationData.ConceptFeature(newConceptFQName,kind,newFeatureName)));
+    myCachesAreUpToDate=false;
+    if (newFeatureName == null) {
+      return;
+    }
+    if (!(newFeatureName.equals(oldFeatureName))) {
+      myLoggedData.getData().add(new StructureModification.RenameNode(new SNodePointer(feature),renameType,newFeatureName,oldFeatureName));
+    }
+ else     if (kind == StructureModificationData.ConceptFeatureKind.CONCEPT && !(oldConceptFQName.equals(newConceptFQName))) {
+    }
+  }
+}
