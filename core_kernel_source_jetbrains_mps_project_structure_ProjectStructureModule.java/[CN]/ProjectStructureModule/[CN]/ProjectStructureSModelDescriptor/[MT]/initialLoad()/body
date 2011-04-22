@@ -1,12 +1,21 @@
 {
   ProjectStructureSModel model=new ProjectStructureSModel(getSModelReference());
   model.setLoading(true);
-  ModuleDescriptor moduleDescriptor=myModule.getModuleDescriptor();
+  final ModuleDescriptor moduleDescriptor=myModule.getModuleDescriptor();
   IFile file=myModule.getDescriptorFile();
   if (file != null && moduleDescriptor != null) {
     new ProjectStructureBuilder(moduleDescriptor,file,model){
-      @Override public Iterable<SModelReference> loadReferences(      SNode module){
-        return Sequence.<SModelDescriptor>fromIterable(SModelRepository.getInstance().getModelDescriptors(myModule)).select(new ISelector<SModelDescriptor,SModelReference>(){
+      @Override public Iterable<SModelReference> loadReferences(      SNode m,      ModuleDescriptor descriptor){
+        IModule module=moduleDescriptor == descriptor ? myModule : MPSModuleRepository.getInstance().getModule(descriptor.getModuleReference());
+        if (module == null) {
+          return Collections.emptyList();
+        }
+        return Sequence.<SModelDescriptor>fromIterable(module.getOwnModelDescriptors()).where(new IWhereFilter<SModelDescriptor>(){
+          @Override public boolean accept(          SModelDescriptor o){
+            return SModelStereotype.isUserModel(o);
+          }
+        }
+).select(new ISelector<SModelDescriptor,SModelReference>(){
           @Override public SModelReference select(          SModelDescriptor o){
             return o.getSModelReference();
           }
