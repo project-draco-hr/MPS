@@ -1,5 +1,6 @@
 {
   boolean hasAnythingToCompile=false;
+  List<MyMessage> messages=new ArrayList<MyMessage>();
   for (  IModule m : modules) {
     if (m.isCompileInMPS()) {
       hasAnythingToCompile=true;
@@ -13,7 +14,9 @@
   for (  IModule m : modules) {
     if (areClassesUpToDate(m))     continue;
     if (!m.isCompileInMPS()) {
-      LOG.warning("Module which compiled in IDEA depend on module which has to be compiled in MPS:" + m.getModuleFqName(),m);
+      String text="Module which compiled in IDEA depend on module which has to be compiled in MPS:" + m.getModuleFqName();
+      messages.add(new MyMessage(MessageKind.WARNING,text,m));
+      LOG.debug(text,m);
       continue;
     }
     ModuleSources sources=getModuleSources(m);
@@ -28,7 +31,7 @@
   }
   invalidateClasspath(modulesWithRemovals);
   IClassPathItem classPathItems=computeDependenciesClassPath(modules);
-  MyCompilationResultAdapter listener=new MyCompilationResultAdapter(modules,classPathItems);
+  MyCompilationResultAdapter listener=new MyCompilationResultAdapter(modules,classPathItems,messages);
   compiler.addCompilationResultListener(listener);
   compiler.compile(classPathItems);
   compiler.removeCompilationResultListener(listener);
@@ -47,5 +50,5 @@
   for (  IModule module : modules) {
     module.updateClassPath();
   }
-  return new MPSCompilationResult(listener.getErrorCount(),0,false);
+  return new MPSCompilationResult(listener.getErrorCount(),0,false,true,messages);
 }
