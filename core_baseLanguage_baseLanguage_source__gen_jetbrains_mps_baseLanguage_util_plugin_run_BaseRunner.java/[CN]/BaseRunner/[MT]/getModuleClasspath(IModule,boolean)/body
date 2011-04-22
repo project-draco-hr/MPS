@@ -1,20 +1,19 @@
 {
-  Set<String> res=SetSequence.fromSet(new HashSet<String>());
-  IFile classesGen=module.getClassesGen();
-  if (classesGen != null) {
-    SetSequence.fromSet(res).addElement(classesGen.getPath());
+  List<String> result=ListSequence.fromList(new ArrayList<String>());
+  if (module.getClassesGen() != null) {
+    ListSequence.fromList(result).addElement(module.getClassesGen().getAbsolutePath());
   }
-  createModuleClasspath(module.getClassPathItem(),res);
+  final ClasspathStringCollector visitor=new ClasspathStringCollector(result);
+  module.getClassPathItem().accept(visitor);
   if (withDependencies) {
-    createModuleClasspath(AbstractModule.getDependenciesClasspath(CollectionUtil.set(module),true),res);
-  }
-  Set<String> delete=SetSequence.fromSet(new HashSet<String>());
-  List<String> jdkPath=CommonPaths.getJDKPath();
-  for (  String cpItem : SetSequence.fromSet(res)) {
-    if (jdkPath.contains(cpItem)) {
-      SetSequence.fromSet(delete).addElement(cpItem);
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        AbstractModule.getDependenciesClasspath(CollectionUtil.set(module),true).accept(visitor);
+      }
     }
+);
   }
-  SetSequence.fromSet(res).removeSequence(SetSequence.fromSet(delete));
-  return res;
+  List<String> visited=visitor.getResultAndReInit();
+  visited.removeAll(CommonPaths.getJDKPath());
+  return SetSequence.fromSetWithValues(new LinkedHashSet<String>(),visited);
 }
