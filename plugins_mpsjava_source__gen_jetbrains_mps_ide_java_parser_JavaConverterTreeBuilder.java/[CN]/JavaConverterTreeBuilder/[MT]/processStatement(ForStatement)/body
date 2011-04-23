@@ -1,0 +1,43 @@
+{
+  List<Statement> init=processStatements(x.initializations);
+  Expression expr=processExpressionRefl(x.condition);
+  jetbrains.mps.baseLanguage.structure.ForStatement forStatement=jetbrains.mps.baseLanguage.structure.ForStatement.newInstance(myCurrentModel);
+  forStatement.setCondition(expr);
+  if (!(init.isEmpty())) {
+    boolean first=true;
+    for (    Statement statement : init) {
+      if (statement instanceof LocalVariableDeclarationStatement) {
+        LocalVariableDeclarationStatement lvds=(LocalVariableDeclarationStatement)statement;
+        LocalVariableDeclaration variableDeclaration=lvds.getLocalVariableDeclaration();
+        lvds.removeChild(variableDeclaration);
+        if (first) {
+          forStatement.setVariable(variableDeclaration);
+          first=false;
+        }
+ else {
+          AdditionalForLoopVariable additionalForLoopVariable=AdditionalForLoopVariable.newInstance(myCurrentModel);
+          myTypesProvider.replaceUnsafe(variableDeclaration,additionalForLoopVariable);
+          additionalForLoopVariable.setName(variableDeclaration.getName());
+          Expression inititalizer=variableDeclaration.getInitializer();
+          if (inititalizer != null) {
+            inititalizer.getParent().removeChild(inititalizer);
+            additionalForLoopVariable.setInitializer(inititalizer);
+          }
+          forStatement.addAdditionalVar(additionalForLoopVariable);
+        }
+      }
+    }
+  }
+  List<ExpressionStatement> incr=processExpressionStatements(x.increments);
+  if (!(incr.isEmpty())) {
+    for (    ExpressionStatement expressionStatement : incr) {
+      Expression expression=expressionStatement.getExpression();
+      expression.getParent().removeChild(expression);
+      forStatement.addIteration(expression);
+    }
+  }
+  Statement loopBody=processStatementRefl(x.action);
+  StatementList body=getStatementListFromStatement(loopBody);
+  forStatement.setBody(body);
+  return forStatement;
+}

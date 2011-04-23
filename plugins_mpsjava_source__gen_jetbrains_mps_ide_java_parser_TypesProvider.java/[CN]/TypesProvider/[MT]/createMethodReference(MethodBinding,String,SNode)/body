@@ -1,0 +1,31 @@
+{
+  if (binding == null) {
+    return null;
+  }
+  if (binding instanceof ParameterizedMethodBinding) {
+    binding=((ParameterizedMethodBinding)binding).original();
+  }
+  INodeAdapter adapter=myReferentsCreator.myBindingMap.get(binding);
+  if (adapter != null) {
+    return SReference.create(role,sourceNode,adapter.getNode());
+  }
+  if (binding.declaringClass instanceof BinaryTypeBinding) {
+    BinaryTypeBinding binaryTypeBinding=(BinaryTypeBinding)binding.declaringClass;
+    SNodeId nodeId=createMethodId(binding,binaryTypeBinding);
+    SModelReference modelReference=modelReferenceFromBinaryClassBinding(binaryTypeBinding);
+    SNodePointer pointer=getRegularMPSNodePointerFromForeignId(modelReference,nodeId,FeatureKind.METHOD);
+    return SReference.create(role,sourceNode,pointer);
+  }
+  if (binding.declaringClass instanceof ParameterizedTypeBinding) {
+    ParameterizedTypeBinding parameterizedTypeBinding=(ParameterizedTypeBinding)binding.declaringClass;
+    if (parameterizedTypeBinding.genericType() instanceof BinaryTypeBinding) {
+      BinaryTypeBinding binaryTypeBinding=(BinaryTypeBinding)parameterizedTypeBinding.genericType();
+      SNodeId nodeId=createMethodId(binding,binaryTypeBinding);
+      SModelReference modelReference=modelReferenceFromBinaryClassBinding(binaryTypeBinding);
+      SNodePointer pointer=getRegularMPSNodePointerFromForeignId(modelReference,nodeId,FeatureKind.METHOD);
+      return SReference.create(role,sourceNode,pointer);
+    }
+  }
+  LOG.error("can't create a reference to a method in a class of type " + binding.declaringClass.getClass());
+  return null;
+}

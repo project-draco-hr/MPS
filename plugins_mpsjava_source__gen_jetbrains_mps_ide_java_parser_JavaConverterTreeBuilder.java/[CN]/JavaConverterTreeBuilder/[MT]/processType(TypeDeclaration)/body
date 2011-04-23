@@ -1,0 +1,52 @@
+{
+  Classifier classifier=(Classifier)myTypesProvider.getRaw(x.binding);
+  if (x.binding.isAnnotationType()) {
+    if (x.methods != null) {
+      for (      AbstractMethodDeclaration method : x.methods) {
+        processAnnotationMethod((AnnotationMethodDeclaration)method);
+      }
+    }
+    return classifier;
+  }
+  myCurrentTypeDeclaration=x;
+  myCurrentClass=classifier;
+  try {
+    if (x.fields != null) {
+      for (      FieldDeclaration fieldDeclaration : x.fields) {
+        if (fieldDeclaration instanceof Initializer) {
+          assert(classifier instanceof ClassConcept);
+          processInitializer((Initializer)fieldDeclaration,(ClassConcept)classifier);
+        }
+ else {
+          processField(fieldDeclaration);
+        }
+      }
+    }
+    if (x.methods != null) {
+      for (      AbstractMethodDeclaration method : x.methods) {
+        if (method.isConstructor()) {
+          assert(myCurrentClass instanceof ClassConcept);
+          if (x.binding instanceof LocalTypeBinding) {
+          }
+ else {
+            processConstructor((ConstructorDeclaration)method);
+          }
+        }
+ else         if (method.isClinit()) {
+          continue;
+        }
+ else {
+          processMethod(method);
+        }
+        addExceptionsToMethod(method);
+      }
+    }
+    myCurrentClass=null;
+    myCurrentTypeDeclaration=null;
+    addClassifierAnnotations(classifier,x);
+  }
+ catch (  Throwable e) {
+    throw new JavaConverterException(e);
+  }
+  return classifier;
+}

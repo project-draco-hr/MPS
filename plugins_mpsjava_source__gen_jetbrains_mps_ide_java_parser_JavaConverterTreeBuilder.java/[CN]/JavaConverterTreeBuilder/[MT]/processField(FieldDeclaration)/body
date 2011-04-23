@@ -1,0 +1,60 @@
+{
+  INodeAdapter adapter=myTypesProvider.getRaw(declaration.binding);
+  if (adapter == null) {
+    return;
+  }
+  if (adapter instanceof jetbrains.mps.baseLanguage.structure.FieldDeclaration || adapter instanceof StaticFieldDeclaration) {
+    VariableDeclaration field=(VariableDeclaration)adapter;
+    try {
+      Expression initializer=null;
+      if (declaration.initialization != null) {
+        initializer=processExpressionRefl(declaration.initialization);
+      }
+      if (initializer != null) {
+        field.setInitializer(initializer);
+      }
+      addVariableAnnotations(field,declaration);
+    }
+ catch (    Throwable e) {
+      throw new JavaConverterException(e);
+    }
+  }
+  if (adapter instanceof EnumConstantDeclaration) {
+    try {
+      EnumConstantDeclaration enumConstant=(EnumConstantDeclaration)adapter;
+      assert(myCurrentClass instanceof EnumClass);
+      AllocationExpression initializer=(AllocationExpression)declaration.initialization;
+      MethodBinding constructorBinding;
+      if (initializer instanceof QualifiedAllocationExpression) {
+        TypeDeclaration anonymousEnumClass=((QualifiedAllocationExpression)initializer).anonymousType;
+        constructorBinding=((ConstructorDeclaration)anonymousEnumClass.methods[0]).constructorCall.binding;
+        EnumClass enumClassConstantBody=(EnumClass)myTypesProvider.getRaw(anonymousEnumClass.binding);
+        for (        InstanceMethodDeclaration imd : enumClassConstantBody.getMethods()) {
+          enumClassConstantBody.removeChild(imd);
+          enumConstant.addMethod(imd);
+        }
+        for (        AbstractMethodDeclaration m : anonymousEnumClass.methods) {
+          if (m instanceof ConstructorDeclaration) {
+            continue;
+          }
+          processMethod(m);
+        }
+      }
+ else {
+        constructorBinding=initializer.binding;
+      }
+      jetbrains.mps.baseLanguage.structure.ConstructorDeclaration constructor=(jetbrains.mps.baseLanguage.structure.ConstructorDeclaration)myTypesProvider.getRaw(constructorBinding.original());
+      enumConstant.setConstructor(constructor);
+      org.eclipse.jdt.internal.compiler.ast.Expression[] arguments=initializer.arguments;
+      if (arguments != null) {
+        for (        org.eclipse.jdt.internal.compiler.ast.Expression arg : arguments) {
+          enumConstant.addActualArgument(processExpressionRefl(arg));
+        }
+      }
+      addEnumConstAnnotations(enumConstant,declaration);
+    }
+ catch (    Throwable t) {
+      throw new JavaConverterException(t);
+    }
+  }
+}

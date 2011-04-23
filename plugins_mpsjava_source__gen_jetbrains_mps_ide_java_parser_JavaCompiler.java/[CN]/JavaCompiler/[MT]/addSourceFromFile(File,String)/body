@@ -1,0 +1,60 @@
+{
+  try {
+    String fileContents=FileUtil.read(file);
+    String str="package ";
+    int packageIndex=fileContents.indexOf(str) + str.length();
+    int i=packageIndex;
+    StringBuilder classFQName=new StringBuilder();
+    while (i < fileContents.length()) {
+      char c=fileContents.charAt(i);
+      i++;
+      if (Character.isWhitespace(c) || c == ';') {
+        break;
+      }
+      classFQName.append(c);
+    }
+    String packageNameFromFile=classFQName.toString();
+    if (myPrefix != null) {
+      String pattern;
+      if ("".equals(packageNameWithoutPrefix) && myPrefix.endsWith(".")) {
+        pattern=myPrefix.substring(0,myPrefix.length() - 1);
+      }
+ else       if ("".equals(packageNameWithoutPrefix) || "".equals(myPrefix) || myPrefix.endsWith(".")) {
+        pattern=myPrefix + packageNameWithoutPrefix;
+      }
+ else {
+        pattern=myPrefix + "." + packageNameWithoutPrefix;
+      }
+      if (!(((pattern).equals(packageNameFromFile)))) {
+        LOG.error("package name in a source file does not correpond to file path");
+        return;
+      }
+    }
+ else {
+      if (packageNameFromFile.endsWith(packageNameWithoutPrefix)) {
+        int index=packageNameFromFile.length() - packageNameWithoutPrefix.length();
+        myPrefix=packageNameFromFile.substring(0,index);
+      }
+ else {
+        LOG.error("package name in a source file does not correpond to file path");
+        return;
+      }
+    }
+    String fileName;
+    String nameAndExtension=file.getName();
+    int offset=nameAndExtension.lastIndexOf('.');
+    if (offset < 0) {
+      fileName=nameAndExtension;
+    }
+ else {
+      fileName=nameAndExtension.substring(0,offset);
+    }
+    classFQName.append(".");
+    classFQName.append(fileName);
+    registerModelForPackage(packageNameFromFile);
+    addSource(classFQName.toString(),fileContents);
+  }
+ catch (  Throwable t) {
+    LOG.error(t);
+  }
+}
