@@ -1,0 +1,62 @@
+{
+  LOG.assertLog(!(ThreadUtils.isEventDispatchThread()),"You should not do this in EDT");
+synchronized (LOCK) {
+    if (myState == PluginStateMonitor.State.CONNECTED) {
+      if (isConnected()) {
+        if (canOperate()) {
+          return;
+        }
+ else {
+          setNewState(PluginStateMonitor.State.CONNECTED_BAD_PROJECT);
+        }
+      }
+ else {
+        setNewState(PluginStateMonitor.State.TRYING_TO_CONNECT);
+      }
+    }
+ else     if (myState == PluginStateMonitor.State.CONNECTED_BAD_PROJECT) {
+      if (isConnected()) {
+        if (canOperate()) {
+          setNewState(PluginStateMonitor.State.CONNECTED);
+        }
+ else {
+          return;
+        }
+      }
+ else {
+        setNewState(PluginStateMonitor.State.TRYING_TO_CONNECT);
+      }
+    }
+ else     if (myState == PluginStateMonitor.State.DISCONNECTED) {
+      if (MPSPlugin.getInstance().openConnectionPresent()) {
+        if (isConnected()) {
+          if (canOperate()) {
+            setNewState(PluginStateMonitor.State.CONNECTED);
+          }
+ else {
+            setNewState(PluginStateMonitor.State.CONNECTED_BAD_PROJECT);
+          }
+        }
+      }
+    }
+ else     if (myState == PluginStateMonitor.State.TRYING_TO_CONNECT) {
+      if (isConnected()) {
+        if (canOperate()) {
+          setNewState(PluginStateMonitor.State.CONNECTED);
+        }
+ else {
+          setNewState(PluginStateMonitor.State.CONNECTED_BAD_PROJECT);
+        }
+      }
+ else {
+        int newDelay=(int)(myTimer.getDelay() * DELAY_MUL);
+        if (newDelay <= CRITICAL_DELAY) {
+          myTimer.setNewDelay(newDelay);
+        }
+ else {
+          setNewState(PluginStateMonitor.State.DISCONNECTED);
+        }
+      }
+    }
+  }
+}
