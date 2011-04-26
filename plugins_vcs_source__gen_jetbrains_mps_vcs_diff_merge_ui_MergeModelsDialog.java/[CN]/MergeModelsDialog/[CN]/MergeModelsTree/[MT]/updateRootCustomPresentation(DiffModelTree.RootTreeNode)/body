@@ -1,0 +1,42 @@
+{
+  List<ModelChange> changes=ListSequence.fromList(myMergeContext.getChangesForRoot(rootTreeNode.getRootId())).where(new IWhereFilter<ModelChange>(){
+    public boolean accept(    ModelChange ch){
+      return !(myMergeContext.isChangeResolved(ch));
+    }
+  }
+).toListSequence();
+  int conflictedCount=ListSequence.fromList(changes).where(new IWhereFilter<ModelChange>(){
+    public boolean accept(    ModelChange ch){
+      return Sequence.fromIterable(myMergeContext.getConflictedWith(ch)).isNotEmpty();
+    }
+  }
+).count();
+  int nonConflictedCount=ListSequence.fromList(changes).count() - conflictedCount;
+  ChangeType compositeChangeType=null;
+  if (conflictedCount != 0) {
+    compositeChangeType=ChangeType.CONFLICTED;
+    rootTreeNode.setAdditionalText(nonConflictedCount + "+" + conflictedCount);
+    rootTreeNode.setTooltipText(NameUtil.formatNumericalString(nonConflictedCount,"non-conficting change") + ", " + NameUtil.formatNumericalString(conflictedCount,"conficting change"));
+  }
+ else {
+    if (ListSequence.fromList(changes).isEmpty()) {
+      rootTreeNode.setText(String.format("<html><s>%s</s></html>",rootTreeNode.getText()));
+    }
+ else {
+      compositeChangeType=ChangeType.CHANGE;
+      if (ListSequence.fromList(changes).all(new IWhereFilter<ModelChange>(){
+        public boolean accept(        ModelChange ch){
+          return ch instanceof AddRootChange || ch instanceof DeleteRootChange;
+        }
+      }
+)) {
+        compositeChangeType=ListSequence.fromList(changes).first().getType();
+      }
+      rootTreeNode.setAdditionalText("" + nonConflictedCount);
+      rootTreeNode.setTooltipText(NameUtil.formatNumericalString(nonConflictedCount,"non-conficting change"));
+    }
+  }
+  if (compositeChangeType != null) {
+    rootTreeNode.setColor(compositeChangeType.getTreeColor());
+  }
+}
