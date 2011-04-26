@@ -1,5 +1,5 @@
 {
-  final DiffModelTree.ModelTreeNode modelNode=new DiffModelTree.ModelTreeNode();
+  DiffModelTree.ModelTreeNode modelNode=new DiffModelTree.ModelTreeNode();
   myRootNodes=Sequence.fromIterable(getAffectedRoots()).<DiffModelTree.RootTreeNode>select(new ISelector<SNodeId,DiffModelTree.RootTreeNode>(){
     public DiffModelTree.RootTreeNode select(    SNodeId r){
       return new DiffModelTree.RootTreeNode(r);
@@ -11,11 +11,23 @@
     }
   }
 ,true).toListSequence();
-  ListSequence.fromList(myRootNodes).visitAll(new IVisitor<DiffModelTree.RootTreeNode>(){
-    public void visit(    DiffModelTree.RootTreeNode rtn){
-      modelNode.add(rtn);
-    }
-  }
+  for (  DiffModelTree.RootTreeNode rtn : ListSequence.fromList(myRootNodes)) {
+    MPSTreeNode parentNode=modelNode;
+    for (    final String sub : Sequence.fromIterable(Sequence.fromArray(rtn.myVirtualPackage.split("\\.")))) {
+      Iterable<MPSTreeNode> children=(Iterable<MPSTreeNode>)parentNode;
+      MPSTreeNode child=Sequence.fromIterable(children).findFirst(new IWhereFilter<MPSTreeNode>(){
+        public boolean accept(        MPSTreeNode c){
+          return c instanceof DiffModelTree.PackageTreeNode && sub.equals(c.getText());
+        }
+      }
 );
+      if (child == null) {
+        child=new DiffModelTree.PackageTreeNode(sub);
+        parentNode.add(child);
+      }
+      parentNode=child;
+    }
+    parentNode.add(rtn);
+  }
   return modelNode;
 }
