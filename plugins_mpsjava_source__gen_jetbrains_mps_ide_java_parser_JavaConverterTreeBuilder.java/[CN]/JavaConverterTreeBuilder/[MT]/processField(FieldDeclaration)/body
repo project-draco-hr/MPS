@@ -1,17 +1,17 @@
 {
-  INodeAdapter adapter=myTypesProvider.getRaw(declaration.binding);
-  if (adapter == null) {
+  SNode adapter=myTypesProvider.getRaw(declaration.binding);
+  if ((adapter == null)) {
     return;
   }
-  if (adapter instanceof jetbrains.mps.baseLanguage.structure.FieldDeclaration || adapter instanceof StaticFieldDeclaration) {
-    VariableDeclaration field=(VariableDeclaration)adapter;
+  if (SNodeOperations.isInstanceOf(adapter,"jetbrains.mps.baseLanguage.structure.FieldDeclaration") || SNodeOperations.isInstanceOf(adapter,"jetbrains.mps.baseLanguage.structure.StaticFieldDeclaration")) {
+    SNode field=SNodeOperations.cast(adapter,"jetbrains.mps.baseLanguage.structure.VariableDeclaration");
     try {
-      Expression initializer=null;
+      SNode initializer=null;
       if (declaration.initialization != null) {
         initializer=processExpressionRefl(declaration.initialization);
       }
       if (initializer != null) {
-        field.setInitializer(initializer);
+        SLinkOperations.setTarget(field,"initializer",initializer,true);
       }
       addVariableAnnotations(field,declaration);
     }
@@ -19,19 +19,19 @@
       throw new JavaConverterException(e);
     }
   }
-  if (adapter instanceof EnumConstantDeclaration) {
+  if (SNodeOperations.isInstanceOf(adapter,"jetbrains.mps.baseLanguage.structure.EnumConstantDeclaration")) {
     try {
-      EnumConstantDeclaration enumConstant=(EnumConstantDeclaration)adapter;
-      assert(myCurrentClass instanceof EnumClass);
+      SNode enumConstant=SNodeOperations.cast(adapter,"jetbrains.mps.baseLanguage.structure.EnumConstantDeclaration");
+      assert(SNodeOperations.isInstanceOf(myCurrentClass,"jetbrains.mps.baseLanguage.structure.EnumClass"));
       AllocationExpression initializer=(AllocationExpression)declaration.initialization;
       MethodBinding constructorBinding;
       if (initializer instanceof QualifiedAllocationExpression) {
         TypeDeclaration anonymousEnumClass=((QualifiedAllocationExpression)initializer).anonymousType;
         constructorBinding=((ConstructorDeclaration)anonymousEnumClass.methods[0]).constructorCall.binding;
-        EnumClass enumClassConstantBody=(EnumClass)myTypesProvider.getRaw(anonymousEnumClass.binding);
-        for (        InstanceMethodDeclaration imd : enumClassConstantBody.getMethods()) {
-          enumClassConstantBody.removeChild(imd);
-          enumConstant.addMethod(imd);
+        SNode enumClassConstantBody=SNodeOperations.cast(myTypesProvider.getRaw(anonymousEnumClass.binding),"jetbrains.mps.baseLanguage.structure.EnumClass");
+        for (        SNode imd : SLinkOperations.getTargets(enumClassConstantBody,"method",true)) {
+          SNodeOperations.detachNode(imd);
+          ListSequence.fromList(SLinkOperations.getTargets(enumConstant,"method",true)).addElement(imd);
         }
         for (        AbstractMethodDeclaration m : anonymousEnumClass.methods) {
           if (m instanceof ConstructorDeclaration) {
@@ -43,12 +43,12 @@
  else {
         constructorBinding=initializer.binding;
       }
-      jetbrains.mps.baseLanguage.structure.ConstructorDeclaration constructor=(jetbrains.mps.baseLanguage.structure.ConstructorDeclaration)myTypesProvider.getRaw(constructorBinding.original());
-      enumConstant.setConstructor(constructor);
-      org.eclipse.jdt.internal.compiler.ast.Expression[] arguments=initializer.arguments;
+      SNode constructor=SNodeOperations.cast(myTypesProvider.getRaw(constructorBinding.original()),"jetbrains.mps.baseLanguage.structure.ConstructorDeclaration");
+      SLinkOperations.setTarget(enumConstant,"baseMethodDeclaration",constructor,false);
+      Expression[] arguments=initializer.arguments;
       if (arguments != null) {
-        for (        org.eclipse.jdt.internal.compiler.ast.Expression arg : arguments) {
-          enumConstant.addActualArgument(processExpressionRefl(arg));
+        for (        Expression arg : arguments) {
+          ListSequence.fromList(SLinkOperations.getTargets(enumConstant,"actualArgument",true)).addElement(processExpressionRefl(arg));
         }
       }
       addEnumConstAnnotations(enumConstant,declaration);

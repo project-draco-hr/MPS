@@ -1,43 +1,43 @@
 {
-  List<Statement> init=processStatements(x.initializations);
-  Expression expr=processExpressionRefl(x.condition);
-  jetbrains.mps.baseLanguage.structure.ForStatement forStatement=jetbrains.mps.baseLanguage.structure.ForStatement.newInstance(myCurrentModel);
-  forStatement.setCondition(expr);
+  List<SNode> init=processStatements(x.initializations);
+  SNode expr=processExpressionRefl(x.condition);
+  SNode forStatement=SModelOperations.createNewNode(myCurrentModel,"jetbrains.mps.baseLanguage.structure.ForStatement",null);
+  SLinkOperations.setTarget(forStatement,"condition",expr,true);
   if (!(init.isEmpty())) {
     boolean first=true;
-    for (    Statement statement : init) {
-      if (statement instanceof LocalVariableDeclarationStatement) {
-        LocalVariableDeclarationStatement lvds=(LocalVariableDeclarationStatement)statement;
-        LocalVariableDeclaration variableDeclaration=lvds.getLocalVariableDeclaration();
-        lvds.removeChild(variableDeclaration);
+    for (    SNode statement : init) {
+      if (SNodeOperations.isInstanceOf(statement,"jetbrains.mps.baseLanguage.structure.LocalVariableDeclarationStatement")) {
+        SNode lvds=SNodeOperations.cast(statement,"jetbrains.mps.baseLanguage.structure.LocalVariableDeclarationStatement");
+        SNode variableDeclaration=SLinkOperations.getTarget(lvds,"localVariableDeclaration",true);
+        SNodeOperations.detachNode(variableDeclaration);
         if (first) {
-          forStatement.setVariable(variableDeclaration);
+          SLinkOperations.setTarget(forStatement,"variable",variableDeclaration,true);
           first=false;
         }
  else {
-          AdditionalForLoopVariable additionalForLoopVariable=AdditionalForLoopVariable.newInstance(myCurrentModel);
+          SNode additionalForLoopVariable=SModelOperations.createNewNode(myCurrentModel,"jetbrains.mps.baseLanguage.structure.AdditionalForLoopVariable",null);
           myTypesProvider.replaceUnsafe(variableDeclaration,additionalForLoopVariable);
-          additionalForLoopVariable.setName(variableDeclaration.getName());
-          Expression inititalizer=variableDeclaration.getInitializer();
-          if (inititalizer != null) {
-            inititalizer.getParent().removeChild(inititalizer);
-            additionalForLoopVariable.setInitializer(inititalizer);
+          SPropertyOperations.set(additionalForLoopVariable,"name",SPropertyOperations.getString(variableDeclaration,"name"));
+          SNode inititalizer=SLinkOperations.getTarget(variableDeclaration,"initializer",true);
+          if ((inititalizer != null)) {
+            SNodeOperations.detachNode(inititalizer);
+            SLinkOperations.setTarget(additionalForLoopVariable,"initializer",inititalizer,true);
           }
-          forStatement.addAdditionalVar(additionalForLoopVariable);
+          ListSequence.fromList(SLinkOperations.getTargets(forStatement,"additionalVar",true)).addElement(additionalForLoopVariable);
         }
       }
     }
   }
-  List<ExpressionStatement> incr=processExpressionStatements(x.increments);
+  List<SNode> incr=processExpressionStatements(x.increments);
   if (!(incr.isEmpty())) {
-    for (    ExpressionStatement expressionStatement : incr) {
-      Expression expression=expressionStatement.getExpression();
-      expression.getParent().removeChild(expression);
-      forStatement.addIteration(expression);
+    for (    SNode expressionStatement : incr) {
+      SNode expression=SLinkOperations.getTarget(expressionStatement,"expression",true);
+      SNodeOperations.detachNode(expression);
+      ListSequence.fromList(SLinkOperations.getTargets(forStatement,"iteration",true)).addElement(expression);
     }
   }
-  Statement loopBody=processStatementRefl(x.action);
-  StatementList body=getStatementListFromStatement(loopBody);
-  forStatement.setBody(body);
+  SNode loopBody=processStatementRefl(x.action);
+  SNode body=getStatementListFromStatement(loopBody);
+  SLinkOperations.setTarget(forStatement,"body",body,true);
   return forStatement;
 }

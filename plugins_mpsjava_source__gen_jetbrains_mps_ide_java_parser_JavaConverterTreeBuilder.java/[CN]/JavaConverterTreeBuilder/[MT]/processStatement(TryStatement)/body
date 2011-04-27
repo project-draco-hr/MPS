@@ -1,42 +1,42 @@
 {
-  Statement tryBlock=processStatementRefl(x.tryBlock);
-  List<LocalVariableDeclaration> catchArgs=new ArrayList<LocalVariableDeclaration>();
-  List<Statement> catchBlocks=new ArrayList<Statement>();
-  Statement finallyBlock=processStatementRefl(x.finallyBlock);
+  SNode tryBlock=processStatementRefl(x.tryBlock);
+  List<SNode> catchArgs=new ArrayList<SNode>();
+  List<SNode> catchBlocks=new ArrayList<SNode>();
+  SNode finallyBlock=processStatementRefl(x.finallyBlock);
   if (x.catchBlocks != null) {
     for (int i=0, c=x.catchArguments.length; i < c; ++i) {
-      LocalVariableDeclaration local=(LocalVariableDeclaration)myTypesProvider.getRaw(x.catchArguments[i].binding);
-      catchArgs.add(local);
+      SNode local=SNodeOperations.cast(myTypesProvider.getRaw(x.catchArguments[i].binding),"jetbrains.mps.baseLanguage.structure.LocalVariableDeclaration");
+      ListSequence.fromList(catchArgs).addElement(local);
     }
     for (int i=0, c=x.catchBlocks.length; i < c; ++i) {
-      catchBlocks.add(processStatementRefl(x.catchBlocks[i]));
+      ListSequence.fromList(catchBlocks).addElement(processStatementRefl(x.catchBlocks[i]));
     }
   }
-  if (finallyBlock != null) {
-    jetbrains.mps.baseLanguage.structure.TryStatement tryStatement=jetbrains.mps.baseLanguage.structure.TryStatement.newInstance(myCurrentModel);
+  if ((finallyBlock != null)) {
+    SNode tryStatement=SModelOperations.createNewNode(myCurrentModel,"jetbrains.mps.baseLanguage.structure.TryStatement",null);
     for (int i=0; i < catchBlocks.size(); i++) {
-      Statement catchBlock=catchBlocks.get(i);
-      LocalVariableDeclaration lvd=catchArgs.get(i);
-      CatchClause catchClause=CatchClause.newInstance(myCurrentModel);
-      tryStatement.addCatchClause(catchClause);
-      catchClause.setCatchBody(getStatementListFromStatement(catchBlock));
-      catchClause.setThrowable(lvd);
+      SNode catchBlock=ListSequence.fromList(catchBlocks).getElement(i);
+      SNode lvd=ListSequence.fromList(catchArgs).getElement(i);
+      SNode catchClause=SModelOperations.createNewNode(myCurrentModel,"jetbrains.mps.baseLanguage.structure.CatchClause",null);
+      ListSequence.fromList(SLinkOperations.getTargets(tryStatement,"catchClause",true)).addElement(catchClause);
+      SLinkOperations.setTarget(catchClause,"catchBody",getStatementListFromStatement(catchBlock),true);
+      SLinkOperations.setTarget(catchClause,"throwable",lvd,true);
     }
-    tryStatement.setFinallyBody(getStatementListFromStatement(finallyBlock));
-    tryStatement.setBody(getStatementListFromStatement(tryBlock));
+    SLinkOperations.setTarget(tryStatement,"finallyBody",getStatementListFromStatement(finallyBlock),true);
+    SLinkOperations.setTarget(tryStatement,"body",getStatementListFromStatement(tryBlock),true);
     return tryStatement;
   }
  else {
-    TryCatchStatement tryCatchStatement=TryCatchStatement.newInstance(myCurrentModel);
+    SNode tryCatchStatement=SModelOperations.createNewNode(myCurrentModel,"jetbrains.mps.baseLanguage.structure.TryCatchStatement",null);
     for (int i=0; i < catchBlocks.size(); i++) {
-      Statement catchBlock=catchBlocks.get(i);
-      LocalVariableDeclaration lvd=catchArgs.get(i);
-      CatchClause catchClause=CatchClause.newInstance(myCurrentModel);
-      tryCatchStatement.addCatchClause(catchClause);
-      catchClause.setCatchBody(getStatementListFromStatement(catchBlock));
-      catchClause.setThrowable(lvd);
+      SNode catchBlock=ListSequence.fromList(catchBlocks).getElement(i);
+      SNode lvd=ListSequence.fromList(catchArgs).getElement(i);
+      SNode catchClause=SModelOperations.createNewNode(myCurrentModel,"jetbrains.mps.baseLanguage.structure.CatchClause",null);
+      ListSequence.fromList(SLinkOperations.getTargets(tryCatchStatement,"catchClause",true)).addElement(catchClause);
+      SLinkOperations.setTarget(catchClause,"catchBody",getStatementListFromStatement(catchBlock),true);
+      SLinkOperations.setTarget(catchClause,"throwable",lvd,true);
     }
-    tryCatchStatement.setBody(getStatementListFromStatement(tryBlock));
+    SLinkOperations.setTarget(tryCatchStatement,"body",getStatementListFromStatement(tryBlock),true);
     return tryCatchStatement;
   }
 }
