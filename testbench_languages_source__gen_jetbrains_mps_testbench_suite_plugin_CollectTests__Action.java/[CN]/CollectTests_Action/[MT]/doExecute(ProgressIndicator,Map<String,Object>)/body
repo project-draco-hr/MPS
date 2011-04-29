@@ -1,0 +1,67 @@
+{
+  final Logger LOG=Logger.getLogger("jetbrains.mps.testbench.suite");
+  final Wrappers._T<List<ModuleReference>> solutions=new Wrappers._T<List<ModuleReference>>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      solutions.value=CollectTests_Action.this.allSolutions(_params);
+    }
+  }
+);
+  final SModel model=((SModelDescriptor)MapSequence.fromMap(_params).get("modelDesc")).getSModel();
+  int done=0;
+  for (  ModuleReference mref : solutions.value) {
+    if (proInd.isCanceled()) {
+      return false;
+    }
+    proInd.setText("Processing " + mref.getModuleFqName());
+    final IModule module=MPSModuleRepository.getInstance().getModule(mref);
+    if (module != null) {
+      final Wrappers._T<SNode> suite=new Wrappers._T<SNode>(null);
+      for (      final SModelDescriptor smd : module.getOwnModelDescriptors()) {
+        final Wrappers._T<SModel> smodel=new Wrappers._T<SModel>();
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            try {
+              smodel.value=smd.getSModel();
+            }
+ catch (            RuntimeException ex) {
+              LOG.error(ex);
+            }
+          }
+        }
+);
+        if (smodel.value == null) {
+          continue;
+        }
+        if (new TestCollector().collectTests(smodel.value,module.getScope(),new _FunctionTypes._void_P1_E0<_FunctionTypes._return_P0_E0<? extends SNode>>(){
+          public void invoke(          final _FunctionTypes._return_P0_E0<? extends SNode> tref){
+            ThreadUtils.runInUIThreadAndWait(new Runnable(){
+              public void run(){
+                ModelAccess.instance().executeCommand(new Runnable(){
+                  public void run(){
+                    if (suite.value == null) {
+                      suite.value=SModelOperations.createNewRootNode(model,"jetbrains.mps.testbench.suite.structure.ModuleSuite",null);
+                      SNode sref=SLinkOperations.setNewChild(suite.value,"moduleRef","jetbrains.mps.testbench.suite.structure.SolutionRef");
+                      ModuleReference mref=module.getModuleReference();
+                      SPropertyOperations.set(sref,"moduleFQName",mref.getModuleFqName());
+                      SPropertyOperations.set(sref,"moduleID",mref.getModuleId().toString());
+                    }
+                    ListSequence.fromList(SLinkOperations.getTargets(suite.value,"testRef",true)).addElement(tref.invoke());
+                    model.addModelImport(smd.getSModelReference(),false);
+                    ((SModelDescriptor)MapSequence.fromMap(_params).get("modelDesc")).getModule().addDependency(module.getModuleReference(),false);
+                  }
+                }
+,((Project)MapSequence.fromMap(_params).get("project")));
+              }
+            }
+);
+          }
+        }
+)) {
+        }
+      }
+    }
+    proInd.setFraction(((double)++done) / ListSequence.fromList(solutions.value).count());
+  }
+  return true;
+}
