@@ -1,36 +1,21 @@
 {
   DefaultActionGroup result=new DefaultActionGroup();
-  DefaultActionGroup currentGroup=null;
-  List<DefaultActionGroup> groups=new ArrayList<DefaultActionGroup>();
-  List<EditorTabDescriptor> tabs=new ArrayList<EditorTabDescriptor>(myPossibleTabs);
-  Collections.sort(tabs,new EditorTabComparator());
-  for (  final EditorTabDescriptor d : tabs) {
-    List<SNode> concepts=d.getConcepts(myBaseNode.getNode());
-    if (concepts.isEmpty())     continue;
-    boolean current=false;
-    for (    SNode aspect : d.getNodes(myBaseNode.getNode())) {
-      if (aspect.getContainingRoot().equals(getCurrentAspect())) {
-        current=true;
-        break;
-      }
-    }
-    DefaultActionGroup group=new DefaultActionGroup(d.getTitle(),!current);
-    for (    final SNode concept : concepts) {
-      group.add(new CreateAction(concept,d));
-    }
-    if (current) {
-      currentGroup=group;
-    }
- else {
-      groups.add(group);
+  CreateGroupsBuilder builder=new CreateGroupsBuilder(myBaseNode,myPossibleTabs,getCurrentAspect()){
+    public void aspectCreated(    SNode sNode){
+      AddConceptTab.this.aspectCreated(sNode);
     }
   }
-  if (currentGroup != null) {
-    result.add(currentGroup);
+;
+  Iterator<DefaultActionGroup> it=builder.getCreateGroups().iterator();
+  if (it.hasNext()) {
+    DefaultActionGroup current=it.next();
+    result.add(current);
     result.add(new Separator());
   }
-  for (  DefaultActionGroup group : groups) {
-    result.add(group);
+  while (it.hasNext()) {
+    DefaultActionGroup g=it.next();
+    g.setPopup(true);
+    result.add(g);
   }
   return result;
 }
