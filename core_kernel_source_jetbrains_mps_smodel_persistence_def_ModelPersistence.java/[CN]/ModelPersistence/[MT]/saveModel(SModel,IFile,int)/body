@@ -9,21 +9,20 @@
     DefaultSModelDescriptor md=(DefaultSModelDescriptor)modelDescriptor;
     saveMetadata(md.getModelFile(),md.getMetaData());
   }
-  int newVersion=persistenceVersion;
-  if (canUpgrade) {
-    if (persistenceVersion != PersistenceSettings.VERSION_UNDEFINED && needsUpgrade(persistenceVersion)) {
-      newVersion=getCurrentPersistenceVersion();
-      upgradePersistence(file,model,persistenceVersion,newVersion);
-      return model;
-    }
+  int oldVersion=model.getPersistenceVersion();
+  if (oldVersion != persistenceVersion) {
+    model.setPersistenceVersion(persistenceVersion);
   }
-  Document document=saveModel(model,newVersion);
+  Document document=saveModel(model,persistenceVersion);
   try {
     JDOMUtil.writeDocument(document,file);
-    SModelRepository.getInstance().markUnchanged(model);
   }
  catch (  IOException e) {
     LOG.error("Error in file " + file,e);
+  }
+  if (oldVersion != persistenceVersion) {
+    LOG.info("persistence upgraded: " + oldVersion + "->"+ persistenceVersion+ " "+ model.getSModelReference());
+    return model;
   }
   return null;
 }
