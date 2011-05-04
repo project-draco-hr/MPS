@@ -1,38 +1,26 @@
 {
-  File dir=new File(myThis.getLanguagePath());
-  String message=NewModuleCheckUtil.checkModuleDirectory(dir,MPSExtentions.DOT_LANGUAGE,"Language");
+  String message=NewModuleUtil.check(MPSExtentions.DOT_LANGUAGE,myThis.getLanguageNamespace(),myThis.getLanguagePath());
   if (message != null) {
     myThis.getDialog().setErrorText(message);
     return;
   }
-  if (myThis.getLanguageNamespace().length() == 0) {
-    myThis.getDialog().setErrorText("Enter namespace");
-    return;
-  }
-  if (MPSModuleRepository.getInstance().getModuleByUID(myThis.getLanguageNamespace()) != null) {
-    myThis.getDialog().setErrorText("Language namespace already exists");
-    return;
-  }
-  if (NameUtil.shortNameFromLongName(myThis.getLanguageNamespace()).length() == 0) {
-    myThis.getDialog().setErrorText("Enter valid namespace");
-    return;
-  }
   myThis.getDialog().dispose();
-  final Language language=null;
+  final Wrappers._T<Language> language=new Wrappers._T<Language>(null);
   Project project=myThis.getProject().getProject();
   ModelAccess.instance().runWriteActionWithProgressSynchronously(new Progressive(){
     public void run(    ProgressIndicator indicator){
       indicator.setIndeterminate(true);
+      language.value=myThis.createNewLanguage();
     }
   }
 ,"Creating",false,project);
   ModelAccess.instance().runWriteActionInCommandAsync(new Runnable(){
     public void run(){
-      if (!(language.getSModelRoots().isEmpty())) {
-        LanguageAspect.STRUCTURE.createNew(language,false);
-        LanguageAspect.EDITOR.createNew(language,false);
-        LanguageAspect.CONSTRAINTS.createNew(language,false);
-        LanguageAspect.TYPESYSTEM.createNew(language,false);
+      if (!(language.value.getSModelRoots().isEmpty())) {
+        LanguageAspect.STRUCTURE.createNew(language.value,false);
+        LanguageAspect.EDITOR.createNew(language.value,false);
+        LanguageAspect.CONSTRAINTS.createNew(language.value,false);
+        LanguageAspect.TYPESYSTEM.createNew(language.value,false);
       }
       if (myThis.myNeedRuntime_f0.isSelected()) {
         Solution runtime=myThis.createRuntimeSolution();
