@@ -10,15 +10,32 @@ synchronized (EVENTS_LOCK) {
   Set<BaseEditorChecker> checkers=new LinkedHashSet<BaseEditorChecker>();
   Set<BaseEditorChecker> checkersToRemove=new LinkedHashSet<BaseEditorChecker>();
 synchronized (CHECKERS_LOCK) {
-    checkers.addAll(myCheckers);
+    if (!EditorSettings.getInstance().isPowerSaveMode() || myForceUpdateInPowerSaveModeFlag) {
+      checkers.addAll(myCheckers);
+      myForceUpdateInPowerSaveModeFlag=false;
+    }
     checkersToRemove.addAll(myCheckersToRemove);
     myCheckersToRemove.clear();
+  }
+  final List<EditorComponent> allEditorComponents=getAllEditorComponents();
+  runUpdateMessagesAction(new Runnable(){
+    @Override public void run(){
+      if (EditorSettings.getInstance().isPowerSaveMode()) {
+        myCheckedOnceEditors.clear();
+        myInspectorMessagesCreated=false;
+      }
+ else {
+        cleanupCheckedOnce(allEditorComponents);
+      }
+    }
+  }
+);
+  if (checkers.isEmpty() && checkersToRemove.isEmpty()) {
+    return;
   }
   boolean isUpdated=false;
   boolean inspectorIsUpdated=false;
   EditorComponent inspector=null;
-  List<EditorComponent> allEditorComponents=getAllEditorComponents();
-  cleanupCheckedOnce(allEditorComponents);
   try {
     TypeChecker.getInstance().enableGlobalSubtypingCache();
     for (    EditorComponent editorComponent : allEditorComponents) {
