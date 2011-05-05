@@ -4,14 +4,25 @@
     LOG.error("Can't write to " + file.getPath());
     return null;
   }
-  SModelDescriptor modelDescriptor=model.getModelDescriptor();
-  if (modelDescriptor instanceof DefaultSModelDescriptor) {
-    DefaultSModelDescriptor md=(DefaultSModelDescriptor)modelDescriptor;
-    saveMetadata(md.getModelFile(),md.getMetaData());
-  }
   int oldVersion=model.getPersistenceVersion();
   if (oldVersion != persistenceVersion) {
     model.setPersistenceVersion(persistenceVersion);
+  }
+  SModelDescriptor modelDescriptor=model.getModelDescriptor();
+  if (modelDescriptor instanceof DefaultSModelDescriptor) {
+    DefaultSModelDescriptor md=(DefaultSModelDescriptor)modelDescriptor;
+    Map<String,String> metadata=md.getMetaData();
+    SModelHeader header=model.getSModelHeader();
+    if (persistenceVersion < 7 && (header.getVersion() != -1 || header.isDoNotGenerate())) {
+      metadata=new HashMap<String,String>(metadata);
+      if (header.getVersion() != -1) {
+        metadata.put(SModelHeader.VERSION,Integer.toString(header.getVersion()));
+      }
+      if (header.isDoNotGenerate()) {
+        metadata.put(SModelHeader.DO_NOT_GENERATE,"true");
+      }
+    }
+    saveMetadata(md.getModelFile(),metadata);
   }
   Document document=saveModel(model);
   try {
