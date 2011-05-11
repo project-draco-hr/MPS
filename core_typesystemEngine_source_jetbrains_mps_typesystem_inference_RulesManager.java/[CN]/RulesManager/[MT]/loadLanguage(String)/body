@@ -2,9 +2,35 @@
   if (myLoadedLanguages.contains(languageNamespace)) {
     return true;
   }
-  Language l=GlobalScope.getInstance().getLanguage(languageNamespace);
-  if (l == null) {
+  LanguageRuntime language=LanguageRegistry.getInstance().getLanguage(languageNamespace);
+  if (language == null)   return false;
+  IHelginsDescriptor typesystemDescriptor=language.getTypesystem();
+  if (typesystemDescriptor == null)   return false;
+  try {
+    myInferenceRules.addRuleSetItem(typesystemDescriptor.getInferenceRules());
+    myNonTypesystemRules.addRuleSetItem(typesystemDescriptor.getNonTypesystemRules());
+    mySubtypingRules.addRuleSetItem(typesystemDescriptor.getSubtypingRules());
+    Set<ComparisonRule_Runtime> comparisonRule_runtimes=typesystemDescriptor.getComparisonRules();
+    myComparisonRules.addRuleSetItem(comparisonRule_runtimes);
+    myReplacementRules.addRuleSetItem(typesystemDescriptor.getEliminationRules());
+    myDependenciesContainer.addDependencies(typesystemDescriptor.getDependencies());
+    myVariableConverters.addAll(typesystemDescriptor.getVariableConverters());
+    myOverloadedOperationsManager.addOverloadedOperationsTypeProviders(typesystemDescriptor.getOverloadedOperationsTypesProviders());
+    Set<AbstractDependentComputation_Runtime> dependentComputations=typesystemDescriptor.getDependentComputations();
+    myDependentComputations.addRuleSetItem(dependentComputations);
+    for (    AbstractDependentComputation_Runtime dependentComputation : dependentComputations) {
+      myDependentComputationsBlockedNodes.addRule(dependentComputation.getWrapper());
+    }
+    myComparisonRules.makeConsistent();
+    myReplacementRules.makeConsistent();
+    myDependenciesContainer.makeConsistent();
+    myOverloadedOperationsManager.makeConsistent();
+    return true;
+  }
+ catch (  Throwable t) {
     return false;
   }
-  return loadLanguage(l);
+ finally {
+    myLoadedLanguages.add(languageNamespace);
+  }
 }
