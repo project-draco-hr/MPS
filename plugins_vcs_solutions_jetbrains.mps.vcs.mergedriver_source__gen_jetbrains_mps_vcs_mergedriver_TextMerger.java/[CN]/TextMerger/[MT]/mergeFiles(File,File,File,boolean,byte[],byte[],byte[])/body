@@ -1,0 +1,33 @@
+{
+  SVNDiffOptions diffOptions=null;
+  FSMergerBySequence merger=new FSMergerBySequence(conflictStart,separator,conflictEnd);
+  int mergeResult=0;
+  RandomAccessFile local=null;
+  RandomAccessFile latest=null;
+  InputStream base=null;
+  OutputStream result=null;
+  try {
+    local=new RandomAccessFile(localFile,"r");
+    latest=new RandomAccessFile(latestFile,"r");
+    base=new FileInputStream(baseFile);
+    QSequenceLineRAData baseData=QSequenceLineRAByteData.create(base);
+    QSequenceLineRAData localData=new QSequenceLineRAFileData(local);
+    QSequenceLineRAData latestData=new QSequenceLineRAFileData(latest);
+    FileUtil.closeFileSafe(base);
+    result=(overwrite ? new FileOutputStream(baseFile) : System.out);
+    mergeResult=merger.merge(baseData,localData,latestData,diffOptions,result,SVNDiffConflictChoiceStyle.CHOOSE_MODIFIED_LATEST);
+  }
+ catch (  IOException e) {
+    return FATAL_ERROR;
+  }
+ finally {
+    FileUtil.closeFileSafe(result);
+    FileUtil.closeFileSafe(base);
+    FileUtil.closeFileSafe(latest);
+    FileUtil.closeFileSafe(local);
+  }
+  if (mergeResult == FSMergerBySequence.CONFLICTED) {
+    return CONFLICTS;
+  }
+  return MERGED;
+}

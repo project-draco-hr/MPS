@@ -1,70 +1,35 @@
 {
-  if (args.length < 3) {
-    System.err.println("Usage: " + getCommandLine() + " <base> <current> <other> [marker-size]");
+  byte[] conflictStart=CONFLICT_START.getBytes();
+  byte[] conflictEnd=CONFLICT_END.getBytes();
+  byte[] conflictSeparator=CONFLICT_SEPARATOR.getBytes();
+  if (args.length < 4) {
+    System.err.println("Usage: " + getCommandLine() + " --<vcs> <base> <current> <other> "+ "[<base name> <current name> <other name>]");
     System.exit(2);
   }
-  final Wrappers._int markerSize=new Wrappers._int(32);
-  if (args.length > 3) {
-    markerSize.value=Integer.parseInt(args[3]);
-  }
-  List<byte[]> contents=Sequence.fromIterable(Sequence.fromArray(args)).take(3).toListSequence().<byte[]>select(new ISelector<String,byte[]>(){
-    public byte[] select(    String fn){
-      FileInputStream in=null;
-      try {
-        File file=new File(fn);
-        in=new FileInputStream(file);
-        byte[] content=new byte[((int)file.length())];
-        in.read(content);
-        return content;
-      }
- catch (      IOException e) {
-        return null;
-      }
- finally {
-        if (in != null) {
-          try {
-            in.close();
-          }
- catch (          IOException ignored) {
-          }
-        }
-      }
+  File baseFile=new File(args[1]);
+  File currentFile=new File(args[2]);
+  File otherFile=new File(args[3]);
+  boolean overwrite=false;
+  FileMerger merger;
+  if ("--svn".equals(args[0])) {
+    if (args.length >= 7) {
+      conflictStart=(CONFLICT_START + " " + args[5]).getBytes();
+      conflictEnd=(CONFLICT_END + " " + args[6]).getBytes();
+    }
+    if (baseFile.getName().endsWith(".mps.svn-base")) {
+      merger=new SimpleMerger();
+    }
+ else {
+      merger=new TextMerger();
     }
   }
-).toListSequence();
-  FileOutputStream out=null;
-  try {
-    out=new FileOutputStream(args[1]);
-    _FunctionTypes._return_P1_E0<? extends byte[],? super String> marker=new _FunctionTypes._return_P1_E0<byte[],String>(){
-      public byte[] invoke(      String m){
-        try {
-          return (StringUtils.repeat(m,markerSize.value) + "\n").getBytes("utf-8");
-        }
- catch (        UnsupportedEncodingException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
-;
-    out.write(marker.invoke("<"));
-    out.write(ListSequence.fromList(contents).getElement(1));
-    out.write(marker.invoke("="));
-    out.write(ListSequence.fromList(contents).getElement(0));
-    out.write(marker.invoke("="));
-    out.write(ListSequence.fromList(contents).getElement(2));
-    out.write(marker.invoke(">"));
-    System.exit(1);
+ else   if ("--git".equals(args[0])) {
+    overwrite=true;
+    merger=new SimpleMerger();
   }
- catch (  IOException ignored) {
+ else {
     System.exit(2);
+    return;
   }
- finally {
-    if (out != null) {
-      try {
-        out.close();
-      }
- catch (      IOException ignored) {
-      }
-    }
-  }
+  System.exit(merger.mergeFiles(baseFile,currentFile,otherFile,overwrite,conflictStart,conflictEnd,conflictSeparator));
 }
