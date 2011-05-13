@@ -1,2 +1,42 @@
 {
+  VirtualFile attributesFile=vcsRootPath.findChild(ATTRIBUTES_FILE);
+  if (attributesFile != null && attributesFile.isDirectory()) {
+    return false;
+  }
+  try {
+    if (attributesFile == null || attributesFile.exists()) {
+      attributesFile=vcsRootPath.createChildData(null,ATTRIBUTES_FILE);
+    }
+    final List<String> lines=StringsIO.readLines(attributesFile.getInputStream());
+    if (dryRun) {
+      return ListSequence.fromList(EXTENSIONS).all(new IWhereFilter<String>(){
+        public boolean accept(        final String ext){
+          return ListSequence.fromList(lines).any(new IWhereFilter<String>(){
+            public boolean accept(            String line){
+              return line.matches("\\s*\\*\\." + ext + ".+merge=mps\\s*");
+            }
+          }
+);
+        }
+      }
+);
+    }
+    for (    String ext : ListSequence.fromList(EXTENSIONS)) {
+      boolean updated=false;
+      for (int i=0; i < ListSequence.fromList(lines).count(); i++) {
+        if (ListSequence.fromList(lines).getElement(i).matches("\\s*\\*\\." + ext + ".*") && !(ListSequence.fromList(lines).getElement(i).contains("merge=mps"))) {
+          ListSequence.fromList(lines).setElement(i,ListSequence.fromList(lines).getElement(i) + " merge=mps");
+          updated=true;
+        }
+      }
+      if (!(updated)) {
+        ListSequence.fromList(lines).addElement("*." + ext + " merge=mps");
+      }
+    }
+    StringsIO.writeLines(attributesFile.getOutputStream(null),lines);
+    return true;
+  }
+ catch (  IOException e) {
+    return false;
+  }
 }
