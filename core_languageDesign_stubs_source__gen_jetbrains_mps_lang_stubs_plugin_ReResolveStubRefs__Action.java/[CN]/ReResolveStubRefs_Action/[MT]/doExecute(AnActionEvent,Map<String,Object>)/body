@@ -1,6 +1,7 @@
 {
   try {
     int i=0;
+    Map<String,SModelReference> cache=MapSequence.fromMap(new HashMap<String,SModelReference>());
     for (    final SModelDescriptor d : SModelRepository.getInstance().getModelDescriptors()) {
       if (!(d instanceof EditableSModelDescriptor)) {
         continue;
@@ -26,24 +27,36 @@
           if (ref.getTargetNode() != null) {
             continue;
           }
-          for (          SModelDescriptor md : module.getScope().getModelDescriptors()) {
-            SModelReference mdRef=md.getSModelReference();
-            SModelId mdId=mdRef.getSModelId();
-            if (mdId instanceof SModelId.RegularSModelId) {
-              continue;
+          String oldId=((SModelId.ForeignSModelId)modelId).getId();
+          SModelReference replacement=null;
+          SModelReference cachedReplacement=MapSequence.fromMap(cache).get(oldId);
+          if (cachedReplacement != null && module.getScope().getModelDescriptor(cachedReplacement) != null) {
+            replacement=cachedReplacement;
+          }
+ else {
+            for (            SModelDescriptor md : module.getScope().getModelDescriptors()) {
+              SModelReference mdRef=md.getSModelReference();
+              SModelId mdId=mdRef.getSModelId();
+              if (mdId instanceof SModelId.RegularSModelId) {
+                continue;
+              }
+              if (!(ReResolveStubRefs_Action.this.matches(oldId,((SModelId.ForeignSModelId)mdId).getId(),_params))) {
+                continue;
+              }
+              if (md.getSModel().getNodeById(nodeId) == null) {
+                continue;
+              }
+              replacement=md.getSModelReference();
+              MapSequence.fromMap(cache).put(oldId,replacement);
+              break;
             }
-            if (!(ReResolveStubRefs_Action.this.matches(((SModelId.ForeignSModelId)modelId).getId(),((SModelId.ForeignSModelId)mdId).getId(),_params))) {
-              continue;
-            }
-            if (md.getSModel().getNodeById(nodeId) == null) {
-              continue;
-            }
+          }
+          if (replacement != null) {
             SetSequence.fromSet(toRemove).addElement(ref.getTargetSModelReference());
-            SModelReference mr=md.getSModelReference();
+            SModelReference mr=replacement;
             d.getSModel().addModelImport(mr,false);
             ref.setTargetSModelReference(mr);
             i++;
-            break;
           }
         }
       }
