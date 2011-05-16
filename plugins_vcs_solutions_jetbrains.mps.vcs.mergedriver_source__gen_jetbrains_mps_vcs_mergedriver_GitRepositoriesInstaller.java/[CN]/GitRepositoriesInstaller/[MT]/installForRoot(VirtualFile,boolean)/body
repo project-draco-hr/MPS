@@ -1,0 +1,52 @@
+{
+  VirtualFile attributesFile=vcsRootPath.findChild(ATTRIBUTES_FILE);
+  if (attributesFile != null && attributesFile.isDirectory()) {
+    return AbstractInstaller.State.NOT_INSTALLED;
+  }
+  try {
+    if (attributesFile == null || !(attributesFile.exists())) {
+      if (dryRun) {
+        return AbstractInstaller.State.NOT_INSTALLED;
+      }
+      attributesFile=vcsRootPath.createChildData(null,ATTRIBUTES_FILE);
+    }
+    final List<String> lines=StringsIO.readLines(attributesFile.getInputStream());
+    if (ListSequence.fromList(EXTENSIONS).all(new IWhereFilter<String>(){
+      public boolean accept(      final String ext){
+        return ListSequence.fromList(lines).any(new IWhereFilter<String>(){
+          public boolean accept(          String line){
+            return line.matches("\\s*\\*\\." + ext + ".+merge=mps\\s*");
+          }
+        }
+);
+      }
+    }
+)) {
+      return AbstractInstaller.State.INSTALLED;
+    }
+    for (    String ext : ListSequence.fromList(EXTENSIONS)) {
+      boolean addNew=true;
+      for (int i=0; i < ListSequence.fromList(lines).count(); i++) {
+        if (ListSequence.fromList(lines).getElement(i).matches("\\s*\\*\\." + ext + ".*")) {
+          if (ListSequence.fromList(lines).getElement(i).contains("merge=mps")) {
+            if (dryRun) {
+              return AbstractInstaller.State.OUTDATED;
+            }
+          }
+ else {
+            ListSequence.fromList(lines).setElement(i,ListSequence.fromList(lines).getElement(i) + " merge=mps");
+          }
+          addNew=false;
+        }
+      }
+      if (addNew) {
+        ListSequence.fromList(lines).addElement("*." + ext + " merge=mps");
+      }
+    }
+    StringsIO.writeLines(attributesFile.getOutputStream(null),lines);
+    return AbstractInstaller.State.INSTALLED;
+  }
+ catch (  IOException e) {
+    return AbstractInstaller.State.NOT_INSTALLED;
+  }
+}
