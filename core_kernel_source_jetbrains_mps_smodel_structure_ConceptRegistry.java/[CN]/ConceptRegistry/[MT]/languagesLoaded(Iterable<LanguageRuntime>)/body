@@ -1,16 +1,16 @@
 {
   ModelAccess.assertLegalWrite();
-  List<ConceptDeclaration> conceptsToRegister=new ArrayList<ConceptDeclaration>();
+  List<StructureAspectDescriptor.DescriptorInitializer> conceptsToRegister=new ArrayList<StructureAspectDescriptor.DescriptorInitializer>();
   for (  LanguageRuntime languageRuntime : languages) {
-    conceptsToRegister.addAll(languageRuntime.getConcepts());
+    conceptsToRegister.addAll(languageRuntime.getStructureAspect().getDescriptors());
   }
-  Map<String,ConceptDeclaration> nameToConceptDeclaration=new HashMap<String,ConceptDeclaration>();
-  for (  ConceptDeclaration conceptDeclaration : conceptsToRegister) {
+  Map<String,StructureAspectDescriptor.DescriptorInitializer> nameToConceptDeclaration=new HashMap<String,StructureAspectDescriptor.DescriptorInitializer>();
+  for (  StructureAspectDescriptor.DescriptorInitializer conceptDeclaration : conceptsToRegister) {
     nameToConceptDeclaration.put(conceptDeclaration.fqName(),conceptDeclaration);
   }
-  for (  ConceptDeclaration conceptDeclaration : conceptsToRegister) {
+  for (  StructureAspectDescriptor.DescriptorInitializer conceptDeclaration : conceptsToRegister) {
     boolean isOk=true;
-    for (    String dependency : conceptDeclaration.getDependencies()) {
+    for (    String dependency : conceptDeclaration.dependencies()) {
       if (!nameToConceptDeclaration.containsKey(dependency) && !structureDescriptors.containsKey(dependency)) {
         isOk=false;
         break;
@@ -20,14 +20,28 @@
       LOG.error("Error with concept dependencies: " + conceptDeclaration.fqName());
     }
   }
-  List<ConceptDeclaration> result=new ArrayList<ConceptDeclaration>();
-  Set<ConceptDeclaration> used=new HashSet<ConceptDeclaration>();
-  for (  ConceptDeclaration conceptDeclaration : conceptsToRegister) {
+  List<StructureAspectDescriptor.DescriptorInitializer> result=new ArrayList<StructureAspectDescriptor.DescriptorInitializer>();
+  Set<StructureAspectDescriptor.DescriptorInitializer> used=new HashSet<StructureAspectDescriptor.DescriptorInitializer>();
+  for (  StructureAspectDescriptor.DescriptorInitializer conceptDeclaration : conceptsToRegister) {
     dfs(conceptDeclaration,used,result,nameToConceptDeclaration);
   }
-  for (  ConceptDeclaration conceptDeclaration : result) {
-    registerStructure(conceptDeclaration.fqName(),conceptDeclaration.getStructureDescriptor());
-    registerBehavior(conceptDeclaration.fqName(),conceptDeclaration.getBehaviorDescriptor());
-    registerConstraints(conceptDeclaration.fqName(),conceptDeclaration.getConstraintsDescriptor());
+  Map<String,BehaviorAspectDescriptor.DescriptorInitializer> nameToBehaviorDescriptorInitializer=new HashMap<String,BehaviorAspectDescriptor.DescriptorInitializer>();
+  Map<String,ConstraintsAspectDescriptor.DescriptorInitializer> nameToConstraintsDescriptorInitializer=new HashMap<String,ConstraintsAspectDescriptor.DescriptorInitializer>();
+  for (  LanguageRuntime languageRuntime : languages) {
+    for (    BehaviorAspectDescriptor.DescriptorInitializer descriptorInitializer : languageRuntime.getBehaviorAspect().getDescriptors()) {
+      nameToBehaviorDescriptorInitializer.put(descriptorInitializer.fqName(),descriptorInitializer);
+    }
+    for (    ConstraintsAspectDescriptor.DescriptorInitializer descriptorInitializer : languageRuntime.getConstraintsAspect().getDescriptors()) {
+      nameToConstraintsDescriptorInitializer.put(descriptorInitializer.fqName(),descriptorInitializer);
+    }
+  }
+  for (  StructureAspectDescriptor.DescriptorInitializer concept : result) {
+    registerStructure(concept.fqName(),concept.initDescriptor());
+    if (nameToBehaviorDescriptorInitializer.containsKey(concept.fqName())) {
+      registerBehavior(concept.fqName(),nameToBehaviorDescriptorInitializer.get(concept.fqName()).initDescriptor());
+    }
+    if (nameToConstraintsDescriptorInitializer.containsKey(concept.fqName())) {
+      registerConstraints(concept.fqName(),nameToConstraintsDescriptorInitializer.get(concept.fqName()).initDescriptor());
+    }
   }
 }
