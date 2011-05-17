@@ -1,3 +1,33 @@
 {
   ModelAccess.assertLegalWrite();
+  List<ConceptDeclaration> conceptsToRegister=new ArrayList<ConceptDeclaration>();
+  for (  LanguageRuntime languageRuntime : languages) {
+    conceptsToRegister.addAll(languageRuntime.getConcepts());
+  }
+  Map<String,ConceptDeclaration> nameToConceptDeclaration=new HashMap<String,ConceptDeclaration>();
+  for (  ConceptDeclaration conceptDeclaration : conceptsToRegister) {
+    nameToConceptDeclaration.put(conceptDeclaration.fqName(),conceptDeclaration);
+  }
+  for (  ConceptDeclaration conceptDeclaration : conceptsToRegister) {
+    boolean isOk=true;
+    for (    String dependency : conceptDeclaration.getDependencies()) {
+      if (!nameToConceptDeclaration.containsKey(dependency) && !structureDescriptors.containsKey(dependency)) {
+        isOk=false;
+        break;
+      }
+    }
+    if (!isOk) {
+      LOG.error("Error with concept dependencies: " + conceptDeclaration.fqName());
+    }
+  }
+  List<ConceptDeclaration> result=new ArrayList<ConceptDeclaration>();
+  Set<ConceptDeclaration> used=new HashSet<ConceptDeclaration>();
+  for (  ConceptDeclaration conceptDeclaration : conceptsToRegister) {
+    dfs(conceptDeclaration,used,result,nameToConceptDeclaration);
+  }
+  for (  ConceptDeclaration conceptDeclaration : result) {
+    registerStructure(conceptDeclaration.fqName(),conceptDeclaration.getStructureDescriptor());
+    registerBehavior(conceptDeclaration.fqName(),conceptDeclaration.getBehaviorDescriptor());
+    registerConstraints(conceptDeclaration.fqName(),conceptDeclaration.getConstraintsDescriptor());
+  }
 }
