@@ -1,5 +1,5 @@
 {
-  String scrName=((cleanMake ? "Rebuild" : "Make"));
+  final String scrName=((cleanMake ? "Rebuild" : "Make"));
   WorkbenchMakeService.MessageHandler mh=new WorkbenchMakeService.MessageHandler("Make");
   mh.clear();
   if (Sequence.fromIterable(inputRes).isEmpty()) {
@@ -42,12 +42,24 @@
   final Wrappers._T<IResult> res=new Wrappers._T<IResult>();
   doExecute(new Runnable(){
     public void run(){
-      for (      Iterable<IResource> cl : clInput.value) {
-        res.value=script.execute(ctl,cl);
-        if (!(res.value.isSucessful())) {
-          break;
+      ThreadUtils.runInUIThreadAndWait(new Runnable(){
+        public void run(){
+          IdeEventQueue.getInstance().flushQueue();
+          ProgressManager.getInstance().run(new Task.Backgroundable(context.getProject(),scrName,true){
+            public void run(            @NotNull ProgressIndicator ignore){
+              progInd=ProgressManager.getInstance().getProgressIndicator();
+              for (              Iterable<IResource> cl : clInput.value) {
+                res.value=script.execute(ctl,cl);
+                if (!(res.value.isSucessful()) || progInd.isCanceled()) {
+                  break;
+                }
+              }
+            }
+          }
+);
         }
       }
+);
     }
   }
 );
