@@ -1,12 +1,12 @@
 {
-  Set<String> classpathItems=SetSequence.fromSet(new LinkedHashSet<String>());
-  SetSequence.fromSet(classpathItems).addElement(PathUtil.getJarPathForClass(MergeDriverMain.class));
-  SetSequence.fromSet(classpathItems).addElement(PathUtil.getJarPathForClass(ListSequence.class));
-  SetSequence.fromSet(classpathItems).addElement(PathUtil.getJarPathForClass(_FunctionTypes.class));
-  SetSequence.fromSet(classpathItems).addElement(PathUtil.getJarPathForClass(StringUtils.class));
-  SetSequence.fromSet(classpathItems).addElement(PathUtil.getJarPathForClass(FileUtil.class));
-  if (withSvnkit) {
-    SetSequence.fromSet(classpathItems).addElement(getSvnkitJar());
+  Iterable<String> classpath=getClasspath(withSvnkit);
+  if (InternalFlag.isInternalMode()) {
+    classpath=Sequence.fromIterable(classpath).where(new IWhereFilter<String>(){
+      public boolean accept(      String cpi){
+        return cpi.endsWith(".jar");
+      }
+    }
+).concat(ListSequence.fromList(Arrays.asList(InternalRuntimePacker.getPath())));
   }
-  return "\"" + System.getProperty("java.home") + File.separator+ "bin"+ File.separator+ "java\" -cp "+ StringUtils.join(classpathItems,File.pathSeparator)+ " "+ MergeDriverMain.class.getName();
+  return "\"" + System.getProperty("java.home") + File.separator+ "bin"+ File.separator+ "java\" -cp "+ StringUtils.join(Sequence.fromIterable(classpath).toListSequence(),File.pathSeparator)+ " "+ MergeDriverMain.class.getName();
 }
