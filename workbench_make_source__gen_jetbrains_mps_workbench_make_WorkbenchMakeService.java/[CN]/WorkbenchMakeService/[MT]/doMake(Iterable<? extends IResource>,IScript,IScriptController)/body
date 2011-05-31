@@ -1,31 +1,25 @@
 {
-  final String scrName=((cleanMake ? "Rebuild" : "Make"));
-  final WorkbenchMakeService.MessageHandler mh=new WorkbenchMakeService.MessageHandler("Make");
+  String scrName=((cleanMake ? "Rebuild" : "Make"));
+  WorkbenchMakeService.MessageHandler mh=new WorkbenchMakeService.MessageHandler("Make");
   mh.clear();
   if (Sequence.fromIterable(inputRes).isEmpty()) {
     if (cleanMake) {
       String msg=scrName + " aborted: nothing to do";
       this.showError(mh,msg);
       this.displayInfo(msg);
-      return new IResult.FAILURE(null);
+      return new FutureValue(new IResult.FAILURE(null));
     }
  else {
       this.displayInfo("Everything up to date");
-      return new IResult.SUCCESS(null);
+      return new FutureValue(new IResult.SUCCESS(null));
     }
   }
   if (!(script.isValid())) {
     String msg=scrName + " failed";
     showError(mh,msg + ". Invalid script.");
     this.displayInfo(msg);
-    return new IResult.FAILURE(null);
+    return new FutureValue(new IResult.FAILURE(null));
   }
-  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-    public void run(){
-      SModelRepository.getInstance().saveAll();
-    }
-  }
-);
   final Wrappers._T<Iterable<? extends Iterable<IResource>>> clInput=new Wrappers._T<Iterable<? extends Iterable<IResource>>>();
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
@@ -38,75 +32,19 @@
     }
   }
 );
-  final IScriptController ctl=this.completeController(scrName,mh,controller);
-  final Wrappers._T<IResult> res=new Wrappers._T<IResult>();
+  IScriptController ctl=this.completeController(scrName,mh,controller);
+  final WorkbenchMakeService.MakeTask task=new WorkbenchMakeService.MakeTask(context.getProject(),scrName,script,scrName,clInput.value,ctl,mh);
   doExecute(new Runnable(){
     public void run(){
       ThreadUtils.runInUIThreadAndWait(new Runnable(){
         public void run(){
           IdeEventQueue.getInstance().flushQueue();
-          ProgressManager.getInstance().run(new Task.Backgroundable(context.getProject(),scrName,true,PerformInBackgroundOption.DEAF){
-            public void run(            @NotNull ProgressIndicator pi){
-              pi.pushState();
-              pi.setFraction(0.0);
-              final int clsize=Sequence.fromIterable(clInput.value).count();
-              if (clsize == 0) {
-                return;
-              }
-              final double clfrac=(1.0 / clsize);
-              final int[] idx=new int[]{0};
-              progInd=new ProgressIndicatorDelegate(pi){
-                @Override public void setFraction(                double d){
-                  getDelegate().setFraction((idx[0] + d) * clfrac);
-                }
-                @Override public void setText2(                String string){
-                }
-              }
-;
-              for (              Iterable<IResource> cl : clInput.value) {
-                pi.setText2((idx[0] + 1) + "/" + clsize+ " "+ IterableUtils.join(Sequence.fromIterable(cl).<String>select(new ISelector<IResource,String>(){
-                  public String select(                  IResource r){
-                    return ((IResource)r).describe();
-                  }
-                }
-),","));
-                res.value=script.execute(ctl,cl);
-                if (!(res.value.isSucessful()) || progInd.isCanceled()) {
-                  break;
-                }
-                idx[0]++;
-              }
-              pi.popState();
-            }
-            @Override public void onSuccess(){
-              reconcile();
-            }
-            @Override public void onCancel(){
-              res.value=null;
-              reconcile();
-            }
-            private void reconcile(){
-              if (res.value == null) {
-                String msg=scrName + " aborted";
-                WorkbenchMakeService.this.displayInfo(msg);
-              }
- else               if (!(res.value.isSucessful())) {
-                String msg=scrName + " failed";
-                showError(mh,msg + ". See previous messages for details.");
-                WorkbenchMakeService.this.displayInfo(msg);
-              }
- else {
-                String msg=scrName + " successful";
-                WorkbenchMakeService.this.displayInfo(msg);
-              }
-            }
-          }
-);
+          ProgressManager.getInstance().run(task);
         }
       }
 );
     }
   }
 );
-  return null;
+  return task;
 }

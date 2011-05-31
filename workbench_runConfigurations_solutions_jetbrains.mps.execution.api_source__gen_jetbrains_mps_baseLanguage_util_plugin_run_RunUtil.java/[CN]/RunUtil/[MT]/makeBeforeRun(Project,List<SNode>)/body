@@ -1,4 +1,7 @@
 {
+  if (ThreadUtils.isEventDispatchThread()) {
+    throw new RuntimeException("Can't run make from the event dispatch thread");
+  }
   final List<SModelDescriptor> models=ListSequence.fromList(new ArrayList<SModelDescriptor>());
   for (  final SNode node : nodes) {
     ModelAccess.instance().runReadAction(new Runnable(){
@@ -15,14 +18,18 @@
   }
   if (ListSequence.fromList(models).isNotEmpty()) {
     final ProjectOperationContext context=ProjectOperationContext.get(project);
-    final IResult[] result=new IResult[1];
-    ApplicationManager.getApplication().invokeAndWait(new Runnable(){
-      public void run(){
-        result[0]=new WorkbenchMakeService(context,true).make(new ModelsToResources(context,models).resources(false));
-      }
+    IResult result=null;
+    Future<IResult> future=new WorkbenchMakeService(context,true).make(new ModelsToResources(context,models).resources(false));
+    try {
+      result=future.get();
     }
-,ModalityState.NON_MODAL);
-    return result[0].isSucessful();
+ catch (    CancellationException ignore) {
+    }
+catch (    InterruptedException ignore) {
+    }
+catch (    ExecutionException ignore) {
+    }
+    return result != null && result.isSucessful();
   }
   return true;
 }

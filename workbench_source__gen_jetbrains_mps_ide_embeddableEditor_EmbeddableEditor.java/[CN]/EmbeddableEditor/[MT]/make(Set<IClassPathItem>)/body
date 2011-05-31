@@ -1,23 +1,39 @@
 {
-  IScript scr=new ScriptBuilder().withFacets(new IFacet.Name("Generate"),new IFacet.Name("TextGen"),new IFacet.Name("JavaCompile"),new IFacet.Name("Make")).withFinalTarget(new ITarget.Name("compileToMemory")).toScript();
-  IResult res=new WorkbenchMakeService(myContext,true).make(new ModelsToResources(myContext,Sequence.<SModelDescriptor>singleton(myModel)).resources(false),scr,new IScriptController.Stub(new IConfigMonitor.Stub(){
-    public <T extends IOption>T relayQuery(    IQuery<T> query){
-      return query.defaultOption();
-    }
-  }
+  final IScript scr=new ScriptBuilder().withFacets(new IFacet.Name("Generate"),new IFacet.Name("TextGen"),new IFacet.Name("JavaCompile"),new IFacet.Name("Make")).withFinalTarget(new ITarget.Name("compileToMemory")).toScript();
+  ApplicationManager.getApplication().executeOnPooledThread(new Runnable(){
+    public void run(){
+      Future<IResult> future=new WorkbenchMakeService(myContext,true).make(new ModelsToResources(myContext,Sequence.<SModelDescriptor>singleton(myModel)).resources(false),scr,new IScriptController.Stub(new IConfigMonitor.Stub(){
+        public <T extends IOption>T relayQuery(        IQuery<T> query){
+          return query.defaultOption();
+        }
+      }
 ,new IJobMonitor.Stub()){
-    @Override public void setup(    IParametersPool ppool){
-      super.setup(ppool);
-      Tuples._1<Iterable<IClassPathItem>> params=(Tuples._1<Iterable<IClassPathItem>>)ppool.parameters(new ITarget.Name("compileToMemory"),Object.class);
-      if (params != null) {
-        params._0(classPath);
+        @Override public void setup(        IParametersPool ppool){
+          super.setup(ppool);
+          Tuples._1<Iterable<IClassPathItem>> params=(Tuples._1<Iterable<IClassPathItem>>)ppool.parameters(new ITarget.Name("compileToMemory"),Object.class);
+          if (params != null) {
+            params._0(classPath);
+          }
+        }
+      }
+);
+      try {
+        IResult result=future.get();
+        if (result.isSucessful()) {
+          final CResource out=(CResource)Sequence.fromIterable(result.output()).first();
+          SwingUtilities.invokeLater(new Runnable(){
+            public void run(){
+              processClassesData(out.classes());
+            }
+          }
+);
+        }
+      }
+ catch (      InterruptedException ignore) {
+      }
+catch (      ExecutionException ignore) {
       }
     }
   }
 );
-  if (res.isSucessful()) {
-    CResource out=(CResource)Sequence.fromIterable(res.output()).first();
-    return out.classes();
-  }
-  return null;
 }

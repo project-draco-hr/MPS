@@ -1,18 +1,35 @@
 {
   try {
-    SModelDescriptor md=TextPreviewModel_Action.this.modelToGenerate(_params);
-    IScript scr=new ScriptBuilder().withFacets(new IFacet.Name("Generate"),new IFacet.Name("TextGen"),new IFacet.Name("JavaCompile"),new IFacet.Name("Make")).withFinalTarget(new ITarget.Name("textGenToMemory")).toScript();
-    IResult res=new WorkbenchMakeService(((IOperationContext)MapSequence.fromMap(_params).get("context")),true).make(new ModelsToResources(((IOperationContext)MapSequence.fromMap(_params).get("context")),Sequence.<SModelDescriptor>singleton(md)).resources(false),scr,new IScriptController.Stub(new IConfigMonitor.Stub(){
-      public <T extends IOption>T relayQuery(      IQuery<T> query){
-        return query.defaultOption();
+    final SModelDescriptor md=TextPreviewModel_Action.this.modelToGenerate(_params);
+    ApplicationManager.getApplication().executeOnPooledThread(new Runnable(){
+      public void run(){
+        IScript scr=new ScriptBuilder().withFacets(new IFacet.Name("Generate"),new IFacet.Name("TextGen"),new IFacet.Name("JavaCompile"),new IFacet.Name("Make")).withFinalTarget(new ITarget.Name("textGenToMemory")).toScript();
+        Future<IResult> future=new WorkbenchMakeService(((IOperationContext)MapSequence.fromMap(_params).get("context")),true).make(new ModelsToResources(((IOperationContext)MapSequence.fromMap(_params).get("context")),Sequence.<SModelDescriptor>singleton(md)).resources(false),scr,new IScriptController.Stub(new IConfigMonitor.Stub(){
+          public <T extends IOption>T relayQuery(          IQuery<T> query){
+            return query.defaultOption();
+          }
+        }
+,new IJobMonitor.Stub()));
+        try {
+          IResult result=future.get();
+          if (result.isSucessful()) {
+            FResource fres=(FResource)Sequence.fromIterable(result.output()).first();
+            final TextPreviewFile tfile=new TextPreviewFile(md.getSModelReference().getSModelFqName().getCompactPresentation(),"Generated text for " + md.getSModelReference().getSModelFqName().getLongName(),fres.contents());
+            SwingUtilities.invokeLater(new Runnable(){
+              public void run(){
+                FileEditorManager.getInstance(((IOperationContext)MapSequence.fromMap(_params).get("context")).getProject()).openTextEditor(new OpenFileDescriptor(((IOperationContext)MapSequence.fromMap(_params).get("context")).getProject(),tfile),true);
+              }
+            }
+);
+          }
+        }
+ catch (        InterruptedException ignore) {
+        }
+catch (        ExecutionException ignore) {
+        }
       }
     }
-,new IJobMonitor.Stub()));
-    if (res.isSucessful()) {
-      FResource fres=(FResource)Sequence.fromIterable(res.output()).first();
-      TextPreviewFile tfile=new TextPreviewFile(md.getSModelReference().getSModelFqName().getCompactPresentation(),"Generated text for " + md.getSModelReference().getSModelFqName().getLongName(),fres.contents());
-      FileEditorManager.getInstance(((IOperationContext)MapSequence.fromMap(_params).get("context")).getProject()).openTextEditor(new OpenFileDescriptor(((IOperationContext)MapSequence.fromMap(_params).get("context")).getProject(),tfile),true);
-    }
+);
   }
  catch (  Throwable t) {
     if (log.isErrorEnabled()) {
