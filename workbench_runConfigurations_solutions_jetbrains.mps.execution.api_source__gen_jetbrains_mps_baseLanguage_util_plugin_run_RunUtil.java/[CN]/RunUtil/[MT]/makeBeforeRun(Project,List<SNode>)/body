@@ -1,28 +1,20 @@
 {
-  final List<SModelDescriptor> models=ListSequence.fromList(new ArrayList<SModelDescriptor>());
-  for (  final SNode node : nodes) {
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        SModelDescriptor md=SNodeOperations.getModel(node).getModelDescriptor();
-        if (md instanceof EditableSModelDescriptor) {
-          if (!(ListSequence.fromList(models).contains((EditableSModelDescriptor)md)) && ModelGenerationStatusManager.getInstance().generationRequired(md,ProjectOperationContext.get(project))) {
-            ListSequence.fromList(models).addElement((EditableSModelDescriptor)md);
-          }
+  final Wrappers._T<List<SModelDescriptor>> descriptors=new Wrappers._T<List<SModelDescriptor>>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      descriptors.value=ListSequence.fromList(nodes).<SModelDescriptor>select(new ISelector<SNode,SModelDescriptor>(){
+        public SModelDescriptor select(        SNode it){
+          return SNodeOperations.getModel(it).getModelDescriptor();
         }
       }
-    }
-);
-  }
-  if (ListSequence.fromList(models).isNotEmpty()) {
-    final ProjectOperationContext context=ProjectOperationContext.get(project);
-    final IResult[] result=new IResult[1];
-    ApplicationManager.getApplication().invokeAndWait(new Runnable(){
-      public void run(){
-        result[0]=new WorkbenchMakeService(context,true).make(new ModelsToResources(context,models).resources(false));
+).where(new IWhereFilter<SModelDescriptor>(){
+        public boolean accept(        SModelDescriptor it){
+          return ModelGenerationStatusManager.getInstance().generationRequired(it,ProjectOperationContext.get(project));
+        }
       }
+).distinct().toListSequence();
     }
-,ModalityState.NON_MODAL);
-    return result[0].isSucessful();
   }
-  return true;
+);
+  return makeModels(project,descriptors.value);
 }
