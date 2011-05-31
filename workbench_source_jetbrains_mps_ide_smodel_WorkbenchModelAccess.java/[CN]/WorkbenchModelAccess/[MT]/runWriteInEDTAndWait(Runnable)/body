@@ -1,0 +1,36 @@
+{
+  if (isInEDT()) {
+    runWriteAction(r);
+    return;
+  }
+  final CyclicBarrier barr=new CyclicBarrier(2);
+  final boolean canRead=canRead();
+  try {
+    if (canRead)     getReadLock().unlock();
+    myEDTExecutor.scheduleWrite(new Runnable(){
+      @Override public void run(){
+        try {
+          r.run();
+        }
+  finally {
+          try {
+            barr.await();
+          }
+ catch (          InterruptedException ignore) {
+          }
+catch (          BrokenBarrierException ignore) {
+          }
+        }
+      }
+    }
+);
+    barr.await();
+  }
+ catch (  InterruptedException ignore) {
+  }
+catch (  BrokenBarrierException ignore) {
+  }
+ finally {
+    if (canRead)     getReadLock().lock();
+  }
+}

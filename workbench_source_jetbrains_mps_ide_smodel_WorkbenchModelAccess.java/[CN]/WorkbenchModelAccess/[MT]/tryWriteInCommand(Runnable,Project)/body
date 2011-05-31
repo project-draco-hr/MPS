@@ -3,29 +3,36 @@
     return false;
   }
   final boolean[] res=new boolean[]{false};
-  if (!getWriteLock().tryLock()) {
-    return false;
-  }
-  getWriteLock().unlock();
   final Project project=p != null ? p : CurrentProjectAccessUtil.getProjectFromUI();
-  CommandProcessor.getInstance().executeCommand(project,new Runnable(){
-    public void run(){
-      ApplicationManager.getApplication().runWriteAction(new Runnable(){
-        public void run(){
-          if (getWriteLock().tryLock()) {
+  final boolean canRead=canRead();
+  try {
+    if (canRead)     getReadLock().unlock();
+    CommandProcessor.getInstance().executeCommand(project,new Runnable(){
+      public void run(){
+        ApplicationManager.getApplication().runWriteAction(new Runnable(){
+          public void run(){
             try {
-              new CommandRunnable(r,project).run();
-            }
+              if (getWriteLock().tryLock(WAIT_FOR_WRITE_LOCK_MILLIS,MILLISECONDS)) {
+                try {
+                  new CommandRunnable(r,project).run();
+                }
   finally {
-              getWriteLock().unlock();
+                  getWriteLock().unlock();
+                }
+                res[0]=true;
+              }
             }
-            res[0]=true;
+ catch (            InterruptedException ignore) {
+            }
           }
         }
-      }
 );
+      }
     }
-  }
 ,"",null,UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION);
+  }
+  finally {
+    if (canRead)     getReadLock().lock();
+  }
   return res[0];
 }

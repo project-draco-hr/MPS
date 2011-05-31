@@ -6,31 +6,39 @@
   if (myDistributedLocksMode && ApplicationManager.getApplication().isDispatchThread()) {
     return false;
   }
-  if (!getWriteLock().tryLock()) {
-    return false;
-  }
-  getWriteLock().unlock();
   Computable<Boolean> computable=new Computable<Boolean>(){
     public Boolean compute(){
-      if (getWriteLock().tryLock()) {
-        try {
-          r.run();
-        }
+      try {
+        if (getWriteLock().tryLock(WAIT_FOR_WRITE_LOCK_MILLIS,MILLISECONDS)) {
+          try {
+            r.run();
+          }
   finally {
-          getWriteLock().unlock();
+            getWriteLock().unlock();
+          }
+          return true;
         }
-        return true;
-      }
  else {
+          return false;
+        }
+      }
+ catch (      InterruptedException e) {
         return false;
       }
     }
   }
 ;
-  if (ThreadUtils.isEventDispatchThread()) {
-    return ApplicationManager.getApplication().runWriteAction(computable);
-  }
+  final boolean canRead=canRead();
+  try {
+    if (canRead)     getReadLock().unlock();
+    if (ThreadUtils.isEventDispatchThread()) {
+      return ApplicationManager.getApplication().runWriteAction(computable);
+    }
  else {
-    return ApplicationManager.getApplication().runReadAction(computable);
+      return ApplicationManager.getApplication().runReadAction(computable);
+    }
+  }
+  finally {
+    if (canRead)     getReadLock().lock();
   }
 }

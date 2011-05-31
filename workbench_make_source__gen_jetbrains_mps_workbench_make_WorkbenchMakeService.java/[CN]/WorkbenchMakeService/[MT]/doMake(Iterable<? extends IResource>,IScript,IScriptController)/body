@@ -1,6 +1,6 @@
 {
-  String scrName=((cleanMake ? "Rebuild" : "Make"));
-  WorkbenchMakeService.MessageHandler mh=new WorkbenchMakeService.MessageHandler("Make");
+  final String scrName=((cleanMake ? "Rebuild" : "Make"));
+  final WorkbenchMakeService.MessageHandler mh=new WorkbenchMakeService.MessageHandler("Make");
   mh.clear();
   if (Sequence.fromIterable(inputRes).isEmpty()) {
     if (cleanMake) {
@@ -26,26 +26,87 @@
     }
   }
 );
+  final Wrappers._T<Iterable<? extends Iterable<IResource>>> clInput=new Wrappers._T<Iterable<? extends Iterable<IResource>>>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      clInput.value=new ModulesClusterizer().clusterize(Sequence.fromIterable(inputRes).<IResource>select(new ISelector<IResource,IResource>(){
+        public IResource select(        IResource r){
+          return (IResource)r;
+        }
+      }
+));
+    }
+  }
+);
   final IScriptController ctl=this.completeController(scrName,mh,controller);
   final Wrappers._T<IResult> res=new Wrappers._T<IResult>();
   doExecute(new Runnable(){
     public void run(){
-      res.value=script.execute(ctl,inputRes);
+      ThreadUtils.runInUIThreadAndWait(new Runnable(){
+        public void run(){
+          IdeEventQueue.getInstance().flushQueue();
+          ProgressManager.getInstance().run(new Task.Backgroundable(context.getProject(),scrName,true,PerformInBackgroundOption.DEAF){
+            public void run(            @NotNull ProgressIndicator pi){
+              pi.pushState();
+              pi.setFraction(0.0);
+              final int clsize=Sequence.fromIterable(clInput.value).count();
+              if (clsize == 0) {
+                return;
+              }
+              final double clfrac=(1.0 / clsize);
+              final int[] idx=new int[]{0};
+              progInd=new ProgressIndicatorDelegate(pi){
+                @Override public void setFraction(                double d){
+                  getDelegate().setFraction((idx[0] + d) * clfrac);
+                }
+                @Override public void setText2(                String string){
+                }
+              }
+;
+              for (              Iterable<IResource> cl : clInput.value) {
+                pi.setText2((idx[0] + 1) + "/" + clsize+ " "+ IterableUtils.join(Sequence.fromIterable(cl).<String>select(new ISelector<IResource,String>(){
+                  public String select(                  IResource r){
+                    return ((IResource)r).describe();
+                  }
+                }
+),","));
+                res.value=script.execute(ctl,cl);
+                if (!(res.value.isSucessful()) || progInd.isCanceled()) {
+                  break;
+                }
+                idx[0]++;
+              }
+              pi.popState();
+            }
+            @Override public void onSuccess(){
+              reconcile();
+            }
+            @Override public void onCancel(){
+              res.value=null;
+              reconcile();
+            }
+            private void reconcile(){
+              if (res.value == null) {
+                String msg=scrName + " aborted";
+                WorkbenchMakeService.this.displayInfo(msg);
+              }
+ else               if (!(res.value.isSucessful())) {
+                String msg=scrName + " failed";
+                showError(mh,msg + ". See previous messages for details.");
+                WorkbenchMakeService.this.displayInfo(msg);
+              }
+ else {
+                String msg=scrName + " successful";
+                WorkbenchMakeService.this.displayInfo(msg);
+              }
+            }
+          }
+);
+        }
+      }
+);
     }
   }
 );
-  if (res.value == null) {
-    String msg=scrName + " aborted";
-    this.displayInfo(msg);
-  }
- else   if (!(res.value.isSucessful())) {
-    String msg=scrName + " failed";
-    showError(mh,msg + ". See previous messages for details.");
-    this.displayInfo(msg);
-  }
- else {
-    String msg=scrName + " successful";
-    this.displayInfo(msg);
-  }
-  return res.value;
+  return null;
 }

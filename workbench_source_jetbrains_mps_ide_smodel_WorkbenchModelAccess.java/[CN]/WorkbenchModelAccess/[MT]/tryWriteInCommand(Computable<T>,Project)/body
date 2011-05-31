@@ -1,0 +1,37 @@
+{
+  if (myDistributedLocksMode) {
+    return null;
+  }
+  final T[] res=(T[])new Object[]{null};
+  final Project project=p != null ? p : CurrentProjectAccessUtil.getProjectFromUI();
+  final boolean canRead=canRead();
+  try {
+    if (canRead)     getReadLock().unlock();
+    CommandProcessor.getInstance().executeCommand(project,new Runnable(){
+      public void run(){
+        ApplicationManager.getApplication().runWriteAction(new Runnable(){
+          public void run(){
+            try {
+              if (getWriteLock().tryLock(WAIT_FOR_WRITE_LOCK_MILLIS,MILLISECONDS)) {
+                try {
+                  res[0]=new CommandComputable<T>(r,project).compute();
+                }
+  finally {
+                  getWriteLock().unlock();
+                }
+              }
+            }
+ catch (            InterruptedException ignore) {
+            }
+          }
+        }
+);
+      }
+    }
+,"",null,UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION);
+  }
+  finally {
+    if (canRead)     getReadLock().lock();
+  }
+  return res[0];
+}
