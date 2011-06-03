@@ -1,19 +1,17 @@
 {
-  if (ListSequence.fromList(descriptors).isEmpty()) {
+  if (ListSequence.fromList(models).isEmpty()) {
     return true;
   }
-  final Wrappers._boolean result=new Wrappers._boolean();
-  ApplicationManager.getApplication().invokeAndWait(new Runnable(){
-    public void run(){
-      IResult makeResult=new WorkbenchMakeService(ProjectOperationContext.get(project),true).make(new ModelsToResources(ProjectOperationContext.get(project),descriptors).resources(false));
-      if (makeResult == null) {
-        result.value=true;
-      }
- else {
-        result.value=makeResult.isSucessful();
-      }
-    }
+  Future<IResult> future=new WorkbenchMakeService(ProjectOperationContext.get(project),true).make(new ModelsToResources(ProjectOperationContext.get(project),models).resources(false));
+  IResult result=null;
+  try {
+    result=future.get();
   }
-,ModalityState.NON_MODAL);
-  return result.value;
+ catch (  CancellationException ignore) {
+  }
+catch (  InterruptedException ignore) {
+  }
+catch (  ExecutionException ignore) {
+  }
+  return result != null && result.isSucessful();
 }

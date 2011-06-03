@@ -1,16 +1,27 @@
 {
-  for (  ModelChange change : ListSequence.fromList(myMergeContext.getChangesForRoot(myRootId))) {
-    if (!(myMergeContext.isChangeResolved(change))) {
-      higlightChange(myResultEditor,myMergeContext.getResultModel(),change);
-      if (myMergeContext.isMyChange(change)) {
-        higlightChange(myMineEditor,myMergeContext.getMyModel(),change);
-      }
+  List<ModelChange> changesForRoot=ListSequence.fromList(myMergeContext.getChangesForRoot(myRootId)).where(new IWhereFilter<ModelChange>(){
+    public boolean accept(    ModelChange ch){
+      return !(myMergeContext.isChangeResolved(ch));
+    }
+  }
+).toListSequence();
+  for (  ModelChange change : ListSequence.fromList(changesForRoot)) {
+    higlightChange(myResultEditor,myMergeContext.getResultModel(),change);
+    if (myMergeContext.isMyChange(change)) {
+      higlightChange(myMineEditor,myMergeContext.getMyModel(),change);
+    }
  else {
-        higlightChange(myRepositoryEditor,myMergeContext.getRepositoryModel(),change);
-      }
+      higlightChange(myRepositoryEditor,myMergeContext.getRepositoryModel(),change);
     }
   }
   myMineEditor.repaintAndRebuildEditorMessages();
   myResultEditor.repaintAndRebuildEditorMessages();
   myRepositoryEditor.repaintAndRebuildEditorMessages();
+  int conflictingChanges=ListSequence.fromList(changesForRoot).where(new IWhereFilter<ModelChange>(){
+    public boolean accept(    ModelChange ch){
+      return Sequence.fromIterable(myMergeContext.getConflictedWith(ch)).isNotEmpty();
+    }
+  }
+).count();
+  myStatusBar.setText(MergeModelsDialog.generateUnresolvedChangesText(ListSequence.fromList(changesForRoot).count(),conflictingChanges));
 }
