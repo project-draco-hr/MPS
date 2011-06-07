@@ -1,12 +1,24 @@
 {
   if (generationPlan.hasConflictingPriorityRules()) {
-    myLogger.error("Conflicting mapping priority rules encountered:");
-    List<com.intellij.openapi.util.Pair<MappingPriorityRule,String>> errors=generationPlan.getConflictingPriorityRulesAsStrings();
-    for (    com.intellij.openapi.util.Pair<MappingPriorityRule,String> error : errors) {
-      MappingPriorityRule rule=error.first;
-      String text=error.second;
+    Map<MappingPriorityRule,TemplateModule> myRule2Generator=new HashMap<MappingPriorityRule,TemplateModule>();
+    for (    TemplateModule generator : generationPlan.getGenerators()) {
+      Collection<TemplateMappingPriorityRule> priorities=generator.getPriorities();
+      if (priorities == null) {
+        continue;
+      }
+      for (      TemplateMappingPriorityRule rule : priorities) {
+        myRule2Generator.put((MappingPriorityRule)rule,generator);
+      }
     }
-    myLogger.error("-----------------------------------------------");
+    myLogger.error("Conflicting mapping priority rules encountered:");
+    List<Pair<MappingPriorityRule,String>> errors=generationPlan.getConflictingPriorityRulesAsStrings();
+    for (    Pair<MappingPriorityRule,String> error : errors) {
+      MappingPriorityRule rule=error.o1;
+      String text=error.o2;
+      TemplateModule templateModule=myRule2Generator.get(rule);
+      myLogger.error(templateModule.getReference(),text);
+    }
+    myLogger.error("");
     return false;
   }
   return true;
