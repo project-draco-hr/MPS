@@ -2,7 +2,7 @@
   final IScript scr=new ScriptBuilder().withFacets(new IFacet.Name("Generate"),new IFacet.Name("TextGen"),new IFacet.Name("JavaCompile"),new IFacet.Name("Make")).withFinalTarget(new ITarget.Name("compileToMemory")).toScript();
   ApplicationManager.getApplication().executeOnPooledThread(new Runnable(){
     public void run(){
-      Future<IResult> future=new WorkbenchMakeService(myContext,true).make(new ModelsToResources(myContext,Sequence.<SModelDescriptor>singleton(myModel)).resources(false),scr,new IScriptController.Stub(new IConfigMonitor.Stub(){
+      IScriptController ctl=new IScriptController.Stub(new IConfigMonitor.Stub(){
         public <T extends IOption>T relayQuery(        IQuery<T> query){
           return query.defaultOption();
         }
@@ -16,22 +16,26 @@
           }
         }
       }
-);
-      try {
-        IResult result=future.get();
-        if (result.isSucessful()) {
-          final CResource out=(CResource)Sequence.fromIterable(result.output()).first();
-          SwingUtilities.invokeLater(new Runnable(){
-            public void run(){
-              processClassesData(out.classes());
+;
+      MakeSession session=new MakeSession(myContext,null,true);
+      if (IMakeService.INSTANCE.get().startNewSession(session)) {
+        Future<IResult> future=IMakeService.INSTANCE.get().make(session,new ModelsToResources(myContext,Sequence.<SModelDescriptor>singleton(myModel)).resources(false),scr,ctl);
+        try {
+          IResult result=future.get();
+          if (result.isSucessful()) {
+            final CResource out=(CResource)Sequence.fromIterable(result.output()).first();
+            SwingUtilities.invokeLater(new Runnable(){
+              public void run(){
+                processClassesData(out.classes());
+              }
             }
-          }
 );
+          }
         }
-      }
- catch (      InterruptedException ignore) {
-      }
-catch (      ExecutionException ignore) {
+ catch (        InterruptedException ignore) {
+        }
+catch (        ExecutionException ignore) {
+        }
       }
     }
   }
