@@ -1,25 +1,21 @@
 {
   myClassesCache=new HashMap<String,Class<SNodeTextGen>>();
-  TextGenBuffer buffer=new TextGenBuffer();
+  TextGenBuffer buffer=new TextGenBuffer(withDebugInfo);
   buffer.putUserObject(PACKAGE_NAME,node.getModel().getLongName());
   appendNodeText(context,buffer,node,null);
   myClassesCache=null;
   String topBufferText=buffer.getTopBufferText();
   int topLength=topBufferText.isEmpty() ? 1 : topBufferText.split(buffer.getLineSeparator(),-1).length + 2;
-  Map<SNode,TraceablePositionInfo> positionInfo=TraceInfoGenerationUtil.getUserObjects(buffer,TraceInfoGenerationUtil.POSITION_INFO);
-  Map<SNode,ScopePositionInfo> scopeInfo=TraceInfoGenerationUtil.getUserObjects(buffer,TraceInfoGenerationUtil.SCOPE_INFO);
-  Map<SNode,UnitPositionInfo> unitInfo=TraceInfoGenerationUtil.getUserObjects(buffer,TraceInfoGenerationUtil.UNIT_INFO);
-  for (  TraceablePositionInfo position : positionInfo.values()) {
-    position.setStartLine(position.getStartLine() + topLength);
-    position.setEndLine(position.getEndLine() + topLength);
-  }
-  for (  ScopePositionInfo position : scopeInfo.values()) {
-    position.setStartLine(position.getStartLine() + topLength);
-    position.setEndLine(position.getEndLine() + topLength);
-  }
-  for (  UnitPositionInfo position : unitInfo.values()) {
-    position.setStartLine(position.getStartLine() + topLength);
-    position.setEndLine(position.getEndLine() + topLength);
+  Map<SNode,TraceablePositionInfo> positionInfo=null;
+  Map<SNode,ScopePositionInfo> scopeInfo=null;
+  Map<SNode,UnitPositionInfo> unitInfo=null;
+  if (withDebugInfo) {
+    positionInfo=TraceInfoGenerationUtil.getUserObjects(buffer,TraceInfoGenerationUtil.POSITION_INFO);
+    scopeInfo=TraceInfoGenerationUtil.getUserObjects(buffer,TraceInfoGenerationUtil.SCOPE_INFO);
+    unitInfo=TraceInfoGenerationUtil.getUserObjects(buffer,TraceInfoGenerationUtil.UNIT_INFO);
+    adjustPositions(topLength,positionInfo);
+    adjustPositions(topLength,scopeInfo);
+    adjustPositions(topLength,unitInfo);
   }
   List<String> dependencies=getUserObjectCollection(DEPENDENCY,node,buffer,(Set<String>)buffer.getUserObject(EXTENDS));
   List<String> extend=getUserObjectCollection(EXTENDS,node,buffer,null);
