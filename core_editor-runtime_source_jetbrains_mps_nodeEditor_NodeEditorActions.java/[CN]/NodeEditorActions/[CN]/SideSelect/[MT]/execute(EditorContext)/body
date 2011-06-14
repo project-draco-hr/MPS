@@ -1,70 +1,16 @@
 {
-  EditorComponent editor=context.getNodeEditorComponent();
-  final EditorCell deepestSelected=editor.getDeepestSelectedCell();
-  EditorCell selected=context.getSelectedCell();
-  EditorCell nextLeaf=getNextLeaf(deepestSelected);
-  editor.clearSelectionStack();
-  EditorCell newSelection=getCommonSelectableAncestor(deepestSelected,selected,nextLeaf);
-  EditorCell deepestSelection;
-  if (newSelection != selected) {
-    if (mySide == CellSide.LEFT) {
-      deepestSelection=newSelection.getFirstLeaf(CellConditions.SELECTABLE);
-    }
- else {
-      deepestSelection=newSelection.getLastLeaf(CellConditions.SELECTABLE);
-    }
-    if (deepestSelection instanceof EditorCell_Label) {
-      EditorCell_Label label=(EditorCell_Label)deepestSelection;
-      if (mySide == CellSide.LEFT) {
-        label.home();
-      }
- else {
-        label.end();
-      }
-    }
+  SelectionManager selectionManager=context.getNodeEditorComponent().getSelectionManager();
+  SingularSelection selection=(SingularSelection)selectionManager.getSelection();
+  if (!expandSelection(selection) && selectionManager.getSelectionStackSize() > 1) {
+    selectionManager.popSelection();
+    return;
   }
- else {
-    if (mySide == CellSide.LEFT) {
-      newSelection=newSelection.getLastDescendant(new Condition<EditorCell>(){
-        public boolean met(        EditorCell object){
-          return object.isSelectable() && !deepestSelected.isAncestorOf(object) && deepestSelected != object;
-        }
-      }
-);
-    }
- else {
-      newSelection=newSelection.getFirstDescendant(new Condition<EditorCell>(){
-        public boolean met(        EditorCell object){
-          return object.isSelectable() && !deepestSelected.isAncestorOf(object) && deepestSelected != object;
-        }
-      }
-);
-    }
-    if (mySide == CellSide.LEFT) {
-      deepestSelection=newSelection.getLastLeaf(CellConditions.SELECTABLE);
-    }
- else {
-      deepestSelection=newSelection.getFirstLeaf(CellConditions.SELECTABLE);
-    }
-    if (deepestSelection instanceof EditorCell_Label) {
-      EditorCell_Label label=(EditorCell_Label)deepestSelection;
-      if (mySide == CellSide.LEFT) {
-        label.end();
-      }
- else {
-        label.home();
-      }
-    }
-    if (newSelection instanceof EditorCell_Label) {
-      ((EditorCell_Label)newSelection).selectAll();
-    }
+  EditorCell selected=selection.getEditorCell();
+  EditorCell nextLeaf=getNextLeaf(selected);
+  EditorCell cellToSelect=getCommonSelectableAncestor(selected,nextLeaf);
+  Selection newSelection=selectionManager.createSelection(cellToSelect);
+  if (newSelection instanceof SingularSelection) {
+    ((SingularSelection)newSelection).setSideSelectDirection(mySide == CellSide.LEFT ? SideSelectDirection.LEFT : SideSelectDirection.RIGHT);
   }
-  EditorCell current=deepestSelection;
-  while (current != newSelection) {
-    if (current.isSelectable()) {
-      editor.pushSelection(current);
-    }
-    current=current.getParent();
-  }
-  editor.setSelectionDontClearStack(newSelection,true);
+  selectionManager.pushSelection(newSelection);
 }
