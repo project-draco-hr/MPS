@@ -1,53 +1,61 @@
 {
   Pair<String,LanguageAspect> currentConceptAndLanguageAspect=new Pair<String,LanguageAspect>(fqName,languageAspect);
   if (conceptsInLoading.contains(currentConceptAndLanguageAspect)) {
-    return;
+    return null;
   }
+  T descriptor=null;
 switch (languageAspect) {
 case STRUCTURE:
-    if (structureDescriptors.containsKey(fqName)) {
-      return;
-    }
-  break;
+    descriptor=(T)structureDescriptors.get(fqName);
+  if (descriptor != null) {
+    return descriptor;
+  }
+break;
 case BEHAVIOR:
-if (behaviorDescriptors.containsKey(fqName)) {
-  return;
+descriptor=(T)behaviorDescriptors.get(fqName);
+if (descriptor != null) {
+return descriptor;
 }
 break;
 case CONSTRAINTS:
-if (constraintsDescriptors.containsKey(fqName)) {
-return;
+descriptor=(T)constraintsDescriptors.get(fqName);
+if (descriptor != null) {
+return descriptor;
 }
 break;
 }
+synchronized (lock) {
 conceptsInLoading.add(currentConceptAndLanguageAspect);
 languageToConcepts.putValue(NameUtil.namespaceFromConceptFQName(fqName),fqName);
+try {
 LanguageRuntime languageRuntime=LanguageRegistry.getInstance().getLanguage(NameUtil.namespaceFromConceptFQName(fqName));
 if (languageRuntime != null) {
-switch (languageAspect) {
-case STRUCTURE:
-structureDescriptors.put(fqName,getDescriptor(languageRuntime.getStructureAspect(),fqName,LanguageRuntimeInterpreted.STRUCTURE_PROVIDER));
-break;
-case BEHAVIOR:
-behaviorDescriptors.put(fqName,getDescriptor(languageRuntime.getBehaviorAspect(),fqName,LanguageRuntimeInterpreted.BEHAVIOR_PROVIDER));
-break;
-case CONSTRAINTS:
-constraintsDescriptors.put(fqName,getDescriptor(languageRuntime.getConstraintsAspect(),fqName,LanguageRuntimeInterpreted.CONSTRAINTS_PROVIDER));
-break;
+descriptor=(T)getRuntimeProvider(languageRuntime,languageAspect).getDescriptor(fqName);
 }
+}
+ catch (Exception e) {
+LOG.error("Error while descriptor creating from language aspect for concept " + fqName,e);
+}
+if (descriptor == null) {
+descriptor=(T)getDefaultProvider(languageAspect).getDescriptor(fqName);
+}
+if (descriptor == null) {
+LOG.error("Null descriptor after all",new RuntimeException());
 }
  else {
 switch (languageAspect) {
 case STRUCTURE:
-structureDescriptors.put(fqName,LanguageRuntimeInterpreted.STRUCTURE_PROVIDER.getDescriptor(fqName));
+structureDescriptors.put(fqName,(StructureDescriptor)descriptor);
 break;
 case BEHAVIOR:
-behaviorDescriptors.put(fqName,LanguageRuntimeInterpreted.BEHAVIOR_PROVIDER.getDescriptor(fqName));
+behaviorDescriptors.put(fqName,(BehaviorDescriptor)descriptor);
 break;
 case CONSTRAINTS:
-constraintsDescriptors.put(fqName,LanguageRuntimeInterpreted.CONSTRAINTS_PROVIDER.getDescriptor(fqName));
+constraintsDescriptors.put(fqName,(ConstraintsDescriptor)descriptor);
 break;
 }
 }
 conceptsInLoading.remove(currentConceptAndLanguageAspect);
+return descriptor;
+}
 }
