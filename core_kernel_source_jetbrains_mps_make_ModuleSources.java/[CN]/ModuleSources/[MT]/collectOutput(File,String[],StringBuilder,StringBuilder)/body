@@ -1,0 +1,58 @@
+{
+  if (files == null)   return;
+  int initialLength=path.length();
+  for (  String childName : files) {
+    if (isIgnoredFileName(childName))     continue;
+    File file=new File(outputDir,childName);
+    if (childName.endsWith(MPSExtentions.DOT_CLASSFILE)) {
+      boolean isInnerClass=false;
+      String containerName=childName.substring(0,childName.length() - MPSExtentions.DOT_CLASSFILE.length());
+      int indexOfDollar=containerName.indexOf("$");
+      if (indexOfDollar > 0) {
+        containerName=containerName.substring(0,indexOfDollar);
+        isInnerClass=true;
+      }
+      package_.setLength(initialLength);
+      if (initialLength > 0) {
+        package_.append('.');
+      }
+      package_.append(containerName);
+      String fqName=package_.toString();
+      JavaFile javaFile=myJavaFiles.get(fqName);
+      if (javaFile == null) {
+        myFilesToDelete.add(file);
+      }
+ else       if (!isInnerClass && isFileUpToDate(javaFile,file.lastModified())) {
+        myFilesToCompile.remove(javaFile);
+      }
+      continue;
+    }
+    String[] subList=file.list();
+    if (subList != null) {
+      path.setLength(initialLength);
+      package_.setLength(initialLength);
+      if (initialLength > 0) {
+        path.append('/');
+        package_.append('.');
+      }
+      path.append(childName);
+      package_.append(childName);
+      collectOutput(file,subList,path,package_);
+    }
+ else     if (isResourceFileName(childName)) {
+      path.setLength(initialLength);
+      if (initialLength > 0) {
+        path.append('/');
+      }
+      path.append(childName);
+      String childPath=path.toString();
+      ResourceFile resourceFile=myResourceFiles.get(childPath);
+      if (resourceFile == null) {
+        myFilesToDelete.add(file);
+      }
+ else       if (resourceFile.getFile().lastModified() < file.lastModified()) {
+        myResourcesToCopy.remove(resourceFile);
+      }
+    }
+  }
+}
