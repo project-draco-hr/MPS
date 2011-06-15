@@ -1,7 +1,7 @@
 {
   Set<T> result=myRulesCache.get(key);
   if (result != null) {
-    return Collections.unmodifiableSet(result);
+    return result;
   }
   String c1=key.o1;
   String c2=key.o2;
@@ -14,14 +14,16 @@
           if (conceptDeclaration1 != key.o1 || conceptDeclaration2 != key.o2) {
             myRules.putIfAbsent(key,result);
           }
-          myRulesCache.putIfAbsent(key,new THashSet<T>(result));
+synchronized (result) {
+            Set<T> clone=Collections.unmodifiableSet(new THashSet<T>(result));
+            myRulesCache.putIfAbsent(key,clone);
+          }
           return Collections.unmodifiableSet(result);
         }
       }
     }
   }
-  result=Collections.synchronizedSet(new HashSet<T>(1));
-  myRules.putIfAbsent(key,result);
-  myRulesCache.putIfAbsent(key,new HashSet<T>(1));
-  return Collections.unmodifiableSet(result);
+  myRules.putIfAbsent(key,Collections.synchronizedSet(new HashSet<T>(1)));
+  myRulesCache.putIfAbsent(key,Collections.<T>emptySet());
+  return Collections.emptySet();
 }
