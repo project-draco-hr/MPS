@@ -1,0 +1,63 @@
+{
+  Map<String,ReferenceConstraintsDescriptor> references=new HashMap();
+  references.put("getter",new BaseReferenceConstraintsDescriptor("getter",this){
+    @Override public boolean hasOwnScopeProvider(){
+      return true;
+    }
+    @Nullable @Override public ReferenceScopeProvider getScopeProvider(){
+      return new BaseReferenceScopeProvider(){
+        @Override public boolean hasPresentation(){
+          return true;
+        }
+        @Override public String getPresentation(        final IOperationContext operationContext,        final ReferencePresentationContext _context){
+          String gn=SPropertyOperations.getString(_context.getParameterNode(),"name");
+          if (gn == null) {
+            return null;
+          }
+          if (gn.startsWith("is")) {
+            return Introspector.decapitalize(gn.substring(2));
+          }
+          if (gn.startsWith("get")) {
+            return Introspector.decapitalize(gn.substring(3));
+          }
+          return null;
+        }
+        @Override public Object createSearchScopeOrListOfNodes(        final IOperationContext operationContext,        final ReferenceConstraintsContext _context){
+          SNode bt=TypeChecker.getInstance().getTypeOf(SLinkOperations.getTarget(SNodeOperations.as(_context.getReferenceNode(),"jetbrains.mps.ui.structure.BeanPropertyView"),"bean",true));
+          try {
+            throw new NullPointerException();
+          }
+ catch (          NullPointerException e) {
+          }
+          return ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(SNodeOperations.as(bt,"jetbrains.mps.baseLanguage.structure.ClassifierType"),"classifier",false),"method",true)).where(new IWhereFilter<SNode>(){
+            public boolean accept(            SNode m){
+              if (ListSequence.fromList(SLinkOperations.getTargets(m,"parameter",true)).isNotEmpty()) {
+                return false;
+              }
+              if (!(SNodeOperations.isInstanceOf(SLinkOperations.getTarget(m,"visibility",true),"jetbrains.mps.baseLanguage.structure.PublicVisibility"))) {
+                return false;
+              }
+              String gn=SPropertyOperations.getString(m,"name");
+              if (gn != null) {
+                if (gn.startsWith("is")) {
+                  return SNodeOperations.isInstanceOf(SLinkOperations.getTarget(m,"returnType",true),"jetbrains.mps.baseLanguage.structure.BooleanType");
+                }
+ else                 if (gn.startsWith("get")) {
+                  return !(SNodeOperations.isInstanceOf(SLinkOperations.getTarget(m,"returnType",true),"jetbrains.mps.baseLanguage.structure.VoidType"));
+                }
+              }
+              return false;
+            }
+          }
+);
+        }
+        @Override public SNodePointer getSearchScopeValidatorNode(){
+          return breakingNode_h502i8_a0a3a0a0a1a0b0a1a1;
+        }
+      }
+;
+    }
+  }
+);
+  return references;
+}
