@@ -2,40 +2,28 @@
   MigrationState msComponent=myProject.getComponent(MigrationState.class);
   MPSProject mpsProject=myProject.getComponent(MPSProject.class);
   if (msComponent.getMigrationState() == MState.INITIAL) {
-    stage_1_1_invalidateCaches();
-    msComponent.setMigrationState(MState.CACHES_INVALIDATED);
-    ApplicationManager.getApplication().restart();
+    stageUpgradePersistence(mpsProject);
+    msComponent.setMigrationState(MState.PERSISTENCE_UPGRADED);
+    cleanRestart();
   }
-  if (msComponent.getMigrationState() == MState.CACHES_INVALIDATED) {
-    stage_2_1_addLanguageDesingDevKitToLanguages(mpsProject);
-    stage_2_2_addGeneralPurposeDevKitToLanguageModels(mpsProject);
-    stage_2_3_removeLanguageDesignDevKitFromModels(mpsProject);
-    stage_2_4_removeBootstrapLanguagesDevKitFromLanguageModels(mpsProject);
-    stage_2_5_fixDependenciesEverywhere(mpsProject);
+  if (msComponent.getMigrationState() == MState.PERSISTENCE_UPGRADED) {
+    stageFixDependencies(mpsProject);
     msComponent.setMigrationState(MState.LANGUAGES_DEPS_CORRECTED);
-    ApplicationManager.getApplication().restart();
+    cleanRestart();
   }
   if (msComponent.getMigrationState() == MState.LANGUAGES_DEPS_CORRECTED) {
-    stage_3_1_updateLanguageAccessories(mpsProject);
-    stage_3_2_reResolveStubRefs(mpsProject);
-    stage_3_3_optimizeImports(mpsProject);
+    stageStubsMigration(mpsProject);
     msComponent.setMigrationState(MState.STUBS_CONVERTED);
-    ApplicationManager.getApplication().restart();
+    cleanRestart();
   }
   if (msComponent.getMigrationState() == MState.STUBS_CONVERTED) {
-    stage_4_1_convertAttributes(mpsProject);
-    msComponent.setMigrationState(MState.ATTRIBUTES_CONVERTED);
-    ApplicationManager.getApplication().restart();
-  }
-  if (msComponent.getMigrationState() == MState.ATTRIBUTES_CONVERTED) {
-    stage_5_1_migrations(mpsProject);
+    stageLanguageMigrations(mpsProject);
     msComponent.setMigrationState(MState.LANGUAGES_MIGRATION);
-    ApplicationManager.getApplication().restart();
+    cleanRestart();
   }
   if (msComponent.getMigrationState() == MState.LANGUAGES_MIGRATION) {
-    stage_6_1_regeneration(mpsProject);
+    stageRegeneration(mpsProject);
     msComponent.setMigrationState(MState.REGENERATION);
-    ApplicationManager.getApplication().restart();
   }
   if (msComponent.getMigrationState() == MState.REGENERATION) {
     msComponent.setMigrationState(MState.DONE);
