@@ -1,0 +1,93 @@
+{
+  return new IJob(){
+    public IResult execute(    final Iterable<IResource> input,    final IJobMonitor monitor,    final IParametersPool pool){
+      Iterable<IResource> _output_21gswx_a0a=null;
+switch (0) {
+case 0:
+        monitor.currentProgress().beginWork("Writing",Sequence.fromIterable(input).count() * 100,monitor.currentProgress().workLeft());
+      for (      IResource resource : Sequence.fromIterable(input)) {
+        final GResource gres=(GResource)resource;
+        monitor.currentProgress().advanceWork("Writing",50,gres.status().getInputModel().getSModelReference().getSModelFqName().getLongName());
+        if (!(gres.status().isOk())) {
+          Logger.getLogger("jetbrains.mps.make.TextGen").error("Generation was not OK");
+          return new IResult.FAILURE(_output_21gswx_a0a);
+        }
+        String output=gres.module().getOutputFor(gres.model());
+        final IFile targetDir=(pool.parameters(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).pathToFile() != null ? pool.parameters(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).pathToFile().invoke(output) : FileSystem.getInstance().getFileByPath(output));
+        final IFile cachesDir=FileGenerationUtil.getCachesDir(targetDir);
+        final FilesDelta targetDelta=new FilesDelta(targetDir);
+        Sequence.fromIterable(gres.retainedModels()).where(new IWhereFilter<SModelDescriptor>(){
+          public boolean accept(          SModelDescriptor smd){
+            return !(GeneratorManager.isDoNotGenerate(smd));
+          }
+        }
+).visitAll(new IVisitor<SModelDescriptor>(){
+          public void visit(          SModelDescriptor smd){
+            targetDelta.kept(FileGenerationUtil.getDefaultOutputDir(smd,targetDir));
+          }
+        }
+);
+        final FilesDelta cachesDelta=new FilesDelta(cachesDir);
+        Sequence.fromIterable(gres.retainedModels()).where(new IWhereFilter<SModelDescriptor>(){
+          public boolean accept(          SModelDescriptor smd){
+            return !(GeneratorManager.isDoNotGenerate(smd));
+          }
+        }
+).visitAll(new IVisitor<SModelDescriptor>(){
+          public void visit(          SModelDescriptor smd){
+            cachesDelta.kept(FileGenerationUtil.getDefaultOutputDir(smd,cachesDir));
+          }
+        }
+);
+        final JavaStreamHandler javaStreamHandler=new JavaStreamHandler(gres.model(),targetDir,cachesDir);
+        final Wrappers._boolean ok=new Wrappers._boolean();
+        boolean generateDI=pool.parameters(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).generateDebugInfo() == null || pool.parameters(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).generateDebugInfo();
+        final TextGenerator textgen=new TextGenerator(javaStreamHandler,BLDependenciesCache.getInstance().getGenerator(),(generateDI ? TraceInfoCache.getInstance().getGenerator() : null),GenerationDependenciesCache.getInstance().getGenerator());
+        textgen.setFailIfNoTextgen(pool.parameters(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).failIfNoTextgen() != null && pool.parameters(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).failIfNoTextgen());
+        textgen.setGenerateDebugInfo(generateDI);
+        try {
+          ModelAccess.instance().runReadAction(new Runnable(){
+            public void run(){
+              ok.value=textgen.handleOutput(pool.parameters(new ITarget.Name("checkParameters"),Generate_Facet.Target_checkParameters.Variables.class).operationContext(),gres.status());
+            }
+          }
+);
+        }
+  finally {
+          javaStreamHandler.dispose();
+        }
+        final SModelDescriptor outputMD=gres.status().getOutputModelDescriptor();
+        if (outputMD instanceof TransientModelsModule.TransientSModelDescriptor) {
+          ModelAccess.instance().runWriteInEDTAndWait(new Runnable(){
+            public void run(){
+              TransientModelsModule.TransientSModelDescriptor tmd=(TransientModelsModule.TransientSModelDescriptor)outputMD;
+              ((TransientModelsModule)tmd.getModule()).removeModel(tmd);
+              CleanupManager.getInstance().cleanup();
+            }
+          }
+);
+        }
+        if (!(ok.value)) {
+          for (          String err : textgen.errors()) {
+            monitor.reportFeedback(new IFeedback.ERROR(String.valueOf(err)));
+          }
+          monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Failed to generate text")));
+          return new IResult.FAILURE(_output_21gswx_a0a);
+        }
+        ModelAccess.instance().runWriteInEDTAndWait(new Runnable(){
+          public void run(){
+            javaStreamHandler.flush();
+          }
+        }
+);
+        monitor.currentProgress().advanceWork("Writing",50);
+        _output_21gswx_a0a=Sequence.fromIterable(_output_21gswx_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(new TResource(gres.module(),Sequence.fromIterable(javaStreamHandler.delta()).concat(Sequence.fromIterable(Sequence.fromArray(new IDelta[]{targetDelta,cachesDelta})))))));
+      }
+    monitor.currentProgress().finishWork("Writing");
+default :
+  return new IResult.SUCCESS(_output_21gswx_a0a);
+}
+}
+}
+;
+}
