@@ -17,12 +17,6 @@
       return new FutureValue(new IResult.SUCCESS(null));
     }
   }
-  if (!(script.isValid())) {
-    String msg=scrName + " failed";
-    showError(mh,msg + ". Invalid script.");
-    this.displayInfo(msg);
-    return new FutureValue(new IResult.FAILURE(null));
-  }
   final Wrappers._T<Iterable<? extends Iterable<IResource>>> clInput=new Wrappers._T<Iterable<? extends Iterable<IResource>>>();
   final Wrappers._T<Iterable<Iterable<String>>> usedLangs=new Wrappers._T<Iterable<Iterable<String>>>();
   ModelAccess.instance().runReadAction(new Runnable(){
@@ -40,13 +34,6 @@
         }
       }
 ).toListSequence();
-      System.out.println("*** used langs by cluster");
-      Sequence.fromIterable(usedLangs.value).visitAll(new IVisitor<Iterable<String>>(){
-        public void visit(        Iterable<String> it){
-          System.out.println("   " + it);
-        }
-      }
-);
     }
   }
 );
@@ -62,12 +49,21 @@
         }
       }
 );
-      IScript scr=scb.withFinalTarget(new ITarget.Name("make")).toScript();
-      System.out.println("*** script valid=" + scr.isValid());
-      return script;
+      return scb.withFinalTarget(new ITarget.Name("make")).toScript();
     }
   }
 ).toListSequence();
+  if (!(Sequence.fromIterable(scripts).all(new IWhereFilter<IScript>(){
+    public boolean accept(    IScript sc){
+      return sc.isValid();
+    }
+  }
+))) {
+    String msg=scrName + " failed";
+    showError(mh,msg + ". Invalid script.");
+    this.displayInfo(msg);
+    return new FutureValue(new IResult.FAILURE(null));
+  }
   final WorkbenchMakeService.MakeTask task=new WorkbenchMakeService.MakeTask(this.getSession().getContext().getProject(),scrName,scripts,scrName,clInput.value,ctl,mh,PerformInBackgroundOption.DEAF){
     @Override protected void done(){
       if (!(currentSessionStickyMark.isMarked())) {
