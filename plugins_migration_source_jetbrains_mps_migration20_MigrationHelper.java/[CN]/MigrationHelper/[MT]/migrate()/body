@@ -10,13 +10,24 @@
         continue;
       }
       if (showMessageBefore(stage))       return;
-      Runnable stageRunnable=new StageExecutor(stage,mpsProject);
-      if (stage.needsCommand()) {
-        ModelAccess.instance().runWriteActionInCommand(stageRunnable);
-      }
+      ProgressManager.getInstance().run(new Modal(myProject,stage.title(),false){
+        public void run(        @NotNull ProgressIndicator indicator){
+          indicator.setIndeterminate(true);
+          final Runnable stageRunnable=new StageExecutor(stage,mpsProject);
+          if (stage.needsCommand()) {
+            ThreadUtils.runInUIThreadAndWait(new Runnable(){
+              public void run(){
+                ModelAccess.instance().runWriteActionInCommand(stageRunnable);
+              }
+            }
+);
+          }
  else {
-        stageRunnable.run();
+            stageRunnable.run();
+          }
+        }
       }
+);
       msComponent.setMigrationState(next);
       if (showMessageAfter(stage))       return;
       checkRestart(stage);
