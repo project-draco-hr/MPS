@@ -2,14 +2,15 @@
   ModelChange.assertLegalChange(model);
   GlobalScope scope=GlobalScope.getInstance();
   SModelDescriptor modelDescriptor=model.getModelDescriptor();
-  IModule module=modelDescriptor == null ? null : modelDescriptor.getModule();
+  final IModule module=modelDescriptor == null ? null : modelDescriptor.getModule();
+  final Set<IModule> moduleDependencies=module != null ? module.getDependenciesManager().getAllDependOnModules() : null;
   Set<ModuleReference> usedLanguages=getAllImportedLanguages(model);
   Set<SModelReference> importedModels=new HashSet<SModelReference>();
   for (  SModelDescriptor sm : allImportedModels(model,scope)) {
     importedModels.add(sm.getSModelReference());
   }
   for (  SNode node : model.nodes()) {
-    Language lang=node.getLanguage(scope);
+    Language lang=node.getLanguage();
     if (lang == null) {
       LOG.error("Can't find language " + node.getLanguageNamespace());
       continue;
@@ -31,7 +32,7 @@
           if (respectModulesScopes && module != null) {
             SModelDescriptor targetModelDescriptor=SModelRepository.getInstance().getModelDescriptor(targetModelReference);
             IModule targetModule=targetModelDescriptor == null ? null : targetModelDescriptor.getModule();
-            if (targetModule != null && !module.getDependenciesManager().getAllDependOnModules().contains(targetModule)) {
+            if (targetModule != null && !moduleDependencies.contains(targetModule)) {
               module.addDependency(targetModule.getModuleReference(),false);
             }
           }
