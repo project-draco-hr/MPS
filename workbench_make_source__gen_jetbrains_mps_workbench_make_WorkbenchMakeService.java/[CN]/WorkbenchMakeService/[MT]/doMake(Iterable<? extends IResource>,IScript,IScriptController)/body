@@ -1,67 +1,15 @@
 {
-  String scrName=((cleanMake ? "Rebuild" : "Make"));
-  WorkbenchMakeService.MessageHandler mh=new WorkbenchMakeService.MessageHandler("Make");
-  mh.clear();
-  if (Sequence.fromIterable(inputRes).isEmpty()) {
-    if (cleanMake) {
-      String msg=scrName + " aborted: nothing to do";
-      this.showError(mh,msg);
-      this.displayInfo(msg);
-      return new FutureValue(new IResult.FAILURE(null));
-    }
- else {
-      this.displayInfo("Everything up to date");
-      return new FutureValue(new IResult.SUCCESS(null));
-    }
+  Future<IResult> result=null;
+  try {
+    awaitCurrentProcess();
+    result=_doMake(inputRes,script,controller);
   }
-  if (!(script.isValid())) {
-    String msg=scrName + " failed";
-    showError(mh,msg + ". Invalid script.");
-    this.displayInfo(msg);
-    return new FutureValue(new IResult.FAILURE(null));
-  }
-  final Wrappers._T<Iterable<? extends Iterable<IResource>>> clInput=new Wrappers._T<Iterable<? extends Iterable<IResource>>>();
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      clInput.value=new ModulesClusterizer().clusterize(Sequence.fromIterable(inputRes).<IResource>select(new ISelector<IResource,IResource>(){
-        public IResource select(        IResource r){
-          return (IResource)r;
-        }
-      }
-));
-    }
-  }
-);
-  final Wrappers._boolean alreadySentToBg=new Wrappers._boolean(false);
-  IScriptController ctl=this.completeController(mh,controller,new _FunctionTypes._void_P0_E0(){
-    public void invoke(){
-      if (!(alreadySentToBg.value)) {
-        progInd.background();
+  finally {
+    if (result == null || result.isDone()) {
+      if (!(currentSessionStickyMark.isMarked())) {
+        currentSessionStickyMark.set(null,false);
       }
     }
   }
-);
-  final WorkbenchMakeService.MakeTask task=new WorkbenchMakeService.MakeTask(context.getProject(),scrName,script,scrName,clInput.value,ctl,mh,new PerformInBackgroundOption(){
-    public boolean shouldStartInBackground(){
-      return false;
-    }
-    public void processSentToBackground(){
-      alreadySentToBg.value=true;
-    }
-  }
-);
-  doExecute(new Runnable(){
-    public void run(){
-      SwingUtilities.invokeLater(new Runnable(){
-        public void run(){
-          IdeEventQueue.getInstance().flushQueue();
-          ProgressManager.getInstance().run(task);
-          IdeEventQueue.getInstance().flushQueue();
-        }
-      }
-);
-    }
-  }
-);
-  return task;
+  return result;
 }

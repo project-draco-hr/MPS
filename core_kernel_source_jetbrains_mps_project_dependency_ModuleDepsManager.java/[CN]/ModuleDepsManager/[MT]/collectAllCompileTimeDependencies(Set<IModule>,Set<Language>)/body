@@ -1,0 +1,27 @@
+{
+  dependencies.add(myModule);
+  for (  Dependency dep : myModule.getDependOn()) {
+    IModule m=MPSModuleRepository.getInstance().getModule(dep.getModuleRef());
+    if (m == null)     continue;
+    if (!dependencies.contains(m)) {
+      m.getDependenciesManager().collectAllCompileTimeDependencies(dependencies,languagesWithRuntime);
+    }
+  }
+  for (  ModuleReference ref : myModule.getUsedDevkitReferences()) {
+    DevKit dk=MPSModuleRepository.getInstance().getDevKit(ref);
+    if (dk == null)     continue;
+    for (    Solution exportedSolution : dk.getAllExportedSolutions()) {
+      if (exportedSolution != null && !dependencies.contains(exportedSolution)) {
+        exportedSolution.getDependenciesManager().collectAllCompileTimeDependencies(dependencies,languagesWithRuntime);
+      }
+    }
+    for (    Language language : dk.getAllExportedLanguages()) {
+      collectAllCompileTimeDependenciesInUsedLanguage(language,dependencies,languagesWithRuntime);
+    }
+  }
+  for (  ModuleReference ref : myModule.getUsedLanguagesReferences()) {
+    Language l=MPSModuleRepository.getInstance().getLanguage(ref);
+    if (l == null)     continue;
+    collectAllCompileTimeDependenciesInUsedLanguage(l,dependencies,languagesWithRuntime);
+  }
+}

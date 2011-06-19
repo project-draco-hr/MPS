@@ -1,0 +1,46 @@
+{
+  final List<EditableSModelDescriptor> modelDescriptors=new ArrayList<EditableSModelDescriptor>();
+  final List<SModelDescriptor> scopeModelDescriptors=new ArrayList<SModelDescriptor>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      SModelDescriptor d : scope.getOwnModelDescriptors()) {
+        scopeModelDescriptors.add(d);
+      }
+    }
+  }
+);
+  for (  SModelDescriptor modelDescriptor : scopeModelDescriptors) {
+    if (!SModelStereotype.isUserModel(modelDescriptor))     continue;
+    int persistenceVersion=-1;
+    if (modelDescriptor.getLoadingState() != ModelLoadingState.NOT_LOADED) {
+      persistenceVersion=modelDescriptor.getSModel().getPersistenceVersion();
+    }
+ else {
+      if (modelDescriptor instanceof EditableSModelDescriptor) {
+        IFile file=((EditableSModelDescriptor)modelDescriptor).getModelFile();
+        if (file != null) {
+          persistenceVersion=ModelPersistence.loadDescriptor(file).getHeader().getPersistenceVersion();
+        }
+      }
+    }
+    if (persistenceVersion != -1 && persistenceVersion < PersistenceSettings.MAX_VERSION) {
+      modelDescriptors.add((EditableSModelDescriptor)modelDescriptor);
+    }
+  }
+  if (modelDescriptors.isEmpty()) {
+    if (!silent) {
+      JOptionPane.showMessageDialog(mainframe,"No Models To Upgrade Found");
+    }
+    return;
+  }
+  UpdatePersistenceDialog updatePersistenceDialog=new UpdatePersistenceDialog(modelDescriptors,mainframe,unitDescription,false);
+  updatePersistenceDialog.showDialog();
+  if (updatePersistenceDialog.getAnswer()) {
+    ModelAccess.instance().runWriteAction(new Runnable(){
+      public void run(){
+        upgradePersistence(modelDescriptors,PersistenceSettings.MAX_VERSION);
+      }
+    }
+);
+  }
+}

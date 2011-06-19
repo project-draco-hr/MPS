@@ -1,0 +1,26 @@
+{
+  final MigrationState msComponent=myProject.getComponent(MigrationState.class);
+  final MPSProject mpsProject=myProject.getComponent(MPSProject.class);
+  for (  MState state : MState.values()) {
+    if (state == MState.DONE)     break;
+    if (msComponent.getMigrationState() == state) {
+      final MState next=MState.values()[state.ordinal() + 1];
+      final MigrationStage stage=next.getStage();
+      if (stage == null) {
+        msComponent.setMigrationState(next);
+        continue;
+      }
+      if (showMessageBefore(stage))       return;
+      final Runnable stageRunnable=new StageExecutor(stage,mpsProject);
+      if (stage.needsCommand()) {
+        ModelAccess.instance().runWriteActionInCommand(stageRunnable);
+      }
+ else {
+        stageRunnable.run();
+      }
+      msComponent.setMigrationState(next);
+      if (showMessageAfter(stage))       return;
+      checkRestart(stage);
+    }
+  }
+}

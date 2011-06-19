@@ -3,29 +3,33 @@
     final SModelDescriptor md=TextPreviewModel_Action.this.modelToGenerate(_params);
     ApplicationManager.getApplication().executeOnPooledThread(new Runnable(){
       public void run(){
-        IScript scr=new ScriptBuilder().withFacets(new IFacet.Name("Generate"),new IFacet.Name("TextGen"),new IFacet.Name("JavaCompile"),new IFacet.Name("Make")).withFinalTarget(new ITarget.Name("textGenToMemory")).toScript();
-        Future<IResult> future=new WorkbenchMakeService(((IOperationContext)MapSequence.fromMap(_params).get("context")),true).make(new ModelsToResources(((IOperationContext)MapSequence.fromMap(_params).get("context")),Sequence.<SModelDescriptor>singleton(md)).resources(false),scr,new IScriptController.Stub(new IConfigMonitor.Stub(){
+        IScript scr=new ScriptBuilder().withFacets(new IFacet.Name("jetbrains.mps.make.facet.Generate"),new IFacet.Name("jetbrains.mps.make.facet.TextGen"),new IFacet.Name("jetbrains.mps.make.facet.JavaCompile"),new IFacet.Name("jetbrains.mps.make.facet.Make")).withFinalTarget(new ITarget.Name("textGenToMemory")).toScript();
+        IScriptController ctl=new IScriptController.Stub(new IConfigMonitor.Stub(){
           public <T extends IOption>T relayQuery(          IQuery<T> query){
             return query.defaultOption();
           }
         }
-,new IJobMonitor.Stub()));
-        try {
-          IResult result=future.get();
-          if (result.isSucessful()) {
-            FResource fres=(FResource)Sequence.fromIterable(result.output()).first();
-            final TextPreviewFile tfile=new TextPreviewFile(md.getSModelReference().getSModelFqName().getCompactPresentation(),"Generated text for " + md.getSModelReference().getSModelFqName().getLongName(),fres.contents());
-            SwingUtilities.invokeLater(new Runnable(){
-              public void run(){
-                FileEditorManager.getInstance(((IOperationContext)MapSequence.fromMap(_params).get("context")).getProject()).openTextEditor(new OpenFileDescriptor(((IOperationContext)MapSequence.fromMap(_params).get("context")).getProject(),tfile),true);
+,new IJobMonitor.Stub());
+        MakeSession session=new MakeSession(((IOperationContext)MapSequence.fromMap(_params).get("context")),null,true);
+        if (IMakeService.INSTANCE.get().startNewSession(session)) {
+          Future<IResult> future=IMakeService.INSTANCE.get().make(session,new ModelsToResources(((IOperationContext)MapSequence.fromMap(_params).get("context")),Sequence.<SModelDescriptor>singleton(md)).resources(false),scr,ctl);
+          try {
+            IResult result=future.get();
+            if (result.isSucessful()) {
+              FResource fres=(FResource)Sequence.fromIterable(result.output()).first();
+              final TextPreviewFile tfile=new TextPreviewFile(md.getSModelReference().getSModelFqName().getCompactPresentation(),"Generated text for " + md.getSModelReference().getSModelFqName().getLongName(),fres.contents());
+              SwingUtilities.invokeLater(new Runnable(){
+                public void run(){
+                  FileEditorManager.getInstance(((IOperationContext)MapSequence.fromMap(_params).get("context")).getProject()).openTextEditor(new OpenFileDescriptor(((IOperationContext)MapSequence.fromMap(_params).get("context")).getProject(),tfile),true);
+                }
               }
-            }
 );
+            }
           }
-        }
- catch (        InterruptedException ignore) {
-        }
-catch (        ExecutionException ignore) {
+ catch (          InterruptedException ignore) {
+          }
+catch (          ExecutionException ignore) {
+          }
         }
       }
     }

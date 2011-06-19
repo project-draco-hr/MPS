@@ -1,0 +1,52 @@
+{
+  Res res=new Res();
+  Map<String,SModelReference> cache=new HashMap<String,SModelReference>();
+  for (  SModelDescriptor d : p.getProject().getComponent(ProjectScope.class).getModelDescriptors()) {
+    if (!(d instanceof EditableSModelDescriptor))     continue;
+    if (!(SModelStereotype.isUserModel(d)))     continue;
+    if (d == null)     continue;
+    IModule module=d.getModule();
+    if (module == null)     continue;
+    Set<SModelReference> toRemove=new HashSet<SModelReference>();
+    for (    SNode node : d.getSModel().nodes()) {
+      for (      SReference ref : node.getReferences()) {
+        SModelId modelId=ref.getTargetSModelReference().getSModelId();
+        SNodeId nodeId=ref.getTargetNodeId();
+        if (modelId instanceof SModelId.RegularSModelId)         continue;
+        if (ref.getTargetNode() != null)         continue;
+        String oldId=((SModelId.ForeignSModelId)modelId).getId();
+        SModelReference replacement=null;
+        SModelReference cachedReplacement=cache.get(oldId);
+        if (cachedReplacement != null && module.getScope().getModelDescriptor(cachedReplacement) != null) {
+          replacement=cachedReplacement;
+        }
+ else {
+          for (          SModelDescriptor md : module.getScope().getModelDescriptors()) {
+            SModelReference mdRef=md.getSModelReference();
+            SModelId mdId=mdRef.getSModelId();
+            if (mdId instanceof SModelId.RegularSModelId)             continue;
+            if (!(matches(oldId,((SModelId.ForeignSModelId)mdId).getId())))             continue;
+            if (md.getSModel().getNodeById(nodeId) == null)             continue;
+            replacement=md.getSModelReference();
+            cache.put(oldId,replacement);
+            break;
+          }
+        }
+        if (replacement != null) {
+          toRemove.add(ref.getTargetSModelReference());
+          SModelReference mr=replacement;
+          d.getSModel().addModelImport(mr,false);
+          ref.setTargetSModelReference(mr);
+          res.fixed++;
+        }
+ else {
+          res.failed++;
+        }
+      }
+    }
+    for (    SModelReference ref : toRemove) {
+      d.getSModel().deleteModelImport(ref);
+    }
+  }
+  return res;
+}
