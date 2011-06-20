@@ -1,0 +1,46 @@
+{
+  List<SNode> currentChildren=parent.getChildren(role);
+  List<NodeGroupChange> relevantChanges=getRelevantNodeGroupChanges(parent,role);
+  if (ListSequence.fromList(relevantChanges).isEmpty()) {
+    return;
+  }
+  SNode baseParent=myMineChangeSet.getOldModel().getNodeById(parent.getSNodeId());
+  if (baseParent == null) {
+    return;
+  }
+  List<SNode> baseChildren=baseParent.getChildren(role);
+  final Wrappers._int baseIndex=new Wrappers._int();
+  if (0 <= index && index < currentChildren.size()) {
+    final SNodeId currentChildId=currentChildren.get(index).getSNodeId();
+    SNode baseChild=ListSequence.fromList(baseChildren).findFirst(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode c){
+        return currentChildId.equals(c.getSNodeId());
+      }
+    }
+);
+    if (baseChild == null) {
+      return;
+    }
+    baseIndex.value=SNodeOperations.getIndexInParent(baseChild);
+  }
+ else   if (index == 0) {
+    baseIndex.value=0;
+  }
+ else   if (index == currentChildren.size()) {
+    baseIndex.value=ListSequence.fromList(baseChildren).count();
+  }
+ else {
+    return;
+  }
+  invalidateChanges(ListSequence.fromList(relevantChanges).where(new IWhereFilter<NodeGroupChange>(){
+    public boolean accept(    NodeGroupChange ch){
+      return ch.getBegin() + beginOffset <= baseIndex.value && baseIndex.value < ch.getEnd() + endOffset;
+    }
+  }
+).<ModelChange>select(new ISelector<NodeGroupChange,ModelChange>(){
+    public ModelChange select(    NodeGroupChange ch){
+      return (ModelChange)ch;
+    }
+  }
+));
+}
