@@ -58,11 +58,16 @@ case 0:
         }
         final SModelDescriptor outputMD=gres.status().getOutputModelDescriptor();
         if (outputMD instanceof TransientModelsModule.TransientSModelDescriptor) {
-          ModelAccess.instance().runWriteInEDTAndWait(new Runnable(){
+          ThreadUtils.runInUIThreadAndWait(new Runnable(){
             public void run(){
-              TransientModelsModule.TransientSModelDescriptor tmd=(TransientModelsModule.TransientSModelDescriptor)outputMD;
-              ((TransientModelsModule)tmd.getModule()).removeModel(tmd);
-              CleanupManager.getInstance().cleanup();
+              ModelAccess.instance().requireWrite(new Runnable(){
+                public void run(){
+                  TransientModelsModule.TransientSModelDescriptor tmd=(TransientModelsModule.TransientSModelDescriptor)outputMD;
+                  ((TransientModelsModule)tmd.getModule()).removeModel(tmd);
+                  CleanupManager.getInstance().cleanup();
+                }
+              }
+);
             }
           }
 );
@@ -74,9 +79,14 @@ case 0:
           monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Failed to generate text")));
           return new IResult.FAILURE(_output_21gswx_a0a);
         }
-        ModelAccess.instance().runWriteInEDTAndWait(new Runnable(){
+        ThreadUtils.runInUIThreadAndWait(new Runnable(){
           public void run(){
-            javaStreamHandler.flush();
+            ModelAccess.instance().requireWrite(new Runnable(){
+              public void run(){
+                javaStreamHandler.flush();
+              }
+            }
+);
           }
         }
 );
