@@ -17,33 +17,17 @@
           if (modelId instanceof SModelId.RegularSModelId)           continue;
           if (ref.getTargetNode() != null)           continue;
           String oldId=((SModelId.ForeignSModelId)modelId).getId();
-          SModelReference mRep=moduleCache.get(oldId);
-          SModelReference gRep=globalCache.get(oldId);
-          SModelReference replacement=null;
-          if (mRep != null) {
-            replacement=mRep;
+          ModelResolveRes replacement=getModelRefReplacement(module,oldId,nodeId,moduleCache,globalCache);
+          if (replacement.needReload) {
+            SModelDescriptor model=SModelRepository.getInstance().getModelDescriptor(replacement.replacement);
+            ModuleReference moduleRef=model.getModule().getModuleReference();
+            module.addDependency(moduleRef,false);
+            reloadNeeded=true;
           }
- else           if (gRep != null && module.getScope().getModelDescriptor(gRep) != null) {
-            moduleCache.put(oldId,gRep);
-            replacement=gRep;
-          }
- else {
-            replacement=resolveModelInModule(module,oldId,nodeId);
-            moduleCache.put(oldId,replacement);
-            if (replacement == null) {
-              replacement=resolveModelAnywhere(p,oldId,nodeId);
-              if (replacement != null) {
-                ModuleReference moduleRef=SModelRepository.getInstance().getModelDescriptor(replacement).getModule().getModuleReference();
-                module.addDependency(moduleRef,false);
-                reloadNeeded=true;
-              }
-            }
-            globalCache.put(oldId,replacement);
-          }
-          if (replacement != null) {
+          if (replacement.replacement != null) {
             toRemove.add(targetModel);
-            d.getSModel().addModelImport(replacement,false);
-            ref.setTargetSModelReference(replacement);
+            d.getSModel().addModelImport(replacement.replacement,false);
+            ref.setTargetSModelReference(replacement.replacement);
             res.fixed++;
           }
  else {
