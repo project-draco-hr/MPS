@@ -1,18 +1,26 @@
 {
   ConstraintsDescriptor descriptor=constraintsDescriptors.get(fqName);
-  if (descriptor != null || !startLoad(fqName,LanguageAspect.CONSTRAINTS)) {
-    return descriptor != null ? descriptor : new IllegalConstraintsDescriptor(fqName);
+  if (descriptor != null) {
+    return descriptor;
+  }
+  if (!startLoad(fqName,LanguageAspect.CONSTRAINTS)) {
+    return new IllegalConstraintsDescriptor(fqName);
   }
   try {
-    LanguageRuntime languageRuntime=LanguageRegistry.getInstance().getLanguage(NameUtil.namespaceFromConceptFQName(fqName));
-    descriptor=languageRuntime.getConstraintsAspectDescriptor().getDescriptor(fqName);
+    try {
+      LanguageRuntime languageRuntime=LanguageRegistry.getInstance().getLanguage(NameUtil.namespaceFromConceptFQName(fqName));
+      descriptor=languageRuntime.getConstraintsAspectDescriptor().getDescriptor(fqName);
+    }
+ catch (    Throwable e) {
+      LOG.warning("Exception while constraints descriptor creating",e);
+    }
+    if (descriptor == null) {
+      descriptor=new IllegalConstraintsDescriptor(fqName);
+    }
+    constraintsDescriptors.put(fqName,descriptor);
+    return descriptor;
   }
- catch (  Exception ignored) {
+  finally {
+    finishLoad(fqName,LanguageAspect.CONSTRAINTS);
   }
-  if (descriptor == null) {
-    descriptor=new IllegalConstraintsDescriptor(fqName);
-  }
-  constraintsDescriptors.put(fqName,descriptor);
-  finishLoad(fqName,LanguageAspect.CONSTRAINTS);
-  return descriptor;
 }
