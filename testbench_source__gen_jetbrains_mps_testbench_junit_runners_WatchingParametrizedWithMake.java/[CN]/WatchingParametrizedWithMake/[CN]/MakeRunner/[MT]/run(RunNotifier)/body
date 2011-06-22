@@ -5,10 +5,29 @@
       ModuleMaker maker=new ModuleMaker();
       MPSCompilationResult compilationResult=maker.make(new LinkedHashSet<IModule>(MPSModuleRepository.getInstance().getAllModules()),new EmptyProgressIndicator());
       if (compilationResult != null && compilationResult.getErrors() > 0) {
-        notifier.fireTestFailure(new Failure(myDescription,new Exception("Comilation errors: " + compilationResult)));
+        notifier.fireTestFailure(new Failure(myDescription,new Exception("Compilation errors: " + compilationResult)));
       }
     }
   }
 );
+  try {
+    SwingUtilities.invokeAndWait(new Runnable(){
+      public void run(){
+        ModelAccess.instance().runWriteAction(new Runnable(){
+          public void run(){
+            LocalFileSystem.getInstance().refresh(false);
+          }
+        }
+);
+      }
+    }
+);
+  }
+ catch (  InterruptedException e) {
+    notifier.fireTestFailure(new Failure(myDescription,e));
+  }
+catch (  InvocationTargetException e) {
+    notifier.fireTestFailure(new Failure(myDescription,e));
+  }
   notifier.fireTestFinished(myDescription);
 }
