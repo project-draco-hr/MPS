@@ -38,37 +38,37 @@
   }
 );
   IScriptController ctl=this.completeController(mh,controller);
-  Iterable<IScript> scripts=Sequence.fromIterable(((script != null ? Sequence.fromIterable(usedLangs.value).<IScript>select(new ISelector<Iterable<String>,IScript>(){
-    public IScript select(    Iterable<String> it){
-      return script;
-    }
-  }
-) : Sequence.fromIterable(usedLangs.value).<IScript>select(new ISelector<Iterable<String>,IScript>(){
-    public IScript select(    Iterable<String> langs){
+  Iterable<ScriptBuilder> scriptBuilders=Sequence.fromIterable(usedLangs.value).<ScriptBuilder>select(new ISelector<Iterable<String>,ScriptBuilder>(){
+    public ScriptBuilder select(    Iterable<String> langs){
       final ScriptBuilder scb=new ScriptBuilder();
       Sequence.fromIterable(langs).visitAll(new IVisitor<String>(){
         public void visit(        String ns){
           LanguageRuntime lr=LanguageRegistry.getInstance().getLanguage(ns);
           Iterable<IFacet> fcts=lr.getFacetProvider().getDescriptor(null).getManifest().facets();
-          scb.withFacets(fcts);
+          scb.withFacetNames(Sequence.fromIterable(fcts).<IFacet.Name>select(new ISelector<IFacet,IFacet.Name>(){
+            public IFacet.Name select(            IFacet fct){
+              return fct.getName();
+            }
+          }
+));
         }
       }
 );
-      return scb.withFinalTarget(new ITarget.Name("make")).toScript();
+      return scb.withFinalTarget(new ITarget.Name("make"));
     }
   }
-)))).toListSequence();
-  if (!(Sequence.fromIterable(scripts).all(new IWhereFilter<IScript>(){
-    public boolean accept(    IScript sc){
-      return sc.isValid();
+).toListSequence();
+  Iterable<IScript> scripts=((script != null ? Sequence.fromIterable(scriptBuilders).<IScript>select(new ISelector<ScriptBuilder,IScript>(){
+    public IScript select(    ScriptBuilder it){
+      return script;
     }
   }
-))) {
-    String msg=scrName + " failed";
-    showError(mh,msg + ". Invalid script.");
-    this.displayInfo(msg);
-    return new FutureValue(new IResult.FAILURE(null));
+) : Sequence.fromIterable(scriptBuilders).<IScript>select(new ISelector<ScriptBuilder,IScript>(){
+    public IScript select(    ScriptBuilder scb){
+      return scb.toScript();
+    }
   }
+)));
   final WorkbenchMakeService.MakeTask task=new WorkbenchMakeService.MakeTask(this.getSession().getContext().getProject(),scrName,scripts,scrName,clInput.value,ctl,mh,PerformInBackgroundOption.DEAF){
     @Override protected void done(){
       if (!(currentSessionStickyMark.isMarked())) {
