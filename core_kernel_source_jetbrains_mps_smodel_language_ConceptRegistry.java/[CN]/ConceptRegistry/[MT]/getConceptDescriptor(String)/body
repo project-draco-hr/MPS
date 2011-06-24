@@ -1,18 +1,26 @@
 {
   ConceptDescriptor descriptor=conceptDescriptors.get(fqName);
-  if (descriptor != null || !startLoad(fqName,LanguageAspect.STRUCTURE)) {
-    return descriptor != null ? descriptor : new IllegalConceptDescriptor(fqName);
+  if (descriptor != null) {
+    return descriptor;
+  }
+  if (!startLoad(fqName,LanguageAspect.STRUCTURE)) {
+    return new IllegalConceptDescriptor(fqName);
   }
   try {
-    LanguageRuntime languageRuntime=LanguageRegistry.getInstance().getLanguage(NameUtil.namespaceFromConceptFQName(fqName));
-    descriptor=languageRuntime.getStructureAspectDescriptor().getDescriptor(fqName);
+    try {
+      LanguageRuntime languageRuntime=LanguageRegistry.getInstance().getLanguage(NameUtil.namespaceFromConceptFQName(fqName));
+      descriptor=languageRuntime.getStructureAspectDescriptor().getDescriptor(fqName);
+    }
+ catch (    Throwable e) {
+      LOG.warning("Exception while structure descriptor creating",e);
+    }
+    if (descriptor == null) {
+      descriptor=new IllegalConceptDescriptor(fqName);
+    }
+    conceptDescriptors.put(fqName,descriptor);
+    return descriptor;
   }
- catch (  Exception ignored) {
+  finally {
+    finishLoad(fqName,LanguageAspect.STRUCTURE);
   }
-  if (descriptor == null) {
-    descriptor=new IllegalConceptDescriptor(fqName);
-  }
-  conceptDescriptors.put(fqName,descriptor);
-  finishLoad(fqName,LanguageAspect.STRUCTURE);
-  return descriptor;
 }

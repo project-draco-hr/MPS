@@ -1,2 +1,95 @@
 {
+  String scrName=((this.getSession().isCleanMake() ? "Rebuild" : "Make"));
+  IMessageHandler mh=this.getSession().getMessageHandler();
+  if (mh == null) {
+    mh=new WorkbenchMakeService.MessageHandler("Make",this.getSession().getContext());
+  }
+  mh.clear();
+  if (Sequence.fromIterable(inputRes).isEmpty()) {
+    if (this.getSession().isCleanMake()) {
+      String msg=scrName + " aborted: nothing to do";
+      this.showError(mh,msg);
+      this.displayInfo(msg);
+      return new FutureValue(new IResult.FAILURE(null));
+    }
+ else {
+      this.displayInfo("Everything up to date");
+      return new FutureValue(new IResult.SUCCESS(null));
+    }
+  }
+  final Wrappers._T<Iterable<? extends Iterable<IResource>>> clInput=new Wrappers._T<Iterable<? extends Iterable<IResource>>>();
+  final Wrappers._T<Iterable<Iterable<String>>> usedLangs=new Wrappers._T<Iterable<Iterable<String>>>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      final ModulesClusterizer mcr=new ModulesClusterizer();
+      clInput.value=mcr.clusterize(Sequence.fromIterable(inputRes).<IResource>select(new ISelector<IResource,IResource>(){
+        public IResource select(        IResource r){
+          return (IResource)r;
+        }
+      }
+));
+      usedLangs.value=Sequence.fromIterable(clInput.value).<Iterable<String>>select(new ISelector<Iterable<IResource>,Iterable<String>>(){
+        public Iterable<String> select(        Iterable<IResource> it){
+          return mcr.allUsedLangNamespaces(it);
+        }
+      }
+).toListSequence();
+    }
+  }
+);
+  IScriptController ctl=this.completeController(mh,controller);
+  Iterable<ScriptBuilder> scriptBuilders=Sequence.fromIterable(usedLangs.value).<ScriptBuilder>select(new ISelector<Iterable<String>,ScriptBuilder>(){
+    public ScriptBuilder select(    Iterable<String> langs){
+      final ScriptBuilder scb=new ScriptBuilder();
+      Sequence.fromIterable(langs).visitAll(new IVisitor<String>(){
+        public void visit(        String ns){
+          LanguageRuntime lr=LanguageRegistry.getInstance().getLanguage(ns);
+          Iterable<IFacet> fcts=lr.getFacetProvider().getDescriptor(null).getManifest().facets();
+          scb.withFacetNames(Sequence.fromIterable(fcts).<IFacet.Name>select(new ISelector<IFacet,IFacet.Name>(){
+            public IFacet.Name select(            IFacet fct){
+              return fct.getName();
+            }
+          }
+));
+        }
+      }
+);
+      return scb.withFinalTarget(new ITarget.Name("make"));
+    }
+  }
+).toListSequence();
+  Iterable<IScript> scripts=((script != null ? Sequence.fromIterable(scriptBuilders).<IScript>select(new ISelector<ScriptBuilder,IScript>(){
+    public IScript select(    ScriptBuilder it){
+      return script;
+    }
+  }
+) : Sequence.fromIterable(scriptBuilders).<IScript>select(new ISelector<ScriptBuilder,IScript>(){
+    public IScript select(    ScriptBuilder scb){
+      return scb.toScript();
+    }
+  }
+)));
+  final WorkbenchMakeService.MakeTask task=new WorkbenchMakeService.MakeTask(this.getSession().getContext().getProject(),scrName,scripts,scrName,clInput.value,ctl,mh,PerformInBackgroundOption.DEAF){
+    @Override protected void done(){
+      if (!(currentSessionStickyMark.isMarked())) {
+        currentSessionStickyMark.set(null,false);
+      }
+    }
+  }
+;
+  this.getSession().doExecute(new Runnable(){
+    public void run(){
+      SwingUtilities.invokeLater(new Runnable(){
+        public void run(){
+          IdeEventQueue.getInstance().flushQueue();
+          ProgressManager.getInstance().run(task);
+          IdeEventQueue.getInstance().flushQueue();
+        }
+      }
+);
+    }
+  }
+);
+  this.currentProcess=task;
+  return task;
 }

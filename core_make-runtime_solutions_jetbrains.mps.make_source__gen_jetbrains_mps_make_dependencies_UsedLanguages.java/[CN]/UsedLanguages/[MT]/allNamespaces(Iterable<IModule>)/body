@@ -1,0 +1,28 @@
+{
+  Set<String> namespaces=SetSequence.fromSet(new HashSet<String>());
+  Queue<String> nsq=QueueSequence.fromQueue(new LinkedList<String>());
+  for (  IModule mod : modules) {
+    Iterable<Language> langs=mod.getDependenciesManager().getAllUsedLanguages();
+    QueueSequence.fromQueue(nsq).addSequence(Sequence.fromIterable(langs).<String>select(new ISelector<Language,String>(){
+      public String select(      Language it){
+        return it.getModuleDescriptor().getNamespace();
+      }
+    }
+));
+    while (QueueSequence.fromQueue(nsq).isNotEmpty()) {
+      String ns=QueueSequence.fromQueue(nsq).removeFirstElement();
+      LanguageRuntime lr=LanguageRegistry.getInstance().getLanguage(ns);
+      if (lr == null) {
+        LOG.debug("language not found for namespace " + ns);
+        continue;
+      }
+      if (!(SetSequence.fromSet(namespaces).contains(ns))) {
+        SetSequence.fromSet(namespaces).addElement(ns);
+        for (        TemplateModule tm : lr.getGenerators()) {
+          QueueSequence.fromQueue(nsq).addSequence(Sequence.fromIterable(tm.getUsedLanguages()));
+        }
+      }
+    }
+  }
+  return namespaces;
+}
