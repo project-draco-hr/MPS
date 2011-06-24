@@ -1,0 +1,44 @@
+{
+  final List<ITestNodeWrapper> editorMethodList=myThis.getMethods();
+  final List<ITestNodeWrapper> editorTestCasesList=myThis.getNodes();
+  final SModel editorModel=myThis.getModel();
+  final IModule editorModule=myThis.getModule();
+  final int configTypeIndex=Sequence.fromIterable(Sequence.fromArray(myThis.getButtons())).indexOf(Sequence.fromIterable(Sequence.fromArray(myThis.getButtons())).findFirst(new IWhereFilter<JRadioButton>(){
+    public boolean accept(    JRadioButton it){
+      return it.isSelected();
+    }
+  }
+));
+  ApplicationManager.getApplication().executeOnPooledThread(new Runnable(){
+    public void run(){
+      final ClonableList<String> testMethods=new ClonableList<String>();
+      final ClonableList<String> testCases=new ClonableList<String>();
+      final Wrappers._T<String> model=new Wrappers._T<String>();
+      final Wrappers._T<String> module=new Wrappers._T<String>();
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          for (          ITestNodeWrapper testMethod : editorMethodList) {
+            testMethods.add(TestUtils.pointerToString(new SNodePointer(testMethod.getNode())));
+          }
+          for (          ITestNodeWrapper testCase : editorTestCasesList) {
+            testCases.add(TestUtils.pointerToString(new SNodePointer(testCase.getNode())));
+          }
+          if (editorModel != null) {
+            model.value=editorModel.getSModelFqName().toString();
+          }
+          if (editorModule != null) {
+            module.value=editorModule.getModuleFqName();
+          }
+        }
+      }
+);
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        public void run(){
+          applyInternal.invoke(configuration,configTypeIndex,testMethods,testCases,model.value,module.value);
+        }
+      }
+);
+    }
+  }
+);
+}
