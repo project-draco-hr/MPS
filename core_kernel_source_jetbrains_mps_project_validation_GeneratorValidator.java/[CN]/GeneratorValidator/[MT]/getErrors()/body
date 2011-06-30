@@ -6,16 +6,21 @@
     }
   }
   Set<String> usedLanguages=new HashSet<String>();
-  for (  SModelDescriptor model : myModule.getGeneratorModels()) {
-    usedLanguages.addAll(ModelContentUtil.getUsedLanguageNamespaces(model.getSModel(),true));
+  for (  SModelDescriptor model : myModule.getOwnTemplateModels()) {
+    if (SModelStereotype.isGeneratorModel(model)) {
+      usedLanguages.addAll(ModelContentUtil.getUsedLanguageNamespacesInTemplateModel(model.getSModel()));
+    }
   }
   Set<String> extendedLanguages=new HashSet<String>();
   Language sourceLanguage=myModule.getSourceLanguage();
+  usedLanguages.remove(sourceLanguage.getModuleFqName());
   for (  Language language : sourceLanguage.getAllExtendedLanguages()) {
     extendedLanguages.add(language.getModuleFqName());
   }
   for (  String lang : usedLanguages) {
-    if (!extendedLanguages.contains(lang) && !MPSModuleRepository.getInstance().getLanguage(lang).getRuntimeDependOn().isEmpty()) {
+    Language language=MPSModuleRepository.getInstance().getLanguage(lang);
+    if (language == null)     continue;
+    if (!extendedLanguages.contains(lang) && !language.getRuntimeDependencies().isEmpty()) {
       errors.add(sourceLanguage + " should extend " + lang);
     }
   }

@@ -1,18 +1,26 @@
 {
   BehaviorDescriptor descriptor=behaviorDescriptors.get(fqName);
-  if (descriptor != null || !startLoad(fqName,LanguageAspect.BEHAVIOR)) {
-    return descriptor != null ? descriptor : new IllegalBehaviorDescriptor(fqName);
+  if (descriptor != null) {
+    return descriptor;
+  }
+  if (!startLoad(fqName,LanguageAspect.BEHAVIOR)) {
+    return new IllegalBehaviorDescriptor(fqName);
   }
   try {
-    LanguageRuntime languageRuntime=LanguageRegistry.getInstance().getLanguage(NameUtil.namespaceFromConceptFQName(fqName));
-    descriptor=languageRuntime.getBehaviorAspectDescriptor().getDescriptor(fqName);
+    try {
+      LanguageRuntime languageRuntime=LanguageRegistry.getInstance().getLanguage(NameUtil.namespaceFromConceptFQName(fqName));
+      descriptor=languageRuntime.getBehaviorAspectDescriptor().getDescriptor(fqName);
+    }
+ catch (    Throwable e) {
+      LOG.warning("Exception while behavior descriptor creating",e);
+    }
+    if (descriptor == null) {
+      descriptor=new IllegalBehaviorDescriptor(fqName);
+    }
+    behaviorDescriptors.put(fqName,descriptor);
+    return descriptor;
   }
- catch (  Exception ignored) {
+  finally {
+    finishLoad(fqName,LanguageAspect.BEHAVIOR);
   }
-  if (descriptor == null) {
-    descriptor=new IllegalBehaviorDescriptor(fqName);
-  }
-  behaviorDescriptors.put(fqName,descriptor);
-  finishLoad(fqName,LanguageAspect.BEHAVIOR);
-  return descriptor;
 }

@@ -1,11 +1,7 @@
 {
   if (myState.compareAndSet(WorkbenchMakeService.TaskState.NOT_STARTED,WorkbenchMakeService.TaskState.RUNNING)) {
+    notifyListeners(new MakeNotification(WorkbenchMakeService.this,MakeNotification.Kind.ABOUT_TO_START));
     pi.pushState();
-    try {
-      Thread.sleep(400);
-    }
- catch (    InterruptedException ignore) {
-    }
     final int clsize=Sequence.fromIterable(this.myClInput).count();
     if (clsize == 0) {
       return;
@@ -20,14 +16,25 @@
       }
     }
 ;
-    for (    Iterable<IResource> cl : this.myClInput) {
+    Iterator<IScript> scit=Sequence.fromIterable(myScripts).iterator();
+    Iterator<? extends Iterable<IResource>> clit=Sequence.fromIterable(myClInput).iterator();
+    while (scit.hasNext() && clit.hasNext()) {
+      Iterable<IResource> cl=clit.next();
+      IScript scr=scit.next();
+      if (!(scr.isValid())) {
+        String msg=myScrName + " failed";
+        showError(myMessageHandler,msg + ". Invalid script.");
+        WorkbenchMakeService.this.displayInfo(msg);
+        this.myResult=new IResult.FAILURE(null);
+        break;
+      }
       pi.setText2((idx[0] + 1) + "/" + clsize+ " "+ IterableUtils.join(Sequence.fromIterable(cl).<String>select(new ISelector<IResource,String>(){
         public String select(        IResource r){
           return ((IResource)r).describe();
         }
       }
 ),","));
-      this.myResult=this.myScript.execute(this.myController,cl);
+      this.myResult=scr.execute(this.myController,cl);
       if (!(this.myResult.isSucessful()) || progInd.isCanceled()) {
         break;
       }
