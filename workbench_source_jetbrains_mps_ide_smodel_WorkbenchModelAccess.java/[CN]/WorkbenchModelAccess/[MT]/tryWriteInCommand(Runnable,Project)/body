@@ -4,35 +4,28 @@
   }
   final boolean[] res=new boolean[]{false};
   final Project project=p != null ? p : CurrentProjectAccessUtil.getProjectFromUI();
-  final boolean ownRead=ownReadLock();
-  try {
-    if (ownRead)     getReadLock().unlock();
-    CommandProcessor.getInstance().executeCommand(project,new Runnable(){
-      public void run(){
-        ApplicationManager.getApplication().runWriteAction(new Runnable(){
-          public void run(){
-            try {
-              if (getWriteLock().tryLock(WAIT_FOR_WRITE_LOCK_MILLIS,MILLISECONDS)) {
-                try {
-                  new CommandRunnable(r,project).run();
-                }
-  finally {
-                  getWriteLock().unlock();
-                }
-                res[0]=true;
+  CommandProcessor.getInstance().executeCommand(project,new Runnable(){
+    public void run(){
+      ApplicationManager.getApplication().runWriteAction(new Runnable(){
+        public void run(){
+          try {
+            if (getWriteLock().tryLock(WAIT_FOR_WRITE_LOCK_MILLIS,MILLISECONDS)) {
+              try {
+                new CommandRunnable(r,project).run();
               }
-            }
- catch (            InterruptedException ignore) {
+  finally {
+                getWriteLock().unlock();
+              }
+              res[0]=true;
             }
           }
+ catch (          InterruptedException ignore) {
+          }
         }
-);
       }
+);
     }
+  }
 ,"",null,UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION);
-  }
-  finally {
-    if (ownRead)     getReadLock().lock();
-  }
   return res[0];
 }
