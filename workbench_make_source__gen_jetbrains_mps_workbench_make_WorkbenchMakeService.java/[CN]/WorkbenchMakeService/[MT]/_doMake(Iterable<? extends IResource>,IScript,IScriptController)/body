@@ -8,7 +8,7 @@
   if (Sequence.fromIterable(inputRes).isEmpty()) {
     if (this.getSession().isCleanMake()) {
       String msg=scrName + " aborted: nothing to do";
-      this.showError(mh,msg);
+      mh.handle(new Message(MessageKind.ERROR,msg));
       this.displayInfo(msg);
       return new FutureValue(new IResult.FAILURE(null));
     }
@@ -37,7 +37,8 @@
     }
   }
 );
-  IScriptController ctl=this.completeController(mh,controller);
+  final ProgressIndicatorProgressStrategy pips=new ProgressIndicatorProgressStrategy();
+  IScriptController ctl=new WorkbenchMakeService.Controller(controller,mh,pips);
   Iterable<ScriptBuilder> scriptBuilders=Sequence.fromIterable(usedLangs.value).<ScriptBuilder>select(new ISelector<Iterable<String>,ScriptBuilder>(){
     public ScriptBuilder select(    Iterable<String> langs){
       final ScriptBuilder scb=new ScriptBuilder();
@@ -69,9 +70,19 @@
     }
   }
 )));
-  final WorkbenchMakeService.MakeTask task=new WorkbenchMakeService.MakeTask(this.getSession().getContext().getProject(),scrName,scripts,scrName,clInput.value,ctl,mh,PerformInBackgroundOption.DEAF){
+  final MakeTask task=new MakeTask(this.getSession().getContext().getProject(),scrName,scripts,scrName,clInput.value,ctl,mh,PerformInBackgroundOption.DEAF){
+    @Override protected void aboutToStart(){
+      notifyListeners(new MakeNotification(WorkbenchMakeService.this,MakeNotification.Kind.SCRIPT_ABOUT_TO_START));
+    }
     @Override protected void done(){
       attemptCloseSession();
+      notifyListeners(new MakeNotification(WorkbenchMakeService.this,MakeNotification.Kind.SCRIPT_FINISHED));
+    }
+    @Override protected void displayInfo(    String info){
+      WorkbenchMakeService.this.displayInfo(info);
+    }
+    @Override protected void useProgressIndicator(    ProgressIndicator pi){
+      pips.setProgressIndicator(pi);
     }
   }
 ;

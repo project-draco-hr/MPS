@@ -1,6 +1,6 @@
 {
-  if (myState.compareAndSet(WorkbenchMakeService.TaskState.NOT_STARTED,WorkbenchMakeService.TaskState.RUNNING)) {
-    notifyListeners(new MakeNotification(WorkbenchMakeService.this,MakeNotification.Kind.SCRIPT_ABOUT_TO_START));
+  if (myState.compareAndSet(MakeTask.TaskState.NOT_STARTED,MakeTask.TaskState.RUNNING)) {
+    aboutToStart();
     pi.pushState();
     final int clsize=Sequence.fromIterable(this.myClInput).count();
     if (clsize == 0) {
@@ -8,14 +8,14 @@
     }
     final double clfrac=(1.0 / clsize);
     final int[] idx=new int[]{0};
-    progInd=new ProgressIndicatorDelegate(pi){
+    useProgressIndicator(new ProgressIndicatorDelegate(pi){
       @Override public void setFraction(      double d){
         getDelegate().setFraction((idx[0] + d) * clfrac);
       }
       @Override public void setText2(      String string){
       }
     }
-;
+);
     Iterator<IScript> scit=Sequence.fromIterable(myScripts).iterator();
     Iterator<? extends Iterable<IResource>> clit=Sequence.fromIterable(myClInput).iterator();
     while (scit.hasNext() && clit.hasNext()) {
@@ -23,8 +23,8 @@
       IScript scr=scit.next();
       if (!(scr.isValid())) {
         String msg=myScrName + " failed";
-        showError(myMessageHandler,msg + ". Invalid script.");
-        WorkbenchMakeService.this.displayInfo(msg);
+        myMessageHandler.handle(new Message(MessageKind.ERROR,msg + ". Invalid script."));
+        displayInfo(msg);
         this.myResult=new IResult.FAILURE(null);
         break;
       }
@@ -35,12 +35,12 @@
       }
 ),","));
       this.myResult=scr.execute(this.myController,cl);
-      if (!(this.myResult.isSucessful()) || progInd.isCanceled()) {
+      if (!(this.myResult.isSucessful()) || pi.isCanceled()) {
         break;
       }
       idx[0]++;
     }
     pi.popState();
-    this.myState.set(WorkbenchMakeService.TaskState.INDETERMINATE);
+    this.myState.set(MakeTask.TaskState.INDETERMINATE);
   }
 }
