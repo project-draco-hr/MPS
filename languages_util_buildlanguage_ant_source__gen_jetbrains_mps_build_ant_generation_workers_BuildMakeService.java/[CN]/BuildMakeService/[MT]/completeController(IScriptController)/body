@@ -11,20 +11,22 @@
     }
   }
 ;
-  final Wrappers._T<ProgressIndicator> pind=new Wrappers._T<ProgressIndicator>(new EmptyProgressIndicator());
+  final ProgressIndicator pind=new EmptyProgressIndicator();
   return new IScriptController(){
     public void runConfigWithMonitor(    _FunctionTypes._void_P1_E0<? super IConfigMonitor> code){
       code.invoke(cmon);
     }
-    public void runJobWithMonitor(    final _FunctionTypes._void_P1_E0<? super IJobMonitor> code){
-      IdeEventQueue.getInstance().flushQueue();
-      ModelAccess.instance().runWriteActionWithProgressSynchronously(new Progressive(){
-        public void run(        ProgressIndicator realInd){
-          pind.value=new EmptyProgressIndicator();
-          code.invoke(jmon);
-        }
+    public void runJobWithMonitor(    _FunctionTypes._void_P1_E0<? super IJobMonitor> code){
+      final boolean oldFlag=ApplicationImpl.setExceptionalThreadWithReadAccessFlag(true);
+      try {
+        code.invoke(jmon);
       }
-,"Build",true,BuildMakeService.this.context.getProject());
+ catch (      Throwable e) {
+        BuildMakeService.LOG.error("error running job",e);
+      }
+ finally {
+        ApplicationImpl.setExceptionalThreadWithReadAccessFlag(oldFlag);
+      }
     }
     public void setup(    IParametersPool pool){
       Tuples._4<Project,IOperationContext,Boolean,_FunctionTypes._return_P0_E0<? extends ProgressIndicator>> vars=(Tuples._4<Project,IOperationContext,Boolean,_FunctionTypes._return_P0_E0<? extends ProgressIndicator>>)pool.parameters(new ITarget.Name("checkParameters"),Object.class);
@@ -34,7 +36,7 @@
         vars._2(true);
         vars._3(new _FunctionTypes._return_P0_E0<ProgressIndicator>(){
           public ProgressIndicator invoke(){
-            return pind.value;
+            return pind;
           }
         }
 );
