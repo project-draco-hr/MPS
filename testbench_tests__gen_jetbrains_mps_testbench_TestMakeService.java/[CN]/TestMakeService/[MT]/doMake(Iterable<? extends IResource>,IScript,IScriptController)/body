@@ -1,61 +1,9 @@
 {
-  final String scrName="Build";
+  String scrName="Build";
   if (Sequence.fromIterable(inputRes).isEmpty()) {
     String msg=scrName + " aborted: nothing to do";
     this.showError(msg);
-    return new IResult.FAILURE(null);
+    return new FutureValue(new IResult.FAILURE(null));
   }
-  if (!(script.isValid())) {
-    String msg=scrName + " failed";
-    showError(msg + ". Invalid script.");
-    return new IResult.FAILURE(null);
-  }
-  final Wrappers._T<Iterable<? extends Iterable<IResource>>> clInput=new Wrappers._T<Iterable<? extends Iterable<IResource>>>();
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      clInput.value=new ModulesClusterizer().clusterize(Sequence.fromIterable(inputRes).<IResource>select(new ISelector<IResource,IResource>(){
-        public IResource select(        IResource r){
-          return (IResource)r;
-        }
-      }
-));
-    }
-  }
-);
-  final Wrappers._T<IResult> res=new Wrappers._T<IResult>();
-  final IScriptController ctl=this.completeController(controller);
-  ThreadUtils.runInUIThreadAndWait(new Runnable(){
-    public void run(){
-      IdeEventQueue.getInstance().flushQueue();
-      ProgressManager.getInstance().run(new Task.Backgroundable(context.getProject(),scrName,true){
-        public void run(        @NotNull ProgressIndicator pi){
-          for (          Iterable<IResource> cl : clInput.value) {
-            res.value=script.execute(ctl,cl);
-            if (!(res.value.isSucessful()) || pi.isCanceled()) {
-              break;
-            }
-          }
-        }
-        @Override public void onSuccess(){
-          reconcile();
-        }
-        @Override public void onCancel(){
-          reconcile();
-        }
-        private void reconcile(){
-          if (res.value == null) {
-            String msg=scrName + " aborted";
-            showError(msg);
-          }
- else           if (!(res.value.isSucessful())) {
-            String msg=scrName + " failed";
-            showError(msg + ". See previous messages for details.");
-          }
-        }
-      }
-);
-    }
-  }
-);
-  return res.value;
+  return new TestMakeService.TaskRunner(scrName,messageHandler).runTask(inputRes,defaultScript,controller);
 }

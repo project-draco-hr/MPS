@@ -5,39 +5,5 @@
     this.showError(msg);
     return new FutureValue(new IResult.FAILURE(null));
   }
-  if (!(script.isValid())) {
-    String msg=scrName + " failed";
-    showError(msg + ". Invalid script.");
-    return new FutureValue(new IResult.FAILURE(null));
-  }
-  final Wrappers._T<Iterable<? extends Iterable<IResource>>> clInput=new Wrappers._T<Iterable<? extends Iterable<IResource>>>();
-  final Wrappers._T<Iterable<Iterable<String>>> usedLangs=new Wrappers._T<Iterable<Iterable<String>>>();
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      final ModulesClusterizer mcr=new ModulesClusterizer();
-      clInput.value=mcr.clusterize(Sequence.fromIterable(inputRes).<IResource>select(new ISelector<IResource,IResource>(){
-        public IResource select(        IResource r){
-          return (IResource)r;
-        }
-      }
-));
-      usedLangs.value=Sequence.fromIterable(clInput.value).<Iterable<String>>select(new ISelector<Iterable<IResource>,Iterable<String>>(){
-        public Iterable<String> select(        Iterable<IResource> it){
-          return mcr.allUsedLangNamespaces(it);
-        }
-      }
-).toListSequence();
-    }
-  }
-);
-  IScriptController ctl=this.completeController(controller);
-  IResult res;
-  MakeTask task=new MakeTask(context.getProject(),scrName,Sequence.fromIterable(clInput.value).<IScript>select(new ISelector<Iterable<IResource>,IScript>(){
-    public IScript select(    Iterable<IResource> it){
-      return script;
-    }
-  }
-),scrName,clInput.value,ctl,messageHandler,PerformInBackgroundOption.DEAF);
-  ProgressManager.getInstance().run(task);
-  return task;
+  return new BuildMakeService.TaskRunner(scrName,messageHandler).runTask(inputRes,defaultScript,controller);
 }
