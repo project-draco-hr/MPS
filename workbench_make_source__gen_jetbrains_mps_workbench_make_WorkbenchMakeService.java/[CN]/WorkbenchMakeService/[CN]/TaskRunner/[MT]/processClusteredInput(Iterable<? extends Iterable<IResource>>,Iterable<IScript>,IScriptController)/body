@@ -1,0 +1,35 @@
+{
+  final ProgressIndicatorProgressStrategy pips=new ProgressIndicatorProgressStrategy();
+  WorkbenchMakeService.this.getSession();
+  final MakeTask task=new MakeTask(WorkbenchMakeService.this.getSession().getContext().getProject(),taskName,scripts,taskName,clustRes,new WorkbenchMakeService.Controller(controller,mh,pips),mh,PerformInBackgroundOption.DEAF){
+    @Override protected void aboutToStart(){
+      notifyListeners(new MakeNotification(WorkbenchMakeService.this,MakeNotification.Kind.SCRIPT_ABOUT_TO_START));
+    }
+    @Override protected void done(){
+      attemptCloseSession();
+      notifyListeners(new MakeNotification(WorkbenchMakeService.this,MakeNotification.Kind.SCRIPT_FINISHED));
+    }
+    @Override protected void displayInfo(    String info){
+      WorkbenchMakeService.this.displayInfo(info);
+    }
+    @Override protected void useProgressIndicator(    ProgressIndicator pi){
+      pips.setProgressIndicator(pi);
+    }
+  }
+;
+  WorkbenchMakeService.this.getSession().doExecute(new Runnable(){
+    public void run(){
+      SwingUtilities.invokeLater(new Runnable(){
+        public void run(){
+          IdeEventQueue.getInstance().flushQueue();
+          ProgressManager.getInstance().run(task);
+          IdeEventQueue.getInstance().flushQueue();
+        }
+      }
+);
+    }
+  }
+);
+  WorkbenchMakeService.this.currentProcess=task;
+  return task;
+}
