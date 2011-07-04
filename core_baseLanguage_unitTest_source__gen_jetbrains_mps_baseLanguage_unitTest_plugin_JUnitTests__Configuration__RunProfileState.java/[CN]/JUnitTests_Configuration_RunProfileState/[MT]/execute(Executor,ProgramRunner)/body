@@ -1,12 +1,25 @@
 {
   Project project=myEnvironment.getProject();
+  List<ITestNodeWrapper> nodeWrappers=ListSequence.fromList(myRunConfiguration.getTests(project.getComponent(MPSProject.class))).toListSequence();
+  TestRunState runState=new TestRunState(nodeWrappers);
+  TestEventsDispatcher eventsDispatcher=new TestEventsDispatcher(runState);
+  final Wrappers._T<ProcessHandler> process=new Wrappers._T<ProcessHandler>(null);
+  final UnitTestViewComponent viewComponent=new UnitTestViewComponent(project,ProjectOperationContext.get(project),new ConsoleViewImpl(project,true),runState,new _FunctionTypes._void_P0_E0(){
+    public void invoke(){
+      if (process.value != null) {
+        process.value.destroyProcess();
+      }
+    }
+  }
+);
+  UnitTestProcessListener testProcessListener=new UnitTestProcessListener(eventsDispatcher);
+  process.value=new Junit_Command().setDebuggerSettings(myDebuggerSettings.getCommandLine(true)).createProcess(nodeWrappers,myRunConfiguration.getJavaRunParameters().getJavaRunParameters());
 {
-    ProcessHandler _processHandler=new Junit_Command().setDebuggerSettings(myDebuggerSettings.getCommandLine(true)).createProcess(ListSequence.fromList(myRunConfiguration.getTests(project.getComponent(MPSProject.class))).toListSequence(),myRunConfiguration.getJavaRunParameters().getJavaRunParameters());
-    final ConsoleViewImpl _consoleView=new ConsoleViewImpl(project,false);
-    _processHandler.addProcessListener(new ConsoleProcessListener(_consoleView));
-    return new DefaultExecutionResult(_processHandler,new DefaultExecutionConsole(_consoleView.getComponent(),new _FunctionTypes._void_P0_E0(){
+    ProcessHandler _processHandler=process.value;
+    _processHandler.addProcessListener(testProcessListener);
+    return new DefaultExecutionResult(_processHandler,new DefaultExecutionConsole(viewComponent,new _FunctionTypes._void_P0_E0(){
       public void invoke(){
-        _consoleView.dispose();
+        viewComponent.dispose();
       }
     }
 ));
