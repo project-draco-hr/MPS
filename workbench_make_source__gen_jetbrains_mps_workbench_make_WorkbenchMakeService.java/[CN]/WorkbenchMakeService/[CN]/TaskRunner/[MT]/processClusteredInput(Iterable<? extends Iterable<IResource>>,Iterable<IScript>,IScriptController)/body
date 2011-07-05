@@ -6,6 +6,7 @@
       notifyListeners(new MakeNotification(WorkbenchMakeService.this,MakeNotification.Kind.SCRIPT_ABOUT_TO_START));
     }
     @Override protected void done(){
+      currentProcess.compareAndSet(this,null);
       attemptCloseSession();
       notifyListeners(new MakeNotification(WorkbenchMakeService.this,MakeNotification.Kind.SCRIPT_FINISHED));
     }
@@ -22,7 +23,9 @@
       SwingUtilities.invokeLater(new Runnable(){
         public void run(){
           IdeEventQueue.getInstance().flushQueue();
-          ProgressManager.getInstance().run(task);
+          if (currentProcess.compareAndSet(null,task)) {
+            ProgressManager.getInstance().run(task);
+          }
           IdeEventQueue.getInstance().flushQueue();
         }
       }
@@ -30,6 +33,5 @@
     }
   }
 );
-  WorkbenchMakeService.this.currentProcess=task;
   return task;
 }
