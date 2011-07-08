@@ -1,0 +1,36 @@
+{
+  Project project=myEnvironment.getProject();
+  final SNode configuration=myRunConfiguration.getConfiguration();
+  final SNode layout=SNodeOperations.cast(myRunConfiguration.getNode().getNode(),"jetbrains.mps.build.packaging.structure.Layout");
+  if (configuration == null) {
+    throw new ExecutionException("Configuration not selected.");
+  }
+  final Wrappers._boolean isMPSBuildIncluded=new Wrappers._boolean();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      SNode mpsbuild=ListSequence.fromList(SNodeOperations.getDescendants(layout,"jetbrains.mps.build.custommps.structure.MPSBuild",false,new String[]{})).first();
+      if ((mpsbuild == null)) {
+        mpsbuild=ListSequence.fromList(SNodeOperations.getDescendants(layout,"jetbrains.mps.build.custommps.structure.MPSDistribution",false,new String[]{})).first();
+      }
+      isMPSBuildIncluded.value=AbstractProjectComponent_Behavior.call_included_1213877333807(mpsbuild,configuration);
+    }
+  }
+);
+  File file=new File(GenerateBuildUtil.getGeneratedFilePath(configuration));
+  if (isMPSBuildIncluded.value) {
+    String path=file.getAbsolutePath();
+    String suffix=".xml";
+    file=new File(path.substring(0,path.length() - suffix.length()) + DistribConfiguration_Behavior.getSuffix_1240229578757() + suffix);
+  }
+{
+    ProcessHandler _processHandler=new Ant_Command().setAntLocation((myRunConfiguration.getSettings().getUseOtherAntLocation() ? myRunConfiguration.getSettings().getOtherAntLocation() : null)).setOptions(myRunConfiguration.getSettings().getAntOptions()).createProcess(file.getAbsolutePath());
+    final ConsoleView _consoleView=ConsoleCreator.createConsoleView(project,false);
+    _processHandler.addProcessListener(new ConsoleProcessListener(_consoleView));
+    return new DefaultExecutionResult(_processHandler,new DefaultExecutionConsole(_consoleView.getComponent(),new _FunctionTypes._void_P0_E0(){
+      public void invoke(){
+        _consoleView.dispose();
+      }
+    }
+));
+  }
+}

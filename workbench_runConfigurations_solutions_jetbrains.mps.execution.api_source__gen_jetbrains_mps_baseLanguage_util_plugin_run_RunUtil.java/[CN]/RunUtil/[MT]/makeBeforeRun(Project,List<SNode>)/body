@@ -2,37 +2,22 @@
   if (ThreadUtils.isEventDispatchThread()) {
     throw new RuntimeException("Can't run make from the event dispatch thread");
   }
-  final List<SModelDescriptor> models=ListSequence.fromList(new ArrayList<SModelDescriptor>());
-  for (  final SNode node : nodes) {
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        SModelDescriptor md=SNodeOperations.getModel(node).getModelDescriptor();
-        if (md instanceof EditableSModelDescriptor) {
-          if (!(ListSequence.fromList(models).contains((EditableSModelDescriptor)md)) && ModelGenerationStatusManager.getInstance().generationRequired(md,ProjectOperationContext.get(project))) {
-            ListSequence.fromList(models).addElement((EditableSModelDescriptor)md);
-          }
+  final Wrappers._T<List<SModelDescriptor>> descriptors=new Wrappers._T<List<SModelDescriptor>>(ListSequence.fromList(new ArrayList<SModelDescriptor>()));
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      descriptors.value=ListSequence.fromList(nodes).<SModelDescriptor>select(new ISelector<SNode,SModelDescriptor>(){
+        public SModelDescriptor select(        SNode it){
+          return SNodeOperations.getModel(it).getModelDescriptor();
         }
       }
+).distinct().where(new IWhereFilter<SModelDescriptor>(){
+        public boolean accept(        SModelDescriptor it){
+          return ModelGenerationStatusManager.getInstance().generationRequired(it,ProjectOperationContext.get(project));
+        }
+      }
+).toListSequence();
     }
+  }
 );
-  }
-  if (ListSequence.fromList(models).isNotEmpty()) {
-    final ProjectOperationContext context=ProjectOperationContext.get(project);
-    IResult result=null;
-    MakeSession session=new MakeSession(context,null,true);
-    if (IMakeService.INSTANCE.get().openNewSession(session)) {
-      Future<IResult> future=IMakeService.INSTANCE.get().make(session,new ModelsToResources(context,models).resources(false));
-      try {
-        result=future.get();
-      }
- catch (      CancellationException ignore) {
-      }
-catch (      InterruptedException ignore) {
-      }
-catch (      ExecutionException ignore) {
-      }
-    }
-    return result != null && result.isSucessful();
-  }
-  return true;
+  return makeModels(project,descriptors.value);
 }
