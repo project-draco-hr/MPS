@@ -1,0 +1,23 @@
+{
+  final List<SModelDescriptor> modelDescriptors=getModelDescriptors(klass);
+  String testClassName=getTestClassName(klass);
+  if (testClassName != null) {
+    if (ListSequence.fromList(modelDescriptors).isEmpty()) {
+      throw new InitializationError("Unable to locate class: " + testClassName + " - no model descriptors found (model or module was not specified)");
+    }
+    return Collections.singletonList(MultiTuple.<String,IModule>from(testClassName,ListSequence.fromList(modelDescriptors).first().getModule()));
+  }
+  final List<Tuples._2<String,IModule>> testClassDescriptors=ListSequence.fromList(new ArrayList<Tuples._2<String,IModule>>());
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      SModelDescriptor modelDescriptor : ListSequence.fromList(modelDescriptors)) {
+        SModel sModel=modelDescriptor.getSModel();
+        for (        SNode testCase : ListSequence.fromList(SModelOperations.getRoots(sModel,"jetbrains.mps.baseLanguage.unitTest.structure.ITestCase"))) {
+          ListSequence.fromList(testClassDescriptors).addElement(MultiTuple.<String,IModule>from(((String)BehaviorManager.getInstance().invoke(Object.class,SNodeOperations.cast(testCase,"jetbrains.mps.baseLanguage.unitTest.structure.ITestCase"),"virtual_getClassName_1216136193905",new Class[]{SNode.class})),modelDescriptor.getModule()));
+        }
+      }
+    }
+  }
+);
+  return testClassDescriptors;
+}
