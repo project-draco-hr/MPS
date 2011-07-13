@@ -10,9 +10,12 @@
   }
   for (  IFile file : files) {
     if (hasModuleExtension(file.getName())) {
-      T descriptor=reader.read(file,excludes);
-      if (descriptor != null) {
-        result.add(descriptor);
+      ModuleDescriptor moduleDescriptor=loadDescriptorOnly_internal(file,excludes);
+      if (moduleDescriptor != null) {
+        T descriptor=reader.read(new ModuleHandle(file,moduleDescriptor));
+        if (descriptor != null) {
+          result.add(descriptor);
+        }
       }
     }
   }
@@ -20,9 +23,17 @@
     if (FileTypeManager.getInstance().isFileIgnored(childDir.getName()))     continue;
     if (hasModuleExtension(childDir.getName()))     continue;
     if (excludes.contains(childDir))     continue;
-    if (childDir.getName().endsWith(MPSExtentions.MPS_ARCH)) {
-      IFile dirInJar=FileSystem.getInstance().getFileByPath(childDir.getPath() + "!/" + AbstractModule.MODULE_DIR);
-      readModuleDescriptors(dirInJar,excludes,result,refreshFiles,reader);
+    if (childDir.getName().endsWith(".jar")) {
+      IFile moduleFile=FileSystem.getInstance().getFileByPath(childDir.getPath() + META_INF_MODULE_XML);
+      if (moduleFile.exists()) {
+        ModuleDescriptor moduleDescriptor=loadModuleDescriptor(moduleFile);
+        if (moduleDescriptor != null) {
+          T descriptor=reader.read(new ModuleHandle(moduleFile,moduleDescriptor));
+          if (descriptor != null) {
+            result.add(descriptor);
+          }
+        }
+      }
     }
  else     if (childDir.getName().equals("mps.jar")) {
       IFile dirInJar=FileSystem.getInstance().getFileByPath(childDir.getPath() + "!/modules");

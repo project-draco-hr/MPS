@@ -1,0 +1,28 @@
+{
+  Language language=new Language();
+  LanguageDescriptor languageDescriptor;
+  if (handle.getDescriptor() != null) {
+    languageDescriptor=(LanguageDescriptor)handle.getDescriptor();
+    if (languageDescriptor.getUUID() == null) {
+      languageDescriptor.setUUID(UUID.randomUUID().toString());
+      LanguageDescriptorPersistence.saveLanguageDescriptor(handle.getFile(),languageDescriptor);
+    }
+  }
+ else {
+    languageDescriptor=createNewDescriptor(namespace,handle.getFile());
+  }
+  language.myDescriptorFile=handle.getFile();
+  MPSModuleRepository repository=MPSModuleRepository.getInstance();
+  if (repository.existsModule(languageDescriptor.getModuleReference())) {
+    LOG.error("Loading module " + languageDescriptor.getNamespace() + " for the second time");
+    return repository.getLanguage(languageDescriptor.getModuleReference());
+  }
+  List<SolutionDescriptor> solutionDescriptors=createStubSolutionDescriptors(languageDescriptor);
+  addDepsOnStubSolutions(languageDescriptor,solutionDescriptors);
+  language.setLanguageDescriptor(languageDescriptor,false);
+  repository.addModule(language,moduleOwner);
+  for (  SolutionDescriptor sd : solutionDescriptors) {
+    Solution.newInstance(sd,language);
+  }
+  return language;
+}

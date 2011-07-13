@@ -1,36 +1,7 @@
 {
-  ModelAccess.assertLegalWrite();
-  myDirtyFlag=true;
-  String canonicalPath=IFileUtils.getCanonicalPath(file);
-  IModule module=myCanonicalFileToModuleMap.get(canonicalPath);
-  if (module == null) {
-    if (cls == Language.class) {
-      module=Language.createLanguage(null,file,owner);
-    }
- else     if (cls == Solution.class) {
-      module=Solution.newInstance(file,owner);
-    }
- else     if (cls == Library.class) {
-      module=Library.newInstance(file,owner);
-    }
- else     if (cls == DevKit.class) {
-      module=DevKit.newInstance(file,owner);
-    }
- else {
-      throw new IllegalArgumentException("Unknown class " + cls.getName());
-    }
+  ModuleDescriptor moduleDescriptor=ModulesMiner.getInstance().loadModuleDescriptor(file);
+  if (moduleDescriptor == null) {
+    throw new IllegalArgumentException("Unknown module " + file.getName());
   }
- else {
-    if (!cls.isInstance(module)) {
-      LOG.error("can't register module " + module + " : module of another kind with the same name already exists",module);
-    }
-    if (owner == module) {
-      LOG.warning("module " + module + " wants to owe itself: will be collected very quickly",module);
-    }
-    myModuleToOwners.addLink(module,owner);
-    myModules.add(module);
-  }
-  invalidateCaches();
-  fireModuleAdded(module);
-  return (TM)module;
+  return registerModule(new ModuleHandle(file,moduleDescriptor),owner);
 }

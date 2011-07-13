@@ -1,15 +1,34 @@
 {
-  String extension=getModuleExtension(file.getName());
   try {
-    Class<? extends IModule> cls=myExtensionsToModuleTypes.get(extension);
-    if (cls == Language.class) {
-      return LanguageDescriptorPersistence.loadLanguageDescriptor(file);
-    }
- else     if (cls == Solution.class) {
-      return SolutionDescriptorPersistence.loadSolutionDescriptor(file);
+    String filePath=file.getPath();
+    if (filePath.endsWith(META_INF_MODULE_XML)) {
+      DeploymentDescriptor deploymentDescriptor=DeploymentDescriptorPersistence.loadDeploymentDescriptor(file);
+      ModuleDescriptor result=null;
+      if (deploymentDescriptor.getSourcesJar() != null) {
+        IFile moduleJar=FileSystem.getInstance().getFileByPath(filePath.substring(0,filePath.length() - META_INF_MODULE_XML.length()));
+        IFile sourcesJar=moduleJar.getParent().getDescendant(deploymentDescriptor.getSourcesJar());
+        if (sourcesJar.exists() && deploymentDescriptor.getDescriptorFile() != null) {
+          IFile descriptorSource=FileSystem.getInstance().getFileByPath(sourcesJar.getPath() + "!/module/" + deploymentDescriptor.getDescriptorFile());
+          result=loadModuleDescriptor(descriptorSource);
+        }
+      }
+      if (result != null) {
+        result.setDeploymentDescriptor(deploymentDescriptor);
+      }
+      return result;
     }
  else {
-      return DevkitDescriptorPersistence.loadDevKitDescriptor(file);
+      String extension=getModuleExtension(file.getName());
+      Class<? extends IModule> cls=myExtensionsToModuleTypes.get(extension);
+      if (cls == Language.class) {
+        return LanguageDescriptorPersistence.loadLanguageDescriptor(file);
+      }
+ else       if (cls == Solution.class) {
+        return SolutionDescriptorPersistence.loadSolutionDescriptor(file);
+      }
+ else {
+        return DevkitDescriptorPersistence.loadDevKitDescriptor(file);
+      }
     }
   }
  catch (  Exception t) {
