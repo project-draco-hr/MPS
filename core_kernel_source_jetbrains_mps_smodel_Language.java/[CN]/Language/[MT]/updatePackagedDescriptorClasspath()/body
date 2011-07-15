@@ -6,29 +6,28 @@
     String jarName=getModuleFqName() + ".jar";
     IFile bundleHomeFile=bundleParent.getDescendant(jarName);
     if (!bundleHomeFile.exists())     return;
-    boolean hasClasspath=false, skipClasspath=false;
-    List<ModelRoot> remove=new ArrayList<ModelRoot>();
+    boolean hasClasspath=false;
     for (    ModelRoot entry : myLanguageDescriptor.getRuntimeStubModels()) {
       String path=entry.getPath();
-      if (path.endsWith(".jar")) {
-        IFile cp=FileSystem.getInstance().getFileByPath(path);
-        if (!cp.exists()) {
-          entry.setPath(bundleHomeFile.getPath() + "!/" + cp.getName());
-        }
- else         if (bundleHomeFile.equals(cp)) {
-          skipClasspath=true;
-        }
-      }
- else {
+      if (!(path.endsWith(".jar")) || bundleHomeFile.getPath().equals(path)) {
         hasClasspath=true;
-        remove.add(entry);
       }
     }
-    myLanguageDescriptor.getRuntimeStubModels().removeAll(remove);
-    if (hasClasspath && !skipClasspath) {
+    myLanguageDescriptor.getRuntimeStubModels().clear();
+    if (hasClasspath) {
       ClassPathEntry bundleHome=new ClassPathEntry();
       bundleHome.setPath(bundleHomeFile.getPath());
       myLanguageDescriptor.getRuntimeStubModels().add(jetbrains.mps.project.structure.model.ModelRootUtil.fromClassPathEntry(bundleHome));
+    }
+    DeploymentDescriptor dd=myLanguageDescriptor.getDeploymentDescriptor();
+    if (dd == null)     return;
+    for (    String jarFile : dd.getRuntimeJars()) {
+      IFile jar=bundleParent.getDescendant(jarFile);
+      if (jar.exists()) {
+        ClassPathEntry jarEntry=new ClassPathEntry();
+        jarEntry.setPath(jar.getPath());
+        myLanguageDescriptor.getRuntimeStubModels().add(jetbrains.mps.project.structure.model.ModelRootUtil.fromClassPathEntry(jarEntry));
+      }
     }
   }
 }
