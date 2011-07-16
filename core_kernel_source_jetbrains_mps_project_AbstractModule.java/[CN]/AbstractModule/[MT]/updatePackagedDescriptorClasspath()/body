@@ -7,13 +7,23 @@
   IFile bundleParent=bundleHomeFile.getParent();
   if (bundleParent == null || !bundleParent.exists())   return;
   boolean hasClasspath=false;
+  List<ModelRoot> jarsToRetain=new ArrayList<ModelRoot>();
+  Set<String> skipJars=new HashSet<String>();
+  String libFolder=FileSystem.getInstance().getFileByPath(PathManager.getHomePath()).getDescendant("lib").getPath();
   for (  ModelRoot entry : descriptor.getStubModelEntries()) {
     String path=entry.getPath();
     if (!(path.endsWith(".jar")) || bundleHomeFile.getPath().equals(path)) {
       hasClasspath=true;
     }
+ else {
+      IFile jar=FileSystem.getInstance().getFileByPath(path);
+      if (jar.exists() && jar.getPath().startsWith(libFolder)) {
+        skipJars.add(jar.getName());
+        jarsToRetain.add(entry);
+      }
+    }
   }
-  descriptor.getStubModelEntries().clear();
+  descriptor.getStubModelEntries().retainAll(jarsToRetain);
   if (hasClasspath) {
     ClassPathEntry bundleHome=new ClassPathEntry();
     bundleHome.setPath(bundleHomeFile.getPath());
@@ -23,7 +33,7 @@
   if (dd == null)   return;
   for (  String jarFile : dd.getLibraries()) {
     IFile jar=bundleParent.getDescendant(jarFile);
-    if (jar.exists()) {
+    if (!skipJars.contains(jarFile) && jar.exists()) {
       ClassPathEntry jarEntry=new ClassPathEntry();
       jarEntry.setPath(jar.getPath());
       descriptor.getStubModelEntries().add(jetbrains.mps.project.structure.model.ModelRootUtil.fromClassPathEntry(jarEntry));
