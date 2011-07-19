@@ -1,5 +1,54 @@
 {
+  boolean res=false;
   for (  SModel.ImportElement element : ListSequence.fromList(myModel.importedModels())) {
+    if (model.equals(element.getModelReference())) {
+      res=true;
+      element.setModelReference(newModel);
+    }
   }
-  return false;
+  for (  SModel.ImportElement element : ListSequence.fromList(myModel.getAdditionalModelVersions())) {
+    if (model.equals(element.getModelReference())) {
+      element.setModelReference(newModel);
+    }
+  }
+  List<DynamicReference> list=myDynRefMap.remove(model);
+  if (list != null) {
+    res=true;
+    ListSequence.fromList(list).visitAll(new IVisitor<DynamicReference>(){
+      public void visit(      DynamicReference it){
+        it.setTargetSModelReference(newModel);
+      }
+    }
+);
+    MapSequence.fromMap(myDynRefMap).put(newModel,list);
+  }
+  for (  SNodePointer ptr : SetSequence.fromSet(MapSequence.fromMap(myTargetMap).keySet())) {
+    if (model.equals(ptr.getModelReference())) {
+      res=true;
+      ListSequence.fromList(MapSequence.fromMap(myTargetMap).get(ptr)).visitAll(new IVisitor<StaticReference>(){
+        public void visit(        StaticReference it){
+          it.setTargetSModelReference(newModel);
+        }
+      }
+);
+    }
+  }
+  for (  SNodePointer ptr : SetSequence.fromSet(MapSequence.fromMap(myNodeTypeMap).keySet())) {
+    if (model.equals(ptr.getModelReference())) {
+      res=true;
+      ListSequence.fromList(MapSequence.fromMap(myNodeTypeMap).get(ptr)).visitAll(new IVisitor<SNode>(){
+        public void visit(        SNode node){
+          String name=NameUtil.shortNameFromLongName(node.getConceptFqName());
+          HackSNodeUtil.setConceptFqName(node,NameUtil.longNameFromNamespaceAndShortName(newModel.getLongName(),name));
+        }
+      }
+);
+    }
+  }
+  updatePtrMap(myNodeRoleMap,model,newModel);
+  updatePtrMap(myNodeTypeMap,model,newModel);
+  updatePtrMap(myPropNameMap,model,newModel);
+  updatePtrMap(myRefRoleMap,model,newModel);
+  updatePtrMap(myTargetMap,model,newModel);
+  return res;
 }
