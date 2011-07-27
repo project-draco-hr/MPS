@@ -1,0 +1,28 @@
+{
+  final SNode editedNode=editorComponent.getEditedNode();
+  if (editedNode == null)   return Collections.emptySet();
+  SNodePointer rootPointer=ModelAccess.instance().runReadAction(new Computable<SNodePointer>(){
+    @Override public SNodePointer compute(){
+      final SNode rootNode=editedNode.getContainingRoot();
+      if (rootNode == null)       return null;
+      return new SNodePointer(rootNode);
+    }
+  }
+);
+  if (rootPointer == null)   return Collections.emptySet();
+  final Set<ILocationBreakpoint> breakpointsForRoot=myBreakpointsManagerComponent.getBreakpoints(rootPointer);
+  if (breakpointsForRoot == null)   return Collections.emptySet();
+  final Set<ILocationBreakpoint> result=new HashSet<ILocationBreakpoint>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    @Override public void run(){
+      for (      ILocationBreakpoint locationBreakpoint : breakpointsForRoot) {
+        SNode node=locationBreakpoint.getLocation().getSNode();
+        if (node != null && EditorUtil.isNodeShownInTheComponent(editorComponent,node)) {
+          result.add(locationBreakpoint);
+        }
+      }
+    }
+  }
+);
+  return result;
+}
