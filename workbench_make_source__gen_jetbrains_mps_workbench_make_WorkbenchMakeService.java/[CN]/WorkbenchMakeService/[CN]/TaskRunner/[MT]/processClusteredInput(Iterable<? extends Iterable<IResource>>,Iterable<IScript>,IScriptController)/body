@@ -18,20 +18,32 @@
     }
   }
 ;
-  WorkbenchMakeService.this.getSession().doExecute(new Runnable(){
-    public void run(){
-      SwingUtilities.invokeLater(new Runnable(){
-        public void run(){
-          IdeEventQueue.getInstance().flushQueue();
-          if (currentProcess.compareAndSet(null,task)) {
-            ProgressManager.getInstance().run(task);
+  MakeSession session=WorkbenchMakeService.this.getSession();
+  try {
+    session.doExecute(new Runnable(){
+      public void run(){
+        SwingUtilities.invokeLater(new Runnable(){
+          public void run(){
+            IdeEventQueue.getInstance().flushQueue();
+            if (currentProcess.compareAndSet(null,task)) {
+              ProgressManager.getInstance().run(task);
+            }
+ else {
+              throw new IllegalStateException("unexpected: make process already running");
+            }
+            IdeEventQueue.getInstance().flushQueue();
           }
-          IdeEventQueue.getInstance().flushQueue();
         }
+);
       }
-);
     }
-  }
 );
+  }
+ catch (  RuntimeException rex) {
+    if (currentProcess.get() == null) {
+      abortSession();
+    }
+    throw rex;
+  }
   return task;
 }
