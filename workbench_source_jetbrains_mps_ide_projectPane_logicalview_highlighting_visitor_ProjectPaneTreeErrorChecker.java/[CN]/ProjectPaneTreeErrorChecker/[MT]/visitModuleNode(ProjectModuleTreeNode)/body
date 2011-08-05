@@ -1,18 +1,33 @@
 {
-  List<String> errors=ModelAccess.instance().runReadAction(new Computable<List<String>>(){
-    public List<String> compute(){
+  Pair<List<String>,List<String>> problems=ModelAccess.instance().runReadAction(new Computable<Pair<List<String>,List<String>>>(){
+    public Pair<List<String>,List<String>> compute(){
       IModule module=node.getModule();
-      if (module == null)       return Collections.emptyList();
-      return ModuleValidatorFactory.createValidator(module).getErrors();
+      if (module == null)       return null;
+      ModuleValidator validator=ModuleValidatorFactory.createValidator(module);
+      return new Pair(validator.getErrors(),validator.getWarnings());
     }
   }
 );
   String result=null;
-  if (!errors.isEmpty()) {
-    result="<html>";
-    for (    String error : errors) {
-      result+=error + "<br>";
+  boolean hasErrors=false;
+  if (problems != null) {
+    List<String> errors=problems.o1;
+    List<String> warns=problems.o2;
+    if (!errors.isEmpty()) {
+      result="<html>";
+      for (      String error : errors) {
+        result+=error + "<br>";
+      }
+      hasErrors=true;
+    }
+    if (!warns.isEmpty()) {
+      if (result == null) {
+        result="<html>";
+      }
+      for (      String warn : warns) {
+        result+="warn: " + warn + "<br>";
+      }
     }
   }
-  updateNodeLater(node,result);
+  updateNodeLater(node,result,!hasErrors);
 }
