@@ -1,27 +1,25 @@
 {
   myMessagesChanged=false;
   EditorComponent editorComponent=editorContext.getNodeEditorComponent();
-  final SNode root=node.getContainingRoot();
+  SNode sNode=editorComponent.getEditedNode();
+  SNodePointer sNodePointer=editorComponent.getEditedNodePointer();
   Set<EditorMessage> result=SetSequence.fromSet(new HashSet<EditorMessage>());
-  if (root == null) {
-    LOG.error("containing root for node " + node + " is null");
+  if (sNode == null) {
+    LOG.error("edited node is null");
     return result;
   }
-  SModelDescriptor descriptor=SNodeOperations.getModel(root).getModelDescriptor();
+  if (sNodePointer == null) {
+    LOG.error("edited NodePointer is null");
+    return result;
+  }
+  SModelDescriptor descriptor=SNodeOperations.getModel(sNode).getModelDescriptor();
   if (descriptor == null) {
     return result;
   }
-  final Wrappers._T<SNodePointer> rootPointer=new Wrappers._T<SNodePointer>();
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      rootPointer.value=new SNodePointer(root);
-    }
-  }
-);
-  LanguageErrorsComponent errorsComponent=MapSequence.fromMap(myRootsToComponents).get(rootPointer.value);
+  LanguageErrorsComponent errorsComponent=MapSequence.fromMap(myNodePointersToComponents).get(sNodePointer);
   if (errorsComponent == null) {
-    errorsComponent=new LanguageErrorsComponent(editorComponent.getEditedNode());
-    MapSequence.fromMap(myRootsToComponents).put(rootPointer.value,errorsComponent);
+    errorsComponent=new LanguageErrorsComponent(sNode);
+    MapSequence.fromMap(myNodePointersToComponents).put(sNodePointer,errorsComponent);
   }
   if (!(editorComponent instanceof InspectorEditorComponent) && !(SetSequence.fromSet(myEditorComponents).contains(editorComponent))) {
     SetSequence.fromSet(myEditorComponents).addElement(editorComponent);
