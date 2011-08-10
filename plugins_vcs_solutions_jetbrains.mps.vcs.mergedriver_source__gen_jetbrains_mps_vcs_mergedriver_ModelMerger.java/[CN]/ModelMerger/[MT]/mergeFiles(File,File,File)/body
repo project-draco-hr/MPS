@@ -3,9 +3,23 @@
   try {
     MergerRoleIdsHandler roleIdsHandler=new MergerRoleIdsHandler();
     RoleIdsComponent.setHandler(roleIdsHandler);
-    SModel baseModel=ModelUtils.readModel(baseFile);
-    SModel localModel=ModelUtils.readModel(localFile);
-    SModel latestModel=ModelUtils.readModel(latestFile);
+    SModel baseModel;
+    SModel localModel;
+    SModel latestModel;
+    try {
+      baseModel=ModelUtils.readModel(baseFile);
+      localModel=ModelUtils.readModel(localFile);
+      latestModel=ModelUtils.readModel(latestFile);
+    }
+ catch (    IOException e) {
+      throw e;
+    }
+catch (    Throwable e) {
+      if (log.isErrorEnabled()) {
+        log.error("Exception while reading models",e);
+      }
+      return super.mergeFiles(baseFile,localFile,latestFile);
+    }
     int baseP=baseModel.getPersistenceVersion();
     int localP=localModel.getPersistenceVersion();
     int latestP=latestModel.getPersistenceVersion();
@@ -17,37 +31,65 @@
     if (!(roleIdsHandler.isConsistent())) {
       return CONFLICTS;
     }
-    final MergeContext mergeContext=new MergeContext(baseModel,localModel,latestModel);
-    if (Sequence.fromIterable(mergeContext.getAllChanges()).all(new IWhereFilter<ModelChange>(){
-      public boolean accept(      ModelChange c){
-        return Sequence.fromIterable(mergeContext.getConflictedWith(c)).isEmpty();
+    try {
+      if (log.isInfoEnabled()) {
+        log.info("Merging " + baseModel.getSModelReference() + "...");
+      }
+      final MergeContext mergeContext=new MergeContext(baseModel,localModel,latestModel);
+      int conflictingChangesCount=Sequence.fromIterable(mergeContext.getAllChanges()).where(new IWhereFilter<ModelChange>(){
+        public boolean accept(        ModelChange c){
+          return Sequence.fromIterable(mergeContext.getConflictedWith(c)).isNotEmpty();
+        }
+      }
+).count();
+      if (conflictingChangesCount == 0) {
+        if (log.isInfoEnabled()) {
+          log.info(String.format("%s: %d changes detected: %d local and %d latest",Sequence.fromIterable(mergeContext.getAllChanges()).count(),ListSequence.fromList(mergeContext.getMyChangeSet().getModelChanges()).count(),ListSequence.fromList(mergeContext.getRepositoryChangeSet().getModelChanges()).count()));
+        }
+        mergeContext.getResultModel().setLoading(true);
+        Runnable applyAction=new Runnable(){
+          public void run(){
+            mergeContext.applyChanges(mergeContext.getAllChanges());
+          }
+        }
+;
+        ModelAccess.instance().runReadAction(applyAction);
+        if (mergeContext.hasIdsToRestore()) {
+          if (log.isInfoEnabled()) {
+            log.info(String.format("%s: node id duplication detected, should merge in UI",baseModel.getLongName()));
+          }
+        }
+ else {
+          byte[] bytes=ModelUtils.modelToBytes(mergeContext.getResultModel());
+          if (log.isInfoEnabled()) {
+            log.info(String.format("%s: merged successfully",baseModel.getLongName()));
+          }
+          OutputStream out=null;
+          try {
+            out=getResultStream(localFile);
+            out.write(bytes);
+            return MERGED;
+          }
+ catch (          IOException e) {
+            e.printStackTrace();
+            return FATAL_ERROR;
+          }
+ finally {
+            FileUtil.closeFileSafe(out);
+          }
+        }
+      }
+ else {
+        if (log.isInfoEnabled()) {
+          log.info(String.format("%s: %d changes detected, %d of them are conflicting",baseModel.getLongName(),Sequence.fromIterable(mergeContext.getAllChanges()).count(),conflictingChangesCount));
+        }
       }
     }
-)) {
-      mergeContext.getResultModel().setLoading(true);
-      Runnable applyAction=new Runnable(){
-        public void run(){
-          mergeContext.applyChanges(mergeContext.getAllChanges());
-        }
+ catch (    Throwable e) {
+      if (log.isErrorEnabled()) {
+        log.error("Exception while merging",e);
       }
-;
-      ModelAccess.instance().runReadAction(applyAction);
-      if (!(mergeContext.hasIdsToRestore())) {
-        byte[] bytes=ModelUtils.modelToBytes(mergeContext.getResultModel());
-        OutputStream out=null;
-        try {
-          out=getResultStream(localFile);
-          out.write(bytes);
-          return MERGED;
-        }
- catch (        IOException e) {
-          e.printStackTrace();
-          return FATAL_ERROR;
-        }
- finally {
-          FileUtil.closeFileSafe(out);
-        }
-      }
+      return super.mergeFiles(baseFile,localFile,latestFile);
     }
     return super.mergeFiles(baseFile,localFile,latestFile);
   }
