@@ -1,17 +1,26 @@
 {
-  Set<SModel> models=SetSequence.fromSet(new HashSet<SModel>());
-  for (  SNode node : ListSequence.fromList(nlist)) {
-    SetSequence.fromSet(models).addElement(SNodeOperations.getModel(node));
-  }
-  Set<String> packages=SetSequence.fromSet(new HashSet<String>());
-  for (  SModel model : SetSequence.fromSet(models)) {
-    for (    SNode root : ListSequence.fromList(SModelOperations.getRoots(model,null))) {
-      String p=root.getProperty(SModelTreeNode.PACK);
-      if (p != null) {
-        SetSequence.fromSet(packages).addElement(p);
-      }
+  Set<SModel> models=SetSequence.fromSetWithValues(new HashSet<SModel>(),ListSequence.fromList(nlist).<SModel>select(new ISelector<SNode,SModel>(){
+    public SModel select(    SNode n){
+      return SNodeOperations.getModel(n);
     }
   }
+));
+  Set<String> packages=SetSequence.fromSetWithValues(new HashSet<String>(),SetSequence.fromSet(models).<SNode>translate(new ITranslator2<SModel,SNode>(){
+    public Iterable<SNode> translate(    SModel m){
+      return SModelOperations.getRoots(m,"jetbrains.mps.lang.core.structure.BaseConcept");
+    }
+  }
+).<String>select(new ISelector<SNode,String>(){
+    public String select(    SNode r){
+      return SPropertyOperations.getString(r,"virtualPackage");
+    }
+  }
+).where(new IWhereFilter<String>(){
+    public boolean accept(    String p){
+      return p != null;
+    }
+  }
+));
   List<String> result=ListSequence.fromListWithValues(new ArrayList<String>(),packages);
   Collections.sort(result);
   return result;
