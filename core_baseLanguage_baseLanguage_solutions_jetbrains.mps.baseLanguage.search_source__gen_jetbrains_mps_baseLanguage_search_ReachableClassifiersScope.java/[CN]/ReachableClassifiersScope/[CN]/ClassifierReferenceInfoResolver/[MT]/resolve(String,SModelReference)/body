@@ -7,15 +7,36 @@
     return ListSequence.fromList(ClassifiersCache.getInstance(targetModel).getClassifiersByRefName(referenceInfo)).first();
   }
   Collection<IModule> visibleModules=IterableUtil.asCollection(myScope.getVisibleModules());
+  List<SNode> classifiers=new ArrayList<SNode>();
   for (  SModelDescriptor model : ListSequence.fromList(SModelRepository.getInstance().getModelDescriptors())) {
-    if (visibleModules.contains(model.getModule())) {
-      if (model.getSModelReference().getSModelFqName().equals(targetModelReference.getSModelFqName())) {
-        List<SNode> classifiers=ClassifiersCache.getInstance(model).getClassifiersByRefName(referenceInfo);
-        if (ListSequence.fromList(classifiers).isNotEmpty()) {
-          return ListSequence.fromList(classifiers).first();
-        }
+    if (!(visibleModules.contains(model.getModule()))) {
+      continue;
+    }
+    if (!(model.getSModelReference().getSModelFqName().equals(targetModelReference.getSModelFqName()))) {
+      continue;
+    }
+    ListSequence.fromList(classifiers).addSequence(ListSequence.fromList(ClassifiersCache.getInstance(model).getClassifiersByRefName(referenceInfo)));
+  }
+  if (ListSequence.fromList(classifiers).isEmpty()) {
+    return null;
+  }
+  if (ListSequence.fromList(classifiers).count() > 1) {
+    final StringBuilder warn=new StringBuilder();
+    warn.append("reference can't be resolved: ");
+    warn.append(referenceInfo);
+    warn.append(" in ");
+    warn.append(myModel.getLongName());
+    warn.append(" can reference nodes from models: ");
+    ListSequence.fromList(classifiers).visitAll(new IVisitor<SNode>(){
+      public void visit(      SNode it){
+        warn.append(SNodeOperations.getModel(it).getSModelReference()).append("; ");
       }
     }
+);
+    if (log.isWarnEnabled()) {
+      log.warn(warn);
+    }
+    return null;
   }
-  return null;
+  return ListSequence.fromList(classifiers).getElement(0);
 }
