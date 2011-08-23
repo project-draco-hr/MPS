@@ -6,12 +6,11 @@
       public SNode doSubstitute(      String pattern){
         SNode to=SNodeFactoryOperations.createNewNode(_context.getModel(),"jetbrains.mps.query.structure.MqlComma",null);
         SNode current=_context.getSourceNode();
-        while (SNodeOperations.isInstanceOf(SNodeOperations.getParent(current),"jetbrains.mps.query.structure.MqlBinaryExpr") && SLinkOperations.getTarget(SNodeOperations.cast(SNodeOperations.getParent(current),"jetbrains.mps.query.structure.MqlBinaryExpr"),"right",true) == current) {
-          current=SNodeOperations.cast(SNodeOperations.getParent(current),"jetbrains.mps.query.structure.MqlExpression");
-        }
+        current=PrecedenceUtil.getTargetForRightTransform(current,to);
         SNodeOperations.replaceWithAnother(current,to);
-        ListSequence.fromList(SLinkOperations.getTargets(to,"expressions",true)).insertElement(0,current);
-        return ListSequence.fromList(SLinkOperations.getTargets(to,"expressions",true)).getElement(1);
+        SLinkOperations.setTarget(to,"left",current,true);
+        PrecedenceUtil.parenthesiseAndRotateIfNecessary(to);
+        return SLinkOperations.getTarget(to,"right",true);
       }
       public String getMatchingText(      String pattern){
         return ",";
