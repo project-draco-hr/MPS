@@ -1,6 +1,7 @@
 {
   String className=null;
   String fileName=null;
+  String classpathFileName=null;
   for (int i=0; i < args.length; i++) {
     if (getCommandLineFromPrefix(CLASS_PREFIX).equals(args[i])) {
       if (i >= args.length - 1) {
@@ -17,6 +18,13 @@
       }
       fileName=args[i + 1];
     }
+ else     if (getCommandLineFromPrefix(CLASSPATH_PREFIX).equals(args[i])) {
+      if (i >= args.length - 1) {
+        System.err.println("Classpath file name after " + getCommandLineFromPrefix(CLASSPATH_PREFIX) + " expected.");
+        return;
+      }
+      classpathFileName=args[i + 1];
+    }
   }
   if (StringUtils.isEmpty(className)) {
     System.err.println("Main class name expected (example " + getCommandLineFromPrefix(CLASS_PREFIX) + " com.mycompany.ClassName).");
@@ -28,17 +36,38 @@
   }
   List<String> fileContents;
   try {
-    fileContents=readArguments(fileName);
+    fileContents=readArguments(fileName,"(\\s)+");
   }
  catch (  IOException e) {
     System.err.println("Could not read file with arguments.");
     e.printStackTrace();
     return;
   }
+  List<URL> classPath=ListSequence.fromList(new ArrayList<URL>());
+  if (StringUtils.isNotEmpty(classpathFileName)) {
+    try {
+      classPath=ListSequence.fromList(readArguments(classpathFileName,":")).<URL>translate(new ITranslator2<String,URL>(){
+        public Iterable<URL> translate(        String it){
+          try {
+            return Sequence.<URL>singleton(new File(it).toURI().toURL());
+          }
+ catch (          MalformedURLException e) {
+            e.printStackTrace();
+            return ListSequence.fromList(new ArrayList<URL>());
+          }
+        }
+      }
+).toListSequence();
+    }
+ catch (    IOException e) {
+      e.printStackTrace();
+    }
+  }
   try {
-    Class<?> classToStart=Class.forName(className);
+    URLClassLoader classLoader=new URLClassLoader(ListSequence.fromList(classPath).toGenericArray(URL.class));
+    Class<?> classToStart=classLoader.loadClass(className);
     Method method=classToStart.getMethod("main",args.getClass());
-    method.invoke(null,ListSequence.fromList(fileContents).toGenericArray(String.class));
+    method.invoke(null,new Object[]{ListSequence.fromList(fileContents).toGenericArray(String.class)});
   }
  catch (  ClassNotFoundException c) {
     System.err.println("Class " + className + " was not found.");
