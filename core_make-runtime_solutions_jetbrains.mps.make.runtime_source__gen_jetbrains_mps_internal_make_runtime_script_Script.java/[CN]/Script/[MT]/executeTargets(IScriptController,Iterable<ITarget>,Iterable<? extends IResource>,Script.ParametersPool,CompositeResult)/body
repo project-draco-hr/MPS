@@ -2,18 +2,18 @@
   ctl.runJobWithMonitor(new _FunctionTypes._void_P1_E0<IJobMonitor>(){
     public void invoke(    final IJobMonitor monit){
       String scriptName="Script";
-      int work=Sequence.fromIterable(toExecute).foldLeft(0,new ILeftCombinator<ITarget,Integer>(){
+      int work=Sequence.<ITarget>fromIterable(toExecute).foldLeft(0,new ILeftCombinator<ITarget,Integer>(){
         public Integer combine(        Integer s,        ITarget it){
           return s + ((it.requiresInput() || it.producesOutput() ? 1000 : 10));
         }
       }
 );
       monit.currentProgress().beginWork(scriptName,work,monit.currentProgress().workLeft());
-      for (      final ITarget trg : Sequence.fromIterable(toExecute)) {
+      for (      final ITarget trg : Sequence.<ITarget>fromIterable(toExecute)) {
         LOG.debug("Executing " + trg.getName());
         try {
           Iterable<ITarget> impre=targetRange.immediatePrecursors(trg.getName());
-          Iterable<IResource> preInput=Sequence.fromIterable(impre).<IResult>select(new ISelector<ITarget,IResult>(){
+          Iterable<IResource> preInput=Sequence.<ITarget>fromIterable(impre).<IResult>select(new ISelector<ITarget,IResult>(){
             public IResult select(            ITarget t){
               return results.getResult(t.getName());
             }
@@ -24,11 +24,11 @@
             }
           }
 );
-          Iterable<IResource> rawInput=(Iterable<IResource>)Sequence.fromIterable(((Sequence.fromIterable(impre).isEmpty() ? scriptInput : preInput))).distinct().toListSequence();
+          Iterable<IResource> rawInput=(Iterable<IResource>)Sequence.fromIterable(((Sequence.<ITarget>fromIterable(impre).isEmpty() ? scriptInput : preInput))).distinct().toListSequence();
           LOG.debug("Raw input: " + rawInput);
-          Iterable<IResource> input=(Iterable<IResource>)Sequence.fromIterable(rawInput).where(new IWhereFilter<IResource>(){
+          Iterable<IResource> input=(Iterable<IResource>)Sequence.<IResource>fromIterable(rawInput).where(new IWhereFilter<IResource>(){
             public boolean accept(            final IResource res){
-              return Sequence.fromIterable(trg.expectedInput()).any(new IWhereFilter<Class<? extends IResource>>(){
+              return Sequence.<Class<? extends IResource>>fromIterable(trg.expectedInput()).any(new IWhereFilter<Class<? extends IResource>>(){
                 public boolean accept(                Class<? extends IResource> ifc){
                   return ifc.isInstance(res);
                 }
@@ -39,7 +39,7 @@
 ).toListSequence();
           LOG.debug("Input: " + input);
           if (trg.requiresInput()) {
-            if (Sequence.fromIterable(input).isEmpty()) {
+            if (Sequence.<IResource>fromIterable(input).isEmpty()) {
               LOG.debug("No input. Stopping");
               monit.reportFeedback(new IFeedback.ERROR("Error executing target " + trg.getName() + " : no input. Stopping"));
               results.addResult(trg.getName(),new IResult.FAILURE(null));
@@ -48,14 +48,14 @@
           }
           monit.currentProgress().beginWork(trg.getName().toString(),1000,(trg.requiresInput() || trg.producesOutput() ? 1000 : 10));
           IJob job=trg.createJob();
-          IResult jr=job.execute(Sequence.fromIterable(input).where(new IWhereFilter<IResource>(){
+          IResult jr=job.execute(Sequence.<IResource>fromIterable(input).where(new IWhereFilter<IResource>(){
             public boolean accept(            IResource it){
               return !(monit.stopRequested());
             }
           }
 ),monit,new Script.PropertiesAccessor(pool));
           if (!(trg.producesOutput())) {
-            jr=new Script.SubsOutputResult(jr,(trg.requiresInput() ? Sequence.fromIterable(rawInput).subtract(Sequence.fromIterable(input)) : rawInput));
+            jr=new Script.SubsOutputResult(jr,(trg.requiresInput() ? Sequence.<IResource>fromIterable(rawInput).subtract(Sequence.<IResource>fromIterable(input)) : rawInput));
           }
           results.addResult(trg.getName(),jr);
           if (!(jr.isSucessful()) || monit.stopRequested()) {
