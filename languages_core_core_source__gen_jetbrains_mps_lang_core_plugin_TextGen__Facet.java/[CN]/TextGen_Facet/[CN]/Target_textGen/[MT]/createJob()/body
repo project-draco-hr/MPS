@@ -17,33 +17,19 @@ case 0:
           monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("no output location for " + gres.model().getLongName())));
           continue;
         }
-        final IFile targetDir=(pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).pathToFile() != null ? pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).pathToFile().invoke(output) : FileSystem.getInstance().getFileByPath(output));
-        final IFile cachesDir=FileGenerationUtil.getCachesDir(targetDir);
-        final FilesDelta targetDelta=new FilesDelta(targetDir);
-        Sequence.<SModelDescriptor>fromIterable(gres.retainedModels()).where(new IWhereFilter<SModelDescriptor>(){
+        Iterable<IDelta> retainedFilesDelta=RetainedUtil.retainedFilesDelta(Sequence.<SModelDescriptor>fromIterable(gres.retainedModels()).where(new IWhereFilter<SModelDescriptor>(){
           public boolean accept(          SModelDescriptor smd){
             return !(GeneratorManager.isDoNotGenerate(smd));
           }
         }
-).visitAll(new IVisitor<SModelDescriptor>(){
-          public void visit(          SModelDescriptor smd){
-            targetDelta.kept(FileGenerationUtil.getDefaultOutputDir(smd,targetDir));
-          }
-        }
-);
-        final FilesDelta cachesDelta=new FilesDelta(cachesDir);
-        Sequence.<SModelDescriptor>fromIterable(gres.retainedModels()).where(new IWhereFilter<SModelDescriptor>(){
+),gres.module());
+        Iterable<IDelta> retainedCachesDelta=RetainedUtil.retainedCachesDelta(Sequence.<SModelDescriptor>fromIterable(gres.retainedModels()).where(new IWhereFilter<SModelDescriptor>(){
           public boolean accept(          SModelDescriptor smd){
             return !(GeneratorManager.isDoNotGenerate(smd));
           }
         }
-).visitAll(new IVisitor<SModelDescriptor>(){
-          public void visit(          SModelDescriptor smd){
-            cachesDelta.kept(FileGenerationUtil.getDefaultOutputDir(smd,cachesDir));
-          }
-        }
-);
-        final JavaStreamHandler javaStreamHandler=new JavaStreamHandler(gres.model(),targetDir,cachesDir);
+),gres.module());
+        final JavaStreamHandler javaStreamHandler=new JavaStreamHandler(gres.model(),FileSystem.getInstance().getFileByPath(output),FileGenerationUtil.getCachesDir(FileSystem.getInstance().getFileByPath(output)));
         final Wrappers._boolean ok=new Wrappers._boolean();
         boolean generateDI=pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).generateDebugInfo() == null || pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).generateDebugInfo();
         final TextGenerator textgen=new TextGenerator(javaStreamHandler,BLDependenciesCache.getInstance().getGenerator(),(generateDI ? TraceInfoCache.getInstance().getGenerator() : null),GenerationDependenciesCache.getInstance().getGenerator());
@@ -97,7 +83,7 @@ case 0:
         }
 );
         monitor.currentProgress().advanceWork("Writing",50);
-        _output_21gswx_a0a=Sequence.<IResource>fromIterable(_output_21gswx_a0a).concat(Sequence.<IResource>fromIterable(Sequence.<IResource>singleton(new TResource(gres.module(),Sequence.<IDelta>fromIterable(javaStreamHandler.delta()).concat(Sequence.<IDelta>fromIterable(Sequence.fromArray(new IDelta[]{targetDelta,cachesDelta})))))));
+        _output_21gswx_a0a=Sequence.<IResource>fromIterable(_output_21gswx_a0a).concat(Sequence.<IResource>fromIterable(Sequence.<IResource>singleton(new TResource(gres.module(),Sequence.<IDelta>fromIterable(javaStreamHandler.delta()).concat(Sequence.<IDelta>fromIterable(retainedFilesDelta)).concat(Sequence.<IDelta>fromIterable(retainedCachesDelta))))));
       }
     monitor.currentProgress().finishWork("Writing");
 default :
