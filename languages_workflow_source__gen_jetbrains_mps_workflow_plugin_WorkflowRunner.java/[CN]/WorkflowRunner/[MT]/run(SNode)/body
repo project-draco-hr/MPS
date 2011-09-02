@@ -1,8 +1,8 @@
 {
-  report(MessageKind.INFORMATION,"started: " + SPropertyOperations.getString(executable,"name"));
+  report(MessageKind.INFORMATION,"started: " + SPropertyOperations.getString(executable,"name"),null);
   EvaluationEnvironment env=new EvaluationEnvironment(){
-    @Override public void reportError(    String message){
-      WorkflowRunner.this.report(MessageKind.ERROR,message);
+    @Override public void report(    int kind,    String message,    SNode hintNode){
+      WorkflowRunner.this.report((kind == KIND_ERR ? MessageKind.ERROR : MessageKind.WARNING),message,hintNode);
     }
   }
 ;
@@ -12,11 +12,12 @@
       try {
         SNode exprst=SNodeOperations.cast(st,"jetbrains.mps.workflow.structure.WflowExpressionStatement");
         Object result=MqlExpression_Behavior.call_evaluate_1671449901154581105(SLinkOperations.getTarget(exprst,"expression",true),env,rootContext);
-        String asString=(result == null ? "null" : result.toString());
-        report(MessageKind.INFORMATION,SPropertyOperations.getString(exprst,"varname") + "=" + asString);
+        String asString=env.getRuntime().objectDebugText(result);
+        report(MessageKind.INFORMATION,SPropertyOperations.getString(exprst,"varname") + " = " + asString,null);
       }
  catch (      Exception ex) {
-        report(MessageKind.ERROR,ex.toString());
+        Throwable thr=unwrap(ex);
+        report(MessageKind.ERROR,thr.toString(),(thr instanceof EvaluationException ? ((EvaluationException)thr).getQuery() : null));
       }
     }
   }
