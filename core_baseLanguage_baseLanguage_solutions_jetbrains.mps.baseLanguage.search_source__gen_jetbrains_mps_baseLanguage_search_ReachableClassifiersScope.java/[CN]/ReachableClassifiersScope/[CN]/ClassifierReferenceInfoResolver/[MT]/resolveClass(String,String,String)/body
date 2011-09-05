@@ -1,0 +1,49 @@
+{
+  Collection<IModule> visibleModules=IterableUtil.asCollection(myScope.getVisibleModules());
+  List<SNode> classifiers=new ArrayList<SNode>();
+  for (  SModelDescriptor model : Sequence.<IModule>fromIterable(((Iterable<IModule>)visibleModules)).<SModelDescriptor>translate(new ITranslator2<IModule,SModelDescriptor>(){
+    public Iterable<SModelDescriptor> translate(    IModule it){
+      return it.getOwnModelDescriptors();
+    }
+  }
+).distinct()) {
+    SModelFqName modelFqName=model.getSModelReference().getSModelFqName();
+    if (!(modelFqName.getLongName().equals(modelname))) {
+      continue;
+    }
+    if (stereotype != null && !(modelFqName.getStereotype().equals(stereotype))) {
+      continue;
+    }
+    ListSequence.<SNode>fromList(classifiers).addSequence(ListSequence.<SNode>fromList(ClassifiersCache.getInstance(model).getClassifiersByRefName(classname)));
+  }
+  if (ListSequence.<SNode>fromList(classifiers).isEmpty()) {
+    return null;
+  }
+  if (ListSequence.<SNode>fromList(classifiers).count() > 1) {
+    for (    SNode cls : ListSequence.<SNode>fromList(classifiers)) {
+      if (SNodeOperations.getModel(cls) == myModel) {
+        return cls;
+      }
+      if (check_x9ho2v_a0b0a0g0b0_0(check_x9ho2v_a0a1a0a6a1a_0(myModel)) == check_x9ho2v_a0b0a0g0b0(check_x9ho2v_a0a1a0a6a1a(SNodeOperations.getModel(cls)))) {
+        return cls;
+      }
+    }
+    final StringBuilder warn=new StringBuilder();
+    warn.append("reference can't be resolved: ");
+    warn.append(classname);
+    warn.append(" in ");
+    warn.append(myModel.getLongName());
+    warn.append(" can reference nodes from models: ");
+    ListSequence.<SNode>fromList(classifiers).visitAll(new IVisitor<SNode>(){
+      public void visit(      SNode it){
+        warn.append(SNodeOperations.getModel(it).getSModelReference()).append("; ");
+      }
+    }
+);
+    if (log.isWarnEnabled()) {
+      log.warn(warn);
+    }
+    return null;
+  }
+  return ListSequence.<SNode>fromList(classifiers).getElement(0);
+}
