@@ -1,21 +1,6 @@
 {
-  List<SReference> toResolve=ListSequence.fromList(new ArrayList<SReference>());
   Map<SModelReference,SModelReference> models=MapSequence.fromMap(new HashMap<SModelReference,SModelReference>());
-  for (  SNode node : ListSequence.fromList(SModelOperations.getNodes(model,null))) {
-    for (    SReference ref : Sequence.fromIterable(SNodeOperations.getReferences(node))) {
-      SModelReference targetModelRef=ref.getTargetSModelReference();
-      if (targetModelRef == null || !(JAVA_STUB.equals(targetModelRef.getStereotype()))) {
-        continue;
-      }
-      SModelFqName modelName=new SModelFqName(targetModelRef.getLongName(),null);
-      SModelDescriptor modelDescr=SModelRepository.getInstance().getModelDescriptor(modelName);
-      if (modelDescr == null) {
-        continue;
-      }
-      MapSequence.fromMap(models).put(targetModelRef,modelDescr.getSModelReference());
-      ListSequence.fromList(toResolve).addElement(ref);
-    }
-  }
+  List<SReference> toResolve=getReferencesToResolve(model,models);
   Iterable<SModelReference> modelsToAdd=Sequence.fromIterable(MapSequence.fromMap(models).values()).where(new IWhereFilter<SModelReference>(){
     public boolean accept(    SModelReference it){
       return !(jetbrains.mps.smodel.SModelOperations.getImportedModelUIDs(model).contains(it));
@@ -28,7 +13,7 @@
     }
   }
 );
-  final Map<SModelReference,Boolean> modelsUsed=MapSequence.fromMap(new HashMap<SModelReference,Boolean>());
+  final Set<SModelReference> modelsUsed=SetSequence.fromSet(new HashSet<SModelReference>());
   int cnt=0;
   int delta=0;
   do {
@@ -63,7 +48,7 @@
       }
       if (ListSequence.fromList(resolved).count() > 0) {
         node.setReferent(SLinkOperations.getRole(ref),ListSequence.fromList(resolved).first());
-        MapSequence.fromMap(modelsUsed).put(ref.getTargetSModelReference(),true);
+        SetSequence.fromSet(modelsUsed).addElement(ref.getTargetSModelReference());
         ListSequence.fromList(toResolve).removeElement(ref);
         ++delta;
       }
@@ -75,7 +60,7 @@
  while (delta > 0);
   Sequence.fromIterable(modelsToAdd).where(new IWhereFilter<SModelReference>(){
     public boolean accept(    SModelReference it){
-      return MapSequence.fromMap(modelsUsed).get(it);
+      return SetSequence.fromSet(modelsUsed).contains(it);
     }
   }
 ).visitAll(new IVisitor<SModelReference>(){
