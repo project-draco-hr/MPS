@@ -1,15 +1,30 @@
 {
-  if (javaFile.getLastModified() >= classFileLastModified) {
-    return false;
-  }
-  for (  String fqName : myDependencies.getAllDependencies(javaFile.getClassName())) {
-    if (myDependencies.getModule(fqName) != null) {
-      JavaFile file=myJavaFiles.get(fqName);
-      long javaFileLastModified=file != null ? file.getLastModified() : myDependencies.getJavaFileLastModified(fqName);
-      if (javaFileLastModified == 0 || javaFileLastModified > classFileLastModified) {
-        return false;
+  ttrace.push("check is up-to-date",false);
+  try {
+    if (javaFile.getLastModified() >= classFileLastModified) {
+      return false;
+    }
+    for (    String fqName : myDependencies.getAllDependencies(javaFile.getClassName())) {
+      final IModule module=myDependencies.getModule(fqName);
+      if (module != null) {
+        JavaFile file=myJavaFiles.get(fqName);
+        if (file == null) {
+          final ModuleSources targetModule=myAvailableSources.get(module);
+          if (targetModule != null) {
+            file=targetModule.getJavaFile(fqName);
+          }
+        }
+        ttrace.push("in dependencies",false);
+        long javaFileLastModified=file != null ? file.getLastModified() : myDependencies.getJavaFileLastModified(fqName);
+        ttrace.pop();
+        if (javaFileLastModified == 0 || javaFileLastModified > classFileLastModified) {
+          return false;
+        }
       }
     }
+    return true;
   }
-  return true;
+  finally {
+    ttrace.pop();
+  }
 }
