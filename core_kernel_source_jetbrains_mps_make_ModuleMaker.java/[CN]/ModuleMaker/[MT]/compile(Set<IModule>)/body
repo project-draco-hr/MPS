@@ -12,6 +12,7 @@
   JavaCompiler compiler=new JavaCompiler();
   boolean hasJavaToCompile=false;
   boolean hasFilesToCopyOrDelete=false;
+  ttrace.push("preparing to compile",false);
   Set<IModule> modulesWithRemovals=new HashSet<IModule>();
   for (  IModule m : modules) {
     if (areClassesUpToDate(m))     continue;
@@ -33,20 +34,28 @@
       myContainingModules.put(f.getClassName(),m);
     }
   }
+  ttrace.pop();
   if (!hasJavaToCompile && !hasFilesToCopyOrDelete) {
     return new MPSCompilationResult(0,0,false,false,messages);
   }
+  ttrace.push("invalidating classpath",false);
   for (  IModule module : modulesWithRemovals) {
     invalidateCompiledClasses(module);
   }
+  ttrace.pop();
   MyCompilationResultAdapter listener=null;
   if (hasJavaToCompile) {
+    ttrace.push("compiling java",false);
     IClassPathItem classPathItems=computeDependenciesClassPath(modules);
     listener=new MyCompilationResultAdapter(modules,classPathItems,messages);
     compiler.addCompilationResultListener(listener);
+    ttrace.push("eclipse compiler",true);
     compiler.compile(classPathItems);
+    ttrace.pop();
     compiler.removeCompilationResultListener(listener);
+    ttrace.pop();
   }
+  ttrace.push("copying resources",false);
   for (  IModule module : modules) {
     ModuleSources sources=getModuleSources(module);
     for (    ResourceFile toCopy : sources.getResourcesToCopy()) {
@@ -58,8 +67,11 @@
       }
     }
   }
+  ttrace.pop();
+  ttrace.push("updating classpath",false);
   for (  IModule module : modules) {
     invalidateCompiledClasses(module);
   }
+  ttrace.pop();
   return new MPSCompilationResult(listener == null ? 0 : listener.getErrorCount(),0,false,hasJavaToCompile,messages);
 }
