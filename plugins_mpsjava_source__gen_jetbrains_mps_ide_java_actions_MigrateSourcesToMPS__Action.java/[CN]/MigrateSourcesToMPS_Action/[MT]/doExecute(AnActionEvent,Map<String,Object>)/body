@@ -1,16 +1,16 @@
 {
   try {
     ModuleDescriptor moduleDescr=((IModule)MapSequence.fromMap(_params).get("module")).getModuleDescriptor();
-    if (moduleDescr == null) {
+    if (moduleDescr == null || moduleDescr.getSourcePaths().isEmpty()) {
       return;
     }
-    Set<SModel> affectedModels=SetSequence.fromSet(new HashSet<SModel>());
-    for (    String sourcePath : ListSequence.fromList(moduleDescr.getSourcePaths())) {
-      JavaCompiler javaCompiler=new JavaCompiler(((IOperationContext)MapSequence.fromMap(_params).get("context")),((IModule)MapSequence.fromMap(_params).get("module")),new File(sourcePath),false);
-      javaCompiler.compile();
-      SetSequence.fromSet(affectedModels).addSequence(Sequence.fromIterable(javaCompiler.getAffectedModels()));
+    List<File> sourcePaths=ListSequence.fromList(new ArrayList<File>());
+    for (    String path : ListSequence.fromList(moduleDescr.getSourcePaths())) {
+      ListSequence.fromList(sourcePaths).addElement(new File(path));
     }
-    new StubResolver(affectedModels).resolveInProject(((MPSProject)MapSequence.fromMap(_params).get("project")),((IOperationContext)MapSequence.fromMap(_params).get("context")));
+    JavaCompiler javaCompiler=new JavaCompiler(((IOperationContext)MapSequence.fromMap(_params).get("context")),((IModule)MapSequence.fromMap(_params).get("module")),sourcePaths,false);
+    javaCompiler.compile();
+    new StubResolver(javaCompiler.getAffectedModels()).resolveInProject(((MPSProject)MapSequence.fromMap(_params).get("project")),((IOperationContext)MapSequence.fromMap(_params).get("context")));
     moduleDescr.getSourcePaths().clear();
   }
  catch (  Throwable t) {
