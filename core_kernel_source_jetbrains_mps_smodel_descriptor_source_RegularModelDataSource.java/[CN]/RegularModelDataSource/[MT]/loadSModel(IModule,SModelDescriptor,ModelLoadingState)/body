@@ -1,0 +1,41 @@
+{
+  DefaultSModelDescriptor dsm=(DefaultSModelDescriptor)descriptor;
+  SModelReference dsmRef=dsm.getSModelReference();
+  if (!dsm.getModelFile().isReadOnly() && !dsm.getModelFile().exists()) {
+    SModel model=new SModel(dsmRef,new RegularNodeIdMap());
+    return new ModelLoadResult(model,ModelLoadingState.FULLY_LOADED);
+  }
+  ModelLoadResult result;
+  try {
+    result=ModelPersistence.readModel(dsm.getSModelHeader(),dsm.getModelFile(),targetState);
+    if (result.getState() == ModelLoadingState.NOT_LOADED) {
+      if (targetState != ModelLoadingState.NOT_LOADED) {
+        VcsMigrationUtil.getHandler().addSuspiciousModel(dsm,false);
+      }
+      return result;
+    }
+  }
+ catch (  ModelFileReadException t) {
+    return handleExceptionDuringModelRead(dsm,t,false);
+  }
+catch (  PersistenceVersionNotFoundException e) {
+    LOG.error(e);
+    StubModel model=new StubModel(dsmRef);
+    return new ModelLoadResult(model,ModelLoadingState.NOT_LOADED);
+  }
+  SModel model=result.getModel();
+  if (result.getState() == ModelLoadingState.FULLY_LOADED) {
+    try {
+      model.setLoading(true);
+      boolean needToSave=model.updateSModelReferences() || model.updateModuleReferences();
+      if (needToSave && !dsm.getModelFile().isReadOnly()) {
+        SModelRepository.getInstance().markChanged(model);
+      }
+    }
+  finally {
+      model.setLoading(false);
+    }
+  }
+  LOG.assertLog(model.getSModelReference().equals(dsmRef),"\nError loading model from file: \"" + dsm.getModelFile() + "\"\n"+ "expected model UID     : \""+ dsmRef+ "\"\n"+ "but was UID            : \""+ model.getSModelReference()+ "\"\n"+ "the model will not be available.\n"+ "Make sure that all project's roots and/or the model namespace is correct");
+  return result;
+}
