@@ -1,0 +1,31 @@
+{
+  SModel model=new SModel(descriptor.getSModelReference(),new ForeignNodeIdMap());
+  model.setLoading(true);
+  try {
+    for (    Language l : getLanguagesToImport()) {
+      model.addLanguage(l.getModuleReference());
+      module.addUsedLanguage(l.getModuleReference());
+    }
+    for (    String dir : getStubPaths()) {
+      RealClassPathItem cp=null;
+      try {
+        if (dir.indexOf("!") != -1) {
+          cp=ClassPathFactory.getInstance().createFromPath(dir.substring(0,dir.indexOf("!")),this.getClass().getName());
+        }
+ else {
+          String name=descriptor.getSModelReference().getLongName().replaceAll("\\.",File.separator);
+          dir=dir.substring(0,dir.indexOf(name));
+          cp=ClassPathFactory.getInstance().createFromPath(dir,this.getClass().getName());
+        }
+      }
+ catch (      IOException e) {
+        e.printStackTrace();
+      }
+      new ASMModelLoader(new StubLocation(dir,"",module.getModuleReference()),cp,model).updateModel();
+    }
+  }
+  finally {
+    model.setLoading(false);
+  }
+  return new ModelLoadResult(model,ModelLoadingState.FULLY_LOADED);
+}
