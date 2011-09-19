@@ -13,12 +13,91 @@
     s.append(m);
   }
   info(s.toString());
-  final GeneratorManager gm=project.getProject().getComponent(GeneratorManager.class);
-  final GenerationListener generationListener=getGenerationListener();
-  gm.addGenerationListener(generationListener);
-  List<TestGenerationWorker.Cycle> order=computeGenerationOrder(project,go);
-  for (  final TestGenerationWorker.Cycle cycle : order) {
-    generateModulesCycle(gm,cycle);
+  final String[] currentTestName=new String[1];
+  final _FunctionTypes._void_P1_E0<? super String> startTestFormat=new _FunctionTypes._void_P1_E0<String>(){
+    public void invoke(    String msg){
+      currentTestName[0]=myBuildServerMessageFormat.escapeBuildMessage(new StringBuffer(msg)).toString();
+      System.out.println(myBuildServerMessageFormat.formatTestStart(currentTestName[0]));
+    }
   }
-  gm.removeGenerationListener(generationListener);
+;
+  final _FunctionTypes._return_P1_E0<? extends String,? super String> finishTestFormat=new _FunctionTypes._return_P1_E0<String,String>(){
+    public String invoke(    String msg){
+      System.out.println(myBuildServerMessageFormat.formatTestFinish(myBuildServerMessageFormat.escapeBuildMessage(new StringBuffer(msg)).toString()));
+      return currentTestName[0]=null;
+    }
+  }
+;
+  final IScriptController ctl=new IScriptController.Stub(new IConfigMonitor.Stub(),new IJobMonitor.Stub(new IProgress.Stub(){
+    @Override public void beginWork(    String name,    int estimate,    int ofTotal){
+      reportIfStartsWith("Generating ",name,startTestFormat);
+    }
+    @Override public void finishWork(    String name){
+      reportIfStartsWith("Generating ",name,finishTestFormat);
+    }
+    @Override public void advanceWork(    String name,    int done,    String comment){
+      if (comment != null) {
+        reportIfStartsWith("Diffing",name + " " + comment,(done == 1 ? startTestFormat : finishTestFormat));
+      }
+    }
+  }
+){
+    @Override public void reportFeedback(    IFeedback fdbk){
+      if (fdbk.getSeverity() == IFeedback.Severity.ERROR) {
+        System.out.append(myBuildServerMessageFormat.formatTestFailure(currentTestName[0],fdbk.getMessage(),myBuildServerMessageFormat.escapeBuildMessage(new StringBuffer(fdbk.getException().toString()))));
+      }
+    }
+  }
+){
+    @Override public void setup(    IPropertiesPool ppool){
+      Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>> bparams=(Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>>)ppool.properties(new ITarget.Name("jetbrains.mps.lang.plugin.Binaries.copyBinaries"),Object.class);
+      bparams._0(new _FunctionTypes._return_P1_E0<IFile,String>(){
+        public IFile invoke(        String path){
+          return tmpFile(path);
+        }
+      }
+);
+      Tuples._2<_FunctionTypes._return_P1_E0<? extends IFile,? super String>,Boolean> tparams=(Tuples._2<_FunctionTypes._return_P1_E0<? extends IFile,? super String>,Boolean>)ppool.properties(new ITarget.Name("jetbrains.mps.lang.core.TextGen.textGen"),Object.class);
+      tparams._0(new _FunctionTypes._return_P1_E0<IFile,String>(){
+        public IFile invoke(        String path){
+          return tmpFile(path);
+        }
+      }
+);
+      tparams._1(false);
+      Tuples._1<Map<String,String>> dparams=(Tuples._1<Map<String,String>>)ppool.properties(new ITarget.Name("jetbrains.mps.build.gentest.Diff.diff"),Object.class);
+      dparams._0(path2tmp);
+      if (isInvokeTestsSet()) {
+        Tuples._1<UnitTestListener> testParams=(Tuples._1<UnitTestListener>)ppool.properties(new ITarget.Name("jetbrains.mps.build.gentest.Test.runTests"),Object.class);
+        testParams._0(new TestGenerationWorker.MyUnitTestAdapter());
+      }
+    }
+  }
+;
+  final Wrappers._T<IResult> result=new Wrappers._T<IResult>();
+  ModelAccess.instance().flushEventQueue();
+  ThreadUtils.runInUIThreadAndWait(new Runnable(){
+    public void run(){
+      IOperationContext context=ProjectOperationContext.get(project.getProject());
+      try {
+        BuildMakeService bms=new BuildMakeService();
+        MakeSession ms=new MakeSession(context,myMessageHandler,true){
+          @Override public IScript toScript(          ScriptBuilder scriptBuilder){
+            if (isInvokeTestsSet()) {
+              scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.build.gentest.Test"));
+            }
+            return scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.build.gentest.Diff")).toScript();
+          }
+        }
+;
+        result.value=bms.make(ms,collectResources(context,go.getProjects(),go.getModules(),go.getModels()),null,ctl).get();
+      }
+ catch (      InterruptedException ignore) {
+      }
+catch (      ExecutionException ignore) {
+      }
+    }
+  }
+);
+  ModelAccess.instance().flushEventQueue();
 }
