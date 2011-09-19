@@ -4,7 +4,10 @@
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
       for (      MPSProject prj : projects) {
-        if (!(prj.getProjectDescriptor().getTestConfigurations().isEmpty())) {
+        if (isWholeProject(prj)) {
+          _modules.value=Sequence.fromIterable(_modules.value).concat(ListSequence.fromList(prj.getModules()));
+        }
+ else         if (!(prj.getProjectDescriptor().getTestConfigurations().isEmpty())) {
           for (          BaseTestConfiguration tconf : prj.getProjectDescriptor().getTestConfigurations()) {
             try {
               result.value=Sequence.fromIterable(result.value).concat(ListSequence.fromList(tconf.getGenParams(prj.getProject(),true).getModelDescriptors()));
@@ -14,41 +17,39 @@
             }
           }
         }
- else         if (isWholeProject(prj)) {
-          _modules.value=Sequence.fromIterable(_modules.value).concat(ListSequence.fromList(prj.getModules()));
-        }
  else {
           warning("No test configurations for project " + prj.getProjectDescriptor().getName());
         }
       }
-      _modules.value=Sequence.fromIterable(_modules.value).concat(Sequence.fromIterable(projects).translate(new ITranslator2<MPSProject,IModule>(){
-        public Iterable<IModule> translate(        MPSProject prj){
-          return prj.getModules();
-        }
-      }
-));
       result.value=Sequence.fromIterable(result.value).concat(Sequence.fromIterable(_modules.value).translate(new ITranslator2<IModule,SModelDescriptor>(){
         public Iterable<SModelDescriptor> translate(        IModule m){
           return m.getOwnModelDescriptors();
         }
       }
-)).concat(Sequence.fromIterable(withGenerators(_modules.value)).translate(new ITranslator2<IModule,SModelDescriptor>(){
+));
+      result.value=Sequence.fromIterable(result.value).concat(Sequence.fromIterable(_modules.value).where(new IWhereFilter<IModule>(){
+        public boolean accept(        IModule it){
+          return it instanceof Language;
+        }
+      }
+).translate(new ITranslator2<IModule,IModule>(){
+        public Iterable<IModule> translate(        IModule it){
+          return Collections.<IModule>unmodifiableList(((Language)it).getGenerators());
+        }
+      }
+).translate(new ITranslator2<IModule,SModelDescriptor>(){
         public Iterable<SModelDescriptor> translate(        IModule gen){
           return gen.getOwnModelDescriptors();
         }
       }
-).where(new IWhereFilter<SModelDescriptor>(){
-        public boolean accept(        SModelDescriptor smd){
-          return smd.isGeneratable();
-        }
-      }
-)).concat(Sequence.fromIterable(models));
+));
+      result.value=Sequence.fromIterable(result.value).concat(Sequence.fromIterable(models));
     }
   }
 );
   return new ModelsToResources(context,Sequence.fromIterable(result.value).where(new IWhereFilter<SModelDescriptor>(){
     public boolean accept(    SModelDescriptor smd){
-      return !(GeneratorManager.isDoNotGenerate(smd));
+      return smd.isGeneratable();
     }
   }
 )).resources(false);

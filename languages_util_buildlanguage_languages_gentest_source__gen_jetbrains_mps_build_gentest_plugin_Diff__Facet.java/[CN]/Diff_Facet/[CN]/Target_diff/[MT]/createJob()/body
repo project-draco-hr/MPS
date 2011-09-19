@@ -4,18 +4,34 @@
       Iterable<IResource> _output_mtqq_a0a=null;
 switch (0) {
 case 0:
-        if (pa.global().properties(Target_diff.this.getName(),Diff_Facet.Target_diff.Parameters.class).path2tmp() != null) {
+        if (pa.global().properties(Target_diff.this.getName(),Diff_Facet.Target_diff.Parameters.class).fileToPath() != null) {
           monitor.currentProgress().beginWork("Diffing",100 * Sequence.fromIterable(input).count(),monitor.currentProgress().workLeft());
           for (          IResource resource : input) {
-            String fqn=((TResource)resource).module().getModuleFqName();
+            TResource tgres=((TResource)resource);
+            String fqn=tgres.modelDescriptor().getSModelReference().getSModelFqName().getLongName();
             monitor.currentProgress().advanceWork("Diffing",1,fqn);
-            for (            String diff : new Differ(pa.global().properties(Target_diff.this.getName(),Diff_Facet.Target_diff.Parameters.class).path2tmp()).diff()) {
-              monitor.reportFeedback(new IFeedback.ERROR(String.valueOf(diff)));
+            DeltaReconciler dr=new DeltaReconciler(tgres.delta());
+            final Set<String> retainedPaths=SetSequence.fromSet(new HashSet<String>());
+            dr.visitAll(new FilesDelta.Visitor(){
+              @Override public boolean acceptKept(              IFile file){
+                SetSequence.fromSet(retainedPaths).addElement(pa.global().properties(Target_diff.this.getName(),Diff_Facet.Target_diff.Parameters.class).fileToPath().invoke(file));
+                return true;
+              }
             }
+);
+            final Differ differ=new Differ(retainedPaths,pa.global().properties(Target_diff.this.getName(),Diff_Facet.Target_diff.Parameters.class).excludedFiles());
+            dr.visitAll(new FilesDelta.Visitor(){
+              @Override public boolean acceptRoot(              IFile root){
+                for (                String diff : differ.diff(pa.global().properties(Target_diff.this.getName(),Diff_Facet.Target_diff.Parameters.class).fileToPath().invoke(root),root.getPath())) {
+                  monitor.reportFeedback(new IFeedback.ERROR(String.valueOf(diff)));
+                }
+                return true;
+              }
+            }
+);
             monitor.currentProgress().advanceWork("Diffing",99,fqn);
           }
           monitor.currentProgress().finishWork("Diffing");
-          MapSequence.fromMap(pa.global().properties(Target_diff.this.getName(),Diff_Facet.Target_diff.Parameters.class).path2tmp()).clear();
         }
 default :
       return new IResult.SUCCESS(_output_mtqq_a0a);

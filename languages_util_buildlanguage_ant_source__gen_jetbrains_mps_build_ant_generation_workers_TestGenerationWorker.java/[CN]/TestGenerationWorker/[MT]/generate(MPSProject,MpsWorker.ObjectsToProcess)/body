@@ -21,10 +21,10 @@
     }
   }
 ;
-  final _FunctionTypes._return_P1_E0<? extends String,? super String> finishTestFormat=new _FunctionTypes._return_P1_E0<String,String>(){
-    public String invoke(    String msg){
+  final _FunctionTypes._void_P1_E0<? super String> finishTestFormat=new _FunctionTypes._void_P1_E0<String>(){
+    public void invoke(    String msg){
       System.out.println(myBuildServerMessageFormat.formatTestFinish(myBuildServerMessageFormat.escapeBuildMessage(new StringBuffer(msg)).toString()));
-      return currentTestName[0]=null;
+      currentTestName[0]=null;
     }
   }
 ;
@@ -37,36 +37,48 @@
     }
     @Override public void advanceWork(    String name,    int done,    String comment){
       if (comment != null) {
-        reportIfStartsWith("Diffing",name + " " + comment,(done == 1 ? startTestFormat : finishTestFormat));
+        _FunctionTypes._void_P1_E0<? super String> format=startTestFormat;
+        if (done > 1) {
+          format=finishTestFormat;
+        }
+        reportIfStartsWith("Diffing",name + " " + comment,format);
       }
     }
   }
 ){
     @Override public void reportFeedback(    IFeedback fdbk){
       if (fdbk.getSeverity() == IFeedback.Severity.ERROR) {
-        System.out.append(myBuildServerMessageFormat.formatTestFailure(currentTestName[0],fdbk.getMessage(),myBuildServerMessageFormat.escapeBuildMessage(new StringBuffer(fdbk.getException().toString()))));
+        String test=currentTestName[0];
+        if (test == null) {
+          test="unknown";
+        }
+        System.out.println(myBuildServerMessageFormat.formatTestFailure(test,fdbk.getMessage(),myBuildServerMessageFormat.escapeBuildMessage(new StringBuffer(String.valueOf(fdbk.getException())))));
       }
     }
   }
 ){
     @Override public void setup(    IPropertiesPool ppool){
-      Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>> bparams=(Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>>)ppool.properties(new ITarget.Name("jetbrains.mps.lang.plugin.Binaries.copyBinaries"),Object.class);
-      bparams._0(new _FunctionTypes._return_P1_E0<IFile,String>(){
+      Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>> makeparams=(Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>>)ppool.properties(new ITarget.Name("jetbrains.mps.lang.core.Make.make"),Object.class);
+      makeparams._0(new _FunctionTypes._return_P1_E0<IFile,String>(){
         public IFile invoke(        String path){
           return tmpFile(path);
         }
       }
 );
-      Tuples._2<_FunctionTypes._return_P1_E0<? extends IFile,? super String>,Boolean> tparams=(Tuples._2<_FunctionTypes._return_P1_E0<? extends IFile,? super String>,Boolean>)ppool.properties(new ITarget.Name("jetbrains.mps.lang.core.TextGen.textGen"),Object.class);
-      tparams._0(new _FunctionTypes._return_P1_E0<IFile,String>(){
-        public IFile invoke(        String path){
-          return tmpFile(path);
-        }
+      Tuples._1<Boolean> tparams=(Tuples._1<Boolean>)ppool.properties(new ITarget.Name("jetbrains.mps.lang.core.TextGen.textGen"),Object.class);
+      if (tparams != null) {
+        tparams._0(false);
       }
+      Tuples._2<_FunctionTypes._return_P1_E0<? extends String,? super IFile>,Set<File>> dparams=(Tuples._2<_FunctionTypes._return_P1_E0<? extends String,? super IFile>,Set<File>>)ppool.properties(new ITarget.Name("jetbrains.mps.build.gentest.Diff.diff"),Object.class);
+      if (dparams != null && isShowDiff()) {
+        dparams._0(new _FunctionTypes._return_P1_E0<String,IFile>(){
+          public String invoke(          IFile f){
+            return pathOfTmpFile(f);
+          }
+        }
 );
-      tparams._1(false);
-      Tuples._1<Map<String,String>> dparams=(Tuples._1<Map<String,String>>)ppool.properties(new ITarget.Name("jetbrains.mps.build.gentest.Diff.diff"),Object.class);
-      dparams._0(path2tmp);
+        dparams._1(myWhatToDo.getExcludedFromDiffFiles());
+      }
       if (isInvokeTestsSet()) {
         Tuples._1<UnitTestListener> testParams=(Tuples._1<UnitTestListener>)ppool.properties(new ITarget.Name("jetbrains.mps.build.gentest.Test.runTests"),Object.class);
         testParams._0(new TestGenerationWorker.MyUnitTestAdapter());
@@ -86,7 +98,10 @@
             if (isInvokeTestsSet()) {
               scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.build.gentest.Test"));
             }
-            return scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.build.gentest.Diff")).toScript();
+            if (isShowDiff()) {
+              scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.build.gentest.Diff"));
+            }
+            return scriptBuilder.toScript();
           }
         }
 ;
