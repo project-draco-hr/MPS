@@ -6,11 +6,20 @@
   if (bundleHomeFile == null)   return;
   IFile bundleParent=bundleHomeFile.getParent();
   if (bundleParent == null || !bundleParent.exists())   return;
+  String packagedSourcesPath=bundleHomeFile.getPath();
+  if (packagedSourcesPath.endsWith(".jar")) {
+    packagedSourcesPath=(packagedSourcesPath.substring(0,packagedSourcesPath.length() - 4) + "-src.jar!/").toLowerCase();
+  }
+ else {
+    packagedSourcesPath=null;
+  }
   List<ModelRoot> toRemove=new ArrayList<ModelRoot>();
   for (  ModelRoot sme : descriptor.getStubModelEntries()) {
     String path=sme.getPath();
-    String shrinked=MacrosFactory.moduleDescriptor(this).shrinkPath(path,getDescriptorFile());
-    if (MacrosFactory.containsNonMPSMacros(shrinked))     continue;
+    if (packagedSourcesPath == null || !FileUtil.getCanonicalPath(path).toLowerCase().startsWith(packagedSourcesPath)) {
+      String shrinked=MacrosFactory.moduleDescriptor(this).shrinkPath(path,getDescriptorFile());
+      if (MacrosFactory.containsNonMPSMacros(shrinked))       continue;
+    }
     toRemove.add(sme);
   }
   descriptor.getStubModelEntries().removeAll(toRemove);

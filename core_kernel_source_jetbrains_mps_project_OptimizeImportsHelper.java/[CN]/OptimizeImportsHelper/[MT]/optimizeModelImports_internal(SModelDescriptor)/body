@@ -1,5 +1,8 @@
 {
   Result result=new Result();
+  for (  ModuleReference ref : modelDescriptor.getSModel().engagedOnGenerationLanguages()) {
+    result.myUsedLanguages.add(MPSModuleRepository.getInstance().getLanguage(ref));
+  }
   for (  SNode node : modelDescriptor.getSModel().nodes()) {
     result.myUsedLanguages.add(node.getLanguage());
     for (    SReference ref : node.getReferences()) {
@@ -9,17 +12,21 @@
       }
     }
   }
+  Set<SModelReference> unusedModels=new HashSet<SModelReference>();
+  for (  SModelReference model : SModelOperations.getImportedModelUIDs(modelDescriptor.getSModel())) {
+    if (!result.myUsedModels.contains(model)) {
+      unusedModels.add(model);
+    }
+  }
   Set<ModuleReference> unusedLanguages=new HashSet<ModuleReference>();
   for (  ModuleReference languageRef : modelDescriptor.getSModel().importedLanguages()) {
     ModuleReference ref=getUnusedLanguageRef(result,languageRef);
     if (ref != null)     unusedLanguages.add(ref);
   }
   Set<ModuleReference> unusedDevkits=new HashSet<ModuleReference>();
-  Set<SModelReference> unusedModels=new HashSet<SModelReference>();
-  for (  SModelReference model : SModelOperations.getImportedModelUIDs(modelDescriptor.getSModel())) {
-    if (!result.myUsedModels.contains(model)) {
-      unusedModels.add(model);
-    }
+  for (  ModuleReference devkitRef : modelDescriptor.getSModel().importedDevkits()) {
+    ModuleReference ref=getUnusedDevkitRef(result,devkitRef);
+    if (ref != null)     unusedDevkits.add(devkitRef);
   }
   result.myReport=removeFromImports(modelDescriptor,unusedModels,unusedLanguages,unusedDevkits);
   return result;

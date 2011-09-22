@@ -1,47 +1,28 @@
 {
+  String classname=referenceInfo;
+  int dotIndex=classname.lastIndexOf(".");
+  if (dotIndex >= 0 && targetModelReference == null) {
+    List<SNode> localClassifiers=ClassifiersCache.getInstance(myModel.getModelDescriptor()).getClassifiersByRefName(classname);
+    if (ListSequence.fromList(localClassifiers).count() >= 1) {
+      return ListSequence.fromList(localClassifiers).first();
+    }
+    String package_=classname.substring(0,dotIndex);
+    classname=classname.substring(dotIndex + 1);
+    if (classname.indexOf('$') >= 0) {
+      classname=classname.replace('$','.');
+    }
+    return resolveClass(package_,null,classname);
+  }
+  if (targetModelReference == null) {
+    targetModelReference=myModel.getSModelReference();
+  }
   if (targetModelReference.getSModelId() != null) {
     SModelDescriptor targetModel=this.myScope.getModelDescriptor(targetModelReference);
     if (targetModel == null) {
       return null;
     }
-    return ListSequence.fromList(ClassifiersCache.getInstance(targetModel).getClassifiersByRefName(referenceInfo)).first();
+    return ListSequence.fromList(ClassifiersCache.getInstance(targetModel).getClassifiersByRefName(classname)).first();
   }
-  Collection<IModule> visibleModules=IterableUtil.asCollection(myScope.getVisibleModules());
-  List<SNode> classifiers=new ArrayList<SNode>();
-  for (  SModelDescriptor model : ListSequence.fromList(SModelRepository.getInstance().getModelDescriptors())) {
-    if (!(visibleModules.contains(model.getModule()))) {
-      continue;
-    }
-    if (!(model.getSModelReference().getSModelFqName().equals(targetModelReference.getSModelFqName()))) {
-      continue;
-    }
-    ListSequence.fromList(classifiers).addSequence(ListSequence.fromList(ClassifiersCache.getInstance(model).getClassifiersByRefName(referenceInfo)));
-  }
-  if (ListSequence.fromList(classifiers).isEmpty()) {
-    return null;
-  }
-  if (ListSequence.fromList(classifiers).count() > 1) {
-    for (    SNode cls : ListSequence.fromList(classifiers)) {
-      if (SNodeOperations.getModel(cls) == myModel) {
-        return cls;
-      }
-    }
-    final StringBuilder warn=new StringBuilder();
-    warn.append("reference can't be resolved: ");
-    warn.append(referenceInfo);
-    warn.append(" in ");
-    warn.append(myModel.getLongName());
-    warn.append(" can reference nodes from models: ");
-    ListSequence.fromList(classifiers).visitAll(new IVisitor<SNode>(){
-      public void visit(      SNode it){
-        warn.append(SNodeOperations.getModel(it).getSModelReference()).append("; ");
-      }
-    }
-);
-    if (log.isWarnEnabled()) {
-      log.warn(warn);
-    }
-    return null;
-  }
-  return ListSequence.fromList(classifiers).getElement(0);
+  SModelFqName modelname=targetModelReference.getSModelFqName();
+  return resolveClass(modelname.getLongName(),modelname.getStereotype(),classname);
 }

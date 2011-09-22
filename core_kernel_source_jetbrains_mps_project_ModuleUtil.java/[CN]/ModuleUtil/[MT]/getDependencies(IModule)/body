@@ -1,0 +1,24 @@
+{
+  Iterable<IModule> dependencies=new TranslatingIterator<Dependency,IModule>(module.getDependencies().iterator()){
+    @Override protected IModule translate(    Dependency dep){
+      return MPSModuleRepository.getInstance().getModule(dep.getModuleRef());
+    }
+  }
+;
+  Iterable<IModule> solutionsFromDevkits=new TranslatingIterator<ModuleReference,IModule>(new CollectingManyIterator<DevKit,ModuleReference>(includingExtended(usedDevkits(module)).iterator()){
+    @Override protected Iterator<ModuleReference> translate(    DevKit devkit){
+      return devkit.getExportedSolutions_internal().iterator();
+    }
+  }
+){
+    @Override protected IModule translate(    ModuleReference node){
+      return MPSModuleRepository.getInstance().getSolution(node);
+    }
+  }
+;
+  if (module instanceof Language) {
+    Language core=BootstrapLanguages.coreLanguage();
+    return IterableUtil.distinct(IterableUtil.merge(dependencies,solutionsFromDevkits,Collections.<IModule>singleton(core)));
+  }
+  return IterableUtil.distinct(IterableUtil.merge(dependencies,solutionsFromDevkits));
+}

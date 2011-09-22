@@ -2,30 +2,28 @@
   if (myDistributedLocksMode) {
     return false;
   }
+  ApplicationManager.getApplication().assertIsDispatchThread();
   final boolean[] res=new boolean[]{false};
   final Project project=p != null ? p : CurrentProjectAccessUtil.getProjectFromUI();
-  CommandProcessor.getInstance().executeCommand(project,new Runnable(){
-    public void run(){
-      ApplicationManager.getApplication().runWriteAction(new Runnable(){
-        public void run(){
+  Runnable commandRunnable=new Runnable(){
+    @Override public void run(){
+      try {
+        if (getWriteLock().tryLock(WAIT_FOR_WRITE_LOCK_MILLIS,MILLISECONDS)) {
           try {
-            if (getWriteLock().tryLock(WAIT_FOR_WRITE_LOCK_MILLIS,MILLISECONDS)) {
-              try {
-                new CommandRunnable(r,project).run();
-              }
-  finally {
-                getWriteLock().unlock();
-              }
-              res[0]=true;
-            }
+            new CommandRunnable(r,project).run();
           }
- catch (          InterruptedException ignore) {
+  finally {
+            getWriteLock().unlock();
           }
         }
       }
-);
+ catch (      InterruptedException e) {
+        return;
+      }
+      res[0]=true;
     }
   }
-,"",null,UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION);
+;
+  CommandProcessor.getInstance().executeCommand(project,new TryWriteActionRunnable(commandRunnable),"",null,UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION);
   return res[0];
 }

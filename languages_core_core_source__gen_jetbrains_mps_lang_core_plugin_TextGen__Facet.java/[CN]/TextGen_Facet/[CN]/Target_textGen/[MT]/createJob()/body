@@ -17,33 +17,28 @@ case 0:
           monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("no output location for " + gres.model().getLongName())));
           continue;
         }
-        final IFile targetDir=(pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).pathToFile() != null ? pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).pathToFile().invoke(output) : FileSystem.getInstance().getFileByPath(output));
-        final IFile cachesDir=FileGenerationUtil.getCachesDir(targetDir);
-        final FilesDelta targetDelta=new FilesDelta(targetDir);
-        Sequence.fromIterable(gres.retainedModels()).where(new IWhereFilter<SModelDescriptor>(){
+        _FunctionTypes._return_P1_E0<? extends IFile,? super String> getFile=pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).pathToFile();
+        if (getFile == null) {
+          getFile=new _FunctionTypes._return_P1_E0<IFile,String>(){
+            public IFile invoke(            String p){
+              return FileSystem.getInstance().getFileByPath(p);
+            }
+          }
+;
+        }
+        Iterable<IDelta> retainedFilesDelta=RetainedUtil.retainedFilesDelta(Sequence.fromIterable(gres.retainedModels()).where(new IWhereFilter<SModelDescriptor>(){
           public boolean accept(          SModelDescriptor smd){
             return !(GeneratorManager.isDoNotGenerate(smd));
           }
         }
-).visitAll(new IVisitor<SModelDescriptor>(){
-          public void visit(          SModelDescriptor smd){
-            targetDelta.kept(FileGenerationUtil.getDefaultOutputDir(smd,targetDir));
-          }
-        }
-);
-        final FilesDelta cachesDelta=new FilesDelta(cachesDir);
-        Sequence.fromIterable(gres.retainedModels()).where(new IWhereFilter<SModelDescriptor>(){
+),gres.module(),getFile);
+        Iterable<IDelta> retainedCachesDelta=RetainedUtil.retainedCachesDelta(Sequence.fromIterable(gres.retainedModels()).where(new IWhereFilter<SModelDescriptor>(){
           public boolean accept(          SModelDescriptor smd){
             return !(GeneratorManager.isDoNotGenerate(smd));
           }
         }
-).visitAll(new IVisitor<SModelDescriptor>(){
-          public void visit(          SModelDescriptor smd){
-            cachesDelta.kept(FileGenerationUtil.getDefaultOutputDir(smd,cachesDir));
-          }
-        }
-);
-        final JavaStreamHandler javaStreamHandler=new JavaStreamHandler(gres.model(),targetDir,cachesDir);
+),gres.module(),getFile);
+        final JavaStreamHandler javaStreamHandler=new JavaStreamHandler(gres.model(),getFile.invoke(output),FileGenerationUtil.getCachesDir(getFile.invoke(output)));
         final Wrappers._boolean ok=new Wrappers._boolean();
         boolean generateDI=pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).generateDebugInfo() == null || pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).generateDebugInfo();
         final TextGenerator textgen=new TextGenerator(javaStreamHandler,BLDependenciesCache.getInstance().getGenerator(),(generateDI ? TraceInfoCache.getInstance().getGenerator() : null),GenerationDependenciesCache.getInstance().getGenerator());
@@ -97,7 +92,7 @@ case 0:
         }
 );
         monitor.currentProgress().advanceWork("Writing",50);
-        _output_21gswx_a0a=Sequence.fromIterable(_output_21gswx_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(new TResource(gres.module(),Sequence.fromIterable(javaStreamHandler.delta()).concat(Sequence.fromIterable(Sequence.fromArray(new IDelta[]{targetDelta,cachesDelta})))))));
+        _output_21gswx_a0a=Sequence.fromIterable(_output_21gswx_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(new TResource(gres.module(),Sequence.fromIterable(javaStreamHandler.delta()).concat(Sequence.fromIterable(retainedFilesDelta)).concat(Sequence.fromIterable(retainedCachesDelta))))));
       }
     monitor.currentProgress().finishWork("Writing");
 default :

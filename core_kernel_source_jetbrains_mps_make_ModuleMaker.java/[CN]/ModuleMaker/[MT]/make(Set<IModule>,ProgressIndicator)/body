@@ -1,22 +1,33 @@
 {
   indicator.pushState();
+  ttrace.push("making " + modules.size() + " modules",false);
   try {
     indicator.setText("Compiling...");
     indicator.setIndeterminate(true);
+    ttrace.push("collecting candidates",false);
     Set<IModule> candidates=collectCandidates(modules);
+    ttrace.pop();
+    ttrace.push("loading deps",false);
     indicator.setText2("Loading dependencies..");
     myDependencies=new Dependencies(candidates);
+    ttrace.pop();
+    ttrace.push("modules to compile",false);
     indicator.setText2("Calculating modules to compile...");
     Set<IModule> toCompile=getModulesToCompile(candidates);
+    ttrace.pop();
     int errorCount=0;
     int warnCount=0;
     boolean compiled=false;
     List<IMessage> messages=new ArrayList<IMessage>();
+    ttrace.push("building cycles",false);
     List<Set<IModule>> schedule=StronglyConnectedModules.getInstance().getStronglyConnectedComponents(toCompile);
+    ttrace.pop();
     for (    Set<IModule> cycle : schedule) {
       if (indicator.isCanceled())       break;
       indicator.setText2("Compiling modules " + cycle + "...");
+      ttrace.push("processing cycle",false);
       MPSCompilationResult result=compile(cycle);
+      ttrace.pop();
       errorCount+=result.getErrors();
       warnCount+=result.getWarnings();
       compiled=compiled || result.isCompiledAnything();
@@ -25,6 +36,11 @@
     return new MPSCompilationResult(errorCount,warnCount,false,compiled,messages);
   }
   finally {
+    ttrace.pop();
+    final String report=ttrace.report();
+    if (report != null) {
+      handler.handle(new Message(MessageKind.INFORMATION,report));
+    }
     indicator.popState();
   }
 }

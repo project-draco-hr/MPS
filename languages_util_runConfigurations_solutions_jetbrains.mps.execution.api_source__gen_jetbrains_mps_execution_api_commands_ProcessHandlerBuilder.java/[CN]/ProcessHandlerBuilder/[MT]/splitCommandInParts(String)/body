@@ -1,23 +1,31 @@
 {
-  if (!(command.contains(" "))) {
-    return Sequence.<String>singleton(command.replace("\"",""));
-  }
-  if (!(command.contains("\""))) {
-    return Arrays.asList(command.split("(\\s)+"));
-  }
-  String charToReplace="^";
-  while (ProcessHandlerBuilder.MATCH_PATTERN.matcher(command).matches()) {
-    command=REPLACE_PATTERN.matcher(command).replaceAll("$1\\" + charToReplace);
-  }
-  return Sequence.fromIterable(Sequence.fromArray(command.split("\\" + charToReplace))).where(new IWhereFilter<String>(){
-    public boolean accept(    String it){
-      return StringUtils.isNotEmpty(it);
+  List<String> result=ListSequence.fromList(new ArrayList<String>());
+  boolean insideQuotes=false;
+  boolean escaped=false;
+  StringBuilder sb=new StringBuilder();
+  for (int i=0; i < command.length(); i++) {
+    char currentChar=command.charAt(i);
+    if (currentChar == '"' && !(escaped)) {
+      insideQuotes=!(insideQuotes);
+      continue;
     }
-  }
-).<String>select(new ISelector<String,String>(){
-    public String select(    String it){
-      return it.replace("\"","");
+    if (currentChar == ' ' && !(insideQuotes)) {
+      if (sb.length() > 0) {
+        ListSequence.fromList(result).addElement(sb.toString());
+        sb=new StringBuilder();
+      }
     }
+ else     if (currentChar == '\\' && (i < command.length() - 1 && command.charAt(i + 1) == '"')) {
+      escaped=true;
+      continue;
+    }
+ else {
+      sb.append(currentChar);
+    }
+    escaped=false;
   }
-);
+  if (sb.length() > 0) {
+    ListSequence.fromList(result).addElement(sb.toString());
+  }
+  return result;
 }

@@ -1,0 +1,130 @@
+{
+  mySettings=settings;
+  JPanel panel=new JPanel();
+  panel.setLayout(new BoxLayout(panel,BoxLayout.Y_AXIS));
+  panel.add(new JLabel("Editor Tabs : "));
+  ButtonGroup group=new ButtonGroup();
+  myDontShow=new JRadioButton("Do not show tabs");
+  panel.add(myDontShow);
+  group.add(myDontShow);
+  myTabPerAspect=new JRadioButton("Show 1 tab for each aspect");
+  panel.add(myTabPerAspect);
+  group.add(myTabPerAspect);
+  myTabPerNode=new JRadioButton("Each aspect node in a separate tab");
+  panel.add(myTabPerNode);
+  group.add(myTabPerNode);
+  myAllTabs=new JRadioButton("Each aspect node in a separate tab, tabs for non-existing aspects");
+  panel.add(myAllTabs);
+  group.add(myAllTabs);
+  myFirstSelection=myTabPerAspect;
+  myFirstSelection.setSelected(true);
+  JPanel fontPropertiesPanel=new JPanel(new GridLayout(0,1));
+  fontPropertiesPanel.setBorder(new EmptyBorder(5,5,5,5));
+  fontPropertiesPanel.add(new JLabel("Font Name : "));
+  myFontsComboBox=new JComboBox(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
+  fontPropertiesPanel.add(myFontsComboBox);
+  fontPropertiesPanel.add(new JLabel("Font Size : "));
+  List<String> sizes2=new ArrayList<String>();
+  for (int i=1; i <= 50; i++) {
+    sizes2.add("" + i);
+  }
+  myFontSizesComboBox=new JComboBox(sizes2.toArray());
+  fontPropertiesPanel.add(myFontSizesComboBox);
+  fontPropertiesPanel.add(new JLabel("Line Spacing : "));
+  myLineSpacingField=new JTextField();
+  fontPropertiesPanel.add(myLineSpacingField);
+  fontPropertiesPanel.add(new JLabel("Text Width : "));
+  List<String> sizes=new ArrayList<String>();
+  for (int i=60; i <= 300; i+=20) {
+    sizes.add("" + i);
+  }
+  myVerticalBoundComboBox=new JComboBox(sizes.toArray());
+  fontPropertiesPanel.add(myVerticalBoundComboBox);
+  fontPropertiesPanel.add(new JLabel("Indent Size : "));
+  List<String> indents=new ArrayList<String>();
+  for (int i=2; i <= 10; i+=2) {
+    indents.add("" + i);
+  }
+  myIndentSizeComboBox=new JComboBox(indents.toArray());
+  fontPropertiesPanel.add(myIndentSizeComboBox);
+  panel.add(fontPropertiesPanel);
+  JPanel useBraces=new JPanel(new FlowLayout(FlowLayout.LEFT));
+  myUseBraces=new JCheckBox("Use Braces");
+  useBraces.add(myUseBraces);
+  panel.add(useBraces);
+  JPanel antialiasingPanel=new JPanel(new FlowLayout(FlowLayout.LEFT));
+  myAntialiasingCheckBox=new JCheckBox("Use Antialiasing");
+  antialiasingPanel.add(myAntialiasingCheckBox);
+  panel.add(antialiasingPanel);
+  JPanel powerSaveModePanel=new JPanel(new FlowLayout(FlowLayout.LEFT));
+  myPowerSaveModeCheckBox=new JCheckBox("Power Save Mode");
+  powerSaveModePanel.add(myPowerSaveModeCheckBox);
+  panel.add(powerSaveModePanel);
+  JPanel highlightChangesPanel=new JPanel(new FlowLayout(FlowLayout.LEFT));
+  myHighlightChangesCheckBox=new JCheckBox("Highlight nodes with changes relative to base version");
+  highlightChangesPanel.add(myHighlightChangesCheckBox);
+  panel.add(highlightChangesPanel);
+  JPanel colorSettingsPanel=new JPanel();
+  Border border=BorderFactory.createEmptyBorder(5,5,0,0);
+  colorSettingsPanel.setBorder(border);
+  colorSettingsPanel.setLayout(new BoxLayout(colorSettingsPanel,BoxLayout.Y_AXIS));
+  colorSettingsPanel.add(new JLabel("Selection Background:"));
+  mySelectionBackgroundColorComponent=new MyColorComponent(mySettings.getSelectionBackgroundColor()){
+    protected Color getDefaultColor(){
+      return EditorSettings.getDefaultSelectionBackgroundColor();
+    }
+  }
+;
+  colorSettingsPanel.add(mySelectionBackgroundColorComponent);
+  colorSettingsPanel.add(new JLabel("Selection Foreground:"));
+  mySelectionForegroundColorComponent=new MyColorComponent(mySettings.getSelectionForegroundColor()){
+    protected Color getDefaultColor(){
+      return EditorSettings.getDefaultSelectionForegroundColor();
+    }
+  }
+;
+  colorSettingsPanel.add(mySelectionForegroundColorComponent);
+  colorSettingsPanel.add(new JLabel(" "));
+  colorSettingsPanel.add(new JLabel("Caret Blinking Rate : "));
+  myBlinkingRateSlider=new JSlider(1,10,5);
+  colorSettingsPanel.add(myBlinkingRateSlider);
+  myBlinkingDemo=createBlinkingDemo();
+  colorSettingsPanel.add(myBlinkingDemo);
+  for (  Component c : colorSettingsPanel.getComponents()) {
+    if (c instanceof JComponent) {
+      ((JComponent)c).setAlignmentX(Component.LEFT_ALIGNMENT);
+    }
+  }
+  MouseAdapter adapter=new MouseAdapter(){
+    @Override public void mousePressed(    MouseEvent e){
+      myBlinkingDemo.getSelectionManager().clearSelection();
+    }
+  }
+;
+  panel.addMouseListener(adapter);
+  panel.add(colorSettingsPanel);
+  myBlinkingDemo.setBackground(fontPropertiesPanel.getBackground());
+  for (  Component c : panel.getComponents()) {
+    if (c instanceof JComponent) {
+      ((JComponent)c).setAlignmentX(Component.LEFT_ALIGNMENT);
+    }
+  }
+  ActionListener listener=new ActionListener(){
+    public void actionPerformed(    ActionEvent e){
+      myBlinkingDemo.repaint();
+      EditorCell rootCell=myBlinkingDemo.getRootCell();
+      if (rootCell != null) {
+        rootCell.switchCaretVisible();
+        myTimer.setDelay(getBlinkingPeriod());
+      }
+    }
+  }
+;
+  myTimer=new Timer(mySettings.getCaretBlinker().getCaretBlinkingRateTimeMillis(),listener);
+  myEditorSettingsPanel=new JPanel(new BorderLayout());
+  myEditorSettingsPanel.add(panel,BorderLayout.NORTH);
+  myEditorSettingsPanel.addMouseListener(adapter);
+  myTimer.start();
+  reset();
+  validate();
+}
