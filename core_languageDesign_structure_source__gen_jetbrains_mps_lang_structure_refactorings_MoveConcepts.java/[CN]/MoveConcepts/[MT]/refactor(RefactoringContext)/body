@@ -5,6 +5,7 @@
   List<SNode> behaviors=new ArrayList<SNode>();
   List<SNode> constraints=new ArrayList<SNode>();
   List<SNode> dataFlows=new ArrayList<SNode>();
+  List<SNode> intentions=new ArrayList<SNode>();
   SModelDescriptor editorModelDescriptor=sourceLanguage.getEditorModelDescriptor();
   if (editorModelDescriptor != null) {
     for (    SNode node : refactoringContext.getSelectedNodes()) {
@@ -41,6 +42,13 @@
       }
     }
   }
+  SModel intentionsModel=check_u6ijv2_a0v0a(LanguageAspect.INTENTIONS.get(sourceLanguage));
+  ListSequence.fromList(intentions).addSequence(ListSequence.fromList(SModelOperations.getRoots(intentionsModel,"jetbrains.mps.lang.intentions.structure.BaseIntentionDeclaration")).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return ListSequence.fromList(refactoringContext.getSelectedNodes()).contains(SLinkOperations.getTarget(it,"forConcept",false));
+    }
+  }
+));
   for (  SNode node : refactoringContext.getSelectedNodes()) {
     refactoringContext.changeFeatureName(node,((SModelReference)refactoringContext.getParameter("targetModel")).getSModelFqName().toString() + "." + SPropertyOperations.getString(node,"name"),SPropertyOperations.getString(node,"name"));
   }
@@ -84,5 +92,15 @@
     SModel dataFlowModel=targetDataFlowModelDescriptor.getSModel();
     refactoringContext.moveNodesToModel(dataFlows,dataFlowModel);
     refactoringContext.updateByDefault(dataFlowModel);
+  }
+  if (ListSequence.fromList(intentions).isNotEmpty()) {
+    refactoringContext.updateByDefault(intentionsModel);
+    SModelDescriptor targetIntentionsModelDescriptor=LanguageAspect.INTENTIONS.get(targetLanguage);
+    if (targetIntentionsModelDescriptor == null) {
+      targetIntentionsModelDescriptor=LanguageAspect.INTENTIONS.createNew(targetLanguage);
+    }
+    SModel intentionsTargetModel=targetIntentionsModelDescriptor.getSModel();
+    refactoringContext.moveNodesToModel(intentions,intentionsTargetModel);
+    refactoringContext.updateByDefault(intentionsTargetModel);
   }
 }
