@@ -13,21 +13,19 @@
     s.append(m);
   }
   info(s.toString());
-  final String[] currentTestName=new String[1];
   final _FunctionTypes._void_P1_E0<? super String> startTestFormat=new _FunctionTypes._void_P1_E0<String>(){
     public void invoke(    String msg){
-      currentTestName[0]=myBuildServerMessageFormat.escapeBuildMessage(new StringBuffer(msg)).toString();
-      System.out.println(myBuildServerMessageFormat.formatTestStart(currentTestName[0]));
+      myReporter.testStarted(StringUtils.trim(msg));
     }
   }
 ;
   final _FunctionTypes._void_P1_E0<? super String> finishTestFormat=new _FunctionTypes._void_P1_E0<String>(){
     public void invoke(    String msg){
-      System.out.println(myBuildServerMessageFormat.formatTestFinish(myBuildServerMessageFormat.escapeBuildMessage(new StringBuffer(msg)).toString()));
-      currentTestName[0]=null;
+      myReporter.testFinished(StringUtils.trim(msg));
     }
   }
 ;
+  final int[] count=new int[]{1};
   final IScriptController ctl=new IScriptController.Stub(new IConfigMonitor.Stub(),new IJobMonitor.Stub(new IProgress.Stub(){
     @Override public void beginWork(    String name,    int estimate,    int ofTotal){
       reportIfStartsWith("Generating ",name,startTestFormat);
@@ -41,23 +39,32 @@
         if (done > 1) {
           format=finishTestFormat;
         }
-        reportIfStartsWith("Diffing",name + " " + comment,format);
+        reportIfStartsWith("Diffing ",name + " " + comment,format);
       }
     }
   }
 ){
     @Override public void reportFeedback(    IFeedback fdbk){
       if (fdbk.getSeverity() == IFeedback.Severity.ERROR) {
-        String test=currentTestName[0];
+        String test=myReporter.getCurrentTestName();
         if (test == null) {
           test="unknown";
         }
-        System.out.println(myBuildServerMessageFormat.formatTestFailure(test,fdbk.getMessage(),myBuildServerMessageFormat.escapeBuildMessage(new StringBuffer(String.valueOf(fdbk.getException())))));
+        Throwable thr=fdbk.getException();
+        String msg=fdbk.getMessage();
+        String details=(thr == null ? "(no details)" : String.valueOf(MpsWorker.extractStackTrace(thr)));
+        int eol=msg.indexOf("\n");
+        if (eol >= 0) {
+          details=msg.substring(eol + 1) + "\n" + details;
+          msg=msg.substring(0,eol);
+        }
+        myReporter.testFailed(test,msg,details);
       }
     }
   }
 ){
-    @Override public void setup(    IPropertiesPool ppool){
+    @Override public void setup(    IPropertiesPool ppool,    Iterable<ITarget> toExecute,    Iterable<? extends IResource> input){
+      super.setup(ppool,toExecute,input);
       Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>> makeparams=(Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>>)ppool.properties(new ITarget.Name("jetbrains.mps.lang.core.Make.make"),Object.class);
       makeparams._0(new _FunctionTypes._return_P1_E0<IFile,String>(){
         public IFile invoke(        String path){
@@ -83,6 +90,8 @@
         Tuples._1<UnitTestListener> testParams=(Tuples._1<UnitTestListener>)ppool.properties(new ITarget.Name("jetbrains.mps.build.gentest.Test.runTests"),Object.class);
         testParams._0(new TestGenerationWorker.MyUnitTestAdapter());
       }
+      myReporter.finishRun();
+      myReporter.startRun("Module cluster " + String.valueOf(count[0]++));
     }
   }
 ;
