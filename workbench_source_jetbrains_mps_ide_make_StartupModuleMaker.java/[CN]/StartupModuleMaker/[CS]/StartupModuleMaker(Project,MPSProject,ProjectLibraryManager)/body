@@ -1,28 +1,31 @@
 {
   super(project);
-  final ProgressIndicator[] indicator={ProgressManager.getInstance().getProgressIndicator()};
-  if (indicator[0] == null) {
-    indicator[0]=new EmptyProgressIndicator();
-  }
-  indicator[0].pushState();
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      ClassLoaderManager.getInstance().updateClassPath();
-      ModuleMaker maker=new ModuleMaker();
-      maker.make(new LinkedHashSet<IModule>(MPSModuleRepository.getInstance().getAllModules()),indicator[0]);
-    }
-  }
-);
-  StartupManager.getInstance(project).registerPreStartupActivity(new Runnable(){
-    public void run(){
-      ModelAccess.instance().runWriteAction(new Runnable(){
-        public void run(){
-          ClassLoaderManager.getInstance().reloadAll(indicator[0]);
-        }
+  final ProgressIndicator indicator=ProgressManager.getInstance().getProgressIndicator();
+  final ProgressMonitor monitor=indicator != null ? new ProgressMonitorAdapter(indicator) : new EmptyProgressMonitor();
+  monitor.start("Making modules",10);
+  try {
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        ClassLoaderManager.getInstance().updateClassPath();
+        monitor.advance(1);
+        ModuleMaker maker=new ModuleMaker();
+        maker.make(new LinkedHashSet<IModule>(MPSModuleRepository.getInstance().getAllModules()),monitor.subTask(9));
       }
-);
     }
-  }
 );
-  indicator[0].popState();
+    StartupManager.getInstance(project).registerPreStartupActivity(new Runnable(){
+      public void run(){
+        ModelAccess.instance().runWriteAction(new Runnable(){
+          public void run(){
+            ClassLoaderManager.getInstance().reloadAll(indicator != null ? new ProgressMonitorAdapter(indicator) : new EmptyProgressMonitor());
+          }
+        }
+);
+      }
+    }
+);
+  }
+  finally {
+    monitor.done();
+  }
 }
