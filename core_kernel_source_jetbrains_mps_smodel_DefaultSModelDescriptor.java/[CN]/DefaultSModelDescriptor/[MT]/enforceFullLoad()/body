@@ -1,21 +1,18 @@
 {
 synchronized (myFullLoadSync) {
-    if (mySModel.isLoading())     return;
+    if (myIsLoading)     return;
     if (getLoadingState() == ModelLoadingState.FULLY_LOADED)     return;
     runModelLoading(new Computable<ModelLoadResult>(){
       public ModelLoadResult compute(){
         SModel fullModel=load(ModelLoadingState.FULLY_LOADED).getModel();
         updateDiskTimestamp();
-        fullModel.setLoading(true);
-        try {
-          mySModel.setLoading(true);
-          new ModelLoader(mySModel,fullModel).update();
-          setLoadingState(ModelLoadingState.FULLY_LOADED);
-          fireModelStateChanged(ModelLoadingState.ROOTS_LOADED,ModelLoadingState.FULLY_LOADED);
-        }
-  finally {
-          mySModel.setLoading(false);
-        }
+        myIsLoading=true;
+        mySModel.setModelDescriptor(null);
+        new ModelLoader(mySModel,fullModel).update();
+        mySModel.setModelDescriptor(DefaultSModelDescriptor.this);
+        setLoadingState(ModelLoadingState.FULLY_LOADED);
+        fireModelStateChanged(ModelLoadingState.ROOTS_LOADED,ModelLoadingState.FULLY_LOADED);
+        myIsLoading=false;
         return null;
       }
     }
