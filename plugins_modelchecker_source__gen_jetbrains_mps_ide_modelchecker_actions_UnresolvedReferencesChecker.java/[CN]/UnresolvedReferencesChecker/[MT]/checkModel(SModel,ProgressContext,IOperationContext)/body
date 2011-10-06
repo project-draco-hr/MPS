@@ -1,5 +1,6 @@
 {
   List<SearchResult<ModelCheckerIssue>> results=ListSequence.fromList(new ArrayList<SearchResult<ModelCheckerIssue>>());
+  final IScope scope=model.getModelDescriptor().getModule().getScope();
   String title="Checking " + SModelOperations.getModelName(model) + " for unresolved references...";
   for (  SNode node : ListSequence.fromList(SModelOperations.getNodes(model,null))) {
     if (!(progressContext.checkAndUpdateIndicator(title))) {
@@ -13,6 +14,25 @@
         addIssue(results,node,"Unresolved reference: " + SLinkOperations.getResolveInfo(ref),ModelChecker.SEVERITY_ERROR,"unresolved reference",new IModelCheckerFix(){
           public boolean doFix(){
             return Resolver.resolve1(ref,operationContext);
+          }
+        }
+);
+      }
+      final SModelReference uid=ref.getTargetSModelReference();
+      if (uid == null) {
+        continue;
+      }
+      SModelDescriptor descriptor=GlobalScope.getInstance().getModelDescriptor(uid);
+      if (scope.getModelDescriptor(uid) == null && descriptor != null) {
+        addIssue(results,node,"Target module " + descriptor.getModule() + " should be imported",ModelChecker.SEVERITY_ERROR,"unresolved reference",new IModelCheckerFix(){
+          public boolean doFix(){
+            if (scope.getModelDescriptor(uid) == null && GlobalScope.getInstance().getModelDescriptor(uid) != null) {
+              SModelDescriptor sm=GlobalScope.getInstance().getModelDescriptor(uid);
+              check_xiru3y_a1a0a5a0a5a2a3a0(check_xiru3y_a0b0a0f0a0f0c0d0a(operationContext),sm);
+              ClassLoaderManager.getInstance().reloadAll(new EmptyProgressMonitor());
+              return true;
+            }
+            return false;
           }
         }
 );

@@ -1,6 +1,6 @@
 {
   Point point=dtde.getLocation();
-  TreePath treePath=myTree.getPathForLocation(point.x,point.y);
+  final TreePath treePath=myTree.getPathForLocation(point.x,point.y);
   if (treePath == null) {
     dtde.rejectDrop();
     return;
@@ -13,42 +13,42 @@
   Object source=null;
   try {
     source=dtde.getTransferable().getTransferData(myDataFlavor);
+    if (!(source instanceof List) || ((List)source).isEmpty()) {
+      dtde.rejectDrop();
+      return;
+    }
   }
- catch (  Throwable t) {
-    t.printStackTrace();
-  }
-  if (!(source instanceof List) || ((List)source).isEmpty()) {
+ catch (  UnsupportedFlavorException e) {
+    LOG.error(e);
     dtde.rejectDrop();
-    return;
   }
-  final List<Pair<SNode,String>> sourceNodes=(List<Pair<SNode,String>>)source;
-  SModelDescriptor targetModel=getTargetModel(treePath);
-  final String targetPackage=(getTargetVirtualPackage(treePath) == null) ? "" : getTargetVirtualPackage(treePath);
-  List<Pair<SNode,String>> nodeToMove=getNodesToMove(targetModel,targetPackage,sourceNodes);
-  if (nodeToMove.isEmpty()) {
+catch (  IOException e) {
+    LOG.error(e);
     dtde.rejectDrop();
-    return;
   }
+  dtde.acceptDrop(dtde.getDropAction());
+  final List<Pair<SNodePointer,String>> sourceNodes=(List<Pair<SNodePointer,String>>)source;
   Project project=MPSDataKeys.PROJECT.getData(DataManager.getInstance().getDataContext());
   JFrame frame=WindowManager.getInstance().getFrame(project);
-  String text=getConfirnLabel(sourceNodes,targetPackage);
+  final String targetPackage=(getTargetVirtualPackage(treePath) == null) ? "" : getTargetVirtualPackage(treePath);
+  String text=getConfirmLabel(sourceNodes.size(),targetPackage);
   int result=JOptionPane.showConfirmDialog(frame,text,"Move Nodes",JOptionPane.YES_NO_OPTION);
-  if (result == JOptionPane.YES_OPTION) {
-    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-      public void run(){
-        for (        Pair<SNode,String> sourceNode : sourceNodes) {
-          String fullTargetPack=getFullTargetPack(targetPackage,sourceNode.o2);
-          sourceNode.o1.setProperty(SModelTreeNode.PACK,fullTargetPack);
-          if (SNodeOperations.isInstanceOf(sourceNode.o1,SNodeUtil.concept_AbstractConceptDeclaration)) {
-            List<SNode> allAspects=SNodeUtil.findAllAspects(sourceNode.o1);
-            for (            SNode aspect : allAspects) {
-              aspect.setProperty(SModelTreeNode.PACK,fullTargetPack);
-            }
+  if (result != JOptionPane.YES_OPTION)   return;
+  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+    public void run(){
+      SModelDescriptor targetModel=getTargetModel(treePath);
+      if (targetModel == null)       return;
+      for (      Pair<SNode,String> sourceNode : getNodesToMove(targetModel,targetPackage,sourceNodes)) {
+        String fullTargetPack=getFullTargetPack(targetPackage,sourceNode.o2);
+        sourceNode.o1.setProperty(SModelTreeNode.PACK,fullTargetPack);
+        if (SNodeOperations.isInstanceOf(sourceNode.o1,SNodeUtil.concept_AbstractConceptDeclaration)) {
+          List<SNode> allAspects=SNodeUtil.findAllAspects(sourceNode.o1);
+          for (          SNode aspect : allAspects) {
+            aspect.setProperty(SModelTreeNode.PACK,fullTargetPack);
           }
         }
       }
     }
-);
   }
-  dtde.acceptDrop(dtde.getDropAction());
+);
 }

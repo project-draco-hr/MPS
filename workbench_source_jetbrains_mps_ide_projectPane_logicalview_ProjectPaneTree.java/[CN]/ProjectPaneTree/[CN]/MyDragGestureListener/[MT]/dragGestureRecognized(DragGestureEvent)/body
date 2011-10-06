@@ -4,39 +4,39 @@
   if (projectView == null)   return;
   final AbstractProjectViewPane currentPane=projectView.getCurrentProjectViewPane();
   if (!(currentPane instanceof BaseLogicalViewProjectPane))   return;
-  List<Pair<SNode,String>> result=new ArrayList<Pair<SNode,String>>();
-  for (  SNode node : myProjectPane.getSelectedSNodes()) {
-    result.add(new Pair(node,""));
-  }
-  SModelDescriptor contextDescriptor=myProjectPane.getContextModel();
-  if (contextDescriptor != null) {
-    for (    PackageNode treeNode : myProjectPane.getSelectedTreeNodes(PackageNode.class)) {
-      String searchedPack=treeNode.getFullPackage();
-      if (treeNode.getChildCount() == 0 || searchedPack == null)       continue;
-      for (      final SNode node : contextDescriptor.getSModel().roots()) {
-        String nodePack=ModelAccess.instance().runReadAction(new Computable<String>(){
-          public String compute(){
-            return node.getProperty(SNodeUtil.property_BaseConcept_virtualPackage);
+  final List<Pair<SNodePointer,String>> result=new ArrayList<Pair<SNodePointer,String>>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      SNode node : myProjectPane.getSelectedSNodes()) {
+        result.add(new Pair(new SNodePointer(node),""));
+      }
+      SModelDescriptor contextDescriptor=myProjectPane.getContextModel();
+      if (contextDescriptor != null) {
+        for (        PackageNode treeNode : myProjectPane.getSelectedTreeNodes(PackageNode.class)) {
+          String searchedPack=treeNode.getFullPackage();
+          if (treeNode.getChildCount() == 0 || searchedPack == null)           continue;
+          for (          final SNode node : contextDescriptor.getSModel().roots()) {
+            String nodePack=node.getProperty(SNodeUtil.property_BaseConcept_virtualPackage);
+            if (nodePack == null)             continue;
+            if (!nodePack.startsWith(searchedPack))             continue;
+            StringBuilder basePack=new StringBuilder();
+            String firstPart=treeNode.getPackage();
+            String secondPart="";
+            if (nodePack.startsWith(searchedPack + ".")) {
+              secondPart=nodePack.replaceFirst(searchedPack + ".","");
+            }
+            basePack.append(firstPart);
+            if (!firstPart.isEmpty() && !secondPart.isEmpty()) {
+              basePack.append(".");
+            }
+            basePack.append(secondPart);
+            result.add(new Pair(new SNodePointer(node),basePack.toString()));
           }
         }
-);
-        if (nodePack == null)         continue;
-        if (!nodePack.startsWith(searchedPack))         continue;
-        StringBuilder basePack=new StringBuilder();
-        String firstPart=treeNode.getPackage();
-        String secondPart="";
-        if (nodePack.startsWith(searchedPack + ".")) {
-          secondPart=nodePack.replaceFirst(searchedPack + ".","");
-        }
-        basePack.append(firstPart);
-        if (!firstPart.isEmpty() && !secondPart.isEmpty()) {
-          basePack.append(".");
-        }
-        basePack.append(secondPart);
-        result.add(new Pair(node,basePack.toString()));
       }
     }
   }
+);
   try {
     dge.startDrag(DragSource.DefaultMoveNoDrop,new MyTransferable(result),new MyDragSourceListener());
   }
