@@ -5,8 +5,11 @@
   options.getGenerationTracer().startTracing();
   ModelAccess.instance().requireWrite(new Runnable(){
     public void run(){
-      fireBeforeGeneration(inputModels,options,invocationContext);
       for (      SModelDescriptor d : inputModels) {
+        if (d instanceof DefaultSModelDescriptor && ((DefaultSModelDescriptor)d).needsReloading()) {
+          ((DefaultSModelDescriptor)d).reloadFromDisk();
+          LOG.info("Model " + d + " reloaded from disk.");
+        }
         transientModelsComponent.createModule(d.getModule());
       }
     }
@@ -36,7 +39,6 @@
     try {
       ModelAccess.instance().requireWrite(new Runnable(){
         public void run(){
-          fireModelsGenerated(Collections.unmodifiableList(inputModels),result[0]);
         }
       }
 );
@@ -48,7 +50,6 @@
   options.getGenerationTracer().finishTracing();
   ModelAccess.instance().requireWrite(new Runnable(){
     public void run(){
-      fireAfterGeneration(inputModels,options,invocationContext);
       transientModelsComponent.publishAll();
       CleanupManager.getInstance().cleanup();
     }
