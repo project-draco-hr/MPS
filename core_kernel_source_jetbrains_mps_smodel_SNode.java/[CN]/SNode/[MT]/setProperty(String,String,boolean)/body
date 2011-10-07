@@ -5,7 +5,7 @@
   if (usePropertySetter) {
     Set<Pair<SNode,String>> threadSet=ourPropertySettersInProgress.get();
     Pair<SNode,String> pair=new Pair<SNode,String>(this,propertyName);
-    if (!threadSet.contains(pair) && !myModel.isLoading()) {
+    if (!threadSet.contains(pair) && myModel.canFireEvent()) {
       PropertyConstraintsDescriptor descriptor=ConceptRegistry.getInstance().getConstraintsDescriptor(this.getConceptFqName()).getProperty(propertyName);
       threadSet.add(pair);
       try {
@@ -35,10 +35,10 @@
  else {
     myProperties[index + 1]=propertyValue;
   }
-  if (UndoHelper.getInstance().needRegisterUndo(getModel())) {
-    UndoHelper.getInstance().addUndoableAction(new PropertyChangeUndoableAction(this,propertyName,oldValue,propertyValue));
-  }
-  if (ModelChange.needFireEvents(getModel(),this)) {
-    getModel().firePropertyChangedEvent(this,propertyName,oldValue,propertyValue);
+  SModel model=getModel();
+  if (model == null)   return;
+  model.performUndoableAction(new PropertyChangeUndoableAction(this,propertyName,oldValue,propertyValue));
+  if (ModelChange.needFireEvents(model,this)) {
+    model.firePropertyChangedEvent(this,propertyName,oldValue,propertyValue);
   }
 }
