@@ -1,4 +1,5 @@
 {
+  ProgressMonitor monitor=new ProgressMonitorAdapter(indicator);
   IHolder objectHolder=searchQuery.getObjectHolder();
   IOperationContext operationContext;
   List<SModelDescriptor> modelDescriptors;
@@ -17,38 +18,38 @@
  else {
     throw new IllegalArgumentException();
   }
-  ProgressContext progressContext=new ProgressContext(indicator,ListSequence.fromList(modelDescriptors).select(new ISelector<SModelDescriptor,String>(){
-    public String select(    SModelDescriptor md){
-      return getTaskName(md);
+  int work=((modules != null ? ListSequence.fromList(modules).count() : 0)) + ListSequence.fromList(modelDescriptors).count() + 1;
+  monitor.start("Checking",work);
+  try {
+    ModuleChecker moduleChecker=null;
+    if (modules != null) {
+      moduleChecker=new ModuleChecker();
+      for (      IModule module : ListSequence.fromList(modules)) {
+        moduleChecker.checkModule(module,monitor.subTask(1));
+        if (monitor.isCanceled()) {
+          break;
+        }
+      }
     }
-  }
-));
-  ModuleChecker moduleChecker=null;
-  if (modules != null) {
-    moduleChecker=new ModuleChecker(progressContext);
-    indicator.setIndeterminate(true);
-    for (    IModule module : ListSequence.fromList(modules)) {
-      moduleChecker.checkModule(module);
-      if (moduleChecker.isCancelled()) {
+    monitor.advance(0);
+    ModelChecker modelChecker;
+    if (moduleChecker != null) {
+      modelChecker=new ModelChecker(operationContext,moduleChecker.getSearchResults());
+    }
+ else {
+      modelChecker=new ModelChecker(operationContext);
+    }
+    modelChecker.setSpecificCheckers(getSpecificCheckers());
+    monitor.advance(1);
+    for (    SModelDescriptor modelDescriptor : ListSequence.fromList(modelDescriptors)) {
+      modelChecker.checkModel(modelDescriptor,monitor.subTask(1));
+      if (monitor.isCanceled()) {
         break;
       }
     }
+    return modelChecker.getSearchResults();
   }
-  ModelChecker modelChecker;
-  if (moduleChecker != null) {
-    modelChecker=new ModelChecker(operationContext,progressContext,moduleChecker.getSearchResults());
+  finally {
+    monitor.done();
   }
- else {
-    modelChecker=new ModelChecker(operationContext,progressContext);
-  }
-  modelChecker.setSpecificCheckers(getSpecificCheckers());
-  for (  SModelDescriptor modelDescriptor : ListSequence.fromList(modelDescriptors)) {
-    long modelStartTime=System.currentTimeMillis();
-    modelChecker.checkModel(modelDescriptor);
-    if (modelChecker.isCancelled()) {
-      break;
-    }
-    progressContext.saveEstimatedTime(modelStartTime);
-  }
-  return modelChecker.getSearchResults();
 }
