@@ -1,12 +1,11 @@
 {
-  System.err.println(CheckTestStateListener.class.getClassLoader());
   final Wrappers._T<ITestNodeWrapper> pointer=new Wrappers._T<ITestNodeWrapper>();
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
       SModel model=SModelRepository.getInstance().getModelDescriptor(new SModelReference("jetbrains.mps.execution.impl.configurations.tests.commands.sandbox","tests")).getSModel();
       SNode mainNode=ListSequence.fromList(SModelOperations.getRoots(model,"jetbrains.mps.lang.core.structure.INamedConcept")).findFirst(new IWhereFilter<SNode>(){
         public boolean accept(        SNode it){
-          return eq_16es9m_a0a0a0a0a0a1a0a0a0a3a0a(SPropertyOperations.getString(it,"name"),SimpleBTestCase_Test.class.getSimpleName());
+          return eq_16es9m_a0a0a0a0a0a1a0a0a0a1a0a(SPropertyOperations.getString(it,"name"),SimpleBTestCase_Test.class.getSimpleName());
         }
       }
 );
@@ -18,19 +17,15 @@
   ProcessHandler process=new Junit_Command().createProcess(nodeWrappers);
   TestRunState runState=new TestRunState(nodeWrappers);
   CheckTestStateListener checkListener=new CheckTestStateListener(nodeWrappers,ListSequence.fromList(new ArrayList<ITestNodeWrapper>()));
-  System.err.println("Check classloader " + checkListener.getClass().getClassLoader());
-  try {
-    System.err.println("TestEvent classloader " + checkListener.getClass().getClassLoader().loadClass(TestEvent.class.getName()).getClassLoader());
-  }
- catch (  ClassNotFoundException e) {
-  }
-  System.err.println("TestEvent classloader 2" + TestEvent.class.getClassLoader());
   runState.addListener(checkListener);
   TestEventsDispatcher eventsDispatcher=new TestEventsDispatcher(runState);
   OutputRedirector.redirect(process,new UnitTestProcessListener(eventsDispatcher));
-  int exitcode=ProcessHandlerBuilder.startAndWait(process);
-  if (exitcode != 0) {
+  int exitcode=ProcessHandlerBuilder.startAndWait(process,3000000);
+  if (exitcode > 0) {
     Assert.fail("Exit code is not 0 but " + exitcode);
+  }
+ else   if (exitcode < 0) {
+    Assert.fail("Process running too long.");
   }
   if (StringUtils.isNotEmpty(checkListener.getMessages())) {
     Assert.fail(checkListener.getMessages());
