@@ -1,4 +1,7 @@
 {
+  if (!(PluginUtil.isGitPluginEnabled())) {
+    return AbstractInstaller.State.INSTALLED;
+  }
   if (!(myConfigFile.exists())) {
     if (dryRun) {
       return AbstractInstaller.State.NOT_INSTALLED;
@@ -21,28 +24,43 @@
   if (createScriptResult != AbstractInstaller.State.INSTALLED) {
     return createScriptResult;
   }
-  ListSequence.fromList(newConfigLines).addElement(String.format("\tdriver = \"\\\"%s\\\" %%O %%A %%B %%L\"",myScriptFile.getAbsolutePath().replace("\\","\\\\")));
-  ListSequence.fromList(newConfigLines).addElement("");
+  String scriptPath=myScriptFile.getAbsolutePath();
+  if (SystemInfo.isWindows) {
+    scriptPath=CommandLineGenerator.adaptPathForMsysGit(scriptPath);
+  }
+  ListSequence.fromList(newConfigLines).addElement(String.format("\tdriver = \"\\\"%s\\\" %%O %%A %%B %%L\"",scriptPath));
   List<String> configLines=StringsIO.readLines(myConfigFile);
   int sectionStart=ListSequence.fromList(configLines).indexOf(ListSequence.fromList(configLines).findFirst(new IWhereFilter<String>(){
     public boolean accept(    String line){
-      return line.matches("\\s*\\[merge\\s+\"mps\"\\]\\s*");
+      return line.trim().matches("\\[merge\\s+\"mps\"\\]");
     }
   }
 ));
   if (sectionStart != -1) {
-    Iterable<String> skipped=ListSequence.fromList(configLines).skip(sectionStart);
+    int toSkip=sectionStart + 1;
+    Iterable<String> skipped=ListSequence.fromList(configLines).skip(toSkip);
     int sectionEnd=Sequence.fromIterable(skipped).indexOf(Sequence.fromIterable(skipped).findFirst(new IWhereFilter<String>(){
       public boolean accept(      String line){
-        return line.trim().isEmpty();
+        return line.trim().startsWith("[");
       }
     }
-)) + sectionStart + 1;
-    List<String> section=ListSequence.fromList(configLines).page(sectionStart,sectionEnd).toListSequence();
+));
+    if (sectionEnd == -1) {
+      sectionEnd=ListSequence.fromList(configLines).count();
+    }
+ else {
+      sectionEnd=sectionEnd + toSkip;
+    }
+    List<String> section=ListSequence.fromList(configLines).page(sectionStart,sectionEnd).where(new IWhereFilter<String>(){
+      public boolean accept(      String line){
+        return !(line.trim().isEmpty());
+      }
+    }
+).toListSequence();
     boolean equal=(int)ListSequence.fromList(section).count() == (int)ListSequence.fromList(newConfigLines).count();
     if (equal) {
       for (int i=0; i < ListSequence.fromList(section).count(); i++) {
-        if (neq_btx4zt_a0a0a0e0s0a(ListSequence.fromList(section).getElement(i),ListSequence.fromList(newConfigLines).getElement(i))) {
+        if (neq_btx4zt_a0a0a0g0u0a(ListSequence.fromList(section).getElement(i),ListSequence.fromList(newConfigLines).getElement(i))) {
           equal=false;
           break;
         }
