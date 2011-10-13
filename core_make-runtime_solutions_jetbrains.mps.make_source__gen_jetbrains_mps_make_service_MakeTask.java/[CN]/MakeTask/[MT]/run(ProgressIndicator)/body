@@ -1,33 +1,10 @@
 {
   if (myState.compareAndSet(MakeTask.TaskState.NOT_STARTED,MakeTask.TaskState.RUNNING)) {
-    ThreadGroup tg=new ThreadGroup("Make Thread Group");
-    Thread makeThread=new Thread(tg,new Runnable(){
-      public void run(){
-        MakeTask.RelayingLoggingHandler rlh=new MakeTask.RelayingLoggingHandler(myMessageHandler);
-        try {
-          rlh.startRelaying();
-          doRun(pi);
-        }
-  finally {
-          try {
-            reconcile();
-          }
- catch (          RuntimeException ex) {
-            MakeTask.LOG.debug("Unexpected exception",ex);
-          }
-          rlh.stopRelaying();
-        }
-      }
+    if (ThreadUtils.isEventDispatchThread()) {
+      doRun(pi);
     }
-);
-    makeThread.start();
-    do {
-      try {
-        makeThread.join();
-      }
- catch (      InterruptedException ie) {
-      }
+ else {
+      this.spawnMakeThreadThenDoRun(pi);
     }
- while (makeThread.isAlive());
   }
 }
