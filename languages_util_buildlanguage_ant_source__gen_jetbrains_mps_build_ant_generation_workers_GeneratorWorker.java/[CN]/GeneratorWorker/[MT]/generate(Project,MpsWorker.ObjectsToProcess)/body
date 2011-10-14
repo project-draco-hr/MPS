@@ -1,0 +1,43 @@
+{
+  StringBuffer s=new StringBuffer("Generating:");
+  for (  MPSProject p : go.getProjects()) {
+    s.append("\n    ");
+    s.append(p);
+  }
+  for (  IModule m : go.getModules()) {
+    s.append("\n    ");
+    s.append(m);
+  }
+  for (  SModelDescriptor m : go.getModels()) {
+    s.append("\n    ");
+    s.append(m);
+  }
+  info(s.toString());
+  final ProjectOperationContext ctx=new ProjectOperationContext(project);
+  final Iterable<IMResource> resources=Sequence.fromIterable(collectResources(ctx,go)).toListSequence();
+  ModelAccess.instance().flushEventQueue();
+  final Wrappers._T<Future<IResult>> res=new Wrappers._T<Future<IResult>>();
+  ThreadUtils.runInUIThreadAndWait(new Runnable(){
+    public void run(){
+      res.value=new BuildMakeService(ctx,myMessageHandler).make(resources);
+    }
+  }
+);
+  try {
+    if (!(res.value.get().isSucessful())) {
+      myErrors.add("Make was not successful");
+    }
+  }
+ catch (  InterruptedException e) {
+    myErrors.add(e.toString());
+  }
+catch (  ExecutionException e) {
+    myErrors.add(e.toString());
+  }
+  ModelAccess.instance().flushEventQueue();
+  ApplicationManager.getApplication().invokeAndWait(new Runnable(){
+    public void run(){
+    }
+  }
+,ModalityState.defaultModalityState());
+}
