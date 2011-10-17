@@ -1,15 +1,20 @@
 {
   if (myState.compareAndSet(MakeTask.TaskState.NOT_STARTED,MakeTask.TaskState.RUNNING)) {
-    try {
-      doRun(pi);
-    }
-  finally {
+    if (ThreadUtils.isEventDispatchThread()) {
       try {
-        reconcile();
+        doRun(pi);
       }
- catch (      RuntimeException ex) {
-        LOG.debug("Unexpected exception",ex);
+  finally {
+        try {
+          reconcile();
+        }
+ catch (        RuntimeException ex) {
+          LOG.debug("Unexpected exception",ex);
+        }
       }
+    }
+ else {
+      this.spawnMakeThreadThenDoRunRelayingLog(pi);
     }
   }
 }
