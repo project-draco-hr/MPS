@@ -1,0 +1,46 @@
+{
+  aboutToStart();
+  final int clsize=Sequence.fromIterable(this.myClInput).count();
+  if (clsize == 0) {
+    return;
+  }
+  monitor.start("",clsize);
+  try {
+    int idx=0;
+    Iterator<IScript> scit=Sequence.fromIterable(myScripts).iterator();
+    Iterator<? extends Iterable<IResource>> clit=Sequence.fromIterable(myClInput).iterator();
+    while (scit.hasNext() && clit.hasNext()) {
+      Iterable<IResource> cl=clit.next();
+      IScript scr=scit.next();
+      if (!(scr.isValid())) {
+        String msg=myScrName + " failed";
+        myMessageHandler.handle(new Message(MessageKind.ERROR,msg + ". Invalid script."));
+        displayInfo(msg);
+        this.myResult=new IResult.FAILURE(null);
+        break;
+      }
+      if (InternalFlag.isInternalMode()) {
+        myMessageHandler.handle(new Message(MessageKind.INFORMATION,"Modules cluster " + (idx + 1) + "/"+ clsize+ " ["+ IterableUtils.join(Sequence.fromIterable(cl).select(new ISelector<IResource,String>(){
+          public String select(          IResource r){
+            return ((IResource)r).describe();
+          }
+        }
+),", ")+ "]"));
+      }
+      monitor.step((idx + 1) + "/" + clsize+ " "+ IterableUtils.join(Sequence.fromIterable(cl).select(new ISelector<IResource,String>(){
+        public String select(        IResource r){
+          return ((IResource)r).describe();
+        }
+      }
+),","));
+      this.myResult=scr.execute(this.myController,cl,monitor.subTask(1));
+      if (!(this.myResult.isSucessful()) || monitor.isCanceled()) {
+        break;
+      }
+      idx++;
+    }
+  }
+  finally {
+    monitor.done();
+  }
+}
