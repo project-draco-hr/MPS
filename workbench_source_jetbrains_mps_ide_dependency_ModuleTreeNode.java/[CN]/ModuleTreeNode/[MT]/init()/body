@@ -2,32 +2,14 @@
   if (myInitialized) {
     return;
   }
-  TextTreeNode forwardDependencies=new TextTreeNode("Forward");
-  TextTreeNode dependOn=new TextTreeNode("Depend On:");
-  addModules(dependOn,new ArrayList(myModule.getDependenciesManager().getAllVisibleModules()));
-  forwardDependencies.add(dependOn);
-  TextTreeNode used=new TextTreeNode("Uses:");
-  addModules(used,ModuleUtil.refsToLanguages(myModule.getUsedLanguagesReferences()));
-  forwardDependencies.add(used);
-  if (myModule instanceof Language) {
-    TextTreeNode extend=new TextTreeNode("Extends:");
-    addModules(extend,((Language)myModule).getExtendedLanguages());
-    forwardDependencies.add(extend);
+  setIcon(IconManager.getIconFor(myModule));
+  ModuleDependenciesManager manager=new ModuleDependenciesManager<AbstractModule>((AbstractModule)myModule);
+  Set<IModule> dependencies=new LinkedHashSet<IModule>();
+  manager.collectVisibleModules(dependencies,false,myTracer);
+  List<IModule> dependenciesList=new ArrayList<IModule>(dependencies);
+  Collections.sort(dependenciesList,new ModulesComparator());
+  for (  IModule depends : dependenciesList) {
+    add(new DependencyTreeLeafNode(depends,getOperationContext()));
   }
-  add(forwardDependencies);
-  TextTreeNode backwardDependencies=new TextTreeNode("Backward");
-  TextTreeNode dependent=new TextTreeNode("Dependent:");
-  addModules(dependent,getDependents(myModule));
-  backwardDependencies.add(dependent);
-  if (myModule instanceof Language) {
-    Language lang=(Language)myModule;
-    TextTreeNode usedBy=new TextTreeNode("Used By:");
-    addModules(usedBy,getUsedBy(lang));
-    backwardDependencies.add(usedBy);
-    TextTreeNode extendedBy=new TextTreeNode("Extended By:");
-    addModules(extendedBy,getExtendedBy(lang));
-    backwardDependencies.add(extendedBy);
-  }
-  add(backwardDependencies);
   myInitialized=true;
 }
