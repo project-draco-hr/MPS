@@ -2,26 +2,17 @@
   InputStream in=null;
   try {
     in=file.openInputStream();
-    InputSource source=new InputSource(new InputStreamReader(in,"UTF-8"));
+    InputSource source=new InputSource(new InputStreamReader(in,FileUtil.DEFAULT_CHARSET));
     return readModel(header,source,state);
   }
- catch (  Throwable t) {
-    SModelReference ref=header.getModelReference();
-    if (ref == null) {
-      ref=SModelReference.fromPath(file.getPath());
-    }
-    LOG.error("Error while loading model from file: " + file.getPath(),t);
-    StubModel model=new StubModel(ref);
-    return new ModelLoadResult(model,ModelLoadingState.NOT_LOADED);
+ catch (  UnsupportedEncodingException e) {
+    LOG.error(e);
+    throw new ModelReadException("UTF-8 is not supported",e,header);
+  }
+catch (  IOException e) {
+    throw new ModelReadException("Couldn't load model: " + e.getMessage(),e,header);
   }
  finally {
-    if (in != null) {
-      try {
-        in.close();
-      }
- catch (      IOException e) {
-        LOG.error(e);
-      }
-    }
+    FileUtil.closeFileSafe(in);
   }
 }

@@ -1,52 +1,17 @@
 {
-  DefaultHandler handler=new DefaultHandler(){
-    public void startElement(    String uri,    String localName,    String qName,    Attributes attributes) throws SAXException {
-      if (MODEL.equals(qName)) {
-        String uid=attributes.getValue(MODEL_UID);
-        if (uid != null) {
-          result.setUID(uid);
-        }
-        String version=attributes.getValue(SModelHeader.VERSION);
-        if (version != null) {
-          try {
-            result.setVersion(Integer.parseInt(version));
-          }
- catch (          NumberFormatException ex) {
-          }
-        }
-        String doNotGenerate=attributes.getValue(SModelHeader.DO_NOT_GENERATE);
-        if (doNotGenerate != null) {
-          result.setDoNotGenerate(Boolean.parseBoolean(doNotGenerate));
-        }
-      }
- else       if (PERSISTENCE.equals(qName)) {
-        String s=attributes.getValue(PERSISTENCE_VERSION);
-        if (s != null) {
-          try {
-            result.setPersistenceVersion(Integer.parseInt(s));
-          }
- catch (          NumberFormatException ex) {
-          }
-        }
-      }
- else {
-        throw new BreakParseSAXException();
-      }
-    }
-    public void endElement(    String uri,    String localName,    String qName) throws SAXException {
-      throw new BreakParseSAXException();
-    }
-  }
-;
   try {
-    SAXParser parser=JDOMUtil.createSAXParser();
-    parser.parse(source,handler);
+    JDOMUtil.createSAXParser().parse(source,new MyDescriptorHandler(result));
   }
  catch (  BreakParseSAXException ex) {
   }
 catch (  ParserConfigurationException e) {
+    LOG.error(e);
+    throw new ModelReadException("Couldn't read model descriptor: " + e.getMessage(),e);
   }
-catch (  Throwable t) {
-    LOG.error(t);
+catch (  SAXException e) {
+    throw new ModelReadException("Couldn't read model descriptor: " + e.getMessage(),e);
+  }
+catch (  IOException e) {
+    throw new ModelReadException("Couldn't read model descriptor: " + e.getMessage(),e);
   }
 }

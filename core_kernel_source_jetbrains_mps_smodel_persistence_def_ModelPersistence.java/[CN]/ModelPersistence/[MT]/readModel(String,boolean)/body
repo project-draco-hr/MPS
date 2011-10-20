@@ -1,14 +1,25 @@
 {
-  final SModelHeader header=loadDescriptor(new InputSource(new StringReader(content))).getHeader();
+  final SModelHeader header;
+  try {
+    header=loadDescriptor(new InputSource(new StringReader(content))).getHeader();
+  }
+ catch (  ModelReadException e) {
+    return null;
+  }
   if (header.getUID() == null) {
     return null;
   }
   final ModelLoadingState state=onlyRoots ? ModelLoadingState.ROOTS_LOADED : ModelLoadingState.FULLY_LOADED;
   ModelLoadResult result=ModelAccess.instance().runReadAction(new Computable<ModelLoadResult>(){
     @Override public ModelLoadResult compute(){
-      return readModel(header,new InputSource(new StringReader(content)),state);
+      try {
+        return readModel(header,new InputSource(new StringReader(content)),state);
+      }
+ catch (      ModelReadException e) {
+        return null;
+      }
     }
   }
 );
-  return result.getState() != state ? null : result.getModel();
+  return result == null || result.getState() != state ? null : result.getModel();
 }
