@@ -4,7 +4,7 @@
     AbstractVcs vcs=ProjectLevelVcsManager.getInstance(project).getVcsFor(file);
     final VcsRevisionNumber revisionNumber=vcs.getDiffProvider().getCurrentRevision(file);
     ContentRevision content=vcs.getDiffProvider().createFileContent(revisionNumber,file);
-    final SModel oldModel=VcsActionsHelper.loadModel(content.getContent(),model.getModelDescriptor());
+    final SModel oldModel=ModelPersistence.readModel(content.getContent(),false);
     if (ModelDiffTool.isNewDiffEnabled()) {
       final Wrappers._T<ModelDifferenceDialog> modelDialog=new Wrappers._T<ModelDifferenceDialog>();
       final Wrappers._T<SNodeId> id=new Wrappers._T<SNodeId>();
@@ -29,8 +29,12 @@
     }
   }
  catch (  VcsException e) {
-    if (log.isErrorEnabled()) {
-      log.error("",e);
+    if (log.isWarnEnabled()) {
+      log.warn("",e);
     }
+    Messages.showErrorDialog(project,"Can't show difference due to the following error: " + e.getMessage(),"Error");
+  }
+catch (  ModelReadException e) {
+    Messages.showErrorDialog(project,"Can't load previous version: " + e.getMessage(),"Error");
   }
 }
