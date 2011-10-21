@@ -8,25 +8,11 @@
     String path=PathManager.getHomePath() + NameUtil.pathFromNamespace(".lib.") + "tools.jar";
     classpaths.add(ClassPathFactory.getInstance().createFromPath(path,"AbstractEvaluationModel"));
     final String fullClassName=this.myAuxModel.getLongName() + "." + AbstractEvaluationModel.EVALUATOR_NAME;
-    InMemoryJavaGenerationHandler handler=new AbstractEvaluationModel.MyInMemoryJavaGenerationHandler(false,true,classpaths);
+    InMemoryJavaGenerationHandler handler=new MyInMemoryJavaGenerationHandler(false,true,classpaths,myGenerationListeners);
     Project ideaProject=this.myAuxModule.getMPSProject().getProject();
     DefaultMessageHandler messageHandler=new DefaultMessageHandler(ideaProject);
     ProgressWindow progressWindow=new ProgressWindow(false,ideaProject);
-    boolean successful=GenerationFacade.generateModels(myContext.getProject(),Collections.singletonList((SModelDescriptor)myAuxModel),myContext,handler,new ProgressMonitorAdapter(progressWindow),messageHandler,GenerationOptions.getDefaults().incremental(new IncrementalGenerationStrategy(){
-      public Map<String,String> getModelHashes(      SModelDescriptor p0,      IOperationContext p1){
-        return Collections.emptyMap();
-      }
-      public GenerationCacheContainer getContainer(){
-        return null;
-      }
-      public GenerationDependencies getDependencies(      SModelDescriptor p0){
-        return null;
-      }
-      public boolean isIncrementalEnabled(){
-        return false;
-      }
-    }
-).saveTransientModels(IS_DEVELOPER_MODE).rebuildAll(false).reporting(false,false,false,0).create(),myContext.getProject().getComponent(TransientModelsComponent.class));
+    boolean successful=GenerationFacade.generateModels(myContext.getProject(),Collections.singletonList((SModelDescriptor)myAuxModel),myContext,handler,new ProgressMonitorAdapter(progressWindow),messageHandler,GenerationOptions.getDefaults().incremental(new AbstractEvaluationModel.MyIncrementalGenerationStrategy()).saveTransientModels(IS_DEVELOPER_MODE).rebuildAll(false).reporting(false,false,false,0).create(),myContext.getProject().getComponent(TransientModelsComponent.class));
     Disposer.dispose(progressWindow);
     String source=handler.getSources().get(fullClassName);
     if (successful && StringUtils.isNotEmpty(source)) {
