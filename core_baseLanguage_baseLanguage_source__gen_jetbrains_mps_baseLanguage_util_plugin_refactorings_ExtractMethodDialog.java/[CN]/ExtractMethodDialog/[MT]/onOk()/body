@@ -5,35 +5,19 @@
     JOptionPane.showMessageDialog(this,"Can't refactor. See errors.","Can't perform refactoring",JOptionPane.ERROR_MESSAGE);
   }
  else {
-    final Wrappers._T<SNode> staticTarget=new Wrappers._T<SNode>();
-    final Wrappers._T<SModel> refactoringModel=new Wrappers._T<SModel>(null);
-    if (this.myParameters.getAnalyzer().shouldChooseOuterContainer()) {
-      final Wrappers._T<SModelDescriptor> model=new Wrappers._T<SModelDescriptor>();
-      ModelAccess.instance().runReadAction(new Runnable(){
-        public void run(){
-          refactoringModel.value=SNodeOperations.getModel(ListSequence.fromList(ExtractMethodDialog.this.myParameters.getNodesToRefactor()).first());
-          model.value=refactoringModel.value.getModelDescriptor();
-        }
-      }
-);
-      staticTarget.value=BLDialogs.showStaticContainerChooser(this.myContext.getOperationContext(),model.value);
-      if (staticTarget.value == null) {
-        return;
-      }
-      ModelAccess.instance().runReadAction(new Runnable(){
-        public void run(){
-          ExtractMethodDialog.this.myRefactoring.setStaticContainer(staticTarget.value);
-        }
-      }
-);
+    if ((this.myStaticTarget != null) && !(this.myExtractIntoCurrentContainer)) {
+      this.setStaticContainer();
+    }
+ else     if (this.myParameters.getAnalyzer().shouldChooseOuterContainer()) {
+      chooseStaticContainer();
     }
     ModelAccess.instance().runWriteActionInCommand(new Runnable(){
       public void run(){
         result.value=ExtractMethodDialog.this.myRefactoring.doRefactor();
         ExtractMethodDialog.this.myContext.select(result.value);
-        if (refactoringModel.value != null) {
-          SModelReference ref=SNodeOperations.getModel(staticTarget.value).getSModelReference();
-          refactoringModel.value.addModelImport(ref,false);
+        if ((myRefactoringModel != null) && !(ExtractMethodDialog.this.myExtractIntoCurrentContainer)) {
+          SModelReference ref=SNodeOperations.getModel(myStaticTarget).getSModelReference();
+          myRefactoringModel.addModelImport(ref,false);
         }
       }
     }
