@@ -1,0 +1,42 @@
+{
+  final VirtualFile file=VirtualFileUtils.getVirtualFile(modelFile);
+  if (file == null) {
+    if (log.isErrorEnabled()) {
+      log.error("",new AssertionError());
+    }
+  }
+  final BaseDialog dialog=ModelAccess.instance().runReadAction(new Computable<BaseDialog>(){
+    public BaseDialog compute(){
+      SModelDescriptor modelDescriptor=diskModel.getModelDescriptor();
+      if (modelDescriptor == null) {
+        modelDescriptor=memoryModel.getModelDescriptor();
+        if (modelDescriptor == null) {
+          modelDescriptor=SModelRepository.getInstance().getModelDescriptor(diskModel.getSModelFqName());
+        }
+      }
+      IOperationContext context;
+      if (modelDescriptor == null) {
+        context=new GlobalOperationContext();
+      }
+ else {
+        context=new ModuleContext(modelDescriptor.getModule(),ProjectHelper.toMPSProject(project));
+      }
+      JFrame frame=WindowManager.getInstance().getFrame(project);
+      if (ModelDiffTool.isNewDiffEnabled()) {
+        return new ModelDifferenceDialog(diskModel,memoryModel,new SimpleDiffRequest(project,"Filesystem version (Read-Only)","Memory Version"));
+      }
+ else {
+        return new OldModelDifferenceDialog(context,frame,diskModel,memoryModel,"Disk Memory Diff",true,new String[]{"Filesystem version (Read-Only)","Memory Version"});
+      }
+    }
+  }
+);
+  dialog.showDialog();
+  SwingUtilities.invokeLater(new Runnable(){
+    public void run(){
+      dialog.toFront();
+    }
+  }
+);
+  return true;
+}
