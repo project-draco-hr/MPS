@@ -8,24 +8,11 @@
   ModelLoadResult result;
   try {
     result=ModelPersistence.readModel(dsm.getDescriptorSModelHeader(),dsm.getModelFile(),state);
-    if (result.getState() == ModelLoadingState.NOT_LOADED) {
-      if (state != ModelLoadingState.NOT_LOADED) {
-        SuspiciousModelHandler.getHandler().handleSuspiciousModel(dsm,false);
-      }
-      return result;
-    }
   }
- catch (  ModelFileReadException t) {
+ catch (  ModelReadException e) {
     SuspiciousModelHandler.getHandler().handleSuspiciousModel(dsm,false);
-    SModel newModel=new StubModel(dsm.getSModelReference());
-    LOG.error(t.getMessage(),newModel);
+    SModel newModel=new StubModel(dsm.getSModelReference(),e);
     return new ModelLoadResult(newModel,ModelLoadingState.NOT_LOADED);
-  }
-catch (  PersistenceVersionNotFoundException e) {
-    LOG.error("Trying to load model " + dsm.getLongName() + " from file "+ dsm.getModelFile().toString(),e);
-    SuspiciousModelHandler.getHandler().handleSuspiciousModel(dsm,false);
-    StubModel model=new StubModel(dsmRef);
-    return new ModelLoadResult(model,ModelLoadingState.NOT_LOADED);
   }
   SModel model=result.getModel();
   if (result.getState() == ModelLoadingState.FULLY_LOADED) {

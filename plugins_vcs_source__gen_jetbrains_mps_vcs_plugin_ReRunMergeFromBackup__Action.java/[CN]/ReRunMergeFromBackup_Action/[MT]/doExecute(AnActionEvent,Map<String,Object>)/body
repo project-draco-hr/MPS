@@ -2,8 +2,17 @@
   try {
     for (    File backupFile : Sequence.fromIterable(ReRunMergeFromBackup_Action.this.getBackupFiles(_params))) {
       try {
-        SModel[] models=ModelUtils.loadZippedModels(backupFile,MergeVersion.values());
-        ReRunMergeFromBackup_Action.this.doMerge(models[MergeVersion.MINE.ordinal()],models[MergeVersion.BASE.ordinal()],models[MergeVersion.REPOSITORY.ordinal()],_params);
+        String[] modelsAsText=MergeBackupUtil.loadZippedModelsAsText(backupFile,MergeVersion.values());
+        String mine=modelsAsText[MergeVersion.MINE.ordinal()];
+        String base=modelsAsText[MergeVersion.BASE.ordinal()];
+        String repository=modelsAsText[MergeVersion.REPOSITORY.ordinal()];
+        mine=ReRunMergeFromBackup_Action.this.selectMineModel(ModelPersistence.modelToString(((SModelDescriptor)MapSequence.fromMap(_params).get("model")).getSModel()),mine,_params);
+        if (mine == null) {
+          return;
+        }
+        MergeRequest mergeRequest=DiffRequestFactory.getInstance().createMergeRequest(mine,repository,base,VirtualFileUtils.getVirtualFile(ReRunMergeFromBackup_Action.this.getModelFile(_params)),((Project)MapSequence.fromMap(_params).get("project")),null,null);
+        mergeRequest.setVersionTitles(new String[]{"Mine","Base version","Repository"});
+        DiffManager.getInstance().getDiffTool().show(mergeRequest);
         return;
       }
  catch (      IOException e) {
