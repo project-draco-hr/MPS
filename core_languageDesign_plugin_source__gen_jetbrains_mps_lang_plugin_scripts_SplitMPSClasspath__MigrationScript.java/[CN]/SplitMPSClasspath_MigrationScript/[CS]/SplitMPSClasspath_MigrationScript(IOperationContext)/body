@@ -23,21 +23,27 @@
       SModel model=SNodeOperations.getModel(node);
       IModule module=check_ylpn3n_a0d0a0(model.getModelDescriptor());
       for (      SReference ref : ListSequence.fromList(SNodeOperations.getReferences(node))) {
-        final String fqname=check_ylpn3n_a0a0f0a0(ref.getTargetSModelReference());
+        SModelReference oldModelRef=ref.getTargetSModelReference();
+        final String fqname=check_ylpn3n_a0b0f0a0(oldModelRef);
         for (        IModule newModule : modules) {
           List<SModelDescriptor> models=newModule.getOwnModelDescriptors();
-          SModelReference modelRef=check_ylpn3n_a0b0b0f0a0(ListSequence.fromList(models).findFirst(new IWhereFilter<SModelDescriptor>(){
+          SModelReference modelRef=check_ylpn3n_a0b0c0f0a0(ListSequence.fromList(models).findFirst(new IWhereFilter<SModelDescriptor>(){
             public boolean accept(            SModelDescriptor it){
-              return eq_e5sso0_a0a0a0a0a0a0b0b0f0e0a0a0b0a(it.getLongName(),fqname);
+              return eq_e5sso0_a0a0a0a0a0a0b0c0f0e0a0a0b0a(it.getLongName(),fqname);
             }
           }
 ));
           if (modelRef == null) {
             continue;
           }
-          model.deleteModelImport(ref.getTargetSModelReference());
-          model.addModelImport(modelRef,false);
           ref.setTargetSModelReference(modelRef);
+          if ((SLinkOperations.getTargetNode(ref) == null)) {
+            LOG.warning("cannot resolve reference " + SLinkOperations.getResolveInfo(ref) + " into "+ fqname+ " (module "+ module.getModuleFqName()+ ")");
+            ref.setTargetSModelReference(oldModelRef);
+            continue;
+          }
+          model.addModelImport(modelRef,false);
+          model.deleteModelImport(oldModelRef);
           SModelRepository.getInstance().markChanged(model);
           if (module != null) {
             module.addDependency(newModule.getModuleReference(),false);
