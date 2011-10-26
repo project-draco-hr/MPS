@@ -1,15 +1,25 @@
 {
   myScope=scope;
-  final List<SReference> references=myReferencesFinder.getReferences(scope);
-  myReferences=references;
-  final SearchResults<SNode> results=new SearchResults();
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      for (      SReference ref : references) {
-        results.getSearchResults().add(new SearchResult(ref.getTargetNode(),"target"));
+  final Wrappers._T<SearchResults<SNode>> results=new Wrappers._T<SearchResults<SNode>>(new SearchResults());
+  ProgressManager.getInstance().run(new Task.Modal(myProject,"Targets search",true){
+    public void run(    @NotNull final ProgressIndicator indicator){
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          ProgressMonitor monitor=new ProgressMonitorAdapter(indicator);
+          try {
+            monitor.start(null,100);
+            List<SReference> references=myReferencesFinder.getReferences(scope,monitor.subTask(50));
+            myReferences=references;
+            results.value=myReferencesFinder.getTargetSearchResults(references,monitor.subTask(50));
+          }
+  finally {
+            monitor.done();
+          }
+        }
       }
+);
     }
   }
 );
-  myTargetsView.setContents(results);
+  myTargetsView.setContents(results.value);
 }
