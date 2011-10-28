@@ -1,0 +1,54 @@
+{
+  myLinkByRole=null;
+  SNode[] concepts=((ConceptAndSuperConceptsCache)getOwnerCache()).getConcepts();
+  FlattenIterable<SNode> allLinks=new FlattenIterable<SNode>(new ArrayList<Iterable<SNode>>(concepts.length));
+  for (  SNode concept : concepts) {
+    Iterable<SNode> list=SNodeUtil.getConcept_LinkDeclarations(concept);
+    allLinks.add(list);
+    for (    SNode link : list) {
+      String role1=SModelUtil.getLinkDeclarationRole(link);
+      if (role1 == null) {
+        continue;
+      }
+      if (myLinkByRole != null && myLinkByRole.containsKey(role1)) {
+        continue;
+      }
+      if (myLinkByRole == null) {
+        myLinkByRole=new HashMap<String,SNode>();
+      }
+      myLinkByRole.put(role1,link);
+    }
+  }
+  Map<SNode,SNode> specializedLinks=new HashMap<SNode,SNode>();
+  for (  SNode link : allLinks) {
+    SNode specializedLink=SModelUtil.getLinkDeclarationSpecializedLink(link);
+    if (specializedLink != null) {
+      specializedLinks.put(specializedLink,link);
+    }
+  }
+  myMostSpecificLinkBySpecializedLink=null;
+  myMostSpecificLinks=null;
+  for (  SNode link : allLinks) {
+    SNode moreSpecificLink=specializedLinks.get(link);
+    if (moreSpecificLink == null) {
+      if (myMostSpecificLinks == null) {
+        myMostSpecificLinks=new ArrayList<SNode>(5);
+      }
+      myMostSpecificLinks.add(link);
+    }
+ else {
+      while (moreSpecificLink != null) {
+        if (myMostSpecificLinkBySpecializedLink == null) {
+          myMostSpecificLinkBySpecializedLink=new HashMap<SNode,SNode>();
+        }
+        myMostSpecificLinkBySpecializedLink.put(link,moreSpecificLink);
+        moreSpecificLink=specializedLinks.get(moreSpecificLink);
+      }
+    }
+  }
+  myDependsOnNodes=new HashSet<SNode>();
+  myDependsOnNodes.addAll(Arrays.asList(concepts));
+  for (  SNode link : allLinks) {
+    myDependsOnNodes.add(link);
+  }
+}
