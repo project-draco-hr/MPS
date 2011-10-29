@@ -2,24 +2,29 @@
   try {
     IEvaluationProvider evaluationProvider=DebugActionsUtil.getEvaluationProvider(event);
     if (evaluationProvider != null) {
-      final Wrappers._T<List<SNodePointer>> nodePointers=new Wrappers._T<List<SNodePointer>>();
-      ModelAccess.instance().runReadAction(new Runnable(){
-        public void run(){
-          nodePointers.value=(((List<SNode>)MapSequence.fromMap(_params).get("selectedNodes")) == null ? ListSequence.fromList(new ArrayList<SNodePointer>()) : Sequence.fromIterable(Sequence.fromClosure(new ISequenceClosure<SNode>(){
-            public Iterable<SNode> iterable(){
-              return ((List<SNode>)MapSequence.fromMap(_params).get("selectedNodes"));
-            }
-          }
+      final List<SNodePointer> nodePointers=ListSequence.fromList(new ArrayList<SNodePointer>());
+      if (((EditorComponent)MapSequence.fromMap(_params).get("component")) != null) {
+        final Selection selection=((EditorComponent)MapSequence.fromMap(_params).get("component")).getSelectionManager().getSelection();
+        if ((selection instanceof EditorCellLabelSelection && ((EditorCellLabelSelection)selection).hasNonTrivialSelection()) || (selection instanceof MultipleSelection)) {
+          ModelAccess.instance().runReadAction(new Runnable(){
+            public void run(){
+              ListSequence.fromList(nodePointers).addSequence(Sequence.fromIterable(Sequence.fromClosure(new ISequenceClosure<SNode>(){
+                public Iterable<SNode> iterable(){
+                  return selection.getSelectedNodes();
+                }
+              }
 )).select(new ISelector<SNode,SNodePointer>(){
-            public SNodePointer select(            SNode it){
-              return new SNodePointer(it);
+                public SNodePointer select(                SNode it){
+                  return new SNodePointer(it);
+                }
+              }
+));
             }
           }
-).toListSequence());
+);
         }
       }
-);
-      evaluationProvider.showEvaluationDialog(((IOperationContext)MapSequence.fromMap(_params).get("operationContext")),nodePointers.value);
+      evaluationProvider.showEvaluationDialog(((IOperationContext)MapSequence.fromMap(_params).get("operationContext")),nodePointers);
     }
   }
  catch (  Throwable t) {
