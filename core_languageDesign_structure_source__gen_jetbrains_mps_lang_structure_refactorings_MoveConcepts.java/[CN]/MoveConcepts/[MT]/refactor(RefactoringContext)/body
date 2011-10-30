@@ -1,6 +1,35 @@
 {
   Language targetLanguage=Language.getLanguageFor(SModelRepository.getInstance().getModelDescriptor(((SModelReference)refactoringContext.getParameter("targetModel"))));
   Map<LanguageAspect,List<SNode>> aspectNodes=ConceptMoveUtil.getAspectNodes(((Language)refactoringContext.getParameter("sourceLanguage")),refactoringContext.getSelectedNodes());
+  Iterable<SNode> targExtends=ListSequence.fromList(refactoringContext.getSelectedNodes()).translate(new ITranslator2<SNode,SNode>(){
+    public Iterable<SNode> translate(    SNode it){
+      return SConceptOperations.getDirectSuperConcepts(it,false);
+    }
+  }
+).subtract(ListSequence.fromList(refactoringContext.getSelectedNodes()));
+  List<ModuleReference> targetExtends=Sequence.fromIterable(targExtends).select(new ISelector<SNode,SModelDescriptor>(){
+    public SModelDescriptor select(    SNode it){
+      return check_u6ijv2_a0a0a0a0a0a7a0(SNodeOperations.getModel(it));
+    }
+  }
+).distinct().select(new ISelector<SModelDescriptor,ModuleReference>(){
+    public ModuleReference select(    SModelDescriptor it){
+      return check_u6ijv2_a0a0a0a0a7a0(Language.getLanguageFor(it));
+    }
+  }
+).where(new IWhereFilter<ModuleReference>(){
+    public boolean accept(    ModuleReference it){
+      return it != null;
+    }
+  }
+).toListSequence();
+  SModel srcModel=((SModelDescriptor)refactoringContext.getParameter("sourceModel")).getSModel();
+  boolean isSourceExtends=ListSequence.fromList(SModelOperations.getRoots(srcModel,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration")).subtract(ListSequence.fromList(refactoringContext.getSelectedNodes())).translate(new ITranslator2<SNode,SNode>(){
+    public Iterable<SNode> translate(    SNode it){
+      return SConceptOperations.getDirectSuperConcepts(it,false);
+    }
+  }
+).intersect(ListSequence.fromList(refactoringContext.getSelectedNodes())).isNotEmpty();
   for (  SNode node : refactoringContext.getSelectedNodes()) {
     refactoringContext.changeFeatureName(node,((SModelReference)refactoringContext.getParameter("targetModel")).getSModelFqName().toString() + "." + SPropertyOperations.getString(node,"name"),SPropertyOperations.getString(node,"name"));
   }
@@ -11,5 +40,11 @@
     refactoringContext.updateByDefault(fromModel);
     refactoringContext.moveNodesToModel(MapSequence.fromMap(aspectNodes).get(aspect),toModel);
     refactoringContext.updateByDefault(toModel);
+  }
+  if (isSourceExtends) {
+    ((Language)refactoringContext.getParameter("sourceLanguage")).addExtendedLanguage(targetLanguage.getModuleReference());
+  }
+  for (  ModuleReference ext : ListSequence.fromList(targetExtends)) {
+    targetLanguage.addExtendedLanguage(ext);
   }
 }
