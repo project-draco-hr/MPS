@@ -1,39 +1,28 @@
 {
-  this.myParameters.setVisibilityLevel(this.myVisibilityPanel.getResult());
   final Wrappers._T<SNode> result=new Wrappers._T<SNode>(null);
   if (!(this.myCanRefactor)) {
-    JOptionPane.showMessageDialog(this,"Can't refactor. See errors.","Can't perform refactoring",JOptionPane.ERROR_MESSAGE);
+    JOptionPane.showMessageDialog(this,"Can't refactor\n" + this.myErrors,"Can't perform refactoring",JOptionPane.ERROR_MESSAGE);
+    return;
   }
  else {
-    final Wrappers._T<SNode> staticTarget=new Wrappers._T<SNode>();
-    final Wrappers._T<SModel> refactoringModel=new Wrappers._T<SModel>(null);
-    if (this.myParameters.getAnalyzer().getExtractMethodReafactoringProcessor().getClass() == AbstractExtractMethodRefactoringProcessor.class) {
-      final Wrappers._T<SModelDescriptor> model=new Wrappers._T<SModelDescriptor>();
-      ModelAccess.instance().runReadAction(new Runnable(){
-        public void run(){
-          refactoringModel.value=SNodeOperations.getModel(ListSequence.fromList(ExtractMethodDialog.this.myParameters.getNodesToRefactor()).first());
-          model.value=refactoringModel.value.getModelDescriptor();
-        }
+    if (this.myExtractIntoOuterContainer) {
+      if (this.myStaticTarget == null) {
+        chooseStaticContainer();
       }
-);
-      staticTarget.value=BLDialogs.showStaticContainerChooser(this.myContext.getOperationContext(),model.value);
-      if (staticTarget.value == null) {
+      if (this.myStaticTarget != null) {
+        setStaticContainer();
+      }
+ else {
         return;
       }
-      ModelAccess.instance().runReadAction(new Runnable(){
-        public void run(){
-          ExtractMethodDialog.this.myRefactoring.setStaticContainer(staticTarget.value);
-        }
-      }
-);
     }
     ModelAccess.instance().runWriteActionInCommand(new Runnable(){
       public void run(){
         result.value=ExtractMethodDialog.this.myRefactoring.doRefactor();
         ExtractMethodDialog.this.myContext.select(result.value);
-        if (refactoringModel.value != null) {
-          SModelReference ref=SNodeOperations.getModel(staticTarget.value).getSModelReference();
-          refactoringModel.value.addModelImport(ref,false);
+        if ((myRefactoringModel != null) && ExtractMethodDialog.this.myExtractIntoOuterContainer) {
+          SModelReference ref=SNodeOperations.getModel(myStaticTarget).getSModelReference();
+          myRefactoringModel.addModelImport(ref,false);
         }
       }
     }
