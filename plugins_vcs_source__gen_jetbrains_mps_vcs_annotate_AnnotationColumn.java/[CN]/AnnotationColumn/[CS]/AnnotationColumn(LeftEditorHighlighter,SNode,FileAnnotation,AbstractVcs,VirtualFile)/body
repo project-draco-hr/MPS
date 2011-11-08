@@ -11,13 +11,25 @@
   for (  VcsFileRevision rev : ListSequence.fromList(fileAnnotation.getRevisions())) {
     MapSequence.fromMap(myRevisionNumberToRevision).put(rev.getRevisionNumber(),rev);
   }
+  final Wrappers._T<ModelReadException> mre=new Wrappers._T<ModelReadException>(null);
   try {
     myFileLineToContent=ModelPersistence.getLineToContentMap(myFileAnnotation.getAnnotatedContent());
   }
  catch (  ModelReadException e) {
-    return;
+    mre.value=e;
   }
   if (myFileLineToContent == null) {
+    SwingUtilities.invokeLater(new Runnable(){
+      public void run(){
+        String msg="Couldn't show annotation";
+        if (mre.value != null && mre.value.getCause() != null) {
+          msg+=": " + mre.value.getCause().getMessage();
+        }
+        ToolWindowManager.getInstance(vcs.getProject()).notifyByBalloon(ChangesViewContentManager.TOOLWINDOW_ID,MessageType.WARNING,msg);
+        close();
+      }
+    }
+);
     return;
   }
   myFileAnnotation.addListener(myAnnotationListener);
@@ -30,7 +42,7 @@
   Map<SNodeId,Integer> nodeIdToFileLine=MapSequence.fromMap(new HashMap<SNodeId,Integer>());
   for (int line=0; line < ListSequence.fromList(myFileLineToContent).count(); line++) {
     SNode node=null;
-    SNodeId id=check_5mnya_a0b0k0a(ListSequence.fromList(myFileLineToContent).getElement(line));
+    SNodeId id=check_5mnya_a0b0l0a(ListSequence.fromList(myFileLineToContent).getElement(line));
     if (id != null && SetSequence.fromSet(descendantIds).contains(id)) {
       node=model.getNodeById(id);
     }
