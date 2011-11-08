@@ -5,23 +5,24 @@
       return;
     }
     value=StringUtils.trim(value);
-    final Wrappers._T<SNode> node=new Wrappers._T<SNode>();
     final SNodeId id=SNodeId.fromString(value);
     if (id == null) {
       JOptionPane.showMessageDialog(((Frame)MapSequence.fromMap(_params).get("frame")),"Wrong node ID format " + value);
       return;
     }
-    ModelAccess.instance().runReadAction(new Runnable(){
+    final String trimmedValue=value;
+    ModelAccess.instance().runReadInEDT(new Runnable(){
       public void run(){
-        node.value=((SModelDescriptor)MapSequence.fromMap(_params).get("model")).getSModel().getNodeById(id);
+        SNode node;
+        node=((SModelDescriptor)MapSequence.fromMap(_params).get("model")).getSModel().getNodeById(id);
+        if (node == null) {
+          JOptionPane.showMessageDialog(((Frame)MapSequence.fromMap(_params).get("frame")),"Can't find node with id " + trimmedValue);
+          return;
+        }
+        NavigationSupport.getInstance().openNode(((IOperationContext)MapSequence.fromMap(_params).get("context")),node,true,true);
       }
     }
 );
-    if (node.value == null) {
-      JOptionPane.showMessageDialog(((Frame)MapSequence.fromMap(_params).get("frame")),"Can't find node with id " + value);
-      return;
-    }
-    ((Project)MapSequence.fromMap(_params).get("project")).getComponent(MPSEditorOpener.class).editNode(node.value,((IOperationContext)MapSequence.fromMap(_params).get("context")));
   }
  catch (  Throwable t) {
     if (log.isErrorEnabled()) {

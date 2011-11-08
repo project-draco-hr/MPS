@@ -8,19 +8,25 @@
   if (parenIndex == -1) {
     return null;
   }
-  String methodName=tmpStr.substring(0,parenIndex);
+  final String methodName=tmpStr.substring(0,parenIndex);
   int closingParenIndex=tmpStr.indexOf(")");
   if (closingParenIndex == -1) {
     return null;
   }
-  String position=tmpStr.substring(parenIndex + 1,closingParenIndex);
-  final SNode nodeToShow=TraceInfoUtil.getNodes(methodName,position);
-  if (nodeToShow == null) {
-    return null;
+  final String position=tmpStr.substring(parenIndex + 1,closingParenIndex);
+  final SNodePointer nodeToShow=ModelAccess.instance().runReadAction(new Computable<SNodePointer>(){
+    public SNodePointer compute(){
+      final SNode node=TraceInfoUtil.getNodes(methodName,position);
+      if (node == null) {
+        return null;
+      }
+      return new SNodePointer(node);
+    }
   }
+);
   return new Filter.Result(start + parenIndex + 1+ offset,start + closingParenIndex + offset,new HyperlinkInfo(){
-    public void navigate(    Project p0){
-      JavaStackTraceFilter.showNode(p0,nodeToShow);
+    public void navigate(    Project project){
+      new NodeNavigatable(ProjectHelper.toMPSProject(project),nodeToShow).navigate(true);
     }
   }
 );
