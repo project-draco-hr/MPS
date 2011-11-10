@@ -1,30 +1,60 @@
 {
   JPanel mainPanel=new JPanel(new GridLayout(0,1));
-  mainPanel.add(new JLabel("Model name:"));
-  mainPanel.add(myModelName);
-  mainPanel.add(new JLabel("Stereotype:"));
-  myModelStereotype.setEditable(true);
-  myModelStereotype.setModel(new DefaultComboBoxModel(SModelStereotype.values));
-  mainPanel.add(myModelStereotype);
   mainPanel.add(new JLabel("Model root:"));
   mainPanel.add(myModelRoots);
   DefaultComboBoxModel model=new DefaultComboBoxModel();
   for (  SModelRoot root : myModule.getSModelRoots()) {
-    if (myNamespace == null || myNamespace.startsWith(root.getPrefix())) {
-      model.addElement(new NewModelDialog.ModelRootWrapper(root));
+    IModelRootManager manager=root.getManager();
+    if (manager != null && manager.canCreateModel(myModule,root.getModelRoot(),null)) {
+      model.addElement(root);
     }
   }
   if (model.getSize() == 0) {
     model.addElement("<NO MODEL ROOTS FOR SELECTED NAMESPACE>");
   }
+  myModelRoots.setRenderer(new DefaultListCellRenderer(){
+    @Override public Component getListCellRendererComponent(    JList list,    Object object,    int i,    boolean b,    boolean b1){
+      if (object instanceof SModelRoot) {
+        SModelRoot mr=(SModelRoot)object;
+        String manager=NameUtil.shortNameFromLongName(mr.getManager().getClass().getName());
+        object=mr.getModelRoot().getPath() + " (" + manager+ ")";
+      }
+      return super.getListCellRendererComponent(list,object,i,b,b1);
+    }
+  }
+);
   myModelRoots.addItemListener(new ItemListener(){
     public void itemStateChanged(    ItemEvent e){
-      completePrefix();
+      check();
     }
   }
 );
   myModelRoots.setModel(model);
-  completePrefix();
+  myModelName.setText((myNamespace.length() == 0 ? myNamespace : myNamespace + "."));
+  mainPanel.add(new JLabel("Model name:"));
+  mainPanel.add(myModelName);
+  myModelName.addKeyListener(new KeyAdapter(){
+    public void keyReleased(    KeyEvent event){
+      check();
+    }
+  }
+);
+  mainPanel.add(new JLabel("Stereotype:"));
+  myModelStereotype.setEditable(true);
+  myModelStereotype.setModel(new DefaultComboBoxModel(SModelStereotype.values));
+  myModelStereotype.addKeyListener(new KeyAdapter(){
+    public void keyReleased(    KeyEvent event){
+      check();
+    }
+  }
+);
+  myModelStereotype.addItemListener(new ItemListener(){
+    public void itemStateChanged(    ItemEvent p0){
+      check();
+    }
+  }
+);
+  mainPanel.add(myModelStereotype);
   myContentPane.add(mainPanel,BorderLayout.NORTH);
   myContentPane.add(new JPanel(),BorderLayout.CENTER);
 }
