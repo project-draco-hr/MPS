@@ -13,13 +13,35 @@
       }
     }
 );
-    final List<SNode> nodes=new ArrayList<SNode>();
+    final List<SNodePointer> nodes=ListSequence.fromList(new ArrayList<SNodePointer>());
     ProgressManager.getInstance().run(new Task.Modal(((Project)MapSequence.fromMap(_params).get("project")),"Searching...",true){
       public void run(      @NotNull final ProgressIndicator p){
         ModelAccess.instance().runReadAction(new Runnable(){
           public void run(){
             for (            String finderClass : ListSequence.fromList(finderClasses)) {
-              ListSequence.fromList(nodes).addSequence(ListSequence.fromList(FindUtils.executeFinder(finderClass,((SNode)MapSequence.fromMap(_params).get("classifierNode")),GlobalScope.getInstance(),new ProgressMonitorAdapter(p))));
+              List<SNode> list=FindUtils.executeFinder(finderClass,((SNode)MapSequence.fromMap(_params).get("classifierNode")),GlobalScope.getInstance(),new ProgressMonitorAdapter(p));
+              ListSequence.fromList(nodes).addSequence(ListSequence.fromList(list).select(new ISelector<SNode,SNodePointer>(){
+                public SNodePointer select(                SNode it){
+                  return new SNodePointer(it);
+                }
+              }
+));
+              ListSequence.fromList(nodes).addSequence(ListSequence.fromList(list).where(new IWhereFilter<SNode>(){
+                public boolean accept(                SNode it){
+                  return SNodeOperations.isInstanceOf(it,"jetbrains.mps.baseLanguage.structure.EnumClass");
+                }
+              }
+).translate(new ITranslator2<SNode,SNodePointer>(){
+                public Iterable<SNodePointer> translate(                SNode it){
+                  return ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(it,"jetbrains.mps.baseLanguage.structure.EnumClass"),"enumConstant",true)).select(new ISelector<SNode,SNodePointer>(){
+                    public SNodePointer select(                    SNode e){
+                      return new SNodePointer(e);
+                    }
+                  }
+);
+                }
+              }
+));
             }
           }
         }
@@ -27,17 +49,10 @@
       }
     }
 );
-    final Wrappers._T<List<SNode>> nodesIncludingEnumConstants=new Wrappers._T<List<SNode>>();
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        nodesIncludingEnumConstants.value=GoToInheritedClassifier_Action.this.appendEnumConstants(nodes,_params);
-      }
-    }
-);
     Rectangle cellBounds=((EditorContext)MapSequence.fromMap(_params).get("editorContext")).getSelectedCell().getBounds();
     Point point=new Point(((int)cellBounds.getMinX()),((int)cellBounds.getMaxY()));
     RelativePoint relPoint=new RelativePoint(((EditorComponent)MapSequence.fromMap(_params).get("editorComponent")),point);
-    GoToHelper.showInheritedClassesMenu(nodesIncludingEnumConstants.value,relPoint,((Project)MapSequence.fromMap(_params).get("project")));
+    GoToHelper.showInheritedClassesMenu(nodes,relPoint,ProjectHelper.toMPSProject(((Project)MapSequence.fromMap(_params).get("project"))));
   }
  catch (  Throwable t) {
     LOG.error("User's action execute method failed. Action:" + "GoToInheritedClassifier",t);

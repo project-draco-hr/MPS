@@ -1,0 +1,40 @@
+{
+  boolean result=TestMain.testOnProjectCopy(sourceZip,tempDir,TEST_PROJECT,new ProjectRunnable(){
+    @Override public boolean execute(    final Project project){
+      final boolean[] res=new boolean[1];
+      res[0]=true;
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          DefaultSModelDescriptor testModel=(DefaultSModelDescriptor)TestMain.getModel(project,TEST_MODEL);
+          DefaultSModelDescriptor targetModel=(DefaultSModelDescriptor)TestMain.getModel(project,TARGET_MODEL);
+          ReferencesFinder finder=new ReferencesFinder();
+          Scope testScope=new Scope();
+          testScope.add(testModel);
+          Scope targetScope=new Scope();
+          targetScope.add(targetModel);
+          List<SReference> references=finder.getReferences(testScope,new EmptyProgressMonitor());
+          if (references.size() != 15) {
+            System.out.println("References size " + references.size());
+            res[0]=false;
+          }
+          SearchResults targetSearchResults=finder.getTargetSearchResults(references,new EmptyProgressMonitor());
+          int size=targetSearchResults.getSearchResults().size();
+          if (size != 15) {
+            System.out.println("Targets size " + size);
+            res[0]=false;
+          }
+          SearchResults refSearchResults=finder.getRefSearchResults(references,targetScope,new EmptyProgressMonitor());
+          size=refSearchResults.getSearchResults().size();
+          if (size != 5) {
+            System.out.println("Results size " + size);
+            res[0]=false;
+          }
+        }
+      }
+);
+      return res[0];
+    }
+  }
+);
+  assertTrue(result);
+}
