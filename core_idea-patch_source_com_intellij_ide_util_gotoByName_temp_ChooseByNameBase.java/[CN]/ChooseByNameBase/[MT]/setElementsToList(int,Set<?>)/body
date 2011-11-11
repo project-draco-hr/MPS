@@ -1,6 +1,6 @@
 {
   myListUpdater.cancelAll();
-  if (myDisposedFlag)   return;
+  if (checkDisposed())   return;
   if (elements.isEmpty()) {
     myListModel.clear();
     myTextField.setForeground(Color.red);
@@ -11,8 +11,16 @@
   }
   Object[] oldElements=myListModel.toArray();
   Object[] newElements=elements.toArray();
-  Diff.Change change=Diff.buildChanges(oldElements,newElements);
-  if (change == null)   return;
+  Diff.Change change=null;
+  try {
+    change=Diff.buildChanges(oldElements,newElements);
+  }
+ catch (  FilesTooBigForDiffException e) {
+  }
+  if (change == null) {
+    myListUpdater.doPostponedOkIfNeeded();
+    return;
+  }
   List<Cmd> commands=new ArrayList<Cmd>();
   int inserted=0;
   int deleted=0;
@@ -36,11 +44,12 @@
     myListUpdater.appendToModel(commands,pos);
   }
  else {
-    if (pos == 0) {
+    if (pos <= 0) {
       pos=detectBestStatisticalPosition();
     }
     ListScrollingUtil.selectItem(myList,Math.min(pos,myListModel.size() - 1));
     myList.setVisibleRowCount(Math.min(VISIBLE_LIST_SIZE_LIMIT,myList.getModel().getSize()));
     showList();
+    updateDocPosition();
   }
 }
