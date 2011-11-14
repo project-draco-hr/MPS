@@ -1,2 +1,27 @@
 {
+  for (  VirtualFile file : files) {
+    String protocol=VirtualFileManager.extractProtocol(file.getUrl());
+    if (!LocalFileSystem.PROTOCOL.equals(protocol)) {
+      throw new Exception(MPSBundle.message("facet.sources.tab.add.unsupported.vfs.protocol",file.getPresentableUrl(),protocol));
+    }
+    for (    ModelRootContentEntryEditor modelRootEditor : myModelRootEditors) {
+      ContentEntry contentEntry=modelRootEditor.getContentEntry();
+      if (contentEntry == null) {
+        continue;
+      }
+      VirtualFile modelRootFile=contentEntry.getFile();
+      if (modelRootFile == null) {
+        continue;
+      }
+      if (modelRootFile.equals(file)) {
+        throw new Exception(MPSBundle.message("facet.sources.tab.add.already.exists.root",file.getPresentableUrl()));
+      }
+      if (VfsUtil.isAncestor(modelRootFile,file,true)) {
+        throw new Exception(MPSBundle.message("facet.sources.tab.add.content.intersect.error",file.getPresentableUrl(),modelRootFile.getPresentableUrl()));
+      }
+      if (VfsUtil.isAncestor(file,modelRootFile,true)) {
+        throw new Exception(MPSBundle.message("facet.sources.tab.add.content.dominate.error",file.getPresentableUrl(),modelRootFile.getPresentableUrl()));
+      }
+    }
+  }
 }
