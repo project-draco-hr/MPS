@@ -1,0 +1,71 @@
+{
+  if (SetSequence.fromSet(dependency).contains(from)) {
+    return new DependencyTreeLeafNode(from,role,null);
+  }
+  DependencyPathTree.Dep dep=new DependencyPathTree.Dep(from,type);
+  if (SetSequence.fromSet(visited).contains(dep)) {
+    return null;
+  }
+  SetSequence.fromSet(visited).addElement(dep);
+  MPSTreeNode result=new DependencyTreeNode(from,role,null);
+switch (type) {
+case M:
+    for (    Dependency d : ListSequence.fromList(from.getDependencies())) {
+      addChildDep(result,MPSModuleRepository.getInstance().getModule(d.getModuleRef()),DependencyPathTree.DepType.D,"depends on ",dependency,usedlangauge,visited);
+    }
+  if (from instanceof Language) {
+    for (    Language l : ListSequence.fromList(((Language)from).getExtendedLanguages())) {
+      addChildDep(result,l,DependencyPathTree.DepType.D,"extends language ",dependency,usedlangauge,visited);
+    }
+  }
+for (ModuleReference devkit : ListSequence.fromList(from.getUsedDevkitReferences())) {
+  addChildDep(result,MPSModuleRepository.getInstance().getModule(devkit),DependencyPathTree.DepType.DK,"uses devkit ",dependency,usedlangauge,visited);
+}
+for (ModuleReference l : ListSequence.fromList(from.getUsedLanguagesReferences())) {
+addChildDep(result,MPSModuleRepository.getInstance().getModule(l),DependencyPathTree.DepType.UL,"uses language ",dependency,usedlangauge,visited);
+}
+break;
+case DK:
+DevKit dk=(DevKit)from;
+for (DevKit devkit : ListSequence.fromList(dk.getExtendedDevKits())) {
+addChildDep(result,devkit,DependencyPathTree.DepType.DK,"extends devkit ",dependency,usedlangauge,visited);
+}
+for (Language l : ListSequence.fromList(dk.getExportedLanguages())) {
+addChildDep(result,l,DependencyPathTree.DepType.UL,"exports language ",dependency,usedlangauge,visited);
+}
+for (Solution s : ListSequence.fromList(dk.getExportedSolutions())) {
+addChildDep(result,s,DependencyPathTree.DepType.D,"exports solution ",dependency,usedlangauge,visited);
+}
+break;
+case UL:
+Language ul=(Language)from;
+for (Language l : ListSequence.fromList(ul.getExtendedLanguages())) {
+addChildDep(result,l,DependencyPathTree.DepType.UL,"extends language ",dependency,usedlangauge,visited);
+}
+for (ModuleReference m : ListSequence.fromList(ul.getRuntimeModulesReferences())) {
+addChildDep(result,MPSModuleRepository.getInstance().getModule(m),DependencyPathTree.DepType.R,"exports runtime ",dependency,usedlangauge,visited);
+}
+for (Dependency d : ListSequence.fromList(ul.getDependencies())) {
+if (d.isReexport()) {
+addChildDep(result,MPSModuleRepository.getInstance().getModule(d.getModuleRef()),DependencyPathTree.DepType.D,"re-exports dependency on ",dependency,usedlangauge,visited);
+}
+}
+break;
+case D:
+for (Dependency d : ListSequence.fromList(from.getDependencies())) {
+addChildDep(result,MPSModuleRepository.getInstance().getModule(d.getModuleRef()),(d.isReexport() ? DependencyPathTree.DepType.D : DependencyPathTree.DepType.R),(d.isReexport() ? "re-exports dependency on " : "depends on "),dependency,usedlangauge,visited);
+}
+if (from instanceof Language) {
+for (Language l : ListSequence.fromList(((Language)from).getExtendedLanguages())) {
+addChildDep(result,l,DependencyPathTree.DepType.D,"extends language ",dependency,usedlangauge,visited);
+}
+}
+break;
+case R:
+for (Dependency d : ListSequence.fromList(from.getDependencies())) {
+addChildDep(result,MPSModuleRepository.getInstance().getModule(d.getModuleRef()),DependencyPathTree.DepType.R,"depends on ",dependency,usedlangauge,visited);
+}
+default :
+}
+return (result.getChildCount() > 0 ? result : null);
+}
