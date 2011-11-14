@@ -1,0 +1,27 @@
+{
+  if (canWrite()) {
+    return c.compute();
+  }
+  assertNotWriteFromRead();
+  if (myDistributedLocksMode && ApplicationManager.getApplication().isDispatchThread()) {
+    throw new IllegalStateException("deadlock prevention: do not start write action in EDT, use tryWrite");
+  }
+  com.intellij.openapi.util.Computable<T> computable=new com.intellij.openapi.util.Computable<T>(){
+    public T compute(){
+      getWriteLock().lock();
+      try {
+        return c.compute();
+      }
+  finally {
+        getWriteLock().unlock();
+      }
+    }
+  }
+;
+  if (ThreadUtils.isEventDispatchThread()) {
+    return ApplicationManager.getApplication().runWriteAction(computable);
+  }
+ else {
+    return ApplicationManager.getApplication().runReadAction(computable);
+  }
+}

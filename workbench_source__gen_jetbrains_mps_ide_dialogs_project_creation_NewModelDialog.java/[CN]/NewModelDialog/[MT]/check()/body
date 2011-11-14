@@ -1,0 +1,46 @@
+{
+  Object selected=myModelRoots.getSelectedItem();
+  if (!((selected instanceof SModelRoot))) {
+    setErrorText("Model root is not selected");
+    return false;
+  }
+  SModelRoot mr=((SModelRoot)selected);
+  IModelRootManager manager=mr.getManager();
+  if (manager == null) {
+    setErrorText("Can't create manager class");
+    return false;
+  }
+  String modelName=myModelName.getText();
+  if (modelName.length() == 0) {
+    setErrorText("Empty model name isn't allowed");
+    return false;
+  }
+  SModelFqName modelUID=new SModelFqName(modelName,myModelStereotype.getSelectedItem().toString());
+  if (SModelRepository.getInstance().getModelDescriptor(modelUID) != null) {
+    setErrorText("Model with an uid " + modelName + " already exists");
+    return false;
+  }
+  if (modelName.lastIndexOf(".") == modelName.length()) {
+    setErrorText("Empty model short name isn't allowed");
+    return false;
+  }
+  if (myModule instanceof Language) {
+    for (    LanguageAspect aspect : LanguageAspect.values()) {
+      String shortName=modelName.substring(modelName.lastIndexOf(".") + 1);
+      if (shortName.equals(aspect.getName())) {
+        setErrorText("This name isn't allowed because '" + shortName + "' is language aspect name");
+        return false;
+      }
+    }
+  }
+  if (!(SourceVersion.isName(modelName))) {
+    setErrorText("Model name should be valid Java package");
+    return false;
+  }
+  if (!(manager.canCreateModel(myModule,mr.getModelRoot(),getFqName()))) {
+    setErrorText("Can't create a model with this name under this model root");
+    return false;
+  }
+  setErrorText("");
+  return true;
+}
