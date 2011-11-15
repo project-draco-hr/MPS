@@ -1,0 +1,54 @@
+{
+  myEditorComponent=editorComponent;
+  ChangesManager.getInstance(project).getCommandQueue().runTask(new Runnable(){
+    public void run(){
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+synchronized (myDisposedLock) {
+            if (myDisposed) {
+              return;
+            }
+            SNode editedNode=editorComponent.getEditedNode();
+            if (editedNode == null || editedNode.isDisposed()) {
+              return;
+            }
+            final SModel model=editedNode.getModel();
+            SModelDescriptor descriptor=(model != null ? model.getModelDescriptor() : null);
+            if (descriptor instanceof EditableSModelDescriptor) {
+              myCurrentDifference=ChangesManager.getInstance(project).getCurrentDifference((EditableSModelDescriptor)descriptor);
+              myListener=new EditorChangesHighlighter.MyCurrentDifferenceListener();
+            }
+            if (myListener != null) {
+              myCurrentDifference.setEnabled(true);
+              if (myCurrentDifference.getChangeSet() != null) {
+                ListSequence.fromList(myCurrentDifference.getChangeSet().getModelChanges()).visitAll(new IVisitor<ModelChange>(){
+                  public void visit(                  ModelChange c){
+                    createMessages(c);
+                  }
+                }
+);
+              }
+synchronized (myChangesMessages) {
+                Sequence.fromIterable(MapSequence.fromMap(myChangesMessages).values()).visitAll(new IVisitor<List<ChangeEditorMessage>>(){
+                  public void visit(                  List<ChangeEditorMessage> messages){
+                    ListSequence.fromList(messages).visitAll(new IVisitor<ChangeEditorMessage>(){
+                      public void visit(                      ChangeEditorMessage m){
+                        getHighlightManager().mark(m);
+                      }
+                    }
+);
+                  }
+                }
+);
+              }
+              getHighlightManager().repaintAndRebuildEditorMessages();
+              myCurrentDifference.addDifferenceListener(myListener);
+            }
+          }
+        }
+      }
+);
+    }
+  }
+);
+}
