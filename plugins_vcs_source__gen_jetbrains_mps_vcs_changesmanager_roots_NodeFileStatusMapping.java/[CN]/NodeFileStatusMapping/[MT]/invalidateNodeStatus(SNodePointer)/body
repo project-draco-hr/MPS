@@ -2,7 +2,22 @@
   myRegistry.getCommandQueue().runTask(new Runnable(){
     public void run(){
       calcStatus(nodePointer);
-      FileStatusManager.getInstance(myProject).fileStatusChanged(MPSNodesVirtualFileSystem.getInstance().getFileFor(nodePointer));
+      final FileStatusManager fsm=FileStatusManager.getInstance(myProject);
+      final MPSNodesVirtualFileSystem nvfs=MPSNodesVirtualFileSystem.getInstance();
+      fsm.fileStatusChanged(nvfs.getFileFor(nodePointer));
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          SNode currentNode=nodePointer.getNode();
+          for (          EditorTabDescriptor d : ListSequence.fromList(myProject.getComponent(ProjectPluginManager.class).getTabDescriptors())) {
+            SNode baseNode=d.getBaseNode(currentNode);
+            if (baseNode != null && baseNode != currentNode) {
+              fsm.fileStatusChanged(nvfs.getFileFor(baseNode));
+              break;
+            }
+          }
+        }
+      }
+);
     }
   }
 );
