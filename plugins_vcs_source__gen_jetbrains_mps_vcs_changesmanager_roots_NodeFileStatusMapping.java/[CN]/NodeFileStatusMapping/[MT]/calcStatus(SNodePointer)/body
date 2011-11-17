@@ -4,9 +4,27 @@
     public void run(){
       SModelDescriptor modelDescriptor=SModelRepository.getInstance().getModelDescriptor(root.getModelReference());
       if (modelDescriptor instanceof EditableSModelDescriptor) {
-        CurrentDifference diff=myRegistry.getCurrentDifference((EditableSModelDescriptor)modelDescriptor);
-        if (ListSequence.fromList(check_onkh7z_a0a2a1a0b0d(diff.getChangeSet())).count() != 0) {
-          status.value=FileStatus.MODIFIED;
+        EditableSModelDescriptor emd=(EditableSModelDescriptor)modelDescriptor;
+        CurrentDifference diff=myRegistry.getCurrentDifference(emd);
+        List<ModelChange> modelChanges=check_onkh7z_a0c0b0a1a3(diff.getChangeSet());
+        final SNodeId rootId=root.getNodeId();
+        List<ModelChange> rootChanges=ListSequence.fromList(modelChanges).where(new IWhereFilter<ModelChange>(){
+          public boolean accept(          ModelChange ch){
+            return rootId.equals(ch.getRootId());
+          }
+        }
+).toListSequence();
+        if (ListSequence.fromList(rootChanges).count() != 0) {
+          if (ListSequence.fromList(rootChanges).first() instanceof AddRootChange) {
+            status.value=FileStatus.ADDED;
+            VirtualFile vf=VirtualFileUtils.getVirtualFile(emd.getModelFile());
+            if (vf != null && FileStatusManager.getInstance(myProject).getStatus(vf) == FileStatus.UNKNOWN) {
+              status.value=FileStatus.UNKNOWN;
+            }
+          }
+ else {
+            status.value=FileStatus.MODIFIED;
+          }
         }
  else {
           status.value=FileStatus.NOT_CHANGED;
