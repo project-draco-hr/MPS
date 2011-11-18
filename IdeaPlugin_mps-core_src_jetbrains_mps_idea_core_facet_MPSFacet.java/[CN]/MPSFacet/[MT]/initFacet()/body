@@ -4,11 +4,16 @@
       ModelAccess.instance().runWriteAction(new Runnable(){
         @Override public void run(){
           SolutionDescriptor solutionDescriptor=getConfiguration().getState().myDescriptor;
-          IFile imlFile=FileSystem.getInstance().getFileByPath(getModule().getModuleFilePath());
-          IFile models=imlFile.getParent().getDescendant("models");
-          Project project=ProjectHelper.toMPSProject(getModule().getProject());
-          mySolution=Solution.newInstance(new ModulesMiner.ModuleHandle(imlFile,solutionDescriptor),project);
-          MessagesViewTool.log(getModule().getProject(),MessageKind.INFORMATION,"module loaded: " + mySolution.getModuleFqName());
+          mySolution=new SolutionIdea(getModule(),solutionDescriptor);
+          com.intellij.openapi.project.Project project=getModule().getProject();
+          Project mpsProject=ProjectHelper.toMPSProject(project);
+          MPSModuleRepository repository=MPSModuleRepository.getInstance();
+          if (repository.existsModule(solutionDescriptor.getModuleReference())) {
+            MessagesViewTool.log(project,MessageKind.ERROR,MPSBundle.message("facet.cannot.load.second.module",solutionDescriptor.getNamespace()));
+            return;
+          }
+          repository.addModule(mySolution,mpsProject);
+          MessagesViewTool.log(project,MessageKind.INFORMATION,MPSBundle.message("facet.module.loaded",MPSFacet.this.mySolution.getModuleFqName()));
         }
       }
 );
