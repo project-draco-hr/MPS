@@ -1,0 +1,41 @@
+{
+  Set<DependencyPathTree.Link> vis=SetSequence.fromSet(new HashSet<DependencyPathTree.Link>());
+  Map<Tuples._2<IModule,DependencyPathTree.Role>,DependencyTreeNode> visited=MapSequence.fromMap(new HashMap<Tuples._2<IModule,DependencyPathTree.Role>,DependencyTreeNode>());
+  Queue<DependencyTreeNode> unprocessed=QueueSequence.fromQueue(new LinkedList<DependencyTreeNode>());
+  Map<DependencyTreeNode,List<DependencyTreeNode>> backDeps=MapSequence.fromMap(new HashMap<DependencyTreeNode,List<DependencyTreeNode>>());
+  DependencyTreeNode root=new DependencyTreeNode(new DependencyPathTree.Link(from,DependencyPathTree.Role.None,null),"",null);
+  QueueSequence.fromQueue(unprocessed).addLastElement(root);
+  while (QueueSequence.fromQueue(unprocessed).isNotEmpty()) {
+    DependencyTreeNode node=QueueSequence.fromQueue(unprocessed).removeFirstElement();
+    if (node.getLink().role == DependencyPathTree.Role.UsedLanguage && SetSequence.fromSet(usedlanguage).contains(node.getLink().module) || (node.getLink().role == DependencyPathTree.Role.DTDependency_ || node.getLink().role == DependencyPathTree.Role.RTDependency) && SetSequence.fromSet(dependency).contains(node.getLink().module)) {
+      node.setLeaf();
+      setUsed(node,backDeps);
+      while (node != null && !(node.isUsed())) {
+        node.setUsed();
+      }
+    }
+ else     if (MapSequence.fromMap(visited).containsKey(MultiTuple.<IModule,DependencyPathTree.Role>from(node.getLink().module,node.getLink().role))) {
+      if (!(isShowAll())) {
+        continue;
+      }
+      DependencyTreeNode n=MapSequence.fromMap(visited).get(MultiTuple.<IModule,DependencyPathTree.Role>from(node.getLink().module,node.getLink().role));
+      if (!(MapSequence.fromMap(backDeps).containsKey(n))) {
+        MapSequence.fromMap(backDeps).put(n,ListSequence.fromList(new ArrayList<DependencyTreeNode>()));
+      }
+      node.setLinkLeaf(n);
+      ListSequence.fromList(MapSequence.fromMap(backDeps).get(n)).addElement(node);
+      if (n.isUsed()) {
+        setUsed(node,backDeps);
+      }
+    }
+ else {
+      MapSequence.fromMap(visited).put(MultiTuple.<IModule,DependencyPathTree.Role>from(node.getLink().module,node.getLink().role),node);
+      for (      DependencyPathTree.Link link : ListSequence.fromList(dependencies(node.getLink().role,node.getLink().module))) {
+        DependencyTreeNode n=new DependencyTreeNode(link,link.linktype.toString(),null);
+        node.add(n);
+        QueueSequence.fromQueue(unprocessed).addLastElement(n);
+      }
+    }
+  }
+  return root;
+}
