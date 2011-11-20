@@ -1,0 +1,23 @@
+{
+  ModelAccess.assertLegalRead();
+  if (MapSequence.fromMap(myFeatureToValue).containsKey(feature)) {
+    throw new IllegalArgumentException("Trying to put already present feature");
+  }
+  Feature[] ancestors=feature.getAncestors();
+  if (Sequence.fromIterable(Sequence.fromArray(ancestors)).any(new IWhereFilter<Object>(){
+    public boolean accept(    Object a){
+      return MapSequence.fromMap(myFeatureToValue).containsKey(a);
+    }
+  }
+)) {
+    throw new IllegalAccessError("Trying to put feature which is ancestor of already added one");
+  }
+  MapSequence.fromMap(myFeatureToValue).put(feature,value);
+  MapSequence.fromMap(myFeatureToAncestors).put(feature,ancestors);
+  Sequence.fromIterable(Sequence.fromArray(ancestors)).visitAll(new IVisitor<Feature>(){
+    public void visit(    Feature a){
+      myFeaturesIsAncestorCounterMap.increment(a);
+    }
+  }
+);
+}
