@@ -1,8 +1,7 @@
 {
-  Map<Tuples._2<IModule,DependencyUtil.Role>,DependencyTreeNode> visited=MapSequence.fromMap(new HashMap<Tuples._2<IModule,DependencyUtil.Role>,DependencyTreeNode>());
-  Queue<DependencyTreeNode> unprocessed=QueueSequence.fromQueue(new LinkedList<DependencyTreeNode>());
-  Map<DependencyTreeNode,List<DependencyTreeNode>> backDeps=MapSequence.fromMap(new HashMap<DependencyTreeNode,List<DependencyTreeNode>>());
-  DependencyTreeNode root=new DependencyTreeNode(new DependencyUtil.Link(from,DependencyUtil.Role.None,null),null);
+  Map<Tuples._2<IModule,DependencyUtil.Role>,DependencyPathTree.LinkFrom> visited=MapSequence.fromMap(new HashMap<Tuples._2<IModule,DependencyUtil.Role>,DependencyPathTree.LinkFrom>());
+  Queue<DependencyPathTree.LinkFrom> unprocessed=QueueSequence.fromQueue(new LinkedList<DependencyPathTree.LinkFrom>());
+  DependencyPathTree.LinkFrom root=new DependencyPathTree.LinkFrom(new DependencyUtil.Link(from,DependencyUtil.Role.None,null),null);
   if (myCycles != null && SetSequence.fromSet(myCycles).select(new ISelector<Tuples._2<DependencyUtil.Role,IModule>,IModule>(){
     public IModule select(    Tuples._2<DependencyUtil.Role,IModule> it){
       return it._1();
@@ -13,37 +12,32 @@
   }
   QueueSequence.fromQueue(unprocessed).addLastElement(root);
   while (QueueSequence.fromQueue(unprocessed).isNotEmpty()) {
-    DependencyTreeNode node=QueueSequence.fromQueue(unprocessed).removeFirstElement();
-    if (node.getLink().role == DependencyUtil.Role.UsedLanguage && SetSequence.fromSet(usedlanguage).contains(node.getLink().module) || (node.getLink().role == DependencyUtil.Role.DTDependency_ || node.getLink().role == DependencyUtil.Role.RTDependency) && SetSequence.fromSet(dependency).contains(node.getLink().module)) {
-      node.setDepLeaf();
-      setUsed(node,backDeps);
+    DependencyPathTree.LinkFrom node=QueueSequence.fromQueue(unprocessed).removeFirstElement();
+    if (node.link.role == DependencyUtil.Role.UsedLanguage && SetSequence.fromSet(usedlanguage).contains(node.link.module) || (node.link.role == DependencyUtil.Role.DTDependency_ || node.link.role == DependencyUtil.Role.RTDependency) && SetSequence.fromSet(dependency).contains(node.link.module)) {
+      node.setUsed();
+      node.node.setDepLeaf();
     }
- else     if (MapSequence.fromMap(visited).containsKey(MultiTuple.<IModule,DependencyUtil.Role>from(node.getLink().module,node.getLink().role))) {
+ else     if (MapSequence.fromMap(visited).containsKey(MultiTuple.<IModule,DependencyUtil.Role>from(node.link.module,node.link.role))) {
       if (!(isShowAll())) {
         continue;
       }
-      DependencyTreeNode n=MapSequence.fromMap(visited).get(MultiTuple.<IModule,DependencyUtil.Role>from(node.getLink().module,node.getLink().role));
-      if (!(MapSequence.fromMap(backDeps).containsKey(n))) {
-        MapSequence.fromMap(backDeps).put(n,ListSequence.fromList(new ArrayList<DependencyTreeNode>()));
-      }
-      node.setLinkLeaf(n);
-      ListSequence.fromList(MapSequence.fromMap(backDeps).get(n)).addElement(node);
+      DependencyPathTree.LinkFrom n=MapSequence.fromMap(visited).get(MultiTuple.<IModule,DependencyUtil.Role>from(node.link.module,node.link.role));
+      n.addBackDep(node);
       if (n.isUsed()) {
-        setUsed(node,backDeps);
+        node.setUsed();
       }
     }
  else {
-      MapSequence.fromMap(visited).put(MultiTuple.<IModule,DependencyUtil.Role>from(node.getLink().module,node.getLink().role),node);
-      DependencyUtil.dependencies(node.getLink().role,node.getLink().module,isShowRuntime());
-      for (      DependencyUtil.Link link : ListSequence.fromList(DependencyUtil.dependencies(node.getLink().role,node.getLink().module,isShowRuntime()))) {
-        DependencyTreeNode n=new DependencyTreeNode(link,null);
+      MapSequence.fromMap(visited).put(MultiTuple.<IModule,DependencyUtil.Role>from(node.link.module,node.link.role),node);
+      DependencyUtil.dependencies(node.link.role,node.link.module,isShowRuntime());
+      for (      DependencyUtil.Link link : ListSequence.fromList(DependencyUtil.dependencies(node.link.role,node.link.module,isShowRuntime()))) {
+        DependencyPathTree.LinkFrom n=new DependencyPathTree.LinkFrom(link,node);
         if (myCycles != null && SetSequence.fromSet(myCycles).contains(MultiTuple.<DependencyUtil.Role,IModule>from(link.role,link.module))) {
           n.setCyclic();
         }
-        node.add(n);
         QueueSequence.fromQueue(unprocessed).addLastElement(n);
       }
     }
   }
-  return root;
+  return root.node;
 }
