@@ -1,0 +1,28 @@
+{
+  final Wrappers._T<List<ChangeEditorMessage>> messages=new Wrappers._T<List<ChangeEditorMessage>>(null);
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      SModel model;
+      SNode editedNode=myEditorComponent.getEditedNode();
+      if (editedNode == null || editedNode.isDisposed()) {
+        return;
+      }
+      model=editedNode.getModel();
+      if (model == null || model.isDisposed()) {
+        return;
+      }
+      messages.value=ChangeEditorMessage.createMessages(model,change,EditorHighlighter.this,null,false);
+    }
+  }
+);
+  if (messages.value == null) {
+    messages.value=ListSequence.fromList(new ArrayList<ChangeEditorMessage>());
+  }
+synchronized (myChangesMessages) {
+    if (MapSequence.fromMap(myChangesMessages).containsKey(change)) {
+      return ListSequence.fromList(new ArrayList<ChangeEditorMessage>());
+    }
+    MapSequence.fromMap(myChangesMessages).put(change,messages.value);
+  }
+  return messages.value;
+}
