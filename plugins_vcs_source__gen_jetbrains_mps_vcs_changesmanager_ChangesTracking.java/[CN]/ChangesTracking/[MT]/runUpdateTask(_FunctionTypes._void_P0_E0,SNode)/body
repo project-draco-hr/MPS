@@ -1,0 +1,35 @@
+{
+  final List<SNodeId> ancestors=ListSequence.fromList(SNodeOperations.getAncestors(currentNode,null,true)).select(new ISelector<SNode,SNodeId>(){
+    public SNodeId select(    SNode a){
+      return a.getSNodeId();
+    }
+  }
+).toListSequence();
+  myQueue.runTask(new Runnable(){
+    public void run(){
+      if (ListSequence.fromList(ancestors).translate(new ITranslator2<SNodeId,ModelChange>(){
+        public Iterable<ModelChange> translate(        SNodeId a){
+          return myNodesToDirectChanges.getByFirst(a);
+        }
+      }
+).any(new IWhereFilter<ModelChange>(){
+        public boolean accept(        ModelChange ch){
+          return ch instanceof AddRootChange || ch instanceof NodeGroupChange;
+        }
+      }
+)) {
+      }
+ else {
+        myDifference.getBroadcaster().changeUpdateStarted();
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            task.invoke();
+          }
+        }
+);
+        myDifference.getBroadcaster().changeUpdateFinished();
+      }
+    }
+  }
+);
+}
