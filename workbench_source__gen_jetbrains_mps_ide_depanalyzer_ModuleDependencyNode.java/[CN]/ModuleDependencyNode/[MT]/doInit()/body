@@ -9,31 +9,9 @@
     SetSequence.fromSet(rtModules).addSequence(SetSequence.fromSet(depManager.getAllRequiredModules()));
     SetSequence.fromSet(usedLanguages).addSequence(SetSequence.fromSet(depManager.getAllUsedLanguages()));
   }
-  Set<IModule> depLoops=SetSequence.fromSet(new HashSet<IModule>());
-  Set<IModule> langLoops=SetSequence.fromSet(new HashSet<IModule>());
-  SetSequence.fromSet(depLoops).addSequence(SetSequence.fromSet(tree.getCycles()).where(new IWhereFilter<Tuples._2<DependencyUtil.Role,IModule>>(){
-    public boolean accept(    Tuples._2<DependencyUtil.Role,IModule> it){
-      return it._0() == DependencyUtil.Role.DTDependency_ || it._0() == DependencyUtil.Role.RTDependency || it._0() == DependencyUtil.Role.None;
-    }
-  }
-).select(new ISelector<Tuples._2<DependencyUtil.Role,IModule>,IModule>(){
-    public IModule select(    Tuples._2<DependencyUtil.Role,IModule> it){
-      return it._1();
-    }
-  }
-));
-  SetSequence.fromSet(langLoops).addSequence(SetSequence.fromSet(tree.getCycles()).where(new IWhereFilter<Tuples._2<DependencyUtil.Role,IModule>>(){
-    public boolean accept(    Tuples._2<DependencyUtil.Role,IModule> it){
-      return it._0() == DependencyUtil.Role.UsedLanguage || it._0() == DependencyUtil.Role.None;
-    }
-  }
-).select(new ISelector<Tuples._2<DependencyUtil.Role,IModule>,IModule>(){
-    public IModule select(    Tuples._2<DependencyUtil.Role,IModule> it){
-      return it._1();
-    }
-  }
-));
   Set<IModule> allModules=(tree.isShowRuntime() ? rtModules : reqModules);
+  Set<IModule> depLoops=tree.getLoops();
+  SetSequence.fromSet(allModules).addSequence(SetSequence.fromSet(depLoops).intersect(ListSequence.fromList(myModules)));
   for (  IModule m : SetSequence.fromSet(allModules).sort(new ISelector<IModule,Comparable<?>>(){
     public Comparable<?> select(    IModule it){
       return it.getModuleFqName();
@@ -50,7 +28,7 @@
       }
     }
 ,true)) {
-      usedlanguages.add(new ModuleDependencyNode.ULangDependencyNode(l,SetSequence.fromSet(langLoops).contains(l),getOperationContext()));
+      usedlanguages.add(new ModuleDependencyNode.ULangDependencyNode(l,getOperationContext()));
     }
     add(usedlanguages);
   }
