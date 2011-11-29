@@ -1,0 +1,48 @@
+{
+  setupEnvironment();
+  boolean doneSomething=false;
+  Map<File,List<String>> mpsProjects=myWhatToDo.getMPSProjectFiles();
+  for (  File file : mpsProjects.keySet()) {
+    if (!(file.getName().endsWith(MPSExtentions.DOT_MPS_PROJECT))) {
+      continue;
+    }
+    FileMPSProject p=new FileMPSProject(file);
+    p.init(new FileMPSProject.ProjectDescriptor(file));
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        ClassLoaderManager.getInstance().updateClassPath();
+        new ModuleMaker().make(new HashSet(MPSModuleRepository.getInstance().getAllModules()),new EmptyProgressMonitor());
+      }
+    }
+);
+    ModelAccess.instance().runWriteAction(new Runnable(){
+      public void run(){
+        ClassLoaderManager.getInstance().reloadAll(new EmptyProgressMonitor());
+      }
+    }
+);
+    p.projectOpened();
+    info("Loaded project " + p);
+    executeTask(p,new MpsWorker.ObjectsToProcess(Collections.singleton(p),new HashSet<IModule>(),new HashSet<SModelDescriptor>()));
+    p.projectClosed();
+    disposeProject(p);
+    dispose();
+    doneSomething=true;
+  }
+  LinkedHashSet<IModule> modules=new LinkedHashSet<IModule>();
+  LinkedHashSet<SModelDescriptor> models=new LinkedHashSet<SModelDescriptor>();
+  collectFromModuleFiles(modules);
+  collectFromModelFiles(models);
+  MpsWorker.ObjectsToProcess go=new MpsWorker.ObjectsToProcess(Collections.EMPTY_SET,modules,models);
+  if (go.hasAnythingToGenerate()) {
+    Project project=createDummyProject();
+    executeTask(project,go);
+    doneSomething=true;
+  }
+  if (!(doneSomething)) {
+    error("Could not find anything to generate.");
+    myTestFailed=true;
+  }
+  dispose();
+  showStatistic();
+}
