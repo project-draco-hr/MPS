@@ -1,7 +1,7 @@
 {
   ctl.runJobWithMonitor(new _FunctionTypes._void_P1_E0<IJobMonitor>(){
     public void invoke(    final IJobMonitor monit){
-      String scriptName="Script";
+      String scriptName="__script__";
       int work=Sequence.fromIterable(toExecute).foldLeft(0,new ILeftCombinator<ITarget,Integer>(){
         public Integer combine(        Integer s,        ITarget it){
           return s + ((it.requiresInput() || it.producesOutput() ? 1000 : 10));
@@ -9,7 +9,7 @@
       }
 );
       monit.currentProgress().beginWork(scriptName,work,monit.currentProgress().workLeft());
-      for (      final ITarget trg : Sequence.fromIterable(toExecute)) {
+      with_targets:       for (      final ITarget trg : Sequence.fromIterable(toExecute)) {
         LOG.debug("Executing " + trg.getName());
         try {
           Iterable<ITarget> impre=targetRange.immediatePrecursors(trg.getName());
@@ -40,13 +40,21 @@
           LOG.debug("Input: " + input);
           if (trg.requiresInput()) {
             if (Sequence.fromIterable(input).isEmpty()) {
-              LOG.debug("No input. Stopping");
-              monit.reportFeedback(new IFeedback.ERROR("Error executing target " + trg.getName() + " : no input. Stopping"));
-              results.addResult(trg.getName(),new IResult.FAILURE(null));
-              return;
+              if (trg instanceof ITargetEx && ((ITargetEx)trg).isOptional()) {
+                LOG.info("No input. Skipping optional target.");
+                results.addResult(trg.getName(),new IResult.SUCCESS(null));
+                continue with_targets;
+              }
+ else {
+                LOG.debug("No input. Stopping");
+                monit.reportFeedback(new IFeedback.ERROR("Error executing target " + trg.getName() + " : no input. Stopping"));
+                results.addResult(trg.getName(),new IResult.FAILURE(null));
+                return;
+              }
             }
           }
-          monit.currentProgress().beginWork(trg.getName().toString(),1000,(trg.requiresInput() || trg.producesOutput() ? 1000 : 10));
+          String workName="__" + StringUtils.trim(trg.getName().toString()) + "__";
+          monit.currentProgress().beginWork(workName,1000,(trg.requiresInput() || trg.producesOutput() ? 1000 : 10));
           IJob job=trg.createJob();
           IResult jr=job.execute(Sequence.fromIterable(input).where(new IWhereFilter<IResource>(){
             public boolean accept(            IResource it){
@@ -63,7 +71,7 @@
             LOG.debug((jr.isSucessful() ? "Stop requested" : "Execution failed"));
             return;
           }
-          monit.currentProgress().finishWork(trg.getName().toString());
+          monit.currentProgress().finishWork(workName);
         }
  catch (        TimeOutRuntimeException to) {
           LOG.debug("Timeout executing target " + trg.getName(),to);
