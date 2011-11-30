@@ -1,7 +1,17 @@
 {
-  IModule locationModule=getLocationModule();
+  final IModule locationModule=getLocationModule();
   if (locationModule == null) {
     return super.getClassPath();
   }
-  return Java_Command.getClasspath(locationModule,true);
+  final ClasspathStringCollector visitor=new ClasspathStringCollector();
+  locationModule.getClassPathItem().accept(visitor);
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      AbstractModule.getDependenciesClasspath(CollectionUtil.set(locationModule),false).accept(visitor);
+    }
+  }
+);
+  Set<String> visited=visitor.getClasspath();
+  visited.removeAll(CommonPaths.getJDKPath());
+  return ListSequence.fromListWithValues(new ArrayList<String>(),visited);
 }
