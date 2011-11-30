@@ -1,0 +1,41 @@
+{
+  if (executorService == null) {
+    for (    Callable<T> task : tasks) {
+      task.call();
+    }
+    return null;
+  }
+  List<Future<T>> futures=new ArrayList<Future<T>>(tasks.size());
+  boolean done=false;
+  try {
+    for (    Callable<T> t : tasks) {
+      Future<T> future=executorService.submit(t);
+      futures.add(future);
+    }
+    for (    Future f : futures) {
+      ((Runnable)f).run();
+    }
+    for (    Future f : futures) {
+      try {
+        f.get();
+      }
+ catch (      CancellationException ignore) {
+      }
+catch (      ExecutionException e) {
+        Throwable cause=e.getCause();
+        if (cause != null) {
+          throw cause;
+        }
+      }
+    }
+    done=true;
+  }
+  finally {
+    if (!(done)) {
+      for (      Future f : futures) {
+        f.cancel(false);
+      }
+    }
+  }
+  return futures;
+}
