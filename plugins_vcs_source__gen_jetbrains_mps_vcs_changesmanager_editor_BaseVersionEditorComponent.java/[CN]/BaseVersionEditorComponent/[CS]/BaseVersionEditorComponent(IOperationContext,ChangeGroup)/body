@@ -1,0 +1,38 @@
+{
+  super(operationContext);
+  final SModel baseModel=ListSequence.fromList(changeGroup.getChanges()).first().getChangeSet().getOldModel();
+  SNode baseRoot=baseModel.getNodeById(ListSequence.fromList(changeGroup.getChanges()).first().getRootId());
+  editNode(baseRoot);
+  Iterable<ChangeEditorMessage> messages=ListSequence.fromList(changeGroup.getChanges()).translate(new ITranslator2<ModelChange,ChangeEditorMessage>(){
+    public Iterable<ChangeEditorMessage> translate(    ModelChange ch){
+      return ChangeEditorMessageFactory.createMessages(baseModel,ch,BaseVersionEditorComponent.this,null);
+    }
+  }
+);
+  Bounds verticalBounds=Sequence.fromIterable(messages).select(new ISelector<ChangeEditorMessage,Bounds>(){
+    public Bounds select(    ChangeEditorMessage m){
+      return m.getBounds(BaseVersionEditorComponent.this);
+    }
+  }
+).reduceLeft(new ILeftCombinator<Bounds,Bounds>(){
+    public Bounds combine(    Bounds a,    Bounds b){
+      return a.merge(b);
+    }
+  }
+);
+  Rectangle cellsRect=Sequence.fromIterable(messages).select(new ISelector<ChangeEditorMessage,Rectangle>(){
+    public Rectangle select(    ChangeEditorMessage m){
+      return m.getCell(BaseVersionEditorComponent.this).getBounds();
+    }
+  }
+).reduceLeft(new ILeftCombinator<Rectangle,Rectangle>(){
+    public Rectangle combine(    Rectangle a,    Rectangle b){
+      return a.union(b);
+    }
+  }
+);
+  Rectangle viewRect=new Rectangle(0,(int)verticalBounds.start(),(int)cellsRect.getMaxX(),verticalBounds.length());
+  myScrollPane=new JScrollPane(this,JScrollPane.VERTICAL_SCROLLBAR_NEVER,JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+  myScrollPane.setPreferredSize(viewRect.getSize());
+  myScrollPane.getViewport().setViewPosition(viewRect.getLocation());
+}
