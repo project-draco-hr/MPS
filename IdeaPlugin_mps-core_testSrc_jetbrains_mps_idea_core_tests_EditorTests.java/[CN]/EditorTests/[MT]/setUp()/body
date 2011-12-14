@@ -1,0 +1,42 @@
+{
+  final Exception[] thrown=new Exception[1];
+  UIUtil.invokeAndWaitIfNeeded(new Runnable(){
+    @Override public void run(){
+      try {
+        EditorTests.super.setUp();
+      }
+ catch (      Exception e) {
+        thrown[0]=e;
+      }
+    }
+  }
+);
+  if (thrown[0] != null)   throw thrown[0];
+  ApplicationManagerEx.getApplicationEx().doNotSave();
+  SModelRoot sModelRoot=myFacet.getSolution().getSModelRoots().get(0);
+  final IFile modelFile=FileSystem.getInstance().getFileByPath(sModelRoot.getPath() + "/test.mps");
+  final List<SNode> roots=new ArrayList<SNode>();
+  InspectorTool inspectorTool=myModule.getProject().getComponent(InspectorTool.class);
+  ModelAccess.instance().runReadAction(new Runnable(){
+    @Override public void run(){
+      SModelDescriptor descr=SModelRepository.getInstance().findModel(modelFile);
+      if (descr == null) {
+        thrown[0]=new IllegalStateException("model not found");
+        return;
+      }
+      SModel model=descr.getSModel();
+      if (model != null) {
+        for (        SNode root : model.roots()) {
+          roots.add(root);
+        }
+      }
+      ProjectOperationContext context=new ProjectOperationContext(ProjectHelper.toMPSProject(myModule.getProject()));
+      new MPSEditorOpener(myModule.getProject()).openNode(roots.get(0),context,true,true);
+      testBody=new TestBody();
+      testBody.myModel=roots.get(0).getModel().getModelDescriptor();
+      testBody.myProject=ProjectHelper.toMPSProject(myModule.getProject());
+    }
+  }
+);
+  if (thrown[0] != null)   throw thrown[0];
+}
