@@ -16,7 +16,6 @@
   SModelRoot sModelRoot=myFacet.getSolution().getSModelRoots().get(0);
   final IFile modelFile=FileSystem.getInstance().getFileByPath(sModelRoot.getPath() + "/test.mps");
   final List<SNode> roots=new ArrayList<SNode>();
-  InspectorTool inspectorTool=myModule.getProject().getComponent(InspectorTool.class);
   ModelAccess.instance().runReadAction(new Runnable(){
     @Override public void run(){
       SModelDescriptor descr=SModelRepository.getInstance().findModel(modelFile);
@@ -30,13 +29,23 @@
           roots.add(root);
         }
       }
-      ProjectOperationContext context=new ProjectOperationContext(ProjectHelper.toMPSProject(myModule.getProject()));
-      new MPSEditorOpener(myModule.getProject()).openNode(roots.get(0),context,true,true);
-      testBody=new TestBody();
-      testBody.myModel=roots.get(0).getModel().getModelDescriptor();
-      testBody.myProject=ProjectHelper.toMPSProject(myModule.getProject());
+      for (      SNode r : roots) {
+        if ("EditorTestCase".equals(r.getConceptShortName())) {
+          try {
+            Class<?> cls=Class.forName(model.getLongName() + "." + r.getName()+ "_Test");
+            Method mth=cls.getMethod("test_" + r.getName());
+            BaseTransformationTest btt=(BaseTransformationTest)cls.newInstance();
+            btt.setTestRunner(new SimpleTransformationTestRunner(r,mth));
+            tests.add(btt);
+          }
+ catch (          Exception e) {
+            thrown[0]=e;
+          }
+        }
+      }
     }
   }
 );
+  Logger.setFactory(TestLoggerFactory.getInstance());
   if (thrown[0] != null)   throw thrown[0];
 }
