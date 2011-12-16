@@ -1,0 +1,39 @@
+{
+  ModelAccess.instance().runReadInEDT(new Runnable(){
+    @Override public void run(){
+      final List<ModuleReference> allLanguages=new ArrayList<ModuleReference>();
+      for (      Language language : MPSModuleRepository.getInstance().getAllLanguages()) {
+        allLanguages.add(language.getModuleReference());
+      }
+      SwingUtilities.invokeLater(new Runnable(){
+        @Override public void run(){
+          Collections.sort(allLanguages,UsedLanguagesTableModel.MODULE_REFERENCE_COMPARATOR);
+          ChooseElementsDialog<ModuleReference> chooseLanguagesDialog=new ChooseElementsDialog<ModuleReference>(myUsedlanguagesTable,allLanguages,MPSBundle.message("facet.languages.tab.choose.language.title")){
+            @Override protected String getItemText(            ModuleReference item){
+              return item.getModuleFqName();
+            }
+            @Override protected Icon getItemIcon(            ModuleReference item){
+              return MPSIcons.LANGUAGE_ICON;
+            }
+          }
+;
+          chooseLanguagesDialog.show();
+          Set<ModuleReference> languagesToAdd=new HashSet<ModuleReference>(chooseLanguagesDialog.getChosenElements());
+          myUsedLanguagesTableModel.addUsedLanguages(languagesToAdd);
+          myUsedLanguagesTableModel.fireTableDataChanged();
+          ListSelectionModel selectionModel=myUsedlanguagesTable.getSelectionModel();
+          if (!languagesToAdd.isEmpty()) {
+            selectionModel.clearSelection();
+            for (int i=0; i < myUsedLanguagesTableModel.getRowCount(); i++) {
+              if (languagesToAdd.contains(myUsedLanguagesTableModel.getValueAt(i,0))) {
+                selectionModel.addSelectionInterval(i,i);
+              }
+            }
+          }
+        }
+      }
+);
+    }
+  }
+);
+}

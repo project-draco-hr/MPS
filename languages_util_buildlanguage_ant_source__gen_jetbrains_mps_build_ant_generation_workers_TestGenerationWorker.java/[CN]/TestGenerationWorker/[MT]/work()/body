@@ -1,24 +1,34 @@
 {
   setupEnvironment();
   myReporter.init();
+  boolean doneSomething=false;
   Map<File,List<String>> mpsProjects=myWhatToDo.getMPSProjectFiles();
   for (  File file : mpsProjects.keySet()) {
     if (!(file.getName().endsWith(MPSExtentions.DOT_MPS_PROJECT))) {
       continue;
     }
-    Project p;
-    try {
-      Class<?> cls=Class.forName("jetbrains.mps.TestMain");
-      Method meth=cls.getMethod("loadProject",File.class);
-      p=(MPSProject)meth.invoke(null,file);
+    FileMPSProject p=new FileMPSProject(file);
+    p.init(new FileMPSProject.ProjectDescriptor(file));
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        ClassLoaderManager.getInstance().updateClassPath();
+        new ModuleMaker().make(new HashSet(MPSModuleRepository.getInstance().getAllModules()),new EmptyProgressMonitor());
+      }
     }
- catch (    Exception ex) {
-      throw new RuntimeException(ex);
+);
+    ModelAccess.instance().runWriteAction(new Runnable(){
+      public void run(){
+        ClassLoaderManager.getInstance().reloadAll(new EmptyProgressMonitor());
+      }
     }
+);
+    p.projectOpened();
     info("Loaded project " + p);
     executeTask(p,new MpsWorker.ObjectsToProcess(Collections.singleton(p),new HashSet<IModule>(),new HashSet<SModelDescriptor>()));
+    p.projectClosed();
     disposeProject(p);
     dispose();
+    doneSomething=true;
   }
   LinkedHashSet<IModule> modules=new LinkedHashSet<IModule>();
   LinkedHashSet<SModelDescriptor> models=new LinkedHashSet<SModelDescriptor>();
@@ -28,8 +38,9 @@
   if (go.hasAnythingToGenerate()) {
     Project project=createDummyProject();
     executeTask(project,go);
+    doneSomething=true;
   }
- else {
+  if (!(doneSomething)) {
     error("Could not find anything to generate.");
     myTestFailed=true;
   }

@@ -1,0 +1,31 @@
+{
+  final Module module2=addModule(myProjectBuilder);
+  MPSFacet mpsFacet2=addMPSFacet(module2);
+  ApplicationManager.getApplication().runWriteAction(new Runnable(){
+    @Override public void run(){
+      ModifiableRootModel rootModel=ModuleRootManager.getInstance(module2).getModifiableModel();
+      rootModel.addModuleOrderEntry(myModule);
+      rootModel.commit();
+    }
+  }
+);
+  flushEDT();
+  List<Dependency> solution2Dependencies=mpsFacet2.getSolution().getDependencies();
+  assertEquals(1,solution2Dependencies.size());
+  assertEquals(myFacet.getSolution().getModuleReference(),solution2Dependencies.get(0).getModuleRef());
+  ApplicationManager.getApplication().runWriteAction(new Runnable(){
+    @Override public void run(){
+      ModifiableRootModel rootModel=ModuleRootManager.getInstance(module2).getModifiableModel();
+      for (      OrderEntry orderEntry : rootModel.getOrderEntries()) {
+        if (orderEntry instanceof ModuleOrderEntry && myModule.equals(((ModuleOrderEntry)orderEntry).getModule())) {
+          rootModel.removeOrderEntry(orderEntry);
+          break;
+        }
+      }
+      rootModel.commit();
+    }
+  }
+);
+  flushEDT();
+  assertEmpty(mpsFacet2.getSolution().getDependencies());
+}

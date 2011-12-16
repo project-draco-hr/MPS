@@ -1,0 +1,44 @@
+{
+  final LoggingProgressStrategy.Log logger=context.mock(LoggingProgressStrategy.Log.class);
+  context.checking(new Expectations(){
+{
+      oneOf(logger).info(with(equal("\u221e/" + internalWorkName("script") + "/"+ internalWorkName(new ITarget.Name("Worker_.work").toString())+ "/WORK -- started")));
+      oneOf(logger).info(with(equal("\u221e/" + internalWorkName("script") + "/"+ internalWorkName(new ITarget.Name("Worker_.work").toString())+ "/WORK -- done 50%")));
+      oneOf(logger).info(with(equal("\u221e/" + internalWorkName("script") + "/"+ internalWorkName(new ITarget.Name("Worker_.work").toString())+ "/WORK/WORKWORK -- started")));
+      oneOf(logger).info(with(equal("\u221e/" + internalWorkName("script") + "/"+ internalWorkName(new ITarget.Name("Worker_.work").toString())+ "/WORK -- done 62%")));
+      oneOf(logger).info(with(equal("\u221e/" + internalWorkName("script") + "/"+ internalWorkName(new ITarget.Name("Worker_.work").toString())+ "/WORK/WORKWORK -- done 50%")));
+      oneOf(logger).info(with(equal("\u221e/" + internalWorkName("script") + "/"+ internalWorkName(new ITarget.Name("Worker_.work").toString())+ "/WORK -- done 74%")));
+      exactly(2).of(logger).info(with(equal("\u221e/" + internalWorkName("script") + "/"+ internalWorkName(new ITarget.Name("Worker_.work").toString())+ "/WORK/WORKWORK -- done 100%")));
+      oneOf(logger).info(with(equal("\u221e/" + internalWorkName("script") + "/"+ internalWorkName(new ITarget.Name("Worker_.work").toString())+ "/WORK/WORKWORK -- finished")));
+      oneOf(logger).info(with(equal("\u221e/" + internalWorkName("script") + "/"+ internalWorkName(new ITarget.Name("Worker_.work").toString())+ "/WORK -- done 100%")));
+      oneOf(logger).info(with(equal("\u221e/" + internalWorkName("script") + "/"+ internalWorkName(new ITarget.Name("Worker_.work").toString())+ "/WORK -- finished")));
+      allowing(logger).info(with(new BaseMatcher<String>(){
+        public boolean matches(        Object s){
+          return !(((String)s).matches(".*WORK -- .*"));
+        }
+        public void describeTo(        Description p0){
+        }
+      }
+));
+    }
+  }
+);
+  final LoggingProgressStrategy strat=new LoggingProgressStrategy(logger);
+  ScriptBuilder scb=new ScriptBuilder();
+  IJobMonitor.Stub jmon=new IJobMonitor.Stub(null){
+    @Override public IProgress currentProgress(){
+      return strat.currentProgress();
+    }
+  }
+;
+  final IScriptController mons=new IScriptController.Stub(new IConfigMonitor.Stub(),jmon);
+  IScript scr=scb.withFacetName(new IFacet.Name("Maker_")).withFacetName(new IFacet.Name("Worker_")).withFinalTarget(new ITarget.Name("Maker_.Make")).toScript();
+  Assert.assertTrue(scr.isValid());
+  ITarget dt=scr.finalTarget();
+  Assert.assertNotNull(dt);
+  Assert.assertEquals(new ITarget.Name("Maker_.Make"),dt.getName());
+  IResult res=scr.execute(mons,null,new EmptyProgressMonitor());
+  Assert.assertNotNull(res);
+  Assert.assertTrue(res.isSucessful());
+  Assert.assertTrue(Sequence.fromIterable(res.output()).isEmpty());
+}
