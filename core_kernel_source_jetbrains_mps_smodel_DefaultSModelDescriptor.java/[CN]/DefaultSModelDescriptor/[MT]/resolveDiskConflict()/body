@@ -1,23 +1,26 @@
 {
   ApplicationManager.getApplication().invokeLater(new Runnable(){
     public void run(){
-      final boolean needSave=VcsMigrationUtil.getHandler().resolveDiskMemoryConflict(myModelFile,mySModel);
-      if (needSave) {
-        ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-          public void run(){
-            updateDiskTimestamp();
-            save();
+      final boolean needSave;
+synchronized (myLoadingLock) {
+        needSave=VcsMigrationUtil.getHandler().resolveDiskMemoryConflict(myModelFile,mySModel);
+        if (needSave) {
+          ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+            public void run(){
+              updateDiskTimestamp();
+              save();
+            }
           }
-        }
 );
-      }
+        }
  else {
-        ModelAccess.instance().runWriteAction(new Runnable(){
-          public void run(){
-            reloadFromDisk();
+          ModelAccess.instance().runWriteAction(new Runnable(){
+            public void run(){
+              reloadFromDisk();
+            }
           }
-        }
 );
+        }
       }
     }
   }
