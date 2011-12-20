@@ -1,30 +1,25 @@
 {
-  SwingUtilities.invokeLater(new Runnable(){
+  final Collection<Conflictable> merged=showMergeDialog(models);
+  if (merged.isEmpty()) {
+    ModelChangesWatcher.instance().tryToResumeTasksProcessing();
+    return;
+  }
+  ApplicationManager.getApplication().invokeLater(new Runnable(){
     public void run(){
-      final Collection<Conflictable> merged=showMergeDialog(models);
-      if (merged.isEmpty()) {
-        ModelChangesWatcher.instance().tryToResumeTasksProcessing();
-        return;
-      }
-      ApplicationManager.getApplication().invokeLater(new Runnable(){
-        public void run(){
-          try {
-            ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-              public void run(){
-                for (                Conflictable conflictable : merged) {
-                  conflictable.reloadFromDisk();
-                }
-              }
+      try {
+        ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+          public void run(){
+            for (            Conflictable conflictable : merged) {
+              conflictable.reloadFromDisk();
             }
-);
-          }
-  finally {
-            ModelChangesWatcher.instance().tryToResumeTasksProcessing();
           }
         }
+);
       }
-,ModalityState.NON_MODAL);
+  finally {
+        ModelChangesWatcher.instance().tryToResumeTasksProcessing();
+      }
     }
   }
-);
+,ModalityState.NON_MODAL);
 }
