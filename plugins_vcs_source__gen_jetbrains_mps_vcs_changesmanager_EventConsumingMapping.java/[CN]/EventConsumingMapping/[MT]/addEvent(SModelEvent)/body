@@ -1,2 +1,46 @@
 {
+  SNode affectedNode=null;
+  SNode addedNode=null;
+  if (event instanceof SModelRootEvent) {
+    SModelRootEvent re=(SModelRootEvent)event;
+    affectedNode=re.getRoot();
+    if (re.isAdded()) {
+      addedNode=affectedNode;
+    }
+  }
+ else   if (event instanceof SModelChildEvent) {
+    SModelChildEvent ce=(SModelChildEvent)event;
+    affectedNode=ce.getParent();
+    if (ce.isAdded()) {
+      addedNode=ce.getChild();
+    }
+  }
+ else   if (event instanceof SModelPropertyEvent) {
+    affectedNode=((SModelPropertyEvent)event).getNode();
+  }
+ else   if (event instanceof SModelReferenceEvent) {
+    affectedNode=((SModelReferenceEvent)event).getReference().getSourceNode();
+  }
+  if (affectedNode == null) {
+    return;
+  }
+  if (!(myAddedNodesToEvents.containsKey(affectedNode.getSNodeId()))) {
+    if (event instanceof SModelRootEvent) {
+      SModelRootEvent rootEvent=(SModelRootEvent)event;
+      if (rootEvent.isRemoved()) {
+        consumeAllForNode(affectedNode);
+      }
+    }
+ else     if (event instanceof SModelChildEvent) {
+      SModelChildEvent childEvent=(SModelChildEvent)event;
+      SNode child=childEvent.getChild();
+      if (childEvent.isRemoved()) {
+        consumeAllForNode(child);
+      }
+    }
+    myNodesToUnconsumedEvents.put(affectedNode.getSNodeId(),event);
+  }
+  if (addedNode != null) {
+    myAddedNodesToEvents.put(addedNode.getSNodeId(),event);
+  }
 }
