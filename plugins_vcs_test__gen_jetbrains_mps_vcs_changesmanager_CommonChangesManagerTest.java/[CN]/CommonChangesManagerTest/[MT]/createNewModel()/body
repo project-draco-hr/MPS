@@ -1,0 +1,32 @@
+{
+  final Wrappers._T<CurrentDifference> newModelDiff=new Wrappers._T<CurrentDifference>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      String modelName="newmodel";
+      IModule module=myUiDiff.getModelDescriptor().getModule();
+      module.createModel(SModelFqName.fromString(MODEL_PREFIX + modelName),module.getSModelRoots().get(0),null);
+      newModelDiff.value=getCurrentDifference(modelName);
+    }
+  }
+);
+  ModelAccess.instance().runWriteInEDT(new Runnable(){
+    public void run(){
+      newModelDiff.value.getModelDescriptor().save();
+    }
+  }
+);
+  ModelAccess.instance().flushEventQueue();
+  newModelDiff.value.setEnabled(true);
+  waitForChangesManager();
+  Assert.assertNull(newModelDiff.value.getChangeSet());
+  runCommandAndWait(new Runnable(){
+    public void run(){
+      createNewRoot(newModelDiff.value.getModelDescriptor().getSModel());
+    }
+  }
+);
+  waitForChangesManager();
+  List<ModelChange> changes=newModelDiff.value.getChangeSet().getModelChanges();
+  Assert.assertEquals(1,ListSequence.fromList(changes).count());
+  Assert.assertTrue(ListSequence.fromList(changes).first() instanceof AddRootChange);
+}
