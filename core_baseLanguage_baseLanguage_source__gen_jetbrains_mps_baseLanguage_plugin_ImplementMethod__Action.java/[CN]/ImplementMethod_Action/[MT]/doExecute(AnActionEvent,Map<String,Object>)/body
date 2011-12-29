@@ -1,48 +1,7 @@
 {
   try {
     final Project project=((IOperationContext)MapSequence.fromMap(_params).get("operationContext")).getProject();
-    final SNode contextClass=SNodeOperations.getAncestor(((SNode)MapSequence.fromMap(_params).get("selectedNode")),"jetbrains.mps.baseLanguage.structure.ClassConcept",true,false);
-    final SNode contextMethod=SNodeOperations.getAncestor(((SNode)MapSequence.fromMap(_params).get("selectedNode")),"jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration",true,false);
-    final SNodePointer[] methods=ModelAccess.instance().runReadAction(new Computable<SNodePointer[]>(){
-      public SNodePointer[] compute(){
-        return OverrideImplementMethodsDialog.toNodePointers(OverrideImplementMethodsDialog.sortMethods(contextClass,IMemberContainer_Behavior.call_getMethodsToImplement_5418393554803775106(contextClass)));
-      }
-    }
-);
-    final OverrideImplementMethodsDialog dialog=new OverrideImplementMethodsDialog(methods,ProjectHelper.toIdeaProject(project)){
-      @Override protected boolean showInsertOverride(){
-        return false;
-      }
-    }
-;
-    dialog.setTitle("Select Methods to Implement");
-    dialog.show();
-    if (dialog.isOK()) {
-      final Iterable<SNodePointer> selectedElements=(Iterable<SNodePointer>)dialog.getSelectedElements();
-      ModelAccess.instance().runCommandInEDT(new Runnable(){
-        public void run(){
-          List<SNode> selection=Sequence.fromIterable(selectedElements).select(new ISelector<SNodePointer,SNode>(){
-            public SNode select(            SNodePointer it){
-              return SNodeOperations.cast(it.getNode(),"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration");
-            }
-          }
-).toListSequence();
-          OverrideImplementMethodsHelper helper=new OverrideImplementMethodsHelper(project,contextClass,contextMethod,dialog.isRemoveAttributes(),false,dialog.isAddReturn());
-          List<SNode> insertedMethods=helper.insertMethods(selection);
-          if (insertedMethods.isEmpty()) {
-            return;
-          }
-          if (insertedMethods.size() == 1) {
-            ((EditorContext)MapSequence.fromMap(_params).get("editorContext")).selectAfter(ListSequence.fromList(insertedMethods).first());
-          }
- else {
-            ((EditorContext)MapSequence.fromMap(_params).get("editorContext")).select(ListSequence.fromList(insertedMethods).last());
-            ((EditorContext)MapSequence.fromMap(_params).get("editorContext")).selectRange(ListSequence.fromList(insertedMethods).last(),ListSequence.fromList(insertedMethods).first());
-          }
-        }
-      }
-,project);
-    }
+    new ImplementMethodAction(project,((SNode)MapSequence.fromMap(_params).get("selectedNode")),((EditorContext)MapSequence.fromMap(_params).get("editorContext"))).run();
   }
  catch (  Throwable t) {
     LOG.error("User's action execute method failed. Action:" + "ImplementMethod",t);
