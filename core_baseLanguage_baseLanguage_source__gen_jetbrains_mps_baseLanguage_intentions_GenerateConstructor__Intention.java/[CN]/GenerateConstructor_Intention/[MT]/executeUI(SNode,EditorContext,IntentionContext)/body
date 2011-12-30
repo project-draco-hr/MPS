@@ -1,6 +1,7 @@
 {
   Frame frame=editorContext.getMainFrame();
   final Wrappers._T<SNode> superclass=new Wrappers._T<SNode>(null);
+  final Wrappers._T<SNodePointer[]> ctors=new Wrappers._T<SNodePointer[]>(null);
   final Wrappers._boolean needsShowConstructorsDialog=new Wrappers._boolean(false);
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
@@ -10,21 +11,27 @@
       }
       if (ListSequence.fromList(SLinkOperations.getTargets(superclass.value,"constructor",true)).count() > 1) {
         needsShowConstructorsDialog.value=true;
+        ctors.value=ListSequence.fromList(SLinkOperations.getTargets(superclass.value,"constructor",true)).select(new ISelector<SNode,SNodePointer>(){
+          public SNodePointer select(          SNode it){
+            return new SNodePointer(it);
+          }
+        }
+).toGenericArray(SNodePointer.class);
       }
  else {
-        intentionContext.getContextParametersMap().put("selectedConstructors",new ArrayList<SNode>());
-        ListSequence.fromList(((List<SNode>)intentionContext.getContextParametersMap().get("selectedConstructors"))).addElement(ListSequence.fromList(SLinkOperations.getTargets(superclass.value,"constructor",true)).first());
+        intentionContext.getContextParametersMap().put("selectedConstructors",new SNodePointer[]{new SNodePointer(ListSequence.fromList(SLinkOperations.getTargets(superclass.value,"constructor",true)).first())});
       }
     }
   }
 );
   if (needsShowConstructorsDialog.value) {
-    SelectConstructorsDialog selectConstructorsDialog=new SelectConstructorsDialog(editorContext,frame,superclass.value);
-    selectConstructorsDialog.showDialog();
-    if (!(selectConstructorsDialog.getAnswer())) {
+    SelectConstructorsDialog selectConstructorsDialog=new SelectConstructorsDialog(ctors.value,editorContext.getOperationContext().getProject());
+    selectConstructorsDialog.show();
+    if (!(selectConstructorsDialog.isOK())) {
       return false;
     }
-    intentionContext.getContextParametersMap().put("selectedConstructors",selectConstructorsDialog.getSelectedMembers());
+    List<SNodePointer> selectedElements=selectConstructorsDialog.getSelectedElements();
+    intentionContext.getContextParametersMap().put("selectedConstructors",(selectedElements != null ? selectedElements.toArray(new SNodePointer[selectedElements.size()]) : new SNodePointer[0]));
   }
   final Wrappers._boolean needsShowFieldsDialog=new Wrappers._boolean(false);
   ModelAccess.instance().runReadAction(new Runnable(){
@@ -33,7 +40,7 @@
         needsShowFieldsDialog.value=true;
       }
  else {
-        intentionContext.getContextParametersMap().put("selectedFields",new ArrayList<SNode>());
+        intentionContext.getContextParametersMap().put("selectedFields",new SNodePointer[0]);
       }
     }
   }
@@ -41,7 +48,12 @@
   if (needsShowFieldsDialog.value) {
     SelectFieldsDialog selectFieldsDialog=new SelectFieldsDialog(editorContext,frame,node);
     selectFieldsDialog.showDialog();
-    intentionContext.getContextParametersMap().put("selectedFields",selectFieldsDialog.getSelectedFields());
+    intentionContext.getContextParametersMap().put("selectedFields",ListSequence.fromList(selectFieldsDialog.getSelectedFields()).select(new ISelector<SNode,SNodePointer>(){
+      public SNodePointer select(      SNode it){
+        return new SNodePointer(it);
+      }
+    }
+).toGenericArray(SNodePointer.class));
     return selectFieldsDialog.getAnswer();
   }
  else {
