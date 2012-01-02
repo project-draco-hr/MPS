@@ -1,0 +1,28 @@
+{
+  try {
+    final Wrappers._T<List<SNode>> overridingList=new Wrappers._T<List<SNode>>();
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        overridingList.value=MethodRefactoringUtils.findOverridingMethods(RenameUtil.getMethodDeclaration(((SNode)MapSequence.fromMap(_params).get("target"))),new EmptyProgressIndicator());
+      }
+    }
+);
+    String oldName="";
+    if (SNodeOperations.isInstanceOf(((SNode)MapSequence.fromMap(_params).get("target")),"jetbrains.mps.baseLanguage.structure.IMethodCall")) {
+      oldName=SPropertyOperations.getString(SLinkOperations.getTarget(SNodeOperations.cast(((SNode)MapSequence.fromMap(_params).get("target")),"jetbrains.mps.baseLanguage.structure.IMethodCall"),"baseMethodDeclaration",false),"name");
+    }
+ else     if (SNodeOperations.isInstanceOf(((SNode)MapSequence.fromMap(_params).get("target")),"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration")) {
+      oldName=SPropertyOperations.getString(SNodeOperations.cast(((SNode)MapSequence.fromMap(_params).get("target")),"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration"),"name");
+    }
+    RenameMethodDialog d=new RenameMethodDialog(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject(),oldName,ListSequence.fromList(overridingList.value).isNotEmpty());
+    d.show();
+    String newName=d.getName();
+    if (newName == null) {
+      return;
+    }
+    new RefactoringFacade().execute(RefactoringContext.createRefactoringContextByName("jetbrains.mps.baseLanguage.refactorings.RenameMethod",Arrays.asList("newName","refactorOverriding"),Arrays.asList(newName,d.getOverriding()),((SNode)MapSequence.fromMap(_params).get("target")),((MPSProject)MapSequence.fromMap(_params).get("project"))));
+  }
+ catch (  Throwable t) {
+    LOG.error("User's action execute method failed. Action:" + "RenameMethod",t);
+  }
+}
