@@ -1,6 +1,22 @@
 {
-  SelectFieldsDialog selectFieldsDialog=new SelectFieldsDialog(editorContext,editorContext.getMainFrame(),node);
+  final Wrappers._T<SNodePointer[]> fields=new Wrappers._T<SNodePointer[]>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      fields.value=ListSequence.fromList(SLinkOperations.getTargets(node,"field",true)).select(new ISelector<SNode,SNodePointer>(){
+        public SNodePointer select(        SNode it){
+          return new SNodePointer(it);
+        }
+      }
+).toGenericArray(SNodePointer.class);
+    }
+  }
+);
+  SelectFieldsDialog selectFieldsDialog=new SelectFieldsDialog(fields.value,false,editorContext.getOperationContext().getProject());
+  selectFieldsDialog.setTitle("Select Fields to Generate Getters and Setters");
   selectFieldsDialog.show();
-  intentionContext.getContextParametersMap().put("selectedFields",selectFieldsDialog.getSelectedFields());
-  return selectFieldsDialog.isOK();
+  if (!(selectFieldsDialog.isOK())) {
+    return false;
+  }
+  intentionContext.getContextParametersMap().put("selectedFields",Sequence.fromIterable(((Iterable<SNodePointer>)selectFieldsDialog.getSelectedElements())).toGenericArray(SNodePointer.class));
+  return true;
 }
