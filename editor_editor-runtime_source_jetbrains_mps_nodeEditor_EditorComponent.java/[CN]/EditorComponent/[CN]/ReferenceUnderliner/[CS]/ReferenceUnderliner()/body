@@ -1,0 +1,61 @@
+{
+  addKeyListener(new KeyAdapter(){
+    public void keyPressed(    KeyEvent e){
+      if (e.getKeyCode() == getKeyCode()) {
+        setControlOver();
+      }
+    }
+    public void keyReleased(    KeyEvent e){
+      if (e.getKeyCode() == getKeyCode()) {
+        clearControlOver();
+      }
+    }
+    private int getKeyCode(){
+      return com.intellij.openapi.util.SystemInfo.isMac ? KeyEvent.VK_META : KeyEvent.VK_CONTROL;
+    }
+  }
+);
+  addMouseMotionListener(new MouseMotionListener(){
+    public void mouseDragged(    MouseEvent e){
+    }
+    public void mouseMoved(    MouseEvent e){
+      if (!myEditorContext.getNodeEditorComponent().isFocusOwner())       return;
+      clearControlOver();
+      if (!(com.intellij.openapi.util.SystemInfo.isMac ? e.isMetaDown() : e.isControlDown())) {
+        myLastReferenceCell=null;
+        return;
+      }
+      if (myRootCell == null) {
+        myLastReferenceCell=null;
+        return;
+      }
+      final EditorCell editorCell=myRootCell.findLeaf(e.getX(),e.getY());
+      if (editorCell == null) {
+        myLastReferenceCell=null;
+        return;
+      }
+      SNode snodeWRTReference=ModelAccess.instance().runReadAction(new Computable<SNode>(){
+        public SNode compute(){
+          return editorCell.getSNodeWRTReference();
+        }
+      }
+);
+      if (editorCell.getSNode() == snodeWRTReference) {
+        myLastReferenceCell=null;
+        return;
+      }
+      myLastReferenceCell=editorCell;
+      setControlOver();
+    }
+  }
+);
+  addFocusListener(new FocusListener(){
+    public void focusGained(    FocusEvent e){
+    }
+    public void focusLost(    FocusEvent e){
+      clearControlOver();
+      myLastReferenceCell=null;
+    }
+  }
+);
+}

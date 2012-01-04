@@ -1,23 +1,27 @@
 {
-  List<SNode> methods=new ArrayList<SNode>();
-  for (  SNode method : ConceptBehavior_Behavior.call_getConceptMethods_5466054087443746043(thisNode,GlobalScope.getInstance())) {
-    if (SPropertyOperations.getBoolean(method,"isFinal")) {
-      continue;
+  List<SNode> candidates=new ArrayList<SNode>();
+  Map<SNode,SNode> concrete=MapSequence.fromMap(new HashMap<SNode,SNode>());
+  for (  SNode allSuper : ConceptBehavior_Behavior.call_getAllSuperBehaviors_1818770337282950280(thisNode)) {
+    for (    SNode meth : SLinkOperations.getTargets(allSuper,"method",true)) {
+      SNode baseMeth=ConceptMethodDeclaration_Behavior.call_getOverridenMethod_1225196403956(meth);
+      if (baseMeth != null && !(MapSequence.fromMap(concrete).containsKey(baseMeth))) {
+        MapSequence.fromMap(concrete).put(baseMeth,meth);
+        ListSequence.fromList(candidates).addElement(meth);
+      }
     }
-    if (!(SPropertyOperations.getBoolean(method,"isVirtual"))) {
+  }
+  List<SNode> result=new ArrayList<SNode>();
+  for (  SNode method : candidates) {
+    if (SPropertyOperations.getBoolean(method,"isFinal")) {
       continue;
     }
     if (SPropertyOperations.getBoolean(method,"isAbstract")) {
       continue;
     }
-    if (SLinkOperations.getTarget(method,"overriddenMethod",false) != null) {
+    if (SNodeOperations.getParent(method) == thisNode) {
       continue;
     }
-    SNode container=SNodeOperations.getAncestor(method,"jetbrains.mps.lang.behavior.structure.ConceptBehavior",false,false);
-    if (container == thisNode || container == null) {
-      continue;
-    }
-    ListSequence.fromList(methods).addElement(method);
+    ListSequence.fromList(result).addElement(method);
   }
-  return methods;
+  return result;
 }
