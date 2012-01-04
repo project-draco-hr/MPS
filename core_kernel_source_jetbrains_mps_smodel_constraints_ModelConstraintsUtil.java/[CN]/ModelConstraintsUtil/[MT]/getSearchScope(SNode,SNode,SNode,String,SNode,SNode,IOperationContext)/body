@@ -1,4 +1,5 @@
 {
+  ModelAccess.assertLegalRead();
   final SModel model;
   if (enclosingNode != null) {
     model=enclosingNode.getModel();
@@ -10,28 +11,18 @@
  else {
     model=null;
   }
-  final SNode enclosingNode_=enclosingNode;
-  final SearchScopeStatus[] status=new SearchScopeStatus[1];
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      SNode contextNode=enclosingNode_;
-      if (contextNode == null) {
-        contextNode=referenceNode;
+  final ReferenceScopeProvider scopeProvider=ModelConstraintsManager.getNodeReferentSearchScopeProvider(referenceNodeConcept,linkRole);
+  final ReferentConstraintContext referentConstraintContext=new ReferentConstraintContext(model,enclosingNode,referenceNode,linkTarget,containingLinkDeclaration);
+  return TypeContextManager.getInstance().runResolveAction(new Computable<SearchScopeStatus>(){
+    @Override public SearchScopeStatus compute(){
+      try {
+        return getSearchScope_intern(scopeProvider,referentConstraintContext,context);
       }
-      TypeContextManager.getInstance().runResolveAction(new Runnable(){
-        @Override public void run(){
-          try {
-            status[0]=getSearchScope_intern(model,enclosingNode_,referenceNode,referenceNodeConcept,linkRole,linkTarget,containingLinkDeclaration,context);
-          }
- catch (          Exception t) {
-            LOG.error(t,referenceNode != null ? referenceNode : enclosingNode_);
-            status[0]=new SearchScopeStatus.ERROR("can't create search scope for role '" + linkRole + "' in '"+ referenceNodeConcept.getName()+ "'");
-          }
-        }
+ catch (      Exception t) {
+        LOG.error(t,referenceNode != null ? referenceNode : referentConstraintContext.getEnclosingNode());
+        return new SearchScopeStatus.ERROR("can't create search scope for role '" + linkRole + "' in '"+ referenceNodeConcept.getName()+ "'");
       }
-);
     }
   }
 );
-  return status[0];
 }
