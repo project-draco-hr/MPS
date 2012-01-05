@@ -1,21 +1,28 @@
 {
+  if (parentNode == null) {
+    return null;
+  }
   SNode linkDeclaration=null;
+  int index=0;
   if (currentChild != null) {
     linkDeclaration=currentChild.getRoleLink();
+    index=parentNode.getIndexOfChild(currentChild);
   }
   if (linkDeclaration == null && childSetter instanceof DefaultChildNodeSetter) {
     linkDeclaration=((DefaultChildNodeSetter)childSetter).getLinkDeclaration();
   }
-  SearchScopeStatus status=ModelConstraintsUtil.getSearchScope(parentNode,null,referenceNodeConcept,smartReference,linkDeclaration,context);
-  if (status.isError())   return null;
+  if (linkDeclaration == null) {
+    return null;
+  }
+  ReferenceDescriptor refDescriptor=ModelConstraintsUtil.getSmartReferenceDescriptor(parentNode,SModelUtil.getLinkDeclarationRole(linkDeclaration),index,smartConcept,context);
+  if (refDescriptor == null)   return null;
+  Scope searchScope=refDescriptor.getScope();
+  if (searchScope == null)   return null;
   List<INodeSubstituteAction> actions=new ArrayList<INodeSubstituteAction>();
-  final SNode referenceLink_final=smartReference;
-  ISearchScope searchScope=status.getSearchScope();
-  IReferencePresentation presentation=status.getPresentation();
-  final SNode targetConcept=SModelUtil.getLinkDeclarationTarget(smartReference);
-  List<SNode> referentNodes=searchScope.getNodes(new IsInstanceCondition(targetConcept));
+  IReferencePresentation presentation=refDescriptor.getReferencePresentation();
+  List<SNode> referentNodes=searchScope.getAvailableElements(null);
   for (  SNode referentNode : referentNodes) {
-    actions.add(new SmartRefChildNodeSubstituteAction(referentNode,parentNode,currentChild,childSetter,context.getScope(),referenceNodeConcept,referenceLink_final,presentation));
+    actions.add(new SmartRefChildNodeSubstituteAction(referentNode,parentNode,currentChild,childSetter,context.getScope(),smartConcept,smartReference,presentation));
   }
   return actions;
 }
