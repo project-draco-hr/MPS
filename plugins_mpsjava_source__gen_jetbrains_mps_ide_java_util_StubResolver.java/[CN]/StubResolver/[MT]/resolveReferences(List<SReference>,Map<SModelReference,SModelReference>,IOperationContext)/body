@@ -10,18 +10,18 @@
       if (modelRef == null || resolveInfo == null) {
         continue;
       }
-      final ISearchScope scope=SNodeOperations.getReferentSearchScope(node,SLinkOperations.getRole(ref),context);
-      if (scope == null) {
+      final Scope refScope=ModelConstraintsUtil.getScope(ref,context);
+      if (refScope instanceof ErrorScope) {
         continue;
       }
-      List<SNode> resolved=TypeContextManager.getInstance().runResolveAction(new Computable<List<SNode>>(){
-        public List<SNode> compute(){
-          return scope.getNodes(new Condition<SNode>(){
-            public boolean met(            SNode n){
+      List<SNode> resolved=TypeContextManager.getInstance().runResolveAction(new Computable<IListSequence<SNode>>(){
+        public IListSequence<SNode> compute(){
+          return ListSequence.fromList(refScope.getAvailableElements(null)).where(new IWhereFilter<SNode>(){
+            public boolean accept(            SNode n){
               return modelRef.equals(SNodeOperations.getModel(n).getSModelReference()) && resolveInfo.equals(n.getResolveInfo());
             }
           }
-);
+).toListSequence();
         }
       }
 );
