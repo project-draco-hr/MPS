@@ -6,20 +6,26 @@
   }
   final String modelName=s.getModuleFqName() + ".plugin";
   List<SModelDescriptor> solModels=s.getOwnModelDescriptors();
-  SModelDescriptor pluginModel=ListSequence.fromList(solModels).where(new IWhereFilter<SModelDescriptor>(){
+  final Wrappers._T<SModelDescriptor> pluginModel=new Wrappers._T<SModelDescriptor>(ListSequence.fromList(solModels).where(new IWhereFilter<SModelDescriptor>(){
     public boolean accept(    SModelDescriptor it){
       return it.getLongName().equals(modelName);
     }
   }
-).first();
-  if (pluginModel == null) {
-    pluginModel=s.createModel(new SModelFqName(modelName,""),s.getSModelRoots().get(0),null);
+).first());
+  if (pluginModel.value == null) {
+    pluginModel.value=s.createModel(new SModelFqName(modelName,""),s.getSModelRoots().get(0),null);
   }
   List<SNode> nodes=IterableUtil.asList(LanguageAspect.PLUGIN.get(l).getSModel().nodes());
-  new RefactoringFacade().execute(RefactoringContext.createRefactoringContextByName("jetbrains.mps.lang.core.refactorings.MoveNodes",Arrays.asList("target"),Arrays.asList(pluginModel),ListSequence.fromList(nodes).where(new IWhereFilter<SNode>(){
+  ListSequence.fromList(nodes).where(new IWhereFilter<SNode>(){
     public boolean accept(    SNode it){
       return isFromPluginLang(it);
     }
   }
-).toListSequence(),myProject));
+).visitAll(new IVisitor<SNode>(){
+    public void visit(    SNode it){
+      SNodeOperations.detachNode(it);
+      pluginModel.value.getSModel().addRoot(it);
+    }
+  }
+);
 }
