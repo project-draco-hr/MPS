@@ -18,18 +18,13 @@
     pluginModel.value=s.createModel(new SModelFqName(modelName,""),s.getSModelRoots().get(0),null);
   }
   List<SNode> nodes=IterableUtil.asList(LanguageAspect.PLUGIN.get(l).getSModel().roots());
-  ListSequence.fromList(nodes).where(new IWhereFilter<SNode>(){
+  Iterable<SNode> nodes2Refactor=ListSequence.fromList(nodes).where(new IWhereFilter<SNode>(){
     public boolean accept(    SNode it){
       return !(isFromFacetLang(it));
     }
   }
-).visitAll(new IVisitor<SNode>(){
-    public void visit(    SNode it){
-      SNodeOperations.detachNode(it);
-      pluginModel.value.getSModel().addRoot(it);
-    }
-  }
 );
+  new RefactoringFacade().executeSimple(RefactoringContext.createRefactoringContextByName("jetbrains.mps.lang.core.refactorings.MoveNodes",Arrays.asList("target"),Arrays.asList(pluginModel.value),Sequence.fromIterable(nodes2Refactor).toListSequence(),myProject));
   SModelOperations.validateLanguagesAndImports(pluginModel.value.getSModel(),false,true);
   SModelRepository.getInstance().saveAll();
 }
