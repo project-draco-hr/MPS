@@ -9,19 +9,25 @@
     }
   }
 );
+  final EditableSModelDescriptor md=newModelDiff.value.getModelDescriptor();
   ModelAccess.instance().runWriteInEDT(new Runnable(){
     public void run(){
-      newModelDiff.value.getModelDescriptor().save();
+      md.getSModel();
+      md.save();
     }
   }
 );
   ModelAccess.instance().flushEventQueue();
+  VirtualFile vf=VirtualFileUtils.getVirtualFile(md.getModelFile());
+  VcsDirtyScopeManager.getInstance(myIdeaProject).fileDirty(vf);
+  myChangeListManager.ensureUpToDate(false);
+  FileStatusManager.getInstance(myIdeaProject).fileStatusChanged(vf);
   newModelDiff.value.setEnabled(true);
   waitForChangesManager();
-  Assert.assertNull(newModelDiff.value.getChangeSet());
+  Assert.assertTrue((int)ListSequence.fromList(newModelDiff.value.getChangeSet().getModelChanges()).count() == 0);
   runCommandAndWait(new Runnable(){
     public void run(){
-      createNewRoot(newModelDiff.value.getModelDescriptor().getSModel());
+      createNewRoot(md.getSModel());
     }
   }
 );
