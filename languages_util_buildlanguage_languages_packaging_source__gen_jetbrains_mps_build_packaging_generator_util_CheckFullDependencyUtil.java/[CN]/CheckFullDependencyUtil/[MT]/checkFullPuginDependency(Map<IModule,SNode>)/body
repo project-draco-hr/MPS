@@ -1,0 +1,41 @@
+{
+  Map<SNode,Iterable<SNode>> result=MapSequence.fromMap(new LinkedHashMap<SNode,Iterable<SNode>>(16,(float)0.75,false));
+  final Set<IModule> pluginModules=SetSequence.fromSet(new HashSet<IModule>());
+  SetSequence.fromSet(pluginModules).addSequence(SetSequence.fromSet(MapSequence.fromMap(modules).keySet()).where(new IWhereFilter<IModule>(){
+    public boolean accept(    IModule it){
+      return (getContainingPlugin(MapSequence.fromMap(modules).get(it)) != null);
+    }
+  }
+));
+  Map<SNode,List<IModule>> plugins=MapSequence.fromMap(new LinkedHashMap<SNode,List<IModule>>(16,(float)0.75,false));
+  for (  IModule pluginModule : SetSequence.fromSet(pluginModules)) {
+    SNode containingPlugin=getContainingPlugin(MapSequence.fromMap(modules).get(pluginModule));
+    if (MapSequence.fromMap(plugins).get(containingPlugin) == null) {
+      MapSequence.fromMap(plugins).put(containingPlugin,ListSequence.fromList(new ArrayList<IModule>()));
+    }
+    ListSequence.fromList(MapSequence.fromMap(plugins).get(containingPlugin)).addElement(pluginModule);
+  }
+  for (  final SNode plugin : SetSequence.fromSet(MapSequence.fromMap(plugins).keySet())) {
+    Iterable<SNode> dependency=ListSequence.fromList(MapSequence.fromMap(plugins).get(plugin)).translate(new ITranslator2<IModule,IModule>(){
+      public Iterable<IModule> translate(      IModule it){
+        return ListSequence.fromList(getDependencyToCheck(it)).intersect(SetSequence.fromSet(pluginModules));
+      }
+    }
+).select(new ISelector<IModule,SNode>(){
+      public SNode select(      IModule it){
+        return getContainingPlugin(MapSequence.fromMap(modules).get(it));
+      }
+    }
+).distinct();
+    Iterable<SNode> missing=Sequence.fromIterable(dependency).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return !(isDependent(plugin,it));
+      }
+    }
+);
+    if (Sequence.fromIterable(missing).isNotEmpty()) {
+      MapSequence.fromMap(result).put(plugin,missing);
+    }
+  }
+  return result;
+}

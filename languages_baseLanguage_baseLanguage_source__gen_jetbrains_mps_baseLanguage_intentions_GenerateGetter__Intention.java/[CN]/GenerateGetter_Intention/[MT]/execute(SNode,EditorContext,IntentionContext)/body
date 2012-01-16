@@ -1,0 +1,24 @@
+{
+  SNode classConcept=SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ClassConcept");
+  SNode lastAdded=null;
+  for (  SNodePointer fieldPtr : ((SNodePointer[])intentionContext.getContextParametersMap().get("selectedFields"))) {
+    final SNode field=SNodeOperations.cast(fieldPtr.getNode(),"jetbrains.mps.baseLanguage.structure.FieldDeclaration");
+    Project project=editorContext.getOperationContext().getProject();
+    final String getterName=GenerateGettersAndSettersUtil.getFieldGetterName(field,project);
+    if (ListSequence.fromList(SLinkOperations.getTargets(classConcept,"method",true)).any(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode method){
+        return getterName.equals(SPropertyOperations.getString(method,"name")) && ListSequence.fromList(SLinkOperations.getTargets(method,"parameter",true)).isEmpty();
+      }
+    }
+)) {
+      continue;
+    }
+    SNode fieldReference=SNodeFactoryOperations.createNewNode("jetbrains.mps.baseLanguage.structure.LocalInstanceFieldReference",null);
+    SLinkOperations.setTarget(fieldReference,"variableDeclaration",field,false);
+    SNode added=ListSequence.fromList(SLinkOperations.getTargets(classConcept,"method",true)).addElement(new GenerateGetter_Intention.QuotationClass_wkvgdi_a0a0a7a2a7().createNode(SLinkOperations.getTarget(field,"type",true),fieldReference,getterName));
+    lastAdded=added;
+  }
+  if (lastAdded != null) {
+    editorContext.select(lastAdded);
+  }
+}

@@ -1,0 +1,43 @@
+{
+  int cnt=0;
+  boolean found;
+  do {
+    found=false;
+    for (    SReference ref : ListSequence.fromList(toResolve).toGenericArray(SReference.class)) {
+      SNode node=ref.getSourceNode();
+      final SModelReference modelRef=MapSequence.fromMap(models).get(ref.getTargetSModelReference());
+      final String resolveInfo=SLinkOperations.getResolveInfo(ref);
+      if (modelRef == null || resolveInfo == null) {
+        continue;
+      }
+      final Scope refScope=ModelConstraintsUtil.getScope(ref,context);
+      if (refScope instanceof ErrorScope) {
+        continue;
+      }
+      List<SNode> resolved=TypeContextManager.getInstance().runResolveAction(new Computable<IListSequence<SNode>>(){
+        public IListSequence<SNode> compute(){
+          return ListSequence.fromList(refScope.getAvailableElements(null)).where(new IWhereFilter<SNode>(){
+            public boolean accept(            SNode n){
+              return modelRef.equals(SNodeOperations.getModel(n).getSModelReference()) && resolveInfo.equals(n.getResolveInfo());
+            }
+          }
+).toListSequence();
+        }
+      }
+);
+      if (ListSequence.fromList(resolved).count() > 1) {
+        if (log.isErrorEnabled()) {
+          log.error("more than 1 possible resolution for " + SLinkOperations.getResolveInfo(ref) + " in model "+ modelRef.getLongName());
+        }
+      }
+      if (ListSequence.fromList(resolved).count() > 0) {
+        node.setReferent(SLinkOperations.getRole(ref),ListSequence.fromList(resolved).first());
+        ListSequence.fromList(toResolve).removeElement(ref);
+        ++cnt;
+        found=true;
+      }
+    }
+  }
+ while (found);
+  return cnt;
+}

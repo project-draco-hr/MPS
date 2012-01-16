@@ -1,0 +1,79 @@
+{
+  boolean rootTrace=!getEditorContext().isTracing() && TRACE_ENABLED;
+  if (rootTrace) {
+    getEditorContext().startTracing("========= Handling events =========");
+  }
+ else {
+    getEditorContext().pushTracerTask("Hanlding events",true);
+  }
+  try {
+    if (EventUtil.isDetachedOnlyChange(events)) {
+      return;
+    }
+    SNode lastSelectedNode=getSelectedNode();
+    if (!EventUtil.isDramaticalChange(events)) {
+      if (EventUtil.isPropertyChange(events)) {
+        String propertyName=((SModelPropertyEvent)events.get(0)).getPropertyName();
+        SNodePointer nodeProxy=new SNodePointer(((SModelPropertyEvent)events.get(0)).getNode());
+        Pair<SNodePointer,String> pair=new Pair<SNodePointer,String>(nodeProxy,propertyName);
+        Set<EditorCell_Property> editorCell_properties=myNodePropertiesAccessedCleanlyToDependentCellsMap.get(pair);
+        Set<EditorCell> editorCells=myNodePropertiesAccessedDirtilyToDependentCellsMap.get(pair);
+        Set<EditorCell> editorCellsDependentOnExistence=myNodePropertiesWhichExistenceWasCheckedToDependentCellsMap.get(pair);
+        if (editorCellsDependentOnExistence != null) {
+          if (EventUtil.isPropertyAddedOrRemoved(events.get(0))) {
+            rebuildEditorContent(events);
+          }
+ else {
+            for (            EditorCell cell : editorCellsDependentOnExistence) {
+              cell.synchronizeViewWithModel();
+              fireCellSynchronized(cell);
+            }
+            if (editorCell_properties != null) {
+              for (              EditorCell cell : editorCell_properties) {
+                cell.synchronizeViewWithModel();
+                fireCellSynchronized(cell);
+              }
+            }
+          }
+          relayout();
+          return;
+        }
+        if (editorCells != null) {
+          rebuildEditorContent(events);
+          relayout();
+          updateSelection(events,lastSelectedNode);
+        }
+ else         if (editorCell_properties != null) {
+          for (          EditorCell_Property cell : editorCell_properties) {
+            cell.synchronizeViewWithModel();
+            fireCellSynchronized(cell);
+          }
+          revertErrorCells(events);
+        }
+      }
+ else {
+        rebuildEditorContent(events);
+      }
+    }
+ else {
+      rebuildEditorContent(events);
+      if (!hasFocus() && !myIntentionsSupport.isLightBulbVisible()) {
+        return;
+      }
+      revertErrorCells(events);
+      relayout();
+      updateSelection(events,lastSelectedNode);
+    }
+    if (!myInsideOfCommand) {
+      relayout();
+    }
+  }
+  finally {
+    if (rootTrace) {
+      System.out.println(getEditorContext().stopTracing());
+    }
+ else {
+      getEditorContext().popTracerTask();
+    }
+  }
+}

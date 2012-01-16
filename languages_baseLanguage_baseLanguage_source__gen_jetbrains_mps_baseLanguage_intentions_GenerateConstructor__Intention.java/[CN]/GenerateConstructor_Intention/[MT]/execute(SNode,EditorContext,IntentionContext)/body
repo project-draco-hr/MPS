@@ -1,0 +1,34 @@
+{
+  SNode classConcept=SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ClassConcept");
+  SNode constructorDeclaration=null;
+  Project project=editorContext.getOperationContext().getProject();
+  for (  SNodePointer ptr : ((SNodePointer[])intentionContext.getContextParametersMap().get("selectedConstructors"))) {
+    SNode selectedSuperConstructor=SNodeOperations.cast(ptr.getNode(),"jetbrains.mps.baseLanguage.structure.ConstructorDeclaration");
+    SNode constructor=SNodeFactoryOperations.addNewChild(classConcept,"constructor","jetbrains.mps.baseLanguage.structure.ConstructorDeclaration");
+    constructorDeclaration=constructor;
+    SNodeFactoryOperations.setNewChild(constructor,"body","jetbrains.mps.baseLanguage.structure.StatementList");
+    if (ListSequence.fromList(SLinkOperations.getTargets(selectedSuperConstructor,"parameter",true)).isNotEmpty()) {
+      SNode invocation=SNodeFactoryOperations.addNewChild(SLinkOperations.getTarget(constructor,"body",true),"statement","jetbrains.mps.baseLanguage.structure.SuperConstructorInvocation");
+      SLinkOperations.setTarget(invocation,"baseMethodDeclaration",selectedSuperConstructor,false);
+      for (      SNode superParam : SLinkOperations.getTargets(selectedSuperConstructor,"parameter",true)) {
+        SNode parameter=SNodeFactoryOperations.addNewChild(constructor,"parameter","jetbrains.mps.baseLanguage.structure.ParameterDeclaration");
+        SPropertyOperations.set(parameter,"name",SPropertyOperations.getString(superParam,"name"));
+        SLinkOperations.setTarget(parameter,"type",SNodeOperations.copyNode(SLinkOperations.getTarget(superParam,"type",true)),true);
+        SNode paramReference=SNodeFactoryOperations.addNewChild(invocation,"actualArgument","jetbrains.mps.baseLanguage.structure.ParameterReference");
+        SLinkOperations.setTarget(paramReference,"variableDeclaration",parameter,false);
+      }
+    }
+    for (    SNodePointer fieldPtr : ((SNodePointer[])intentionContext.getContextParametersMap().get("selectedFields"))) {
+      SNode field=SNodeOperations.cast(fieldPtr.getNode(),"jetbrains.mps.baseLanguage.structure.FieldDeclaration");
+      SNode parameterDeclaration=new GenerateConstructor_Intention.QuotationClass_mrvrtl_a0a1a5a3a7().createNode(SNodeOperations.copyNode(SLinkOperations.getTarget(field,"type",true)),GenerateGettersAndSettersUtil.getParameterNameForField(field,project));
+      ListSequence.fromList(SLinkOperations.getTargets(constructor,"parameter",true)).addElement(parameterDeclaration);
+      SNode expressionStatement=SNodeFactoryOperations.addNewChild(SLinkOperations.getTarget(constructor,"body",true),"statement","jetbrains.mps.baseLanguage.structure.ExpressionStatement");
+      SNode assignmentExpression=SNodeFactoryOperations.setNewChild(expressionStatement,"expression","jetbrains.mps.baseLanguage.structure.AssignmentExpression");
+      SLinkOperations.setTarget(assignmentExpression,"lValue",new GenerateConstructor_Intention.QuotationClass_mrvrtl_a2a5a5a3a7().createNode(field),true);
+      SLinkOperations.setTarget(assignmentExpression,"rValue",new GenerateConstructor_Intention.QuotationClass_mrvrtl_a2a6a5a3a7().createNode(parameterDeclaration),true);
+    }
+  }
+  if (constructorDeclaration != null) {
+    editorContext.select(constructorDeclaration);
+  }
+}

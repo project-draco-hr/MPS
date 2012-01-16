@@ -1,0 +1,32 @@
+{
+  for (  final Solution solution : ListSequence.fromList(myProject.getProjectModules(Solution.class))) {
+    if (solution.getModuleFqName().endsWith(SOLUTION_NAME)) {
+      List<SModelDescriptor> models=solution.getOwnModelDescriptors();
+      SModel m=ListSequence.fromList(models).first().getSModel();
+      ListSequence.fromList(SModelOperations.getNodes(m,"jetbrains.mps.lang.plugin.structure.IconResource")).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return (it != null) && StringUtils.isNotEmpty(SPropertyOperations.getString(it,"path")) && !(isValid(it));
+        }
+      }
+).visitAll(new IVisitor<SNode>(){
+        public void visit(        SNode it){
+          String langName=NameUtil.namespaceFromLongName(solution.getModuleFqName());
+          Language lang=MPSModuleRepository.getInstance().getLanguage(langName);
+          if (lang == null) {
+            return;
+          }
+          String iconPath=MacrosFactory.moduleDescriptor(lang).expandPath(SPropertyOperations.getString(it,"path"),lang.getDescriptorFile());
+          String newIconMacro=SPropertyOperations.getString(it,"path").replace(MacrosFactory.LANGUAGE_DESCRIPTOR,MacrosFactory.SOLUTION_DESCRIPTOR);
+          String newIconPath=MacrosFactory.moduleDescriptor(solution).expandPath(newIconMacro,solution.getDescriptorFile());
+          IFile file=FileSystem.getInstance().getFile(iconPath);
+          if (!(file.exists())) {
+            return;
+          }
+          file.move(FileSystem.getInstance().getFile(newIconPath).getParent());
+          SPropertyOperations.set(it,"path",newIconMacro);
+        }
+      }
+);
+    }
+  }
+}
