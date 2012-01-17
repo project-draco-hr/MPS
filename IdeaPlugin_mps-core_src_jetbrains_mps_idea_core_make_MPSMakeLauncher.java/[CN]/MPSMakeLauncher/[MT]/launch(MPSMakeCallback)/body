@@ -2,22 +2,36 @@
   if (!isValid()) {
     throw new IllegalStateException("Unable to launch without validation");
   }
-  Execute execute=new Execute(new MyExecuteStreamHandler(myProject,"Make"){
-    @Override protected void reportWrittenFile(    String file){
+  GeneralCommandLine gcl=new GeneralCommandLine(myCommandLine);
+  gcl.setWorkDirectory(myProject.getBaseDir().getPath());
+  final TextEventProcessor tep=new TextEventProcessor(myProject,"Make"){
+    @Override public void reportWrittenFile(    String file){
+      LOG.debug("written file: " + file);
       callback.fileWritten(file);
     }
   }
-);
-  execute.setWorkingDirectory(new File(myProject.getBaseDir().getPath()));
-  execute.setCommandline(myCommandLine.toArray(new String[myCommandLine.size()]));
+;
   try {
-    int ret=execute.execute();
-    if (ret != 0) {
+    OSProcessHandler processHandler=new OSProcessHandler(gcl.createProcess(),myCommandLine.get(0));
+    processHandler.addProcessListener(new ProcessAdapter(){
+      @Override public void onTextAvailable(      ProcessEvent event,      Key outputType){
+        if (outputType == ProcessOutputTypes.STDERR) {
+          tep.processStderr(event.getText());
+        }
+ else         if (outputType == ProcessOutputTypes.STDOUT) {
+          tep.processStdout(event.getText());
+        }
+      }
+    }
+);
+    processHandler.startNotify();
+    processHandler.waitFor();
+    if (processHandler.getProcess().exitValue() != 0) {
       MessagesViewTool.log(myProject,MessageKind.ERROR,"External process returned non-zero");
     }
   }
- catch (  IOException e) {
+ catch (  ExecutionException e) {
     LOG.debug(e);
-    MessagesViewTool.log(myProject,MessageKind.ERROR,"IO error: " + e.getMessage());
+    MessagesViewTool.log(myProject,MessageKind.ERROR,"Error running process: " + e.getMessage());
   }
 }
