@@ -1,0 +1,38 @@
+{
+  final NodeFileStatusMapping fsm=myIdeaProject.getComponent(NodeFileStatusMapping.class);
+  final List<EditableSModelDescriptor> interestingModels=Arrays.asList(myHtmlDiff.getModelDescriptor(),myUiDiff.getModelDescriptor(),myUtilDiff.getModelDescriptor());
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      ListSequence.fromList(interestingModels).translate(new ITranslator2<EditableSModelDescriptor,SNode>(){
+        public Iterable<SNode> translate(        EditableSModelDescriptor md){
+          return md.getSModel().roots();
+        }
+      }
+).visitAll(new IVisitor<SNode>(){
+        public void visit(        SNode r){
+          fsm.getStatus(r);
+        }
+      }
+);
+    }
+  }
+);
+  waitForChangesManager();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      SNode r : ListSequence.fromList(interestingModels).translate(new ITranslator2<EditableSModelDescriptor,SNode>(){
+        public Iterable<SNode> translate(        EditableSModelDescriptor md){
+          return md.getSModel().roots();
+        }
+      }
+)) {
+        String simpleName=NameUtil.shortNameFromLongName(r.getModel().getLongName()) + "." + r.getName();
+        FileStatus expectedStatus=MapSequence.fromMap(myExpectedFileStatuses).get(simpleName);
+        FileStatus actualStatus=fsm.getStatus(r);
+        actualStatus=(FileStatus.NOT_CHANGED == actualStatus ? null : actualStatus);
+        Assert.assertSame(expectedStatus,actualStatus);
+      }
+    }
+  }
+);
+}

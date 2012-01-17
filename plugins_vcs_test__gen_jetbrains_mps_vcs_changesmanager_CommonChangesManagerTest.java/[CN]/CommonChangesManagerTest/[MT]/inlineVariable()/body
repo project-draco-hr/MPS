@@ -1,0 +1,52 @@
+{
+  final Wrappers._T<SNode> root=new Wrappers._T<SNode>();
+  final Wrappers._T<SNode> method=new Wrappers._T<SNode>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      root.value=getDocumentLayoutRoot();
+      method.value=ListSequence.fromList(SLinkOperations.getTargets(root.value,"method",true)).findFirst(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode f){
+          return "getTextPosition".equals(SPropertyOperations.getString(f,"name"));
+        }
+      }
+);
+    }
+  }
+);
+  doSomethingAndUndo(myUiDiff,true,new _FunctionTypes._return_P0_E0<SNode>(){
+    public SNode invoke(){
+      SNode ifBefore=(SNode)new SNode(SNodeOperations.getModel(root.value),"jetbrains.mps.baseLanguage.structure.IfStatement");
+      SNodeOperations.insertPrevSiblingChild(ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(method.value,"body",true),"statement",true)).first(),ifBefore);
+      return root.value;
+    }
+  }
+,new _FunctionTypes._return_P0_E0<SNode>(){
+    public SNode invoke(){
+      SNode foreachBody=SLinkOperations.getTarget(SNodeOperations.cast(ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(method.value,"body",true),"statement",true)).getElement(1),"jetbrains.mps.baseLanguage.structure.ForeachStatement"),"body",true);
+      SNode declarationStatement=SNodeOperations.cast(ListSequence.fromList(SLinkOperations.getTargets(foreachBody,"statement",true)).getElement(0),"jetbrains.mps.baseLanguage.structure.LocalVariableDeclarationStatement");
+      final SNode declaration=SLinkOperations.getTarget(declarationStatement,"localVariableDeclaration",true);
+      final SNode initializer=SLinkOperations.getTarget(declaration,"initializer",true);
+      ListSequence.fromList(SNodeOperations.getDescendants(foreachBody,"jetbrains.mps.baseLanguage.structure.LocalVariableReference",false,new String[]{})).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode vr){
+          return SLinkOperations.getTarget(vr,"variableDeclaration",false) == declaration;
+        }
+      }
+).visitAll(new IVisitor<SNode>(){
+        public void visit(        SNode vr){
+          SNodeOperations.replaceWithAnother(vr,SNodeOperations.copyNode(initializer));
+        }
+      }
+);
+      SNodeOperations.deleteNode(declarationStatement);
+      return root.value;
+    }
+  }
+,new _FunctionTypes._return_P0_E0<SNode>(){
+    public SNode invoke(){
+      SNodeOperations.deleteNode(ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(method.value,"body",true),"statement",true)).getElement(2));
+      SNodeOperations.deleteNode(ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(method.value,"body",true),"statement",true)).getElement(1));
+      return root.value;
+    }
+  }
+);
+}
