@@ -1,0 +1,44 @@
+{
+  final List<SNode> pathToRoot=OldSModelUtil.getPathToRoot(e.getNode());
+  myCommandQueue.runTask(new Runnable(){
+    public void run(){
+      if (!(checkLoaded())) {
+        return;
+      }
+      fireChangeUpdateStarted();
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          if (isAncestorAlreadyAdded(pathToRoot)) {
+            return;
+          }
+          final SNodeId nodeId=e.getNode().getSNodeId();
+          removeChanges(OldSetPropertyChange.class,new _FunctionTypes._return_P1_E0<Boolean,OldSetPropertyChange>(){
+            public Boolean invoke(            OldSetPropertyChange ch){
+              return nodeId.equals(ch.getAffectedNodeId()) && e.getPropertyName().equals(ch.getProperty());
+            }
+          }
+);
+          String baseValue=check_qfo1x2_a0h0a3a0a0b0m0(myBaseVersionModel.getNodeById(nodeId),e);
+          SNode propertyDeclaration=e.getNode().getPropertyDeclaration(e.getPropertyName());
+          if (propertyDeclaration == null) {
+            if (ObjectUtils.equals(baseValue,e.getNewPropertyValue())) {
+              return;
+            }
+          }
+ else {
+            PropertySupport propertySupport=PropertySupport.getPropertySupport(propertyDeclaration);
+            String basePresentableValue=propertySupport.fromInternalValue(baseValue);
+            String newPresentableValue=propertySupport.fromInternalValue(e.getNewPropertyValue());
+            if (ObjectUtils.equals(basePresentableValue,newPresentableValue)) {
+              return;
+            }
+          }
+          addChange(new OldSetPropertyChange(nodeId,e.getPropertyName(),e.getNewPropertyValue()),e.getAffectedRoot());
+        }
+      }
+);
+      fireChangeUpdateFinished();
+    }
+  }
+);
+}

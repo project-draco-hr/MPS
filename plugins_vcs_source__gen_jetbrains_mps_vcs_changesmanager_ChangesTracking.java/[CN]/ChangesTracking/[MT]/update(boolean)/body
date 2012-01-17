@@ -1,0 +1,62 @@
+{
+  myQueue.assertSoftlyIsCommandThread();
+  if (!(myDifference.isEnabled())) {
+    return;
+  }
+  IFile modelFile=myModelDescriptor.getModelFile();
+  if (modelFile == null || !(modelFile.exists())) {
+    return;
+  }
+  VirtualFile modelVFile=VirtualFileUtils.getVirtualFile(modelFile);
+  if (modelVFile == null || ProjectLevelVcsManager.getInstance(myProject).getVcsFor(modelVFile) == null) {
+    return;
+  }
+  FileStatus status=FileStatusManager.getInstance(myProject).getStatus(modelVFile);
+  if (myDifference.getChangeSet() != null && myDifference.getChangeSet().getNewModel() != myModelDescriptor.getSModel()) {
+    force=true;
+  }
+  if (myStatusOnLastUpdate == status && !(force)) {
+    return;
+  }
+  myDifference.removeChangeSet();
+  myStatusOnLastUpdate=status;
+  if (FileStatus.NOT_CHANGED == status && !(force)) {
+    return;
+  }
+  final Wrappers._T<SModel> baseVersionModel=new Wrappers._T<SModel>(null);
+  if (BaseVersionUtil.isAddedFileStatus(status)) {
+    baseVersionModel.value=new SModel(myModelDescriptor.getSModelReference());
+  }
+ else {
+    String content=BaseVersionUtil.getBaseVersionContent(modelVFile,myProject);
+    if (content == null && status != FileStatus.NOT_CHANGED && !(BaseVersionUtil.isAddedFileStatus(status))) {
+      if (log.isErrorEnabled()) {
+        log.error("Base version content is null while file status is " + status);
+      }
+    }
+    if (content == null) {
+      return;
+    }
+    try {
+      baseVersionModel.value=ModelPersistence.readModel(content,false);
+    }
+ catch (    ModelReadException e) {
+      if (log.isWarnEnabled()) {
+        log.warn("",e);
+      }
+      return;
+    }
+  }
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+synchronized (ChangesTracking.this) {
+        if (!(myDisposed)) {
+          ChangeSet changeSet=ChangeSetBuilder.buildChangeSet(baseVersionModel.value,myModelDescriptor.getSModel(),true);
+          myDifference.setChangeSet((ChangeSetImpl)changeSet);
+          buildCaches();
+        }
+      }
+    }
+  }
+);
+}

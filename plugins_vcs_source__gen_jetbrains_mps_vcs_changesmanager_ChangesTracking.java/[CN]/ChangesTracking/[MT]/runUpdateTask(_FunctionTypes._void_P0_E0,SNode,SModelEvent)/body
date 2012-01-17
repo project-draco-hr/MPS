@@ -1,0 +1,42 @@
+{
+  myEventConsumingMapping.addEvent(event);
+  final List<SNodeId> ancestors=ListSequence.fromList(SNodeOperations.getAncestors(currentNode,null,true)).select(new ISelector<SNode,SNodeId>(){
+    public SNodeId select(    SNode a){
+      return a.getSNodeId();
+    }
+  }
+).toListSequence();
+  myQueue.runTask(new Runnable(){
+    public void run(){
+      if (myDifference.getChangeSet() == null) {
+        update(true);
+      }
+ else {
+        if (ListSequence.fromList(ancestors).any(new IWhereFilter<SNodeId>(){
+          public boolean accept(          SNodeId a){
+            return myAddedNodesToChanges.containsKey(a);
+          }
+        }
+)) {
+        }
+ else {
+          if (myEventConsumingMapping.removeEvent(event)) {
+            myDifference.getBroadcaster().changeUpdateStarted();
+            ModelAccess.instance().runReadAction(new Runnable(){
+              public void run(){
+synchronized (ChangesTracking.this) {
+                  if (!(myDisposed)) {
+                    task.invoke();
+                  }
+                }
+              }
+            }
+);
+            myDifference.getBroadcaster().changeUpdateFinished();
+          }
+        }
+      }
+    }
+  }
+);
+}
