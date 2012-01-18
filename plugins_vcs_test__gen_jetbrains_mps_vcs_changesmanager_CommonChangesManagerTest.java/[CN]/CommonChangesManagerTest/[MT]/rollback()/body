@@ -1,0 +1,22 @@
+{
+  List<VcsException> exceptions=ListSequence.fromList(new ArrayList<VcsException>());
+  myGitVcs.getRollbackEnvironment().rollbackChanges(Arrays.asList(myChangeListManager.getChange(myUtilVirtualFile)),exceptions,RollbackProgressListener.EMPTY);
+  if (ListSequence.fromList(exceptions).isNotEmpty()) {
+    throw ListSequence.fromList(exceptions).first();
+  }
+  myChangeListManager.ensureUpToDate(false);
+  waitForChangesManager();
+  Assert.assertNull(myUtilDiff.getChangeSet());
+  SetSequence.fromSet(MapSequence.fromMap(myExpectedFileStatuses).keySet()).where(new IWhereFilter<String>(){
+    public boolean accept(    String k){
+      return k.startsWith("util.");
+    }
+  }
+).toListSequence().visitAll(new IVisitor<String>(){
+    public void visit(    String k){
+      MapSequence.fromMap(myExpectedFileStatuses).removeKey(k);
+    }
+  }
+);
+  checkRootStatuses();
+}
