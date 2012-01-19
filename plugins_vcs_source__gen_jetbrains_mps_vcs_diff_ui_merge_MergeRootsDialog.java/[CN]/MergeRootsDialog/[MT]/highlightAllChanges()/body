@@ -1,31 +1,37 @@
 {
-  ListSequence.fromList(myChangeGroupBuilders).visitAll(new IVisitor<ChangeGroupBuilder>(){
-    public void visit(    ChangeGroupBuilder b){
+  ListSequence.fromList(myChangeGroupLayouts).visitAll(new IVisitor<ChangeGroupLayout>(){
+    public void visit(    ChangeGroupLayout b){
       b.invalidate();
     }
   }
 );
-  List<ModelChange> changesForRoot=ListSequence.fromList(myMergeContext.getChangesForRoot(myRootId)).where(new IWhereFilter<ModelChange>(){
+  List<ModelChange> changesForRoot=ListSequence.fromList(myMergeSession.getChangesForRoot(myRootId)).where(new IWhereFilter<ModelChange>(){
     public boolean accept(    ModelChange ch){
-      return !(myMergeContext.isChangeResolved(ch));
+      return !(myMergeSession.isChangeResolved(ch));
     }
   }
 ).toListSequence();
   for (  ModelChange change : ListSequence.fromList(changesForRoot)) {
-    higlightChange(myResultEditor,myMergeContext.getResultModel(),change);
-    if (myMergeContext.isMyChange(change)) {
-      higlightChange(myMineEditor,myMergeContext.getMyModel(),change);
+    higlightChange(myResultEditor,myMergeSession.getResultModel(),change);
+    if (myMergeSession.isMyChange(change)) {
+      higlightChange(myMineEditor,myMergeSession.getMyModel(),change);
     }
  else {
-      higlightChange(myRepositoryEditor,myMergeContext.getRepositoryModel(),change);
+      higlightChange(myRepositoryEditor,myMergeSession.getRepositoryModel(),change);
     }
   }
+  ListSequence.fromList(myChangeGroupLayouts).visitAll(new IVisitor<ChangeGroupLayout>(){
+    public void visit(    ChangeGroupLayout b){
+      b.invalidate();
+    }
+  }
+);
   myMineEditor.repaintAndRebuildEditorMessages();
   myResultEditor.repaintAndRebuildEditorMessages();
   myRepositoryEditor.repaintAndRebuildEditorMessages();
   int conflictingChanges=ListSequence.fromList(changesForRoot).where(new IWhereFilter<ModelChange>(){
     public boolean accept(    ModelChange ch){
-      return Sequence.fromIterable(myMergeContext.getConflictedWith(ch)).isNotEmpty();
+      return Sequence.fromIterable(myMergeSession.getConflictedWith(ch)).isNotEmpty();
     }
   }
 ).count();

@@ -1,0 +1,28 @@
+{
+  try {
+    VirtualFile file=VirtualFileUtils.getVirtualFile((modelDescriptor).getModelFile());
+    AbstractVcs vcs=ProjectLevelVcsManager.getInstance(project).getVcsFor(file);
+    final VcsRevisionNumber revisionNumber=vcs.getDiffProvider().getCurrentRevision(file);
+    ContentRevision content=vcs.getDiffProvider().createFileContent(revisionNumber,file);
+    final SModel oldModel=ModelPersistence.readModel(content.getContent(),false);
+    final Wrappers._T<ModelDifferenceDialog> modelDialog=new Wrappers._T<ModelDifferenceDialog>();
+    final Wrappers._T<SNodeId> id=new Wrappers._T<SNodeId>();
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        modelDialog.value=new ModelDifferenceDialog(oldModel,node.getModel(),new SimpleDiffRequest(project,revisionNumber.asString() + " (Read-Only)","Your Version"));
+        id.value=node.getSNodeId();
+      }
+    }
+);
+    modelDialog.value.invokeRootDifference(id.value,bounds);
+  }
+ catch (  VcsException e) {
+    if (log.isWarnEnabled()) {
+      log.warn("",e);
+    }
+    Messages.showErrorDialog(project,"Can't show difference due to the following error: " + e.getMessage(),"Error");
+  }
+catch (  ModelReadException e) {
+    Messages.showErrorDialog(project,"Can't load previous version: " + e.getMessage(),"Error");
+  }
+}
