@@ -18,10 +18,12 @@
   }
 );
   ModelAccess.instance().flushEventQueue();
-  VirtualFile vf=VirtualFileUtils.getVirtualFile(md.getModelFile());
-  VcsDirtyScopeManager.getInstance(myIdeaProject).fileDirty(vf);
-  myChangeListManager.ensureUpToDate(false);
-  FileStatusManager.getInstance(myIdeaProject).fileStatusChanged(vf);
+  final VirtualFile vf=VirtualFileUtils.getVirtualFile(md.getModelFile());
+  doSomethingAndWaitForFileStatusChange(new Runnable(){
+    public void run(){
+    }
+  }
+,vf,FileStatus.UNKNOWN);
   newModelDiff.value.setEnabled(true);
   waitForChangesManager();
   Assert.assertTrue((int)ListSequence.fromList(newModelDiff.value.getChangeSet().getModelChanges()).count() == 0);
@@ -37,7 +39,12 @@
   checkOneAddedRoot(newModelDiff.value);
   MapSequence.fromMap(myExpectedFileStatuses).put("newmodel.NewRoot",FileStatus.UNKNOWN);
   checkRootStatuses();
-  myChangeListManager.addUnversionedFiles(myChangeListManager.getDefaultChangeList(),Arrays.asList(vf));
+  doSomethingAndWaitForFileStatusChange(new Runnable(){
+    public void run(){
+      myChangeListManager.addUnversionedFiles(myChangeListManager.getDefaultChangeList(),Arrays.asList(vf));
+    }
+  }
+,vf,null);
   myChangeListManager.ensureUpToDate(false);
   checkOneAddedRoot(newModelDiff.value);
   MapSequence.fromMap(myExpectedFileStatuses).put("newmodel.NewRoot",FileStatus.ADDED);
