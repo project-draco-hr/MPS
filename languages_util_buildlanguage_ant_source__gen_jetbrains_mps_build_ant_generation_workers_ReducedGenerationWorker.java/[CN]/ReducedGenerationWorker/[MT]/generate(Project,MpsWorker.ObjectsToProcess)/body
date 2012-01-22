@@ -1,0 +1,55 @@
+{
+  ProjectOperationContext ctx=new ProjectOperationContext(project);
+  final Iterable<IMResource> resources=Sequence.fromIterable(collectResources(ctx,go)).toListSequence();
+  ModelAccess.instance().flushEventQueue();
+  final Wrappers._T<Future<IResult>> res=new Wrappers._T<Future<IResult>>();
+  final Wrappers._T<List<String>> writtenFiles=new Wrappers._T<List<String>>();
+  final Wrappers._T<Map<String,String>> fileHashes=new Wrappers._T<Map<String,String>>();
+  ThreadUtils.runInUIThreadAndWait(new Runnable(){
+    public void run(){
+      IOperationContext context=new ProjectOperationContext(project);
+      BuildMakeService bms=new BuildMakeService();
+      MakeSession ms=new MakeSession(context,getMyMessageHandler(),true){
+        @Override public IScript toScript(        ScriptBuilder scriptBuilder){
+          scriptBuilder.withFacetNames(new IFacet.Name("jetbrains.mps.build.reduced.ReportFiles"),new IFacet.Name("jetbrains.mps.build.reduced.CollectHashes"));
+          return scriptBuilder.toScript();
+        }
+      }
+;
+      res.value=bms.make(ms,resources,null,new IScriptController.Stub(){
+        @Override public void setup(        IPropertiesPool pp,        Iterable<ITarget> toExecute,        Iterable<? extends IResource> input){
+          super.setup(pp,toExecute,input);
+          Tuples._1<Boolean> skipReconcile=(Tuples._1<Boolean>)pp.properties(new ITarget.Name("jetbrains.mps.lang.core.Make.reconcile"),Object.class);
+          skipReconcile._0(true);
+          Tuples._2<Boolean,Boolean> compileProps=(Tuples._2<Boolean,Boolean>)pp.properties(new ITarget.Name("jetbrains.mps.baseLanguage.JavaCompile.compile"),Object.class);
+          compileProps._1(true);
+          Tuples._1<List<String>> report=(Tuples._1<List<String>>)pp.properties(new ITarget.Name("jetbrains.mps.build.reduced.ReportFiles.report"),Object.class);
+          report._0(ListSequence.fromList(new ArrayList<String>()));
+          writtenFiles.value=report._0();
+          Tuples._1<Map<String,String>> hashes=(Tuples._1<Map<String,String>>)pp.properties(new ITarget.Name("jetbrains.mps.build.reduced.CollectHashes.collect"),Object.class);
+          hashes._0(MapSequence.fromMap(new HashMap<String,String>()));
+          fileHashes.value=hashes._0();
+        }
+      }
+);
+    }
+  }
+);
+  try {
+    if (!(res.value.get().isSucessful())) {
+      myErrors.add("Make was not successful");
+    }
+    if (writtenFiles.value != null) {
+      for (      String f : writtenFiles.value) {
+        System.out.println("##WRITTEN##" + f);
+      }
+    }
+  }
+ catch (  InterruptedException e) {
+    myErrors.add(e.toString());
+  }
+catch (  ExecutionException e) {
+    myErrors.add(e.toString());
+  }
+  ModelAccess.instance().flushEventQueue();
+}
