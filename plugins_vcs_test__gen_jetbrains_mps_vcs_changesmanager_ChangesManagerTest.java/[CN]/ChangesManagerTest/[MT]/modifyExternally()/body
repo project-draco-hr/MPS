@@ -1,0 +1,34 @@
+{
+  int changesBefore=ListSequence.fromList(check_4gxggu_a0a0a41(myUtilDiff.getChangeSet())).count();
+  final SModel modelContent=ModelPersistence.readModel(myUtilDiff.getModelDescriptor().getModelFile(),false);
+  createNewRoot(modelContent);
+  final EditableSModelDescriptor modelDescriptor=myUtilDiff.getModelDescriptor();
+  waitForSomething(new Runnable(){
+    public void run(){
+      modelDescriptor.addModelListener(new SModelAdapter(){
+        @Override public void modelReplaced(        SModelDescriptor descriptor){
+          descriptor.removeModelListener(this);
+          waitCompleted();
+        }
+      }
+);
+      ModelAccess.instance().runWriteInEDT(new Runnable(){
+        public void run(){
+          try {
+            myUtilVirtualFile.setBinaryContent(ModelPersistence.modelToString(modelContent).getBytes(FileUtil.DEFAULT_CHARSET));
+          }
+ catch (          IOException e) {
+            throw new AssertionError(e);
+          }
+        }
+      }
+);
+      ModelAccess.instance().flushEventQueue();
+    }
+  }
+);
+  waitForChangesManager();
+  Assert.assertEquals(changesBefore + 1,ListSequence.fromList(check_4gxggu_a1a6a41(myUtilDiff.getChangeSet())).count());
+  MapSequence.fromMap(myExpectedFileStatuses).put("util.NewRoot",FileStatus.ADDED);
+  checkRootStatuses();
+}
