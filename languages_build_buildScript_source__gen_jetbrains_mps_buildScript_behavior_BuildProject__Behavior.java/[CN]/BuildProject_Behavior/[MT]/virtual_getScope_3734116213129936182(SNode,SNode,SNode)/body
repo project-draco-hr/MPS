@@ -1,13 +1,25 @@
 {
   if (kind == SConceptOperations.findConceptDeclaration("jetbrains.mps.buildScript.structure.BuildMacro")) {
-    if (child != null && "macros".equals(SNodeOperations.getContainingLinkRole(child))) {
-    }
-    return new SimpleRoleScope(thisNode,SLinkOperations.findLinkDeclaration("jetbrains.mps.buildScript.structure.BuildProject","macros")){
+    SimpleRoleScope scope=new SimpleRoleScope(thisNode,SLinkOperations.findLinkDeclaration("jetbrains.mps.buildScript.structure.BuildProject","macros")){
       public String getName(      SNode child){
         return SPropertyOperations.getString(SNodeOperations.cast(child,"jetbrains.mps.buildScript.structure.BuildMacro"),"name");
       }
     }
 ;
+    if (child != null && "macros".equals(SNodeOperations.getContainingLinkRole(child))) {
+      return new DelegatingScope(scope){
+        public List<SNode> getAvailableElements(        @Nullable String prefix){
+          return ListSequence.fromList(wrapped.getAvailableElements(prefix)).where(new IWhereFilter<SNode>(){
+            public boolean accept(            SNode it){
+              return !(ListSequence.fromList(SNodeOperations.getNextSiblings(child,false)).contains(it));
+            }
+          }
+).toListSequence();
+        }
+      }
+;
+    }
+    return scope;
   }
   return null;
 }
