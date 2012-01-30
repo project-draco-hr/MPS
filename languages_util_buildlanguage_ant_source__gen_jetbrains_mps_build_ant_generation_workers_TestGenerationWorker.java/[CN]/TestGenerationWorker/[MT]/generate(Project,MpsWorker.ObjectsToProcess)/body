@@ -26,7 +26,7 @@
   }
 ;
   final int[] count=new int[]{1};
-  final IScriptController ctl=new IScriptController.Stub(new IConfigMonitor.Stub(),new IJobMonitor.Stub(new IProgress.Stub(){
+  IScriptController ctl=new IScriptController.Stub(new IConfigMonitor.Stub(),new IJobMonitor.Stub(new IProgress.Stub(){
     @Override public void beginWork(    String name,    int estimate,    int ofTotal){
       reportIfStartsWith("Generating ",name,startTestFormat);
     }
@@ -95,33 +95,25 @@
     }
   }
 ;
-  final Wrappers._T<IResult> result=new Wrappers._T<IResult>();
-  ModelAccess.instance().flushEventQueue();
-  ThreadUtils.runInUIThreadAndWait(new Runnable(){
-    public void run(){
-      IOperationContext context=new ProjectOperationContext(project);
-      try {
-        BuildMakeService bms=new BuildMakeService();
-        MakeSession ms=new MakeSession(context,myMessageHandler,true){
-          @Override public IScript toScript(          ScriptBuilder scriptBuilder){
-            if (isInvokeTestsSet()) {
-              scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.build.gentest.Test"));
-            }
-            if (isShowDiff()) {
-              scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.build.gentest.Diff"));
-            }
-            return scriptBuilder.toScript();
-          }
+  IOperationContext context=new ProjectOperationContext(project);
+  try {
+    BuildMakeService bms=new BuildMakeService();
+    MakeSession ms=new MakeSession(context,myMessageHandler,true){
+      @Override public IScript toScript(      ScriptBuilder scriptBuilder){
+        if (isInvokeTestsSet()) {
+          scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.build.gentest.Test"));
         }
-;
-        result.value=bms.make(ms,collectResources(context,go.getProjects(),go.getModules(),go.getModels()),null,ctl).get();
-      }
- catch (      InterruptedException ignore) {
-      }
-catch (      ExecutionException ignore) {
+        if (isShowDiff()) {
+          scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.build.gentest.Diff"));
+        }
+        return scriptBuilder.toScript();
       }
     }
+;
+    bms.make(ms,collectResources(context,go.getProjects(),go.getModules(),go.getModels()),null,ctl).get();
   }
-);
-  ModelAccess.instance().flushEventQueue();
+ catch (  InterruptedException ignore) {
+  }
+catch (  ExecutionException ignore) {
+  }
 }
