@@ -1,0 +1,25 @@
+{
+  Map<String,Method> props=MapSequence.fromMap(new HashMap<String,Method>());
+  for (  Method mth : MPSFacetConfiguration.class.getMethods()) {
+    if (mth.getName().startsWith("set") && Modifier.isPublic(mth.getModifiers()) && mth.getParameterTypes().length == 1) {
+      MapSequence.fromMap(props).put(mth.getName().substring(3),mth);
+    }
+  }
+  for (  Element ch : AttributeUtils.elementChildren(config,"option")) {
+    Method pr=MapSequence.fromMap(props).get(NameUtil.capitalize(ch.getAttributeValue("name")));
+    if (pr != null) {
+      Object value;
+      if (pr.getParameterTypes()[0].isArray()) {
+        value=readArray(ListSequence.fromList(AttributeUtils.elementChildren(ch,"array")).first());
+      }
+ else       if (pr.getParameterTypes()[0].isPrimitive()) {
+        value=Boolean.valueOf(ch.getAttributeValue("value"));
+      }
+ else {
+        value=ch.getAttributeValue("value");
+      }
+      setPropertyValue(pr,value);
+    }
+  }
+  MapSequence.fromMap(props).clear();
+}
