@@ -1,0 +1,49 @@
+{
+  Graph<SubTaskOrderHelper.SubTask> graph=new Graph();
+  for (  SNode st : list) {
+    SubTaskOrderHelper.SubTask module=new SubTaskOrderHelper.SubTask(st);
+    map.put(st,module);
+  }
+  for (  SubTaskOrderHelper.SubTask st : map.values()) {
+    for (    SNode dep : SLinkOperations.getTargets(st.getTask(),"after",true)) {
+      SubTaskOrderHelper.SubTask afterTask=map.get(SLinkOperations.getTarget(dep,"target",false));
+      if (afterTask == null) {
+        genContext.showErrorMessage(dep,"dependency on non-existing subtask");
+        continue;
+      }
+      st.targets.add(afterTask);
+    }
+    for (    SNode dep : SLinkOperations.getTargets(st.getTask(),"before",true)) {
+      SubTaskOrderHelper.SubTask beforeTask=map.get(SLinkOperations.getTarget(dep,"target",false));
+      if (beforeTask == null) {
+        genContext.showErrorMessage(dep,"dependency on non-existing subtask");
+        continue;
+      }
+      beforeTask.targets.add(st);
+    }
+  }
+  for (  SubTaskOrderHelper.SubTask st : map.values()) {
+    graph.add(st);
+  }
+  List<List<SubTaskOrderHelper.SubTask>> cycles=Graphs.findStronglyConnectedComponents(graph);
+  Collections.reverse(cycles);
+  ListSequence.fromList(list).clear();
+  for (  List<SubTaskOrderHelper.SubTask> cycle : cycles) {
+    if (cycle.size() > 1) {
+      StringBuilder sb=new StringBuilder();
+      sb.append("subtasks cycle detected: ");
+      for (int i=0; i < 5 && i < cycle.size(); i++) {
+        if (i > 0) {
+          sb.append(", ");
+        }
+        sb.append(SPropertyOperations.getString(cycle.get(i).getTask(),"name"));
+      }
+      if (cycle.size() > 5) {
+        sb.append(" ...");
+      }
+      genContext.showErrorMessage(cycle.get(0).getTask(),sb.toString());
+      continue;
+    }
+    ListSequence.fromList(list).addElement(cycle.get(0).getTask());
+  }
+}
