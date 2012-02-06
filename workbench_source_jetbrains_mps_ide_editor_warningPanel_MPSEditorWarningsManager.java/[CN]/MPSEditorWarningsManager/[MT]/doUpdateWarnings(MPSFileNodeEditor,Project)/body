@@ -1,25 +1,17 @@
 {
-  if (myWarnings.containsKey(editor)) {
-    for (    WarningPanel panel : myWarnings.get(editor)) {
-      myFileEditorManager.removeTopComponent(editor,panel);
-    }
-    myWarnings.remove(editor);
-  }
+  List<WarningPanel> newWarnings=new ArrayList<WarningPanel>();
   Editor nodeEditor=editor.getNodeEditor();
   if (nodeEditor == null)   return;
   EditorComponent editorComponent=nodeEditor.getCurrentEditorComponent();
   if (editorComponent != null && editorComponent.isDisposed())   return;
   SNode node=editor.getFile().getNode();
   if (node == null)   return;
-  SModel smodel=node.getModel();
-  if (smodel == null)   return;
-  final SModelDescriptor model=smodel.getModelDescriptor();
-  if (model == null)   return;
-  if (model instanceof TransientSModelDescriptor) {
-    addWarningPanel(editor,"Warning: the node is in a transient model. Your changes won't be saved.");
+  EditorWarningsProvider[] providers=Extensions.getExtensions(EditorWarningsProvider.EP_NAME);
+  for (  EditorWarningsProvider provider : providers) {
+    WarningPanel panel=provider.getWarningPanel(node,project);
+    if (panel != null) {
+      newWarnings.add(panel);
+    }
   }
-  IModule module=model.getModule();
-  if (module != null && module.isPackaged()) {
-    addWarningPanel(editor,"Warning: the node is in a packaged model. Your changes won't be saved");
-  }
+  replaceWarningPanels(editor,newWarnings);
 }
