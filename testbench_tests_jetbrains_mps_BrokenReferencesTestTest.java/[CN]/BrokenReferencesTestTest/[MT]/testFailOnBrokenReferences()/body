@@ -1,0 +1,34 @@
+{
+  String solutionName="brokenSolution";
+  URL resource=BrokenReferencesTestTest.class.getResource(solutionName + ".zip");
+  final File destdir=FileUtil.createTempDirectory(solutionName,"");
+  ZipUtil.extract(new File(resource.getFile()),destdir,new FilenameFilter(){
+    public boolean accept(    File dir,    String name){
+      return true;
+    }
+  }
+);
+  WhatToDo whatToDo=new WhatToDo();
+  whatToDo.addModelFile(new File(destdir.getAbsolutePath() + File.separator + "Broken.sandbox"+ File.separator+ "broken"+ File.separator+ "model.mps"));
+  whatToDo.addLibrary(solutionName,destdir,false);
+  whatToDo.updateLogLevel(org.apache.tools.ant.Project.MSG_WARN);
+  final boolean[] brokenReferenceFound=new boolean[]{false};
+  TestBrokenReferencesWorker worker=new TestBrokenReferencesWorker(whatToDo,new LogLogger(),new IdeaTestEnvironment()){
+    @Override protected void output(    CharSequence text){
+      TeamCityMessageFormat teamCityMessageFormat=new TeamCityMessageFormat();
+      if (teamCityMessageFormat.isBuildServerMessage(text) && teamCityMessageFormat.isTestFailMessage(text)) {
+        brokenReferenceFound[0]=true;
+      }
+    }
+  }
+;
+  worker.work();
+  ModelAccess.instance().runWriteInEDT(new Runnable(){
+    @Override public void run(){
+      SModelRepository.getInstance().saveAll();
+      FileUtil.delete(destdir);
+    }
+  }
+);
+  assertTrue("Did not find any broken references in solution.",brokenReferenceFound[0]);
+}
