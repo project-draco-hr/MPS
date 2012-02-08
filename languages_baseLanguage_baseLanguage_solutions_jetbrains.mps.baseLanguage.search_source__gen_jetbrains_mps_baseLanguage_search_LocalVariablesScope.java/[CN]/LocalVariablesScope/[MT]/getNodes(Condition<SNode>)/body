@@ -14,17 +14,26 @@
     if (catchClause != null) {
       this._populateLocalVariablesForCatch(catchClause,this.myLocalVariables);
     }
-    SNode switchCase=SNodeOperations.as(findThisOrParent(myContextNode,SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.SwitchCase")),"jetbrains.mps.baseLanguage.structure.SwitchCase");
-    while ((switchCase != null)) {
-      SNode switchStatement=SNodeOperations.getAncestor(switchCase,"jetbrains.mps.baseLanguage.structure.SwitchStatement",false,false);
-      for (      SNode caseClause : ListSequence.fromList(SLinkOperations.getTargets(switchStatement,"case",true))) {
-        if (caseClause == switchCase) {
-          break;
+    SNode switchStatement=SNodeOperations.as(findThisOrParent(myContextNode,SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.SwitchStatement")),"jetbrains.mps.baseLanguage.structure.SwitchStatement");
+    while ((switchStatement != null)) {
+      SNode caseStatement=getLastSourceNode(this.myContextNode,switchStatement);
+      if (caseStatement != SLinkOperations.getTarget(switchStatement,"expression",true) && caseStatement != switchStatement) {
+        for (        SNode caseClause : ListSequence.fromList(SLinkOperations.getTargets(switchStatement,"case",true))) {
+          if (caseClause == caseStatement) {
+            break;
+          }
+          _populateLocalVariablesFromList(SLinkOperations.getTarget(caseClause,"body",true),null,myLocalVariables);
         }
-        _populateLocalVariablesFromList(SLinkOperations.getTarget(caseClause,"body",true),null,myLocalVariables);
       }
-      switchCase=SNodeOperations.as(findThisOrParent(switchStatement,SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.SwitchCase")),"jetbrains.mps.baseLanguage.structure.SwitchCase");
+      switchStatement=SNodeOperations.as(findThisOrParent(SNodeOperations.getParent(switchStatement),SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.SwitchStatement")),"jetbrains.mps.baseLanguage.structure.SwitchStatement");
     }
+    List<SNode> tmp=new ArrayList();
+    for (    SNode node : myLocalVariables) {
+      if (node != null) {
+        tmp.add(node);
+      }
+    }
+    myLocalVariables=tmp;
   }
   if (condition == AbstractSearchScope.TRUE_CONDITION) {
     return this.myLocalVariables;
