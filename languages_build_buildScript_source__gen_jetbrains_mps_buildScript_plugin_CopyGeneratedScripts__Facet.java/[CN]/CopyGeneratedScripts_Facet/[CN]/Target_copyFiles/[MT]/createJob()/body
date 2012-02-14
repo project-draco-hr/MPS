@@ -5,48 +5,45 @@
 switch (0) {
 case 0:
         for (        IResource resource : input) {
-          TResource tres=(TResource)resource;
-          if (MapSequence.fromMap(pa.global().properties(new ITarget.Name("jetbrains.mps.buildScript.CopyGeneratedScripts.collectDirs"),CopyGeneratedScripts_Facet.Target_collectDirs.Parameters.class).destdir()).get(tres.modelDescriptor().getSModelReference()) != null) {
-            final IFile destDir=FileSystem.getInstance().getFileByPath(MapSequence.fromMap(pa.global().properties(new ITarget.Name("jetbrains.mps.buildScript.CopyGeneratedScripts.collectDirs"),CopyGeneratedScripts_Facet.Target_collectDirs.Parameters.class).destdir()).get(tres.modelDescriptor().getSModelReference()));
-            final List<Tuples._2<IFile,IFile>> toCopy=ListSequence.fromList(new ArrayList<Tuples._2<IFile,IFile>>());
-            if (destDir.exists() && (!(destDir.isDirectory()) || destDir.isReadOnly())) {
-              monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Can not copy scripts into " + destDir)));
-            }
- else {
-              if (!(destDir.exists())) {
-                destDir.mkdirs();
-              }
-              if (destDir.isDirectory()) {
-                new DeltaReconciler(tres.delta()).visitAll(new FilesDelta.Visitor(){
-                  @Override public boolean acceptWritten(                  IFile file){
-                    if (!(Sequence.fromIterable(Sequence.fromArray(new String[]{"dependencies","generated","trace.info"})).contains(file.getName()))) {
+          final List<Tuples._2<IFile,IFile>> toCopy=ListSequence.fromList(new ArrayList<Tuples._2<IFile,IFile>>());
+          final TResource tres=(TResource)resource;
+          if (MapSequence.fromMap(pa.global().properties(new ITarget.Name("jetbrains.mps.buildScript.CopyGeneratedScripts.collectDirs"),CopyGeneratedScripts_Facet.Target_collectDirs.Parameters.class).status()).get(tres.modelDescriptor().getSModelReference()) != null) {
+            final DebugInfo debugInfo=MapSequence.fromMap(pa.global().properties(new ITarget.Name("jetbrains.mps.buildScript.CopyGeneratedScripts.collectDirs"),CopyGeneratedScripts_Facet.Target_collectDirs.Parameters.class).status()).get(tres.modelDescriptor().getSModelReference()).getDebugInfo();
+            new DeltaReconciler(tres.delta()).visitAll(new FilesDelta.Visitor(){
+              @Override public boolean acceptWritten(              IFile file){
+                if (!(Sequence.fromIterable(Sequence.fromArray(new String[]{"dependencies","generated","trace.info"})).contains(file.getName()))) {
+                  String nodeId=debugInfo.getNodeIdForFileName(file.getName());
+                  if (StringUtils.isNotEmpty(nodeId)) {
+                    String destPath=MapSequence.fromMap(pa.global().properties(new ITarget.Name("jetbrains.mps.buildScript.CopyGeneratedScripts.collectDirs"),CopyGeneratedScripts_Facet.Target_collectDirs.Parameters.class).originalNodesToDestination()).get(new SNodePointer(tres.modelDescriptor().getSModelReference().toString(),nodeId));
+                    if (StringUtils.isNotEmpty(destPath)) {
+                      IFile destDir=FileSystem.getInstance().getFileByPath(destPath);
                       IFile copy=destDir.getDescendant(file.getName());
                       ListSequence.fromList(toCopy).addElement(MultiTuple.<IFile,IFile>from(file,copy));
                       monitor.reportFeedback(new IFeedback.INFORMATION(String.valueOf("Copying " + ListSequence.fromList(toCopy).last())));
                     }
-                    return true;
                   }
                 }
-);
-                ThreadUtils.runInUIThreadAndWait(new Runnable(){
-                  public void run(){
-                    ModelAccess.instance().requireWrite(new Runnable(){
-                      public void run(){
-                        ListSequence.fromList(toCopy).visitAll(new IVisitor<Tuples._2<IFile,IFile>>(){
-                          public void visit(                          Tuples._2<IFile,IFile> ftc){
-                            IFileUtils.copyFileContent(ftc._0(),ftc._1());
-                          }
-                        }
-);
-                      }
-                    }
-);
-                  }
-                }
-);
+                return true;
               }
             }
+);
           }
+          ThreadUtils.runInUIThreadAndWait(new Runnable(){
+            public void run(){
+              ModelAccess.instance().requireWrite(new Runnable(){
+                public void run(){
+                  ListSequence.fromList(toCopy).visitAll(new IVisitor<Tuples._2<IFile,IFile>>(){
+                    public void visit(                    Tuples._2<IFile,IFile> ftc){
+                      IFileUtils.copyFileContent(ftc._0(),ftc._1());
+                    }
+                  }
+);
+                }
+              }
+);
+            }
+          }
+);
           _output_ixa0pj_a0a=Sequence.fromIterable(_output_ixa0pj_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(resource)));
         }
 default :
