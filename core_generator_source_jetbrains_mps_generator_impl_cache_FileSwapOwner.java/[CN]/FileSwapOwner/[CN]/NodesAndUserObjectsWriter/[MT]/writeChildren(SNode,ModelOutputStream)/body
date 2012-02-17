@@ -1,27 +1,20 @@
 {
-  Object userObject=node.getUserObject(TemplateQueryContext.ORIGINAL_INPUT_NODE);
-  if (userObject instanceof SNode) {
-    os.writeInt(1);
-    os.writeModelReference(((SNode)userObject).getModel().getSModelReference());
-    os.writeNodeId(((SNode)userObject).getSNodeId());
-  }
- else {
-    os.writeInt(0);
-  }
   Map<Object,Object> userObjects=node.getUserObjects();
-  ArrayList<String> stringUserObjects=new ArrayList<String>();
+  ArrayList<Object> knownUserObject=new ArrayList<Object>();
   for (  Object key : userObjects.keySet()) {
-    if (key instanceof String) {
-      Object value=userObjects.get(key);
-      if (value instanceof String) {
-        stringUserObjects.add((String)key);
-        stringUserObjects.add((String)value);
-      }
+    Object value=userObjects.get(key);
+    if (isKnownUserObject(key) && isKnownUserObject(value)) {
+      knownUserObject.add(key);
+      knownUserObject.add(value);
+    }
+ else {
+      LOG.debug("Going to loose user object " + key + " = "+ value+ " for node "+ node+ " since key or value is not Serializable or not known to MPS.");
     }
   }
-  os.writeInt(stringUserObjects.size());
-  for (  String stringUserObject : stringUserObjects) {
-    os.writeString(stringUserObject);
+  os.writeInt(knownUserObject.size());
+  for (int i=0; i < knownUserObject.size(); i+=2) {
+    writeUserObject(os,knownUserObject.get(i));
+    writeUserObject(os,knownUserObject.get(i + 1));
   }
   super.writeChildren(node,os);
 }
