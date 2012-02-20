@@ -20,7 +20,17 @@
     }
   }
 ));
-  IScriptController scriptCtl=configureFacets(resources,fileHashes,writtenFiles);
+  final String outputRoot=myWhatToDo.getProperty("OUTPUT_ROOT_DIR");
+  final String cachesOutputRoot=myWhatToDo.getProperty("CACHES_OUTPUT_ROOT_DIR");
+  final boolean useTransientOutput=Sequence.fromIterable(resources).any(new IWhereFilter<IMResource>(){
+    public boolean accept(    IMResource r){
+      return r.module().getModuleDescriptor().isUseTransientOutput();
+    }
+  }
+);
+  this.myOutputRedirects=new ReducedGenerationWorker.MyOutputRedirects(outputRoot,cachesOutputRoot,useTransientOutput);
+  this.myForeignRootPaths=(useTransientOutput ? new ReducedGenerationWorker.MyForeignRootPaths(Sequence.<String>singleton(outputRoot)) : null);
+  IScriptController scriptCtl=configureFacets(fileHashes,writtenFiles);
   try {
     res=bms.make(ms,resources,null,scriptCtl);
     if (!(res.get().isSucessful())) {
