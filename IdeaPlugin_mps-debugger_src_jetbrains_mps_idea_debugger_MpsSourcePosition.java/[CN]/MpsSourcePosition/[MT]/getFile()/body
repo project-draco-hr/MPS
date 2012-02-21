@@ -1,23 +1,20 @@
 {
-  final String path=ModelAccess.instance().runReadAction(new Computable<String>(){
+  TraceablePositionInfo positionInfo=getPositionInfo();
+  if (positionInfo == null) {
+    return getModelPsiFile();
+  }
+  final String fileName=positionInfo.getFileName();
+  final String fullPath=ModelAccess.instance().runReadAction(new Computable<String>(){
     @Override public String compute(){
       SModelDescriptor modelDescriptor=myNodePointer.getNode().getModel().getModelDescriptor();
-      if (modelDescriptor instanceof BaseSModelDescriptorWithSource) {
-        ModelDataSource source=((BaseSModelDescriptorWithSource)modelDescriptor).getSource();
-        if (source instanceof RegularModelDataSource) {
-          return ((RegularModelDataSource)source).getFilesToListen().iterator().next();
-        }
-      }
-      return null;
+      IFile defaultOutputDir=FileGenerationUtil.getDefaultOutputDir(modelDescriptor,FileSystem.getInstance().getFileByPath(modelDescriptor.getModule().getGeneratorOutputPath()));
+      return defaultOutputDir.getDescendant(fileName).getPath();
     }
   }
 );
   return ApplicationManager.getApplication().runReadAction(new com.intellij.openapi.util.Computable<PsiFile>(){
     @Override public PsiFile compute(){
-      if (path == null) {
-        return PsiManager.getInstance(myProject).findFile(LocalFileSystem.getInstance().findFileByPath(PathManager.getBinPath()));
-      }
-      return PsiManager.getInstance(myProject).findFile(LocalFileSystem.getInstance().findFileByPath(path));
+      return PsiManager.getInstance(myProject).findFile(LocalFileSystem.getInstance().findFileByPath(fullPath));
     }
   }
 );
