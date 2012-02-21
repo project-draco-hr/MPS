@@ -11,8 +11,6 @@
     }
   }
 ;
-  final List<String> writtenFiles=ListSequence.fromList(new ArrayList<String>());
-  final Map<String,String> fileHashes=MapSequence.fromMap(new HashMap<String,String>());
   final Iterable<IMResource> resources=Sequence.fromIterable(collectResources(ctx,go)).toListSequence();
   this.myOutputPaths=new ReducedGenerationWorker.ModuleOutputPaths(Sequence.fromIterable(resources).select(new ISelector<IMResource,IModule>(){
     public IModule select(    IMResource r){
@@ -30,16 +28,20 @@
 );
   this.myOutputRedirects=new ReducedGenerationWorker.MyOutputRedirects(outputRoot,cachesOutputRoot,useTransientOutput);
   this.myForeignRootPaths=new ReducedGenerationWorker.MyForeignRootPaths(myOutputPaths.getOutputPaths());
-  IScriptController scriptCtl=configureFacets(fileHashes,writtenFiles);
+  final List<String> writtenFiles=ListSequence.fromList(new ArrayList<String>());
+  final List<String> deletedFiles=ListSequence.fromList(new ArrayList<String>());
+  final Map<String,String> fileHashes=MapSequence.fromMap(new HashMap<String,String>());
+  IScriptController scriptCtl=configureFacets(fileHashes,writtenFiles,deletedFiles);
   try {
     res=bms.make(ms,resources,null,scriptCtl);
     if (!(res.get().isSucessful())) {
       myErrors.add("Make was not successful");
     }
-    if (writtenFiles != null) {
-      for (      String f : writtenFiles) {
-        System.out.println("##WRITTEN##" + f);
-      }
+    for (    String f : writtenFiles) {
+      System.out.println("##WRITTEN##" + f);
+    }
+    for (    String f : deletedFiles) {
+      System.out.println("##DELETED##" + f);
     }
   }
  catch (  InterruptedException e) {
