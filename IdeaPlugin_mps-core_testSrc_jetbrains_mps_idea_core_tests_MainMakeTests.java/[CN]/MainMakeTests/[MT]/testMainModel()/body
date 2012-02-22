@@ -7,35 +7,16 @@
   VirtualFile[] children=srs[0].getChildren();
   assertTrue(children.length == 1);
   assertEquals("main.mps",children[0].getName());
-  VirtualFileSystem vfs=VirtualFileManager.getInstance().getFileSystem("file");
-  vfs.refresh(false);
   final VirtualFile module=srs[0].getParent();
-  assertTrue(module.findChild("source_gen") == null);
-class Result {
-    boolean aborted;
-    int errors;
-    int warnings;
-  }
-  final Result res=new Result();
+  assertNotExists(module,"source_gen");
   CompilerManager cm=CompilerManager.getInstance(myFacet.getModule().getProject());
-  cm.compile(myFacet.getModule(),new CompileStatusNotification(){
-    @Override public void finished(    boolean aborted,    int errors,    int warnings,    CompileContext compileContext){
-      res.aborted=aborted;
-      res.errors=errors;
-      res.warnings=warnings;
-    }
-  }
-);
-  assertFalse(res.aborted);
-  assertSame(0,res.errors);
-  assertSame(0,res.warnings);
-  vfs.refresh(false);
-  assertNotNull("Not found after refresh: " + module.getPath() + "/source_gen",module.findChild("source_gen"));
-  assertNotNull(module.findFileByRelativePath("source_gen/main"));
+  assertCompiles(cm);
+  getVFS().refresh(false);
+  assertExists(module,"source_gen");
+  assertExists(module,"source_gen/main");
   assertTrue(module.findFileByRelativePath("source_gen/main").getChildren().length == 5);
   MPSCompiler2[] mpscs=cm.getCompilers(MPSCompiler2.class);
   assertSame(1,mpscs.length);
-  VirtualFile cachesOutputDir=vfs.findFileByPath(MPSCompilerPaths.getCachesOutputPath(mpscs[0],myFacet.getModule(),false));
-  assertNotNull("Not found output dir",cachesOutputDir);
-  assertNotNull(cachesOutputDir.findFileByRelativePath("main"));
+  VirtualFile cachesOutputDir=getVFS().findFileByPath(MPSCompilerPaths.getCachesOutputPath(mpscs[0],myFacet.getModule(),false));
+  assertExists(cachesOutputDir,"main");
 }
