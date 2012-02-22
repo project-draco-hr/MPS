@@ -1,15 +1,4 @@
 {
-  TraceablePositionInfo position=ModelAccess.instance().runReadAction(new Computable<TraceablePositionInfo>(){
-    @Override public TraceablePositionInfo compute(){
-      SModelDescriptor model=node.getModel().getModelDescriptor();
-      DebugInfo debugInfo=TraceInfoCache.getInstance().get(model);
-      if (debugInfo == null) {
-        return null;
-      }
-      return debugInfo.getPositionForNode(node.getSNodeId().toString());
-    }
-  }
-);
   List<Breakpoint> breakpoints=myDebuggerManager.getBreakpointManager().getBreakpoints();
   for (  Breakpoint breakpoint : breakpoints) {
     if (breakpoint instanceof BreakpointWithHighlighter) {
@@ -27,5 +16,27 @@
         return;
       }
     }
+  }
+  TraceablePositionInfo position=ModelAccess.instance().runReadAction(new Computable<TraceablePositionInfo>(){
+    @Override public TraceablePositionInfo compute(){
+      SModelDescriptor model=node.getModel().getModelDescriptor();
+      DebugInfo debugInfo=TraceInfoCache.getInstance().get(model);
+      if (debugInfo == null) {
+        return null;
+      }
+      return debugInfo.getPositionForNode(node.getSNodeId().toString());
+    }
+  }
+);
+  if (position == null)   return;
+  int startLine=position.getStartLine();
+  PsiFile psiFile=MpsSourcePosition.createPosition(myProject,TraceInfoUtil.getUnitName(node.getContainingRoot()),position.getFileName(),startLine).getFile();
+  Document document=PsiDocumentManager.getInstance(myProject).getDocument(psiFile);
+  BreakpointWithHighlighter breakpoint=myDebuggerManager.getBreakpointManager().addFieldBreakpoint(document,startLine);
+  if (breakpoint == null) {
+    breakpoint=myDebuggerManager.getBreakpointManager().addMethodBreakpoint(document,startLine);
+  }
+  if (breakpoint == null) {
+    breakpoint=myDebuggerManager.getBreakpointManager().addLineBreakpoint(document,startLine);
   }
 }
