@@ -1,0 +1,54 @@
+{
+  CreateFromTemplateDialog dialog=new CreateFromTemplateDialog(myProject){
+    @Override protected void doOKAction(){
+      final ModelTemplates template=ModelTemplates.valueOf(getKindCombo().getSelectedName());
+      final SModelFqName modelFqName=new SModelFqName(getNameField().getText().trim(),"");
+      if (!isModelNameValid(modelFqName)) {
+        return;
+      }
+      SModelDescriptor newModelDescriptor=ModelAccess.instance().runWriteActionInCommand(new Computable<SModelDescriptor>(){
+        @Override public SModelDescriptor compute(){
+          EditableSModelDescriptor descriptor=mySolution.createModel(modelFqName,myModelRoot,null);
+          template.preConfigure(descriptor.getSModel(),mySolution);
+          descriptor.save();
+          return descriptor;
+        }
+      }
+,ProjectHelper.toMPSProject(myProject));
+      if (newModelDescriptor == null) {
+        return;
+      }
+      processDoNotAskOnOk(OK_EXIT_CODE);
+      if (getOKAction().isEnabled()) {
+        close(OK_EXIT_CODE);
+      }
+    }
+    private boolean isModelNameValid(    SModelFqName modelFqName){
+      String modelName=modelFqName.getLongName();
+      if (modelName.length() == 0) {
+        showError(MPSBundle.message("create.new.model.dialog.error.empty.name"));
+        return false;
+      }
+      if (SModelRepository.getInstance().getModelDescriptor(modelFqName) != null) {
+        showError(MPSBundle.message("create.new.model.dialog.error.model.exists",modelName));
+        return false;
+      }
+      if (modelName.lastIndexOf(".") == modelName.length()) {
+        showError(MPSBundle.message("create.new.model.dialog.error.empty.short.name"));
+        return false;
+      }
+      if (!(SourceVersion.isName(modelName))) {
+        showError(MPSBundle.message("create.new.model.dialog.error.invalid.java",modelName));
+        return false;
+      }
+      return true;
+    }
+  }
+;
+  dialog.setTitle(MPSBundle.message("create.new.model.dialog.title"));
+  for (  ModelTemplates template : ModelTemplates.values()) {
+    dialog.getKindCombo().addItem(template.getPresentation(),template.getIcon(),template.name());
+  }
+  dialog.getNameField().setText(myModelPrefix);
+  dialog.show();
+}
