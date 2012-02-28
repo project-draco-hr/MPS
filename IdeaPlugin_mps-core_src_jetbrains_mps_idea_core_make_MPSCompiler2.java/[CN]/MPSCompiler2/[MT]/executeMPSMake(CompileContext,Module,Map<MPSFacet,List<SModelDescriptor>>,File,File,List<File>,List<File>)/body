@@ -12,7 +12,7 @@
     makeConfiguration.addConfiguredModels(modelsToMake);
     File moduleFile=new File(facet.getModule().getModuleFilePath());
     if (!moduleFile.exists() || !moduleFile.isFile()) {
-      context.addMessage(CompilerMessageCategory.ERROR,MPSBundle.getString("module.file.not.found"),null,0,0);
+      context.addMessage(CompilerMessageCategory.ERROR,MPSBundle.getString("module.file.not.found"),null,-1,-1);
       return;
     }
     makeConfiguration.addConfiguredModules(Collections.singletonList(moduleFile));
@@ -30,19 +30,38 @@
         deletedFiles.add(new File(path));
       }
       @Override public void error(      String text){
-        context.addMessage(CompilerMessageCategory.ERROR,text,null,0,0);
+        addMessage(text,CompilerMessageCategory.ERROR);
       }
       @Override public void warning(      String text){
-        context.addMessage(CompilerMessageCategory.WARNING,text,null,0,0);
+        addMessage(text,CompilerMessageCategory.WARNING);
       }
       @Override public void info(      String text){
-        context.addMessage(CompilerMessageCategory.INFORMATION,text,null,0,0);
+        addMessage(text,CompilerMessageCategory.INFORMATION);
+      }
+      private void addMessage(      final String text,      final CompilerMessageCategory category){
+        final ModelNodeNavigatable navigatable=extractNavigatable(text,module);
+        if (navigatable != null) {
+          ModelAccess.instance().runReadAction(new Runnable(){
+            @Override public void run(){
+              String path=null;
+              SModel model=navigatable.lookupModel();
+              if (model != null && model.getModelDescriptor() instanceof DefaultSModelDescriptor) {
+                path="file://" + ((DefaultSModelDescriptor)model.getModelDescriptor()).getSource().getFile().getPath();
+              }
+              context.addMessage(category,text,path,-1,-1,navigatable);
+            }
+          }
+);
+        }
+ else {
+          context.addMessage(category,text,null,-1,-1);
+        }
       }
     }
 );
   }
  else {
-    context.addMessage(CompilerMessageCategory.ERROR,MPSBundle.getString("invalid.mps.make.configuration"),null,0,0);
+    context.addMessage(CompilerMessageCategory.ERROR,MPSBundle.getString("invalid.mps.make.configuration"),null,-1,-1);
   }
   for (  File file : writtenFiles) {
     filesToRefresh.add(file);
