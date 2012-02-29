@@ -1,0 +1,34 @@
+{
+  CompilerManagerImpl.testSetup();
+  ModuleRootManager mrm=ModuleRootManager.getInstance(myFacet.getModule());
+  VirtualFile[] srs=mrm.getSourceRoots();
+  assertTrue(srs.length == 2);
+  VirtualFile models=srs[0];
+  assertEquals("models",models.getName());
+  assertTrue(models.getChildren().length == 2);
+  assertExists(models,"code.mps");
+  assertExists(models,"data.mps");
+  final VirtualFile moduleDir=models.getParent();
+  assertTrue(moduleDir.findChild("src") == null);
+  CompilerManager cm=CompilerManager.getInstance(myFacet.getModule().getProject());
+  assertCompiles(cm);
+  MPSCompiler2[] mpscs=cm.getCompilers(MPSCompiler2.class);
+  assertSame(1,mpscs.length);
+  VirtualFile outputDir=moduleDir.findChild("src");
+  assertNotNull("Not found output dir",outputDir);
+  assertExists(outputDir,"code");
+  assertNotExists(outputDir,"code/Test.java");
+  assertExists(outputDir,"code/trace.info");
+  assertChildrenCount(outputDir,"code",1);
+  assertNotExists(models,"Manifest.java");
+  assertExists(models,"trace.info");
+  assertTrue(models.getChildren().length == 3);
+  getVFS().refresh(false);
+  assertNotExists(moduleDir,"source_gen");
+  VirtualFile cachesOutputDir=getVFS().findFileByPath(MPSCompilerPaths.getCachesOutputPath(mpscs[0],myFacet.getModule(),false));
+  assertExists(cachesOutputDir,"code");
+  assertExists(cachesOutputDir,"code/dependencies");
+  assertExists(cachesOutputDir,"code/generated");
+  assertExists(cachesOutputDir,"data/dependencies");
+  assertExists(cachesOutputDir,"data/generated");
+}
