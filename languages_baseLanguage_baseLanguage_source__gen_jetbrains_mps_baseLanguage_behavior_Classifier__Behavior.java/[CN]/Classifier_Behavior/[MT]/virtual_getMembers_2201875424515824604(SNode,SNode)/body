@@ -1,7 +1,9 @@
 {
+  if (!(SConceptOperations.isSubConceptOf(kind,"jetbrains.mps.baseLanguage.structure.ClassifierMember"))) {
+    return new ArrayList<SNode>();
+  }
   if (!(SConceptPropertyOperations.getBoolean(SNodeOperations.castConcept(kind,"jetbrains.mps.baseLanguage.structure.ClassifierMember"),"inheritableMember"))) {
-    List<SNode> result=new ArrayList<SNode>();
-    ListSequence.fromList(result).addSequence(ListSequence.fromList(IMemberContainer_Behavior.call_getMembers_1213877531970(thisNode)).where(new IWhereFilter<SNode>(){
+    return ListSequence.fromListWithValues(new ArrayList<SNode>(),ListSequence.fromList(IMemberContainer_Behavior.call_getMembers_1213877531970(thisNode)).where(new IWhereFilter<SNode>(){
       public boolean accept(      SNode it){
         return SNodeOperations.isInstanceOf(it,NameUtil.nodeFQName(kind));
       }
@@ -12,7 +14,6 @@
       }
     }
 ));
-    return result;
   }
   List<SNode> pretenders=new ArrayList<SNode>();
   for (  SNode classifier : Classifier_Behavior.call_getExtendedClassifiers_2201875424516179426(thisNode)) {
@@ -25,22 +26,40 @@
     }
 ));
   }
-  if (SConceptOperations.isSubConceptOf(kind,"jetbrains.mps.baseLanguage.structure.VariableDeclaration")) {
-    return Classifier_Behavior.call_overrideMembersBySigature_2201875424516179874(thisNode,kind,pretenders,new _FunctionTypes._return_P1_E0<String,SNode>(){
-      public String invoke(      SNode member){
-        return SPropertyOperations.getString(SNodeOperations.cast(member,"jetbrains.mps.baseLanguage.structure.VariableDeclaration"),"name");
-      }
+  Set<Object> signatures=SetSequence.fromSet(new HashSet());
+  List<SNode> result=new ArrayList<SNode>();
+  Iterable<SNode> members=ListSequence.fromList(IMemberContainer_Behavior.call_getMembers_1213877531970(thisNode)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,NameUtil.nodeFQName(kind));
     }
-);
   }
-  if (SConceptOperations.isSubConceptOf(kind,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration")) {
-    return Classifier_Behavior.call_overrideMembersBySigature_2201875424516179874(thisNode,kind,pretenders,new _FunctionTypes._return_P1_E0<String,SNode>(){
-      public String invoke(      SNode member){
-        SNode method=SNodeOperations.cast(member,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration");
-        return SPropertyOperations.getString(method,"name") + "(" + BaseMethodDeclaration_Behavior.call_getErasureSignature_2830572026628006618(method)+ ")";
-      }
+).select(new ISelector<SNode,SNode>(){
+    public SNode select(    SNode it){
+      return SNodeOperations.cast(it,"jetbrains.mps.baseLanguage.structure.ClassifierMember");
     }
-);
   }
-  return null;
+);
+  ListSequence.fromList(result).addSequence(Sequence.fromIterable(members));
+  SetSequence.fromSet(signatures).addSequence(Sequence.fromIterable(members).select(new ISelector<SNode,Object>(){
+    public Object select(    SNode it){
+      return ClassifierMember_Behavior.call_getSignatureForOverriding_274804607996650333(it);
+    }
+  }
+));
+  Map<Object,Integer> signatureToMembersCount=MapSequence.fromMap(new HashMap<Object,Integer>());
+  for (  Object signature : ListSequence.fromList(pretenders).select(new ISelector<SNode,Object>(){
+    public Object select(    SNode it){
+      return ClassifierMember_Behavior.call_getSignatureForOverriding_274804607996650333(it);
+    }
+  }
+)) {
+    MapSequence.fromMap(signatureToMembersCount).put(signature,(MapSequence.fromMap(signatureToMembersCount).containsKey(signature) ? MapSequence.fromMap(signatureToMembersCount).get(signature) + 1 : 1));
+  }
+  for (  SNode node : pretenders) {
+    Object signature=ClassifierMember_Behavior.call_getSignatureForOverriding_274804607996650333(node);
+    if ((int)MapSequence.fromMap(signatureToMembersCount).get(signature) == 1 && !(SetSequence.fromSet(signatures).contains(signature))) {
+      ListSequence.fromList(result).addElement(node);
+    }
+  }
+  return result;
 }
