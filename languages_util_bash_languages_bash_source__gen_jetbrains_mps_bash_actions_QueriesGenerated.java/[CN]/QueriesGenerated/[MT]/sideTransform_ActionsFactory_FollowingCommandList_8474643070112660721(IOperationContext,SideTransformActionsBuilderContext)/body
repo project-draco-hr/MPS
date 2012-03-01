@@ -1,25 +1,26 @@
 {
   List<INodeSubstituteAction> result=ListSequence.fromList(new ArrayList<INodeSubstituteAction>());
 {
-    SNode concept=SConceptOperations.findConceptDeclaration("jetbrains.mps.bash.structure.FollowingCommandList");
-    Iterable<SNode> concepts;
-    concepts=SConceptOperations.getAllSubConcepts(concept,_context.getModel(),operationContext.getScope());
-    for (    final SNode subconcept : concepts) {
-      if (!(SNodeOperations.isInstanceOf(subconcept,"jetbrains.mps.lang.structure.structure.ConceptDeclaration"))) {
-        continue;
+    final String[] lastPattern=new String[1];
+    List<INodeSubstituteAction> list=ModelActions.createChildSubstituteActions(_context.getSourceNode(),null,SConceptOperations.findConceptDeclaration("jetbrains.mps.bash.structure.FollowingCommandList"),new AbstractChildNodeSetter(){
+      public SNode doExecute(      SNode parentNode,      SNode oldChild,      SNode newChild,      IScope p3){
+        return substitute(newChild,lastPattern[0]);
       }
-      if (SConceptPropertyOperations.getBoolean(subconcept,"abstract")) {
-        continue;
+      private SNode substitute(      SNode result,      String pattern){
+        SLinkOperations.setTarget(SLinkOperations.getTarget(result,"baseCommand",true),"following",SLinkOperations.getTarget(SLinkOperations.getTarget(_context.getSourceNode(),"baseCommand",true),"following",true),true);
+        SLinkOperations.setTarget(SLinkOperations.getTarget(result,"baseCommand",true),"base",SLinkOperations.getTarget(SLinkOperations.getTarget(_context.getSourceNode(),"baseCommand",true),"base",true),true);
+        SLinkOperations.setTarget(SLinkOperations.getTarget(_context.getSourceNode(),"baseCommand",true),"following",result,true);
+        SNodeFactoryOperations.setNewChild(SLinkOperations.getTarget(_context.getSourceNode(),"baseCommand",true),"base","jetbrains.mps.bash.structure.HeadPipeline");
+        SNodeFactoryOperations.setNewChild(SLinkOperations.getTarget(SLinkOperations.getTarget(_context.getSourceNode(),"baseCommand",true),"base",true),"command","jetbrains.mps.bash.structure.AbstractCommand");
+        return _context.getSourceNode();
       }
-      ListSequence.fromList(result).addElement(new AbstractSideTransformHintSubstituteAction(subconcept,_context.getSourceNode()){
-        public SNode doSubstitute(        String pattern){
-          SNode result=SNodeFactoryOperations.createNewNode(NameUtil.nodeFQName(subconcept),null);
-          SLinkOperations.setTarget(SLinkOperations.getTarget(result,"baseCommand",true),"following",SLinkOperations.getTarget(SLinkOperations.getTarget(_context.getSourceNode(),"baseCommand",true),"following",true),true);
-          SLinkOperations.setTarget(SLinkOperations.getTarget(result,"baseCommand",true),"base",SLinkOperations.getTarget(SLinkOperations.getTarget(_context.getSourceNode(),"baseCommand",true),"base",true),true);
-          SLinkOperations.setTarget(SLinkOperations.getTarget(_context.getSourceNode(),"baseCommand",true),"following",result,true);
-          SNodeFactoryOperations.setNewChild(SLinkOperations.getTarget(_context.getSourceNode(),"baseCommand",true),"base","jetbrains.mps.bash.structure.HeadPipeline");
-          SNodeFactoryOperations.setNewChild(SLinkOperations.getTarget(SLinkOperations.getTarget(_context.getSourceNode(),"baseCommand",true),"base",true),"command","jetbrains.mps.bash.structure.AbstractCommand");
-          return _context.getSourceNode();
+    }
+,operationContext);
+    for (    final INodeSubstituteAction action : list) {
+      ListSequence.fromList(result).addElement(new NodeSubstituteActionWrapper(action){
+        @Override public SNode substitute(        @Nullable EditorContext context,        String pattern){
+          lastPattern[0]=pattern;
+          return super.substitute(context,pattern);
         }
       }
 );
