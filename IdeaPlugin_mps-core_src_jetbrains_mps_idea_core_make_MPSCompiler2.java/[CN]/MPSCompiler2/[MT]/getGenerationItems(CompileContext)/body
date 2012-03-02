@@ -1,0 +1,33 @@
+{
+  CompileScope compileScope=context.getCompileScope();
+  final VirtualFile[] files=compileScope.getFiles(MPSFileTypeFactory.MODEL_FILE_TYPE,true);
+  if (files.length == 0)   return new MyGenerationItem[0];
+  final HashSet<Module> modulesWithModels=new HashSet<Module>();
+  final List<MyGenerationItem> generationItems=new ArrayList<MyGenerationItem>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    @Override public void run(){
+      for (      VirtualFile modelFile : files) {
+        Module module=context.getModuleByFile(modelFile);
+        modulesWithModels.add(module);
+        EditableSModelDescriptor model=SModelRepository.getInstance().findModel(FileSystem.getInstance().getFileByPath(modelFile.getPath()));
+        if (model == null || !model.isGeneratable())         continue;
+        generationItems.add(createGenerationItem(modelFile,module,model.getSModelReference()));
+      }
+    }
+  }
+);
+  boolean ok=true;
+  for (  final Module module : modulesWithModels) {
+    MPSFacet facet=FacetManager.getInstance(module).getFacetByType(MPSFacetType.ID);
+    if (facet != null) {
+      String namespace=facet.getSolution().getModuleDescriptor().getNamespace();
+      boolean hasNamespace=namespace != null && namespace.trim().length() > 0;
+      if (!hasNamespace) {
+        context.addMessage(CompilerMessageCategory.ERROR,MPSBundle.message("compiler.facetproblem.no_namespace",module.getName()),null,-1,-1);
+        ok&=false;
+      }
+    }
+  }
+  if (!ok)   return new MyGenerationItem[0];
+  return generationItems.toArray(new GenerationItem[generationItems.size()]);
+}
