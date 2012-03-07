@@ -1,0 +1,32 @@
+{
+  ModelChangesWatcher.LOG.debug("Process after event for " + realFile);
+  ModelFileProcessor modelProcessor=new ModelFileProcessor(event.getFileSystem(),reloadSession);
+  ModuleFileProcessor moduleProcessor=new ModuleFileProcessor(event.getFileSystem(),reloadSession);
+  EventProcessor[] proc=new EventProcessor[]{modelProcessor,moduleProcessor};
+  for (  EventProcessor p : proc) {
+    if (!(p.accepts(realFile.getPath()))) {
+      continue;
+    }
+    if (event instanceof VFileContentChangeEvent) {
+      if (VirtualFileUtils.isEventFromSave(event)) {
+        continue;
+      }
+      p.processContentChanged(event.getPath());
+    }
+ else     if (event instanceof VFileCreateEvent) {
+      p.processCreate(event.getPath());
+    }
+ else     if (event instanceof VFileDeleteEvent) {
+      p.processDelete(event.getPath());
+    }
+ else     if (event instanceof VFileCopyEvent) {
+      p.processCreate(event.getPath());
+    }
+ else     if (event instanceof VFileMoveEvent) {
+      VFileMoveEvent re=(VFileMoveEvent)event;
+      String name=re.getFile().getName();
+      p.processDelete(re.getOldParent().findChild(name).getPath());
+      p.processCreate(re.getNewParent().findChild(name).getPath());
+    }
+  }
+}
