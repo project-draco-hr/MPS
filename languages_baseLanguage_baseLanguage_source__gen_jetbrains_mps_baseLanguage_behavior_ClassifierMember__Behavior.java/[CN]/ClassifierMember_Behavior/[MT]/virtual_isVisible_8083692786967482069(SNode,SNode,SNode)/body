@@ -5,21 +5,35 @@
   if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(thisNode,"visibility",true),"jetbrains.mps.baseLanguage.structure.PrivateVisibility")) {
     return ListSequence.fromList(SNodeOperations.getAncestors(contextNode,"jetbrains.mps.baseLanguage.structure.Classifier",true)).last() == ListSequence.fromList(SNodeOperations.getAncestors(contextClassifier,"jetbrains.mps.baseLanguage.structure.Classifier",true)).last();
   }
-  boolean isSamePackage=eq_i8o263_a0a5a2(VisibilityUtil.packageName(contextNode),VisibilityUtil.packageName(contextClassifier));
+  String contextNodePackage=VisibilityUtil.packageName(contextNode);
+  String contextClassifierPackage=VisibilityUtil.packageName(contextClassifier);
+  String declarationClassifierPackage=VisibilityUtil.packageName(Classifier_Behavior.getContextClassifier_6172562527426750080(thisNode));
   if ((SLinkOperations.getTarget(thisNode,"visibility",true) == null)) {
-    return isSamePackage;
+    return eq_i8o263_a0a0i0c(contextNodePackage,contextClassifierPackage);
   }
   if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(thisNode,"visibility",true),"jetbrains.mps.baseLanguage.structure.ProtectedVisibility")) {
-    if (isSamePackage) {
+    if (eq_i8o263_a0a0k0c(contextNodePackage,declarationClassifierPackage)) {
       return true;
     }
-    final SNode declarationClassifier=Classifier_Behavior.getContextClassifier_6172562527426750080(thisNode);
-    return ListSequence.fromList(SNodeOperations.getAncestors(contextNode,"jetbrains.mps.baseLanguage.structure.Classifier",true)).any(new IWhereFilter<SNode>(){
+    Iterable<SNode> possibleClassifiers=ListSequence.fromList(SNodeOperations.getAncestors(contextNode,"jetbrains.mps.baseLanguage.structure.Classifier",true)).where(new IWhereFilter<SNode>(){
       public boolean accept(      SNode it){
-        return SetSequence.fromSet(Classifier_Behavior.call_getAllExtendedClassifiers_2907982978864985482(it)).contains(declarationClassifier);
+        return SetSequence.fromSet(Classifier_Behavior.call_getAllExtendedClassifiers_2907982978864985482(it)).contains(contextClassifier);
       }
     }
 );
+    if (!(SNodeOperations.isInstanceOf(contextNode,"jetbrains.mps.baseLanguage.structure.DotExpression"))) {
+      return Sequence.fromIterable(possibleClassifiers).isNotEmpty();
+    }
+ else {
+      SNode leftClassifier=DotExpression_Behavior.call_getClassifier_1213877410697(SNodeOperations.cast(contextNode,"jetbrains.mps.baseLanguage.structure.DotExpression"));
+      final Set<SNode> extendedClassifiers=Classifier_Behavior.call_getAllExtendedClassifiers_2907982978864985482(leftClassifier);
+      return Sequence.fromIterable(possibleClassifiers).any(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return SetSequence.fromSet(extendedClassifiers).contains(it);
+        }
+      }
+);
+    }
   }
   int accessLevel=ClassifierMember_Behavior.call_getAccessLevelFor_8083692786967356648(thisNode,contextClassifier,contextNode);
   boolean isPrivate=SNodeOperations.isInstanceOf(SLinkOperations.getTarget(thisNode,"visibility",true),"jetbrains.mps.baseLanguage.structure.PrivateVisibility");
