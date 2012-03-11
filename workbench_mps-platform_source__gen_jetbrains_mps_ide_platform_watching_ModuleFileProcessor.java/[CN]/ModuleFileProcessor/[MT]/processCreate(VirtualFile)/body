@@ -1,0 +1,41 @@
+{
+  final String path=file.getPath();
+  Iterable<String> libs=LibraryInitializer.getInstance().getLibs();
+  String lib=Sequence.fromIterable(libs).where(new IWhereFilter<String>(){
+    public boolean accept(    String it){
+      return path.startsWith(it);
+    }
+  }
+).first();
+  if (lib != null) {
+    readModulesFrom(lib,path);
+  }
+ else {
+    Sequence.fromIterable(libs).where(new IWhereFilter<String>(){
+      public boolean accept(      String it){
+        return it.startsWith(path);
+      }
+    }
+).visitAll(new IVisitor<String>(){
+      public void visit(      String it){
+        readModulesFrom(it,it);
+      }
+    }
+);
+  }
+  for (  Project project : ProjectManager.getInstance().getOpenProjects()) {
+    for (    String p : project.getWatchedModulesPaths()) {
+      if (p.startsWith(file.getPath())) {
+        IFile moduleFile=FileSystem.getInstance().getFileByPath(p);
+        List<ModulesMiner.ModuleHandle> module=ModulesMiner.getInstance().collectModules(moduleFile,false);
+        List<ModulesMiner.ModuleHandle> oldList=MapSequence.fromMap(myNewProjectModules).get(project);
+        if (oldList == null) {
+          MapSequence.fromMap(myNewProjectModules).put(project,module);
+        }
+ else {
+          ListSequence.fromList(oldList).addSequence(ListSequence.fromList(module));
+        }
+      }
+    }
+  }
+}
