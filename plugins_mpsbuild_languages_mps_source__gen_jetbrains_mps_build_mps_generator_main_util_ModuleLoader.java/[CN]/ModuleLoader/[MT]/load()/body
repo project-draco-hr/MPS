@@ -1,0 +1,33 @@
+{
+  String moduleFilePath=BuildSourcePath_Behavior.call_getLocalPath_5481553824944787364(SLinkOperations.getTarget(module,"path",true),Context.defaultContext(genContext));
+  try {
+    moduleFilePath=new File(moduleFilePath).getCanonicalPath();
+  }
+ catch (  IOException ex) {
+  }
+  IFile file=FileSystem.getInstance().getFileByPath(moduleFilePath);
+  if (!(file.exists()) || file.isDirectory()) {
+    genContext.showErrorMessage(originalModule,"cannot import module file for " + SPropertyOperations.getString(module,"name") + ": file doesn't exist ("+ moduleFilePath+ ")");
+    return;
+  }
+  DescriptorIO<? extends ModuleDescriptor> loader=DescriptorIOFacade.getInstance().fromFileType(file);
+  if (loader == null) {
+    genContext.showErrorMessage(originalModule,"cannot import module file for " + SPropertyOperations.getString(module,"name") + ": unknown module type");
+    return;
+  }
+  try {
+    ModuleDescriptor md=loader.readFromFile(file);
+    if (md.getLoadException() != null) {
+      genContext.showErrorMessage(originalModule,"cannot import module file for " + SPropertyOperations.getString(module,"name") + ": exception: "+ md.getLoadException().getMessage());
+      return;
+    }
+    if (!(loadModule(md))) {
+      return;
+    }
+    SLinkOperations.setTarget(module,"path",null,true);
+  }
+ catch (  Exception ex) {
+    genContext.showErrorMessage(originalModule,"cannot import module file for " + SPropertyOperations.getString(module,"name") + ": exception: "+ ex.getMessage());
+    return;
+  }
+}
