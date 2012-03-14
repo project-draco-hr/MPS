@@ -1,30 +1,38 @@
 {
   Set<String> classpathItems=SetSequence.fromSet(new LinkedHashSet<String>());
-  final Iterable<String> OTHER_CLASSES=Arrays.asList("com.intellij.ide.projectView.impl.ProjectViewImpl","jetbrains.mps.internal.collections.runtime.ListSequence","jetbrains.mps.baseLanguage.closures.runtime._FunctionTypes","org.apache.commons.logging.Log","org.apache.log4j.Logger","com.intellij.util.containers.ConcurrentHashSet","gnu.trove.THash","org.jdom.JDOMException","com.intellij.openapi.components.ApplicationComponent","com.intellij.idea.IdeaTestApplication","org.picocontainer.Disposable","com.intellij.openapi.extensions.Extensions","com.intellij.ide.ClassloaderUtil","org.apache.xmlrpc.XmlRpcServer","jetbrains.mps.typesystem.inference.TypeChecker","jetbrains.mps.editor.runtime.impl.LanguagesKeymapManager","jetbrains.mps.intentions.IntentionsManager","jetbrains.mps.ide.findusages.FindersManager","com.google.common.collect.ImmutableList","jetbrains.mps.analyzers.runtime.framework.CustomAnalyzerRunner","jetbrains.mps.baseLanguage.tuples.runtime.MultiTuple");
-  Iterable<Class> classes=Arrays.<Class>asList(MergeDriverMain.class,FileUtil.class,MergeSession.class,SModel.class,StringUtils.class,IdeMain.class);
-  classes=Sequence.fromIterable(OTHER_CLASSES).select(new ISelector<String,Class>(){
-    public Class select(    String cn){
-      try {
-        return (Class)Class.forName(cn);
-      }
- catch (      ClassNotFoundException e) {
-        if (log.isErrorEnabled()) {
-          log.error("",e);
-        }
-        return null;
+  final Wrappers._T<String> mpsCorePath=new Wrappers._T<String>(PathManager.getLibPath());
+  File mpsCore=new File(mpsCorePath.value + File.separator + "mps-core.jar");
+  if (mpsCore.exists()) {
+    SetSequence.fromSet(classpathItems).addSequence(Sequence.fromIterable(libJars).select(new ISelector<String,String>(){
+      public String select(      String it){
+        return mpsCorePath.value + File.separator + it;
       }
     }
+));
+    SetSequence.fromSet(classpathItems).addElement(PathManager.getHomePath() + File.separator + "plugins"+ File.separator+ "vcs"+ File.separator+ "lib"+ File.separator+ "mps-vcs-core.jar");
   }
-).concat(Sequence.fromIterable(classes));
-  SetSequence.fromSet(classpathItems).addSequence(Sequence.fromIterable(classes).select(new ISelector<Class,String>(){
-    public String select(    Class c){
-      return PathUtil.getJarPathForClass(c);
+ else {
+    mpsCorePath.value=PathManager.getPluginsPath() + File.separator + "mps-core"+ File.separator+ "lib";
+    mpsCore=new File(mpsCorePath.value + File.separator + "mps-core.jar");
+    if (mpsCore.exists()) {
+      SetSequence.fromSet(classpathItems).addSequence(Sequence.fromIterable(libJars).select(new ISelector<String,String>(){
+        public String select(        String it){
+          return mpsCorePath.value + File.separator + it;
+        }
+      }
+));
+      SetSequence.fromSet(classpathItems).addElement(PathManager.getPluginsPath() + File.separator + "mps-vcs"+ File.separator+ "lib"+ File.separator+ "mps-vcs-core.jar");
+    }
+ else {
+      SetSequence.fromSet(classpathItems).addSequence(SetSequence.fromSet(getClasspathInternal()));
+    }
+  }
+  SetSequence.fromSet(classpathItems).addSequence(Sequence.fromIterable(ideaLibJars).select(new ISelector<String,String>(){
+    public String select(    String it){
+      return PathManager.getLibPath() + File.separator + it;
     }
   }
 ));
-  SetSequence.fromSet(classpathItems).addElement(jetbrains.mps.util.PathManager.getHomePath() + File.separator + "lib"+ File.separator+ "resources.jar");
-  SetSequence.fromSet(classpathItems).addElement(jetbrains.mps.util.PathManager.getHomePath() + File.separator + "lib"+ File.separator+ "resources_en.jar");
-  SetSequence.fromSet(classpathItems).addElement(jetbrains.mps.util.PathManager.getHomePath() + File.separator + "lib"+ File.separator+ "icons.jar");
   if (withSvnkit) {
     SetSequence.fromSet(classpathItems).addElement(getSvnkitJar());
   }
