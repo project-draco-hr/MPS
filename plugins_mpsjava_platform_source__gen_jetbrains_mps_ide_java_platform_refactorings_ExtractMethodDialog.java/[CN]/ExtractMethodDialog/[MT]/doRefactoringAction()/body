@@ -1,0 +1,35 @@
+{
+  final Wrappers._T<SNode> result=new Wrappers._T<SNode>(null);
+  if (!(myCanRefactor)) {
+    JOptionPane.showMessageDialog(myPanel,"Can't refactor\n" + this.myErrors,"Can't perform refactoring",JOptionPane.ERROR_MESSAGE);
+    return;
+  }
+ else {
+    if (myExtractIntoOuterContainer) {
+      if (myStaticTarget == null) {
+        chooseStaticContainer();
+      }
+      if (myStaticTarget != null) {
+        setStaticContainer();
+      }
+ else {
+        return;
+      }
+    }
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        result.value=myRefactoring.doRefactor();
+        myContext.select(result.value);
+        if ((myRefactoringModel != null) && myExtractIntoOuterContainer) {
+          SModelReference ref=SNodeOperations.getModel(myStaticTarget).getSModelReference();
+          myRefactoringModel.addModelImport(ref,false);
+        }
+      }
+    }
+);
+  }
+  super.doRefactoringAction();
+  if ((result.value != null)) {
+    new ExtractMethodDialog.MyMethodDuplicatesProcessor(myContext,result.value).process(this.myRefactoring.getMatches(),myProject);
+  }
+}
