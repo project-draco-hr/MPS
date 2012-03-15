@@ -1,0 +1,70 @@
+{
+  boolean hasErrors=false;
+  Set<String> fqNames=new LinkedHashSet<String>();
+  for (  CompilationUnitDeclaration decl : myCompilationUnitDeclarations) {
+    if (decl.hasErrors()) {
+      hasErrors=true;
+      for (      CategorizedProblem problem : decl.compilationResult().getErrors()) {
+        int id=problem.getID();
+        if (id == IProblem.ImportNotFound || id == IProblem.IsClassPathCorrect) {
+          fqNames.add(problem.getArguments()[0]);
+        }
+ else {
+          String message=problem.getMessage();
+          LOG.warning(message + " (line: " + problem.getSourceLineNumber()+ ")");
+        }
+      }
+    }
+  }
+  boolean buildAstNow=true;
+  if (!(fqNames.isEmpty()) && myContext != null) {
+    int option=JOptionPane.showConfirmDialog(null,"Some imports in source code were not resolved.\nDo you want to specify classpaths for unresolved imports?");
+    if (option == JOptionPane.YES_OPTION) {
+      ClassPathDialog dialog=new ClassPathDialog(myProject,mySourceDirs,ListSequence.fromListWithValues(new ArrayList<String>(),fqNames));
+      dialog.show();
+      List<IClassPathItem> list=dialog.getChoosenClassPath();
+      if (!(list.isEmpty())) {
+        for (        IClassPathItem classpath : list) {
+          myClassPathItem.add(classpath);
+          ClassPathEntry cpe=new ClassPathEntry();
+          if (classpath instanceof FileClassPathItem) {
+            cpe.setPath(((FileClassPathItem)classpath).getPath());
+          }
+ else           if (classpath instanceof JarFileClassPathItem) {
+            cpe.setPath(((JarFileClassPathItem)classpath).getFile().getAbsolutePath());
+          }
+ else {
+            cpe=null;
+          }
+          if (cpe != null) {
+            myModule.getModuleDescriptor().getStubModelEntries().add(ModelRootUtil.fromClassPathEntry(cpe));
+            ModelAccess.instance().runWriteInEDT(new Runnable(){
+              public void run(){
+                myModule.save();
+              }
+            }
+);
+          }
+        }
+        return true;
+      }
+    }
+  }
+  if (hasErrors) {
+    int option=JOptionPane.showConfirmDialog(null,"Errors were found during compilation. Are you sure you want to build MPS model?");
+    if (option != JOptionPane.YES_OPTION) {
+      buildAstNow=false;
+    }
+  }
+  if (buildAstNow) {
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        createModelsAndBuildAST();
+      }
+    }
+);
+    addRequiredLanguagesToModule();
+    return false;
+  }
+  return false;
+}

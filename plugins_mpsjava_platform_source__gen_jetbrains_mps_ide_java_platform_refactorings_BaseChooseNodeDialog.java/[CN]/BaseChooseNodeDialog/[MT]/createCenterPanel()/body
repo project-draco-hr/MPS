@@ -1,0 +1,54 @@
+{
+  final DefaultMutableTreeNode rootNode=createRootNode();
+  myTree=new SimpleTree(new DefaultTreeModel(rootNode));
+  myTree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+  myTree.setCellRenderer(new ModelTreeCellRenderer());
+  myTree.setRootVisible(false);
+  myTree.setShowsRootHandles(true);
+  new ModelTreeBuilder(myTree){
+    protected void initTreeNode(    final ModelTreeNode node){
+      if (node.getUserObject() instanceof SModelDescriptor) {
+        ModelAccess.instance().runReadInEDT(new Runnable(){
+          public void run(){
+            initModelDescriptorNode(node,(SModelDescriptor)node.getUserObject());
+          }
+        }
+);
+      }
+    }
+    private void initModelDescriptorNode(    ModelTreeNode node,    SModelDescriptor descriptor){
+      SModel sModel=descriptor.getSModel();
+      for (      SNode nextRoot : Sequence.fromIterable(ModelTreeBuilder.sortChildNodes(ListSequence.fromList(jetbrains.mps.lang.smodel.generator.smodelAdapter.SModelOperations.getRoots(sModel,"jetbrains.mps.lang.core.structure.BaseConcept")).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return isAcceptable(it);
+        }
+      }
+)))) {
+        ModelTreeNode modelRootTreeNode=ModelTreeBuilder.createSNodeTreeNode(nextRoot);
+        modelRootTreeNode.setLeaf(true);
+        ModelTreeBuilder.insertChildSNodeTreeNode(node,modelRootTreeNode,SPropertyOperations.getString(nextRoot,"virtualPackage"));
+      }
+      notifyNodeStructureChanged(node);
+    }
+  }
+;
+  myTree.getSelectionModel().addTreeSelectionListener(new TreeSelectionListener(){
+    public void valueChanged(    TreeSelectionEvent event){
+      Object selectedNode=event.getPath().getLastPathComponent();
+      if (selectedNode instanceof ModelTreeNode) {
+        ModelTreeNode treeNode=((ModelTreeNode)selectedNode);
+        if (treeNode.getUserObject() instanceof SNodePointer) {
+          mySelectedNode=((SNodePointer)treeNode.getUserObject());
+          getOKAction().setEnabled(true);
+          return;
+        }
+      }
+      getOKAction().setEnabled(false);
+      mySelectedNode=null;
+    }
+  }
+);
+  JScrollPane scrollPane=ScrollPaneFactory.createScrollPane(myTree);
+  scrollPane.setPreferredSize(new Dimension(700,500));
+  return scrollPane;
+}

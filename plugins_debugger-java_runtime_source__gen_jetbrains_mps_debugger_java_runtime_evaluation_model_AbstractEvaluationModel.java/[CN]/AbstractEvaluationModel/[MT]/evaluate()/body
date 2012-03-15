@@ -2,6 +2,8 @@
   try {
     final String fullClassName=this.myAuxModel.getLongName() + "." + AbstractEvaluationModel.EVALUATOR_NAME;
     InMemoryJavaGenerationHandler handler=new MyInMemoryJavaGenerationHandler(false,true,myGenerationListeners);
+    AbstractEvaluationModel.MyCompilationResultAdapter compilationResult=new AbstractEvaluationModel.MyCompilationResultAdapter();
+    handler.setCompilationListener(compilationResult);
     Project ideaProject=this.myAuxModule.getMPSProject().getProject();
     DefaultMessageHandler messageHandler=new DefaultMessageHandler(ideaProject);
     ProgressWindow progressWindow=new ProgressWindow(false,ideaProject);
@@ -25,7 +27,14 @@
       return evaluator;
     }
  else     if (StringUtils.isNotEmpty(source) && !(successful)) {
-      throw new EvaluationException("Errors during compilation.");
+      String text="Errors during compilation";
+      if (compilationResult.hasErrors()) {
+        text+=":\n" + compilationResult.getMessage();
+      }
+ else {
+        text+=".";
+      }
+      throw new EvaluationException(text);
     }
  else {
       throw new EvaluationException("Errors during generation.");

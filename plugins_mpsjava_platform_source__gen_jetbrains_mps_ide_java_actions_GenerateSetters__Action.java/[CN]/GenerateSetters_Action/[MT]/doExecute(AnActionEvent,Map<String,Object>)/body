@@ -1,0 +1,38 @@
+{
+  try {
+    SNodePointer[] fields;
+    SNode classConcept=GenerateSetters_Action.this.getClassConcept(_params);
+    fields=Sequence.fromIterable(GenerateSetters_Action.this.getFieldDeclarationsWithoutSetters(classConcept,_params)).select(new ISelector<SNode,SNodePointer>(){
+      public SNodePointer select(      SNode it){
+        return new SNodePointer(it);
+      }
+    }
+).toGenericArray(SNodePointer.class);
+    SelectFieldsDialog selectFieldsDialog=new SelectFieldsDialog(fields,false,((EditorContext)MapSequence.fromMap(_params).get("editorContext")).getOperationContext().getProject());
+    selectFieldsDialog.setTitle("Select Fields to Generate Setters");
+    selectFieldsDialog.show();
+    if (!(selectFieldsDialog.isOK())) {
+      return;
+    }
+    SNodePointer[] selectedFields=Sequence.fromIterable(((Iterable<SNodePointer>)selectFieldsDialog.getSelectedElements())).toGenericArray(SNodePointer.class);
+    SNode lastAdded=null;
+    Project project=((EditorContext)MapSequence.fromMap(_params).get("editorContext")).getOperationContext().getProject();
+    for (    SNodePointer fieldPtr : selectedFields) {
+      final SNode field=SNodeOperations.cast(fieldPtr.getNode(),"jetbrains.mps.baseLanguage.structure.FieldDeclaration");
+      final String setterName=GenerateGettersAndSettersUtil.getFieldSetterName(field,project);
+      String parameterName=GenerateGettersAndSettersUtil.getParameterNameForField(field,project);
+      SNode fieldReference=SNodeFactoryOperations.createNewNode("jetbrains.mps.baseLanguage.structure.LocalInstanceFieldReference",null);
+      SLinkOperations.setTarget(fieldReference,"variableDeclaration",field,false);
+      SNode added=ListSequence.fromList(SLinkOperations.getTargets(classConcept,"method",true)).addElement(new GenerateSetters_Action.QuotationClass_5cfua3_a0a0a6a51a0a3().createNode(fieldReference,SLinkOperations.getTarget(field,"type",true),parameterName,setterName));
+      lastAdded=added;
+    }
+    if (lastAdded != null) {
+      ((EditorContext)MapSequence.fromMap(_params).get("editorContext")).select(lastAdded);
+    }
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "GenerateSetters",t);
+    }
+  }
+}
