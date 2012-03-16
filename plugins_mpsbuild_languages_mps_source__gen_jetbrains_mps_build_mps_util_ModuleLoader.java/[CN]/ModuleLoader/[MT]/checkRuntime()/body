@@ -1,0 +1,42 @@
+{
+  LanguageDescriptor descriptor=((LanguageDescriptor)myModuleDescriptor);
+  for (  ModuleReference module : descriptor.getRuntimeModules()) {
+    final SNode resolved=SNodeOperations.as(visible.resolve(module.getModuleFqName(),module.getModuleId().toString()),"jetbrains.mps.build.mps.structure.BuildMps_Solution");
+    if (resolved == null) {
+      report("cannot find runtime solution in dependencies: " + module.getModuleFqName(),myModule);
+      continue;
+    }
+    if (!(ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Language"),"runtime",true)).any(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleSolutionRuntime") && SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleSolutionRuntime"),"solution",false) == resolved;
+      }
+    }
+))) {
+      report("runtime solution should be extracted into build script: " + module.toString(),myOriginalModule);
+    }
+  }
+  for (  ModelRoot entry : descriptor.getRuntimeStubModels()) {
+    if (!(LanguageID.JAVA_MANAGER.equals(entry.getManager()))) {
+      continue;
+    }
+    String path=entry.getPath();
+    SNode p=convertPath(path,myOriginalModule);
+    if (p == null) {
+      continue;
+    }
+    if (path.endsWith(".jar")) {
+      final String localPath=BuildSourcePath_Behavior.call_getRelativePath_5481553824944787371(p);
+      if (!(ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Language"),"runtime",true)).any(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleJarRuntime") && eq_a6ewnz_a0a0a0a0a0a0b0g0c0l(BuildSourcePath_Behavior.call_getRelativePath_5481553824944787371(SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleJarRuntime"),"path",true)),localPath);
+        }
+      }
+))) {
+        report("runtime jar should be extracted into build script: " + path,myOriginalModule);
+      }
+    }
+ else {
+      report("only jar runtimes are supported in runtime stubs, found: " + path,myOriginalModule);
+    }
+  }
+}

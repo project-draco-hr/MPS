@@ -1,0 +1,48 @@
+{
+  SNode module=SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Module");
+  Map<String,Boolean> usedModuleIds=new HashMap<String,Boolean>();
+  for (  SNode dep : SLinkOperations.getTargets(module,"dependencies",true)) {
+    if (SNodeOperations.isInstanceOf(dep,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule")) {
+      SNode onModule=SNodeOperations.cast(dep,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule");
+      usedModuleIds.put(SPropertyOperations.getString(SLinkOperations.getTarget(onModule,"module",false),"uuid"),SPropertyOperations.getBoolean(onModule,"reexport"));
+    }
+ else     if (SNodeOperations.isInstanceOf(dep,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModuleById")) {
+      SNode onModule=SNodeOperations.cast(dep,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModuleById");
+      usedModuleIds.put(SPropertyOperations.getString(onModule,"targetId"),SPropertyOperations.getBoolean(onModule,"reexport"));
+    }
+  }
+  for (  Dependency dep : myModuleDescriptor.getDependencies()) {
+    boolean reexport=dep.isReexport();
+    ModuleReference moduleRef=dep.getModuleRef();
+    SNode resolved=SNodeOperations.as(visible.resolve(moduleRef.getModuleFqName(),moduleRef.getModuleId().toString()),"jetbrains.mps.build.mps.structure.BuildMps_Module");
+    boolean found=false;
+    if (usedModuleIds.containsKey(moduleRef.getModuleId().toString())) {
+      found=true;
+      boolean foundReexport=usedModuleIds.get(moduleRef.getModuleId().toString());
+      if (foundReexport != reexport) {
+        report("wrong reexport status for dependency in build script for: " + moduleRef.getModuleId().toString(),myOriginalModule);
+      }
+    }
+    if (!(found)) {
+      if (reexport) {
+        report("reexport dependency should be extracted into build script: " + dep.toString(),myOriginalModule);
+      }
+      if (checkOnly) {
+        continue;
+      }
+      if (resolved != null) {
+        SNode res=SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule",null);
+        SLinkOperations.setTarget(res,"module",resolved,false);
+        SPropertyOperations.set(res,"reexport","" + reexport);
+        ListSequence.fromList(SLinkOperations.getTargets(module,"dependencies",true)).addElement(res);
+      }
+ else {
+        SNode res=SModelOperations.createNewNode(SNodeOperations.getModel(myModule),"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModuleById",null);
+        SPropertyOperations.set(res,"targetId",moduleRef.getModuleId().toString());
+        SPropertyOperations.set(res,"targetName",moduleRef.getModuleFqName());
+        SPropertyOperations.set(res,"reexport","" + reexport);
+        ListSequence.fromList(SLinkOperations.getTargets(module,"dependencies",true)).addElement(res);
+      }
+    }
+  }
+}
