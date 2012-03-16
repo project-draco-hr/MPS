@@ -1,0 +1,37 @@
+{
+  try {
+    SNodePointer[] fields;
+    SNode classConcept=GenerateGetters_Action.this.getClassConcept(_params);
+    fields=Sequence.fromIterable(GenerateGetters_Action.this.getFieldDeclarationsWithoutGetters(classConcept,_params)).select(new ISelector<SNode,SNodePointer>(){
+      public SNodePointer select(      SNode it){
+        return new SNodePointer(it);
+      }
+    }
+).toGenericArray(SNodePointer.class);
+    SelectFieldsDialog selectFieldsDialog=new SelectFieldsDialog(fields,false,((EditorContext)MapSequence.fromMap(_params).get("editorContext")).getOperationContext().getProject());
+    selectFieldsDialog.setTitle("Select Fields to Generate Getters");
+    selectFieldsDialog.show();
+    if (!(selectFieldsDialog.isOK())) {
+      return;
+    }
+    SNodePointer[] selectedFields=Sequence.fromIterable(((Iterable<SNodePointer>)selectFieldsDialog.getSelectedElements())).toGenericArray(SNodePointer.class);
+    SNode lastAdded=null;
+    Project project=((EditorContext)MapSequence.fromMap(_params).get("editorContext")).getOperationContext().getProject();
+    for (    SNodePointer fieldPtr : selectedFields) {
+      final SNode field=SNodeOperations.cast(fieldPtr.getNode(),"jetbrains.mps.baseLanguage.structure.FieldDeclaration");
+      final String getterName=GenerateGettersAndSettersUtil.getFieldGetterName(field,project);
+      SNode fieldReference=SNodeFactoryOperations.createNewNode("jetbrains.mps.baseLanguage.structure.LocalInstanceFieldReference",null);
+      SLinkOperations.setTarget(fieldReference,"variableDeclaration",field,false);
+      SNode added=ListSequence.fromList(SLinkOperations.getTargets(classConcept,"method",true)).addElement(new GenerateGetters_Action.QuotationClass_jzv2hd_a0a0a5a41a0a3().createNode(SLinkOperations.getTarget(field,"type",true),fieldReference,getterName));
+      lastAdded=added;
+    }
+    if (lastAdded != null) {
+      ((EditorContext)MapSequence.fromMap(_params).get("editorContext")).select(lastAdded);
+    }
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "GenerateGetters",t);
+    }
+  }
+}

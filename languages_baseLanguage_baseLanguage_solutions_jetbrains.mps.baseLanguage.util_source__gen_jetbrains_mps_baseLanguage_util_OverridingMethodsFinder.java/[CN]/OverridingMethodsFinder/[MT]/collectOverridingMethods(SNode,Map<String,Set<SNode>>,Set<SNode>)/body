@@ -1,0 +1,34 @@
+{
+  Map<String,Set<SNode>> methodNameToMethodMapCopy=MapSequence.fromMap(new HashMap<String,Set<SNode>>());
+  for (  String methodName : SetSequence.fromSet(MapSequence.fromMap(nameToMethodsMap).keySet())) {
+    SetSequence.fromSet(safeGet(methodNameToMethodMapCopy,methodName)).addSequence(SetSequence.fromSet(MapSequence.fromMap(nameToMethodsMap).get(methodName)));
+  }
+  for (  final SNode classifierMethod : ListSequence.fromList(SLinkOperations.getTargets(classifier,"method",true)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return canBeOverriden(it);
+    }
+  }
+)) {
+    Set<SNode> similarMethods=MapSequence.fromMap(methodNameToMethodMapCopy).get(SPropertyOperations.getString(classifierMethod,"name"));
+    if (similarMethods == null) {
+      continue;
+    }
+    List<SNode> overridingMethods=new ArrayList<SNode>();
+    for (    SNode overridingMethod : SetSequence.fromSet(similarMethods).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return ((Boolean)BehaviorManager.getInstance().invoke(Boolean.class,classifierMethod,"call_hasSameSignature_1213877350435",new Class[]{SNode.class,SNode.class},it));
+      }
+    }
+)) {
+      SetSequence.fromSet(safeGet(this.myOverridingToOverridenMethodsMap,overridingMethod)).addElement(MultiTuple.<SNode,SNode>from(classifierMethod,classifier));
+      ListSequence.fromList(overridingMethods).addElement(overridingMethod);
+    }
+    SetSequence.fromSet(similarMethods).removeSequence(ListSequence.fromList(overridingMethods));
+    if (SetSequence.fromSet(similarMethods).isEmpty()) {
+      MapSequence.fromMap(methodNameToMethodMapCopy).removeKey(SPropertyOperations.getString(classifierMethod,"name"));
+    }
+  }
+  if (!(MapSequence.fromMap(methodNameToMethodMapCopy).isEmpty())) {
+    collectOverridingMethodsInClassifierHierarchy(classifier,methodNameToMethodMapCopy,visitedClassifiers);
+  }
+}
