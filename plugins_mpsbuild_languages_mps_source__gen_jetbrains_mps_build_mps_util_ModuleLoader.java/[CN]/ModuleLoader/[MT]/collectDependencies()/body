@@ -1,0 +1,37 @@
+{
+  for (  Dependency dep : myModuleDescriptor.getDependencies()) {
+    boolean reexport=dep.isReexport();
+    ModuleReference moduleRef=dep.getModuleRef();
+    boolean found=false;
+    if (!(found)) {
+      SNode res=SModelOperations.createNewNode(SNodeOperations.getModel(myModule),"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModuleById",null);
+      SPropertyOperations.set(res,"targetId",moduleRef.getModuleId().toString());
+      SPropertyOperations.set(res,"targetName",moduleRef.getModuleFqName());
+      SPropertyOperations.set(res,"reexport","" + reexport);
+      if (reexport) {
+        reportWarning("reexport dependency should be extracted into build script: " + dep.toString(),myOriginalModule);
+      }
+      ListSequence.fromList(SLinkOperations.getTargets(myModule,"dependencies",true)).addElement(res);
+    }
+  }
+  for (  ModelRoot entry : myModuleDescriptor.getStubModelEntries()) {
+    if (!(LanguageID.JAVA_MANAGER.equals(entry.getManager()))) {
+      continue;
+    }
+    String path=entry.getPath();
+    SNode p=convertPath(path,myOriginalModule);
+    if (p == null) {
+      continue;
+    }
+    if (path.endsWith(".jar")) {
+      SNode jar=SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyJar",null);
+      SLinkOperations.setTarget(jar,"path",p,true);
+      ListSequence.fromList(SLinkOperations.getTargets(myModule,"dependencies",true)).addElement(jar);
+    }
+ else {
+      report("only jar stub libraries are supported, found: " + path,myOriginalModule);
+    }
+  }
+  for (  ModuleReference lang : myModuleDescriptor.getUsedLanguages()) {
+  }
+}
