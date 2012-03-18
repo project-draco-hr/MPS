@@ -3,13 +3,14 @@
   HELPER.setMacro("samples_home",System.getProperty("user.dir") + "/samples");
   List<Object[]> fixtures=new ArrayList<Object[]>();
   mpsProject=TestMain.loadProject(new File(System.getProperty("user.dir") + PROJECT));
-  List<IModule> allModules=ModelAccess.instance().runReadAction(new Computable<List<IModule>>(){
-    @Override public List<IModule> compute(){
+  Set<IModule> allModules=ModelAccess.instance().runReadAction(new Computable<Set<IModule>>(){
+    @Override public Set<IModule> compute(){
       return MPSModuleRepository.getInstance().getAllModules();
     }
   }
 );
-  Collections.sort(allModules,new Comparator<IModule>(){
+  List<IModule> mlist=new ArrayList<IModule>(allModules);
+  Collections.sort(mlist,new Comparator<IModule>(){
     @Override public int compare(    IModule m1,    IModule m2){
       String fqName1=m1.getModuleFqName();
       String fqName2=m2.getModuleFqName();
@@ -17,10 +18,9 @@
     }
   }
 );
-  for (  IModule module : allModules) {
-    if (needsGeneration(module) && !(module instanceof Generator)) {
-      fixtures.add(new Object[]{new Fixture(module,mpsProject)});
-    }
+  for (  IModule module : mlist) {
+    if (!needsGeneration(module) || module instanceof Generator)     continue;
+    fixtures.add(new Object[]{new Fixture(module,mpsProject)});
   }
   return fixtures;
 }
