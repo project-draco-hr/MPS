@@ -6,7 +6,17 @@
   if (!((sourceFile.exists()))) {
     throw new ExecutionException("Source file " + sourceFile + " does not exist. Can't compile it.");
   }
-  IFile executableFile=Gcc_Command.getExecutableFile(file);
-  executableFile.getParent().mkdirs();
+  final IFile executableFile=Gcc_Command.getExecutableFile(file);
+  ThreadUtils.runInUIThreadAndWait(new Runnable(){
+    public void run(){
+      ModelAccess.instance().requireWrite(new Runnable(){
+        public void run(){
+          executableFile.getParent().mkdirs();
+        }
+      }
+);
+    }
+  }
+);
   return new Exec_Command().setWorkingDirectory_File(new File(sourceFile.getParent().getAbsolutePath())).setProgramParameters_String("-xc" + " " + "-g"+ " " + Gcc_Command.protect(sourceFile.getAbsolutePath()) + " "+ "-o "+ Gcc_Command.protect(executableFile.getAbsolutePath())).createProcess(new File(myGccLocation_String));
 }
