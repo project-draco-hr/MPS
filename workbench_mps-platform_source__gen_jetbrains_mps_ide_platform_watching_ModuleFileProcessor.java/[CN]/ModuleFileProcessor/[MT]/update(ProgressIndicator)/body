@@ -1,0 +1,22 @@
+{
+  indicator.setText("Reloading updated modules... Please wait.");
+  for (  final IModule module : myChangedModules) {
+    String text="Reloading " + module.getModuleFqName();
+    indicator.setText2(text);
+    module.reloadFromDisk(false);
+    SetSequence.fromSet(myProcessedModules).addElement(module);
+  }
+  for (  final IModule module : myDeletedModules) {
+    indicator.setText2("Unloading removed module " + module.getModuleFqName());
+    module.dispose();
+    MPSModuleRepository.getInstance().removeModule(module);
+    SetSequence.fromSet(myProcessedModules).addElement(module);
+  }
+  for (  String lib : SetSequence.fromSet(MapSequence.fromMap(myNewLibModules).keySet())) {
+    List<IModule> newModules=LibraryInitializer.getInstance().registerNewModules(lib,MapSequence.fromMap(myNewLibModules).get(lib));
+    SetSequence.fromSet(myProcessedModules).addSequence(ListSequence.fromList(newModules));
+  }
+  for (  Project project : SetSequence.fromSet(MapSequence.fromMap(myNewProjectModules).keySet())) {
+    addNewModules(project,MapSequence.fromMap(myNewProjectModules).get(project));
+  }
+}
