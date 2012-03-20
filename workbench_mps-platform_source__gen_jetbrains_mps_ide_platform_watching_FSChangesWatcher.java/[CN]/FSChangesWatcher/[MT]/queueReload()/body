@@ -1,0 +1,37 @@
+{
+synchronized (myLock) {
+    if (myReloadSession == null) {
+      return;
+    }
+    if (myReloadSession.isEmpty()) {
+      return;
+    }
+    myQueue.queue(new Update(null){
+      public void run(){
+        for (        Project project : myProjectManager.getOpenProjects()) {
+          if (project.getComponent(ProjectLevelVcsManager.class).isBackgroundVcsOperationRunning()) {
+            queueReload();
+            return;
+          }
+        }
+synchronized (myLock) {
+          if (myReloadSession == null) {
+            return;
+          }
+          final ReloadSession session=myReloadSession;
+          if (session.isEmpty()) {
+            return;
+          }
+          myReloadSession=null;
+          ProgressManager.getInstance().run(new Task.Modal(null,"Reloading",false){
+            public void run(            @NotNull final ProgressIndicator progressIndicator){
+              session.doReload(progressIndicator);
+            }
+          }
+);
+        }
+      }
+    }
+);
+  }
+}
