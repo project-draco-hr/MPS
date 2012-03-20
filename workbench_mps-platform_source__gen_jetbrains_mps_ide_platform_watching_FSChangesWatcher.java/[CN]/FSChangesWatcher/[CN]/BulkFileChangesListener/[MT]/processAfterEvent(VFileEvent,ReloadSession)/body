@@ -1,0 +1,40 @@
+{
+  FSChangesWatcher.LOG.debug("Process after event for " + event.getPath());
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      EventProcessor p : reloadSession.getProcessors()) {
+        if (event.getFile() == null) {
+          if (log.isWarnEnabled()) {
+            log.warn("event.getFile() is null. Event: " + event.getClass().getName() + "; path="+ event.getPath());
+          }
+          continue;
+        }
+        if (!(p.accepts(event.getFile()))) {
+          continue;
+        }
+        if (event instanceof VFileContentChangeEvent) {
+          if (VirtualFileUtils.isEventFromSave(event)) {
+            continue;
+          }
+          p.processContentChanged(event.getFile());
+        }
+ else         if (event instanceof VFileCreateEvent) {
+          p.processCreate(event.getFile());
+        }
+ else         if (event instanceof VFileDeleteEvent) {
+          p.processDelete(event.getFile());
+        }
+ else         if (event instanceof VFileCopyEvent) {
+          p.processCreate(event.getFile());
+        }
+ else         if (event instanceof VFileMoveEvent) {
+          VFileMoveEvent re=(VFileMoveEvent)event;
+          String name=re.getFile().getName();
+          p.processDelete(event.getFile());
+          p.processCreate(re.getNewParent().findChild(name));
+        }
+      }
+    }
+  }
+);
+}

@@ -1,28 +1,27 @@
 {
   List<INodeSubstituteAction> result=ListSequence.fromList(new ArrayList<INodeSubstituteAction>());
 {
-    SNode concept=SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.AsExpression");
-    Iterable<SNode> concepts;
-    concepts=SConceptOperations.getAllSubConcepts(concept,_context.getModel(),operationContext.getScope());
-    for (    final SNode subconcept : concepts) {
-      if (!(SNodeOperations.isInstanceOf(subconcept,"jetbrains.mps.lang.structure.structure.ConceptDeclaration"))) {
-        continue;
+    final String[] lastPattern=new String[1];
+    List<INodeSubstituteAction> list=ModelActions.createChildSubstituteActions(_context.getSourceNode(),null,SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.AsExpression"),new AbstractChildNodeSetter(){
+      public SNode doExecute(      SNode parentNode,      SNode oldChild,      SNode newChild,      IScope p3){
+        return substitute(newChild,lastPattern[0]);
       }
-      if (SConceptPropertyOperations.getBoolean(subconcept,"abstract")) {
-        continue;
+      private SNode substitute(      SNode result,      String pattern){
+        SNode type=ExpectedType_FactoryUtil.createExpectedType(_context.getSourceNode());
+        if (SNodeOperations.isInstanceOf(type,"jetbrains.mps.baseLanguage.structure.ClassifierType")) {
+          SLinkOperations.setTarget(result,"classifierType",SNodeOperations.cast(type,"jetbrains.mps.baseLanguage.structure.ClassifierType"),true);
+        }
+        SNodeOperations.replaceWithAnother(_context.getSourceNode(),result);
+        SLinkOperations.setTarget(result,"expression",_context.getSourceNode(),true);
+        return result;
       }
-      ListSequence.fromList(result).addElement(new AbstractSideTransformHintSubstituteAction(subconcept,_context.getSourceNode()){
-        public SNode doSubstitute(        String pattern){
-          SNode result=SNodeFactoryOperations.createNewNode(NameUtil.nodeFQName(subconcept),null);
-{
-            SNode type=ExpectedType_FactoryUtil.createExpectedType(_context.getSourceNode());
-            if (SNodeOperations.isInstanceOf(type,"jetbrains.mps.baseLanguage.structure.ClassifierType")) {
-              SLinkOperations.setTarget(result,"classifierType",SNodeOperations.cast(type,"jetbrains.mps.baseLanguage.structure.ClassifierType"),true);
-            }
-            SNodeOperations.replaceWithAnother(_context.getSourceNode(),result);
-            SLinkOperations.setTarget(result,"expression",_context.getSourceNode(),true);
-            return result;
-          }
+    }
+,operationContext);
+    for (    final INodeSubstituteAction action : list) {
+      ListSequence.fromList(result).addElement(new NodeSubstituteActionWrapper(action){
+        @Override public SNode substitute(        @Nullable EditorContext context,        String pattern){
+          lastPattern[0]=pattern;
+          return super.substitute(context,pattern);
         }
       }
 );

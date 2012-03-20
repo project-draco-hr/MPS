@@ -1,0 +1,72 @@
+{
+  MPSMakeConfiguration makeConfiguration=new MPSMakeConfiguration();
+  makeConfiguration.addProperty("OUTPUT_ROOT_DIR",outputRootDir.getAbsolutePath());
+  makeConfiguration.addProperty("CACHES_OUTPUT_ROOT_DIR",cachesOutputRootDir.getAbsolutePath());
+  for (  Map.Entry<MPSFacet,List<SModelDescriptor>> chunk : facetToModels.entrySet()) {
+    MPSFacet facet=chunk.getKey();
+    final Set<File> modelsToMake=new HashSet<File>();
+    for (    final SModelDescriptor model : chunk.getValue()) {
+      modelsToMake.add(new File(((EditableSModelDescriptor)model).getModelFile().getPath()));
+    }
+    generatedModelFiles.addAll(modelsToMake);
+    makeConfiguration.addConfiguredModels(modelsToMake);
+    File moduleFile=new File(facet.getModule().getModuleFilePath());
+    if (!moduleFile.exists() || !moduleFile.isFile()) {
+      context.addMessage(CompilerMessageCategory.ERROR,MPSBundle.getString("module.file.not.found"),null,-1,-1);
+      return;
+    }
+    makeConfiguration.addConfiguredModules(Collections.singletonList(moduleFile));
+  }
+  final List<File> writtenFiles=new ArrayList<File>();
+  final List<File> deletedFiles=new ArrayList<File>();
+  MPSMakeLauncher gl=new MPSMakeLauncher(makeConfiguration,myProject);
+  gl.validate();
+  if (gl.isValid()) {
+    gl.launch(new MPSMakeCallback(){
+      @Override public void fileWritten(      String path){
+        writtenFiles.add(new File(path));
+      }
+      @Override public void fileDeleted(      String path){
+        deletedFiles.add(new File(path));
+      }
+      @Override public void error(      String text){
+        addMessage(text,CompilerMessageCategory.ERROR);
+      }
+      @Override public void warning(      String text){
+        addMessage(text,CompilerMessageCategory.WARNING);
+      }
+      @Override public void info(      String text){
+        addMessage(text,CompilerMessageCategory.INFORMATION);
+      }
+      private void addMessage(      final String text,      final CompilerMessageCategory category){
+        final ModelNodeNavigatable navigatable=extractNavigatable(text,module);
+        if (navigatable != null) {
+          ModelAccess.instance().runReadAction(new Runnable(){
+            @Override public void run(){
+              String path=null;
+              SModel model=navigatable.lookupModel();
+              if (model != null && model.getModelDescriptor() instanceof DefaultSModelDescriptor) {
+                path="file://" + ((DefaultSModelDescriptor)model.getModelDescriptor()).getSource().getFile().getPath();
+              }
+              context.addMessage(category,text,path,-1,-1,navigatable);
+            }
+          }
+);
+        }
+ else {
+          context.addMessage(category,text,null,-1,-1);
+        }
+      }
+    }
+);
+  }
+ else {
+    context.addMessage(CompilerMessageCategory.ERROR,MPSBundle.getString("invalid.mps.make.configuration"),null,-1,-1);
+  }
+  for (  File file : writtenFiles) {
+    filesToRefresh.add(file);
+  }
+  for (  File file : deletedFiles) {
+    filesToRefresh.add(file);
+  }
+}

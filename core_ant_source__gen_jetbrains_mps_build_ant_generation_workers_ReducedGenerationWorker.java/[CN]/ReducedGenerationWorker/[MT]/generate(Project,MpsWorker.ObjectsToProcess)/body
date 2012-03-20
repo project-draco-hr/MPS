@@ -1,10 +1,7 @@
 {
   ProjectOperationContext ctx=new ProjectOperationContext(project);
-  Iterable<IMResource> resources=Sequence.fromIterable(collectResources(ctx,go)).toListSequence();
   ModelAccess.instance().flushEventQueue();
   Future<IResult> res;
-  final List<String> writtenFiles=ListSequence.fromList(new ArrayList<String>());
-  final Map<String,String> fileHashes=MapSequence.fromMap(new HashMap<String,String>());
   IOperationContext context=new ProjectOperationContext(project);
   BuildMakeService bms=new BuildMakeService();
   MakeSession ms=new MakeSession(context,getMyMessageHandler(),true){
@@ -14,28 +11,37 @@
     }
   }
 ;
-  res=bms.make(ms,resources,null,new IScriptController.Stub(){
-    @Override public void setup(    IPropertiesPool pp,    Iterable<ITarget> toExecute,    Iterable<? extends IResource> input){
-      super.setup(pp,toExecute,input);
-      Tuples._1<Boolean> skipReconcile=(Tuples._1<Boolean>)pp.properties(new ITarget.Name("jetbrains.mps.lang.core.Make.reconcile"),Object.class);
-      skipReconcile._0(true);
-      Tuples._2<Boolean,Boolean> compileProps=(Tuples._2<Boolean,Boolean>)pp.properties(new ITarget.Name("jetbrains.mps.baseLanguage.JavaCompile.compile"),Object.class);
-      compileProps._1(true);
-      Tuples._1<List<String>> report=(Tuples._1<List<String>>)pp.properties(new ITarget.Name("jetbrains.mps.build.reduced.ReportFiles.report"),Object.class);
-      report._0(writtenFiles);
-      Tuples._1<Map<String,String>> hashes=(Tuples._1<Map<String,String>>)pp.properties(new ITarget.Name("jetbrains.mps.build.reduced.CollectHashes.collect"),Object.class);
-      hashes._0(fileHashes);
+  final Iterable<IMResource> resources=Sequence.fromIterable(collectResources(ctx,go)).toListSequence();
+  this.myOutputPaths=new ReducedGenerationWorker.ModuleOutputPaths(Sequence.fromIterable(resources).select(new ISelector<IMResource,IModule>(){
+    public IModule select(    IMResource r){
+      return r.module();
+    }
+  }
+));
+  final String outputRoot=myWhatToDo.getProperty("OUTPUT_ROOT_DIR");
+  final String cachesOutputRoot=myWhatToDo.getProperty("CACHES_OUTPUT_ROOT_DIR");
+  final boolean useTransientOutput=Sequence.fromIterable(resources).any(new IWhereFilter<IMResource>(){
+    public boolean accept(    IMResource r){
+      return r.module().getModuleDescriptor().isUseTransientOutput();
     }
   }
 );
+  this.myOutputRedirects=new ReducedGenerationWorker.MyOutputRedirects(outputRoot,cachesOutputRoot,useTransientOutput);
+  this.myForeignRootPaths=new ReducedGenerationWorker.MyForeignRootPaths(myOutputPaths.getOutputPaths());
+  final List<String> writtenFiles=ListSequence.fromList(new ArrayList<String>());
+  final List<String> deletedFiles=ListSequence.fromList(new ArrayList<String>());
+  final Map<String,String> fileHashes=MapSequence.fromMap(new HashMap<String,String>());
+  IScriptController scriptCtl=configureFacets(fileHashes,writtenFiles,deletedFiles);
   try {
+    res=bms.make(ms,resources,null,scriptCtl);
     if (!(res.get().isSucessful())) {
       myErrors.add("Make was not successful");
     }
-    if (writtenFiles != null) {
-      for (      String f : writtenFiles) {
-        System.out.println("##WRITTEN##" + f);
-      }
+    for (    String f : writtenFiles) {
+      System.out.println("##WRITTEN##" + f);
+    }
+    for (    String f : deletedFiles) {
+      System.out.println("##DELETED##" + f);
     }
   }
  catch (  InterruptedException e) {

@@ -1,12 +1,27 @@
 {
-  SNode node=getNode(debugSession);
-  if (node != null) {
-    final CurrentLinePainter newPainter=new CurrentLinePainter(node);
+  final CurrentLinePainter newPainter=ModelAccess.instance().runReadAction(new Computable<CurrentLinePainter>(){
+    public CurrentLinePainter compute(){
+      SNode node=getNode(debugSession);
+      if (node != null) {
+        return new CurrentLinePainter(node);
+      }
+      return null;
+    }
+  }
+);
+  if (newPainter != null) {
+    final boolean visible=getCurrentSession() == null || getCurrentSession() == debugSession;
+    newPainter.setVisible(visible);
 synchronized (mySessionToContextPainterMap) {
       MapSequence.fromMap(mySessionToContextPainterMap).put(debugSession,newPainter);
       return new Runnable(){
         @Override public void run(){
-          attachPainterAndOpenEditor(newPainter);
+          if (visible) {
+            attachPainterAndOpenEditor(newPainter);
+          }
+ else {
+            attachPainter(newPainter);
+          }
         }
       }
 ;

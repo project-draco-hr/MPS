@@ -1,18 +1,25 @@
 {
-  TreeFileChooser chooser=new TreeFileChooser();
-  chooser.setFileFilter(new IFileFilter(){
-    public boolean accept(    IFile file){
-      return file.isDirectory() || file.getName().toLowerCase().endsWith(MPSExtentions.DOT_MPS_PROJECT);
+  final Project currentProject=PlatformDataKeys.PROJECT.getData(e.getDataContext());
+  final FileChooserDescriptor descriptor=new OpenMPSProjectFileChooserDescriptor(true);
+  descriptor.setTitle(IdeBundle.message("title.open.project"));
+  descriptor.setDescription("Project files (" + MPSExtentions.DOT_MPS_PROJECT + ") ");
+  VirtualFile userHomeDir=null;
+  if (SystemInfo.isMac || SystemInfo.isLinux) {
+    final String home=System.getProperty("user.home");
+    if (home != null) {
+      userHomeDir=LocalFileSystem.getInstance().findFileByIoFile(new File(home));
+    }
+  }
+  descriptor.putUserData(FileChooserDialogImpl.PREFER_LAST_OVER_TO_SELECT,Boolean.TRUE);
+  FileChooser.chooseFilesWithSlideEffect(descriptor,currentProject,userHomeDir,new Consumer<VirtualFile[]>(){
+    @Override public void consume(    final VirtualFile[] files){
+      if (files.length == 0 || files[0] == null || files[0].isDirectory())       return;
+      String filePath=files[0].getPath();
+      Project project=ProjectUtil.openProject(filePath,currentProject,false);
+      if (project != null) {
+        ProjectBaseDirectory.getInstance(project).setBaseDir(project.getBaseDir());
+      }
     }
   }
 );
-  IFile file=chooser.showDialog((Frame)null);
-  if (file == null) {
-    return;
-  }
-  String filePath=file.getPath();
-  Project project=ProjectUtil.openProject(filePath,e.getData(PlatformDataKeys.PROJECT),false);
-  if (project != null) {
-    ProjectBaseDirectory.getInstance(project).setBaseDir(project.getBaseDir());
-  }
 }

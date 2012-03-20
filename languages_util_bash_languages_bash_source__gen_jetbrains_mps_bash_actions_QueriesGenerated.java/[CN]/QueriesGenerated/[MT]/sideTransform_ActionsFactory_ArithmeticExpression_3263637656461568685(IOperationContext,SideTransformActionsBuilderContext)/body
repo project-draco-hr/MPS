@@ -1,34 +1,33 @@
 {
   List<INodeSubstituteAction> result=ListSequence.fromList(new ArrayList<INodeSubstituteAction>());
 {
-    SNode concept=SConceptOperations.findConceptDeclaration("jetbrains.mps.bash.structure.BinaryArithmeticExpression");
-    Iterable<SNode> concepts;
-    concepts=SConceptOperations.getAllSubConcepts(concept,_context.getModel(),operationContext.getScope());
-    for (    final SNode subconcept : concepts) {
-      if (!(SNodeOperations.isInstanceOf(subconcept,"jetbrains.mps.lang.structure.structure.ConceptDeclaration"))) {
-        continue;
+    final String[] lastPattern=new String[1];
+    List<INodeSubstituteAction> list=ModelActions.createChildSubstituteActions(_context.getSourceNode(),null,SConceptOperations.findConceptDeclaration("jetbrains.mps.bash.structure.BinaryArithmeticExpression"),new AbstractChildNodeSetter(){
+      public SNode doExecute(      SNode parentNode,      SNode oldChild,      SNode newChild,      IScope p3){
+        return substitute(newChild,lastPattern[0]);
       }
-      if (SConceptPropertyOperations.getBoolean(subconcept,"abstract")) {
-        continue;
-      }
-      ListSequence.fromList(result).addElement(new AbstractSideTransformHintSubstituteAction(subconcept,_context.getSourceNode()){
-        public SNode doSubstitute(        String pattern){
-          SNode result=SNodeFactoryOperations.createNewNode(NameUtil.nodeFQName(subconcept),null);
-{
-            SNode source=SNodeOperations.cast(_context.getSourceNode(),"jetbrains.mps.bash.structure.ArithmeticExpression");
-            while (SNodeOperations.isInstanceOf(SNodeOperations.getParent(source),"jetbrains.mps.bash.structure.BinaryArithmeticExpression")) {
-              SNode parent=SNodeOperations.cast(SNodeOperations.getParent(source),"jetbrains.mps.bash.structure.BinaryArithmeticExpression");
-              if (SConceptPropertyOperations.getInteger(result,"priority") < SConceptPropertyOperations.getInteger(parent,"priority")) {
-                source=parent;
-              }
- else {
-                break;
-              }
-            }
-            SNodeOperations.replaceWithAnother(source,result);
-            SLinkOperations.setTarget(result,"rightExpression",source,true);
-            return result;
+      private SNode substitute(      SNode result,      String pattern){
+        SNode source=SNodeOperations.cast(_context.getSourceNode(),"jetbrains.mps.bash.structure.ArithmeticExpression");
+        while (SNodeOperations.isInstanceOf(SNodeOperations.getParent(source),"jetbrains.mps.bash.structure.BinaryArithmeticExpression")) {
+          SNode parent=SNodeOperations.cast(SNodeOperations.getParent(source),"jetbrains.mps.bash.structure.BinaryArithmeticExpression");
+          if (SConceptPropertyOperations.getInteger(result,"priority") < SConceptPropertyOperations.getInteger(parent,"priority")) {
+            source=parent;
           }
+ else {
+            break;
+          }
+        }
+        SNodeOperations.replaceWithAnother(source,result);
+        SLinkOperations.setTarget(result,"rightExpression",source,true);
+        return result;
+      }
+    }
+,operationContext);
+    for (    final INodeSubstituteAction action : list) {
+      ListSequence.fromList(result).addElement(new NodeSubstituteActionWrapper(action){
+        @Override public SNode substitute(        @Nullable EditorContext context,        String pattern){
+          lastPattern[0]=pattern;
+          return super.substitute(context,pattern);
         }
       }
 );

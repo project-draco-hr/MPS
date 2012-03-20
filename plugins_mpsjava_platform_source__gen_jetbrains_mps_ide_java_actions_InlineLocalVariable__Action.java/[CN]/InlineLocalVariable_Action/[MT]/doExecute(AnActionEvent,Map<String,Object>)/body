@@ -1,0 +1,59 @@
+{
+  try {
+    final Wrappers._T<InlineVariableRefactoring> ref=new Wrappers._T<InlineVariableRefactoring>();
+    final Wrappers._boolean isAvailable=new Wrappers._boolean(true);
+    String messageDialogTitle="Inline Variable";
+    final Wrappers._T<String> infoMessage=new Wrappers._T<String>(null);
+    final Wrappers._T<String> yesNoMessage=new Wrappers._T<String>(null);
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        if (SNodeOperations.isInstanceOf(((SNode)MapSequence.fromMap(_params).get("node")),"jetbrains.mps.baseLanguage.structure.LocalVariableDeclaration")) {
+          SNode localVariableDeclaration=SNodeOperations.cast(((SNode)MapSequence.fromMap(_params).get("node")),"jetbrains.mps.baseLanguage.structure.LocalVariableDeclaration");
+          InlineVariableAssignmentRefactoring inlineVARef=new InlineVariableAssignmentRefactoring(localVariableDeclaration);
+          if ((SLinkOperations.getTarget(localVariableDeclaration,"initializer",true) == null)) {
+            isAvailable.value=false;
+          }
+          String variableName=SPropertyOperations.getString(localVariableDeclaration,"name");
+          int nodesCount=ListSequence.fromList(inlineVARef.getNodesToRefactor()).count();
+          if (nodesCount == 0) {
+            infoMessage.value="Variable " + variableName + " is never used";
+          }
+ else {
+            yesNoMessage.value="Inline local variable '" + variableName + "'? ("+ NameUtil.formatNumericalString(nodesCount,"occurence")+ ")";
+          }
+          ref.value=inlineVARef;
+        }
+ else {
+          SNode localVariableReference=SNodeOperations.cast(((SNode)MapSequence.fromMap(_params).get("node")),"jetbrains.mps.baseLanguage.structure.LocalVariableReference");
+          ref.value=new InlineVariableReferenceRefactoring(localVariableReference);
+        }
+      }
+    }
+);
+    if (!(isAvailable.value)) {
+      return;
+    }
+    if (infoMessage.value != null) {
+      Messages.showInfoMessage(((Frame)MapSequence.fromMap(_params).get("frame")),infoMessage.value,messageDialogTitle);
+      return;
+    }
+    if (yesNoMessage.value != null) {
+      int code=Messages.showYesNoDialog(((Frame)MapSequence.fromMap(_params).get("frame")),yesNoMessage.value,messageDialogTitle,null);
+      if (code != 0) {
+        return;
+      }
+    }
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        SNode result=ref.value.doRefactoring();
+        ((EditorContext)MapSequence.fromMap(_params).get("editorContext")).select(result);
+      }
+    }
+);
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "InlineLocalVariable",t);
+    }
+  }
+}

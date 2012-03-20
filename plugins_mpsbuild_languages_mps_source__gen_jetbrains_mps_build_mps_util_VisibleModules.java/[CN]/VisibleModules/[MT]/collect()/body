@@ -1,0 +1,29 @@
+{
+  Queue<SNode> queue=QueueSequence.fromQueue(new LinkedList<SNode>());
+  QueueSequence.fromQueue(queue).addLastElement(project);
+  Set<SNode> seen=SetSequence.fromSet(new HashSet<SNode>());
+  while (QueueSequence.fromQueue(queue).isNotEmpty()) {
+    SNode project=QueueSequence.fromQueue(queue).removeFirstElement();
+    for (    SNode dep : SLinkOperations.getTargets(project,"dependencies",true)) {
+      SNode projectDependency=SNodeOperations.as(dep,"jetbrains.mps.build.structure.BuildProjectDependency");
+      if (projectDependency == null) {
+        continue;
+      }
+      SNode depproj=SNodeOperations.as(DependenciesHelper.getOriginalNode(SLinkOperations.getTarget(projectDependency,"script",false),genContext),"jetbrains.mps.build.structure.BuildProject");
+      if (depproj != null && seen.add(depproj)) {
+        QueueSequence.fromQueue(queue).addLastElement(depproj);
+      }
+    }
+    ListSequence.fromList(allModules).addSequence(ListSequence.fromList(SNodeOperations.getDescendants(project,"jetbrains.mps.build.mps.structure.BuildMps_AbstractModule",false,new String[]{})));
+  }
+  for (  SNode module : allModules) {
+    if (moduleById.containsKey(SPropertyOperations.getString(module,"uuid"))) {
+      report("found two modules with the same id: " + SPropertyOperations.getString(module,"uuid"),project);
+    }
+    moduleById.put(SPropertyOperations.getString(module,"uuid"),module);
+    if (moduleByName.containsKey(SPropertyOperations.getString(module,"name"))) {
+      report("found two modules with the same name: " + SPropertyOperations.getString(module,"name"),project);
+    }
+    moduleByName.put(SPropertyOperations.getString(module,"name"),module);
+  }
+}

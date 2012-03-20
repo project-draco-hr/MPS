@@ -1,27 +1,28 @@
 {
   if (refreshFiles) {
-    FileSystem.getInstance().refresh(dir);
+    FileSystem.getInstance().refresh(file);
   }
-  String dirName=dir.getName();
-  if (FileSystem.getInstance().isFileIgnored(dirName))   return;
-  List<IFile> files=dir.getChildren();
-  if (files == null) {
-    return;
+  List<IFile> files;
+  if (file.isDirectory()) {
+    String dirName=file.getName();
+    if (FileSystem.getInstance().isFileIgnored(dirName))     return;
+    files=file.getChildren();
   }
-  for (  IFile file : files) {
-    if (hasModuleExtension(file)) {
-      ModuleDescriptor moduleDescriptor=loadDescriptorOnly_internal(file,excludes);
-      if (moduleDescriptor != null) {
-        T descriptor=reader.read(new ModuleHandle(file,moduleDescriptor));
-        if (descriptor != null) {
-          result.add(descriptor);
-        }
-      }
-    }
+ else {
+    files=Collections.singletonList(file);
   }
+  for (  IFile f : files) {
+    if (!isModuleFile(f))     continue;
+    ModuleDescriptor moduleDescriptor=loadDescriptorOnly_internal(f,excludes);
+    if (moduleDescriptor == null)     continue;
+    T descriptor=reader.read(new ModuleHandle(f,moduleDescriptor));
+    if (descriptor == null)     continue;
+    result.add(descriptor);
+  }
+  if (!file.isDirectory())   return;
   for (  IFile childDir : files) {
     if (FileSystem.getInstance().isFileIgnored(childDir.getName()))     continue;
-    if (hasModuleExtension(childDir))     continue;
+    if (isModuleFile(childDir))     continue;
     if (excludes.contains(childDir))     continue;
     if (childDir.getName().endsWith(".jar")) {
       IFile moduleFile=FileSystem.getInstance().getFileByPath(childDir.getPath() + META_INF_MODULE_XML);
