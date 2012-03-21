@@ -1,0 +1,48 @@
+{
+  myHierarchyTree=createHierarchyTree(false);
+  myOccurenceNavigator=new OccurenceNavigatorSupport(myHierarchyTree){
+    @Nullable protected Navigatable createDescriptorForNode(    DefaultMutableTreeNode node){
+      if (!(node instanceof HierarchyTreeNode)) {
+        return null;
+      }
+      final HierarchyTreeNode treeNode=(HierarchyTreeNode)node;
+      SNodePointer ptr=ModelAccess.instance().runReadAction(new Computable<SNodePointer>(){
+        public SNodePointer compute(){
+          SNode node=treeNode.getNode();
+          if (node == null || node.isDisposed()) {
+            return null;
+          }
+          return new SNodePointer(node);
+        }
+      }
+);
+      if (ptr == null) {
+        return null;
+      }
+      Navigatable n=new NodeNavigatable(ProjectHelper.toMPSProject(getProject()),ptr);
+      return (n.canNavigate() ? n : null);
+    }
+    public String getPreviousOccurenceActionName(){
+      return UsageViewBundle.message("action.previous.occurrence");
+    }
+    public String getNextOccurenceActionName(){
+      return UsageViewBundle.message("action.next.occurrence");
+    }
+  }
+;
+  myHierarchyTree.setRootVisible(true);
+  myHierarchyTree.fireTreeCreated(getProject());
+  final JPanel panel=new JPanel(new BorderLayout());
+  this.myComponent=new AbstractHierarchyView.RootPanel();
+  myComponent.add(panel,BorderLayout.NORTH);
+  myScrollPane=ScrollPaneFactory.createScrollPane(myHierarchyTree);
+  myComponent.add(myScrollPane,BorderLayout.CENTER);
+  showItemInHierarchy(null,null);
+  SwingUtilities.invokeLater(new Runnable(){
+    public void run(){
+      JComponent buttonsPanel=ActionManager.getInstance().createActionToolbar(ActionPlaces.TYPE_HIERARCHY_VIEW_TOOLBAR,createButtonsGroup(),true).getComponent();
+      panel.add(buttonsPanel,BorderLayout.WEST);
+    }
+  }
+);
+}
