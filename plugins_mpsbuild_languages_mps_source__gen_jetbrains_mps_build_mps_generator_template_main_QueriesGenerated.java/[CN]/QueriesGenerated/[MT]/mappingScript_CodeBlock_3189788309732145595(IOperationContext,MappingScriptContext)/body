@@ -1,0 +1,25 @@
+{
+  for (  SNode project : SModelOperations.getRoots(_context.getModel(),"jetbrains.mps.build.structure.BuildProject")) {
+    if (!(_context.isDirty(project))) {
+      continue;
+    }
+    String workingDir=BuildProject_Behavior.call_getBasePath_4959435991187146924(project,Context.defaultContext(_context));
+    if (StringUtils.isEmpty(workingDir)) {
+      _context.showErrorMessage(project,"no working dir for " + SPropertyOperations.getString(project,"name"));
+      continue;
+    }
+    PathConverter pathConverter=new PathConverter(workingDir);
+    VisibleModules visibleModules=new VisibleModules(project,_context);
+    visibleModules.collect();
+    for (    SNode part : SLinkOperations.getTargets(project,"parts",true)) {
+      if (!(SNodeOperations.isInstanceOf(part,"jetbrains.mps.build.mps.structure.BuildMps_Module"))) {
+        continue;
+      }
+      SNode module=SNodeOperations.cast(part,"jetbrains.mps.build.mps.structure.BuildMps_Module");
+      if ((SLinkOperations.getTarget(module,"path",true) == null)) {
+        continue;
+      }
+      new ModuleLoader(module,visibleModules,pathConverter,_context).loadAndCheck();
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  SNode module=SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Module");
+  for (  ModelRoot entry : myModuleDescriptor.getStubModelEntries()) {
+    if (!(LanguageID.JAVA_MANAGER.equals(entry.getManager()))) {
+      continue;
+    }
+    String path=entry.getPath();
+    SNode p=convertPath(path,myOriginalModule);
+    if (p == null) {
+      continue;
+    }
+    if (path.endsWith(".jar")) {
+      SNode jar=SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyJar",null);
+      SLinkOperations.setTarget(jar,"path",p,true);
+      ListSequence.fromList(SLinkOperations.getTargets(module,"dependencies",true)).addElement(jar);
+    }
+ else {
+      report("only jar stub libraries are supported, found: " + path,myOriginalModule);
+    }
+  }
+  for (  ModuleReference lang : myModuleDescriptor.getUsedLanguages()) {
+    SNode resolved=SNodeOperations.as(visible.resolve(lang.getModuleFqName(),lang.getModuleId().toString()),"jetbrains.mps.build.mps.structure.BuildMps_Language");
+    if (resolved == null) {
+      report("cannot find used language in dependencies: " + lang.getModuleFqName(),myModule);
+      continue;
+    }
+    SNode ul=SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyUseLanguage",null);
+    SLinkOperations.setTarget(ul,"language",resolved,false);
+    ListSequence.fromList(SLinkOperations.getTargets(module,"dependencies",true)).addElement(ul);
+  }
+  for (  ModuleReference devkit : myModuleDescriptor.getUsedDevkits()) {
+    SNode resolved=SNodeOperations.as(visible.resolve(devkit.getModuleFqName(),devkit.getModuleId().toString()),"jetbrains.mps.build.mps.structure.BuildMps_DevKit");
+    if (resolved == null) {
+      report("cannot find used devkit in dependencies: " + devkit.getModuleFqName(),myModule);
+      continue;
+    }
+    SNode ud=SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnDevKit",null);
+    SLinkOperations.setTarget(ud,"devkit",resolved,false);
+    ListSequence.fromList(SLinkOperations.getTargets(module,"dependencies",true)).addElement(ud);
+  }
+}
