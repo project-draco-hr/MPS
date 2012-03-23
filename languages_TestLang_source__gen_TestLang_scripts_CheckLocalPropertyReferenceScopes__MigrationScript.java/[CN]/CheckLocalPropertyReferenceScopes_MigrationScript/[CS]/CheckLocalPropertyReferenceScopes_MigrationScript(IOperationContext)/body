@@ -1,0 +1,44 @@
+{
+  super("Check local property reference scopes");
+  this.addRefactoring(new AbstractMigrationRefactoring(operationContext){
+    public String getName(){
+      return "Testing";
+    }
+    public String getAdditionalInfo(){
+      return "Testing";
+    }
+    public String getFqNameOfConceptToSearchInstances(){
+      return "jetbrains.mps.baseLanguage.structure.LocalPropertyReference";
+    }
+    public boolean isApplicableInstanceNode(    SNode node){
+      String excludingPrefix="123collection";
+      String startsFrom="";
+      SReference ref=SNodeOperations.getReference(node,SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.LocalPropertyReference","property"));
+      if (ref == null) {
+        return false;
+      }
+      if (Utils.isInComment(node)) {
+        return false;
+      }
+      String name=SPropertyOperations.getString(SLinkOperations.getTarget(node,"property",false),"name");
+      if (StringUtils.isEmpty(name)) {
+        return false;
+      }
+      if (name.startsWith(excludingPrefix)) {
+        return false;
+      }
+      if (!(name.startsWith(startsFrom))) {
+        return false;
+      }
+      return !(Utils.checkScopes(node,Utils.getOldScopeFromRef(ref),Utils.getNewScopeFromRef(ref,SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.Property")),true));
+    }
+    public void doUpdateInstanceNode(    SNode node){
+      SReference ref=SNodeOperations.getReference(node,SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.LocalPropertyReference","property"));
+      Utils.checkScopes(node,Utils.getOldScopeFromRef(ref),Utils.getNewScopeFromRef(ref,SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.Property")),true);
+    }
+    public boolean isShowAsIntention(){
+      return false;
+    }
+  }
+);
+}
