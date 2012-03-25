@@ -14,12 +14,18 @@
     packagedSourcesPath=null;
   }
   boolean addBundleAsModelRoot=false;
+  final DeploymentDescriptor dd=descriptor.getDeploymentDescriptor();
+  String libPath=dd == null ? FileUtil.getCanonicalPath(PathManager.getHomePath() + File.separator + "lib").toLowerCase() : null;
   List<ModelRoot> toRemove=new ArrayList<ModelRoot>();
   for (  ModelRoot sme : descriptor.getStubModelEntries()) {
     String path=sme.getPath();
-    if (packagedSourcesPath == null || !FileUtil.getCanonicalPath(path).toLowerCase().startsWith(packagedSourcesPath)) {
+    String canonicalPath=FileUtil.getCanonicalPath(path).toLowerCase();
+    if (packagedSourcesPath == null || !canonicalPath.startsWith(packagedSourcesPath)) {
       String shrinked=MacrosFactory.moduleDescriptor(this).shrinkPath(path,getDescriptorFile());
       if (MacrosFactory.containsNonMPSMacros(shrinked))       continue;
+    }
+    if (dd == null && canonicalPath.startsWith(libPath)) {
+      continue;
     }
     toRemove.add(sme);
   }
@@ -38,14 +44,17 @@
       }
     }
     String path=sme.getPath();
-    if (packagedSourcesPath == null || !FileUtil.getCanonicalPath(path).toLowerCase().startsWith(packagedSourcesPath)) {
+    String canonicalPath=FileUtil.getCanonicalPath(path).toLowerCase();
+    if (packagedSourcesPath == null || !canonicalPath.startsWith(packagedSourcesPath)) {
       String shrinked=MacrosFactory.moduleDescriptor(this).shrinkPath(path,getDescriptorFile());
       if (MacrosFactory.containsNonMPSMacros(shrinked))       continue;
+    }
+    if (dd == null && canonicalPath.startsWith(libPath)) {
+      continue;
     }
     toRemove.add(sme);
   }
   descriptor.getModelRoots().removeAll(toRemove);
-  DeploymentDescriptor dd=descriptor.getDeploymentDescriptor();
   if (dd == null) {
     if (addBundleAsModelRoot) {
       ClassPathEntry jarEntry=new ClassPathEntry();
