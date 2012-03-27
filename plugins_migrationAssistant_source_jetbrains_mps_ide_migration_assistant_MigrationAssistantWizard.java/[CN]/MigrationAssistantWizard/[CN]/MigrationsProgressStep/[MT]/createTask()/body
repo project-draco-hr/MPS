@@ -1,0 +1,38 @@
+{
+  return new Modal(myProject,"Executing",false){
+    @Override public void run(    final ProgressIndicator indicator){
+      final MigrationProcessor processor=myProject.getComponent(MigrationProcessor.class);
+      final List<?> actions=processor.getActions();
+      myExcluded.addAll(actions);
+      myExcluded.removeAll(processor.getSelectedActions());
+      processor.addCallback(new Callback(){
+        @Override public void startingAction(        Object action){
+          indicator.setIndeterminate(false);
+        }
+        @Override public void finishedAction(        Object action){
+          myMarked.add(action);
+          advance(action);
+        }
+        @Override public void failedAction(        Object action){
+          myFailed.add(action);
+          advance(action);
+        }
+        @Override public void finishedAll(){
+          processor.removeCallback(this);
+          indicator.setFraction(1.0);
+          myFinished=true;
+          fireStateChanged();
+        }
+        private void advance(        Object action){
+          indicator.setFraction((double)(actions.indexOf(action) + 1) / actions.size());
+          myList.ensureIndexIsVisible(actions.indexOf(action));
+          myList.repaint();
+        }
+      }
+);
+      indicator.setIndeterminate(true);
+      processor.startProcessing();
+    }
+  }
+;
+}

@@ -1,21 +1,36 @@
 {
   try {
+    final Wrappers._T<String> initialText=new Wrappers._T<String>("");
     final EditorCell_Label errorLabel=AddModelImportByRoot_Action.this.getErrorCell(_params);
-    final String initialText=(errorLabel == null ? "" : errorLabel.getRenderedText());
-    ImportHelper.addModelImportByRoot(((Project)MapSequence.fromMap(_params).get("project")),((IModule)MapSequence.fromMap(_params).get("module")),((SModelDescriptor)MapSequence.fromMap(_params).get("model")),initialText,new ImportHelper.ModelImportByRootCallback(){
+    final SNode n=(SNode)((SNode)MapSequence.fromMap(_params).get("node"));
+    final boolean unresolvedName=SNodeOperations.isInstanceOf(n,"jetbrains.mps.baseLanguage.structure.UnresolvedNameReference");
+    if (errorLabel != null) {
+      initialText.value=errorLabel.getRenderedText();
+    }
+ else     if (unresolvedName) {
+      initialText.value=SPropertyOperations.getString(SNodeOperations.cast(n,"jetbrains.mps.baseLanguage.structure.UnresolvedNameReference"),"resolveName");
+    }
+    ImportHelper.addModelImportByRoot(((Project)MapSequence.fromMap(_params).get("project")),((IModule)MapSequence.fromMap(_params).get("module")),((SModelDescriptor)MapSequence.fromMap(_params).get("model")),initialText.value,new ImportHelper.ModelImportByRootCallback(){
       public void importForRootAdded(      String rootName){
-        if (errorLabel == null) {
-          return;
-        }
-        String textToMatch=(rootName != null ? rootName : initialText);
+        String textToMatch=(rootName != null ? rootName : initialText.value);
         if (textToMatch.length() == 0) {
           return;
         }
-        NodeSubstituteInfo substituteInfo=errorLabel.getSubstituteInfo();
+        NodeSubstituteInfo substituteInfo=null;
+        if (errorLabel != null) {
+          substituteInfo=errorLabel.getSubstituteInfo();
+        }
+ else         if (unresolvedName) {
+          substituteInfo=new DefaultChildSubstituteInfo(SNodeOperations.getParent(n),n,SNodeOperations.getContainingLinkDeclaration(n),((EditorContext)MapSequence.fromMap(_params).get("editorContext")));
+          substituteInfo.setOriginalText(initialText.value);
+        }
+        if (substituteInfo == null) {
+          return;
+        }
         substituteInfo.invalidateActions();
         List<INodeSubstituteAction> matchingActions=substituteInfo.getMatchingActions(textToMatch,true);
         if ((int)ListSequence.fromList(matchingActions).count() == 1) {
-          ListSequence.fromList(matchingActions).first().substitute(((EditorContext)MapSequence.fromMap(_params).get("editorContext")),initialText);
+          ListSequence.fromList(matchingActions).first().substitute(((EditorContext)MapSequence.fromMap(_params).get("editorContext")),initialText.value);
         }
       }
     }
