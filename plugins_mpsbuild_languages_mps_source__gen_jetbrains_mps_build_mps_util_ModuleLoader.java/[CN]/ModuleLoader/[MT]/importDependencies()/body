@@ -1,6 +1,16 @@
 {
   SNode module=SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Module");
-  for (  Dependency dep : myModuleDescriptor.getDependencies()) {
+  Iterable<Dependency> dependencies=myModuleDescriptor.getDependencies();
+  if (myModuleDescriptor instanceof LanguageDescriptor) {
+    Iterable<GeneratorDescriptor> generators=((LanguageDescriptor)myModuleDescriptor).getGenerators();
+    dependencies=Sequence.fromIterable(dependencies).union(Sequence.fromIterable(generators).translate(new ITranslator2<GeneratorDescriptor,Dependency>(){
+      public Iterable<Dependency> translate(      GeneratorDescriptor it){
+        return it.getDependencies();
+      }
+    }
+));
+  }
+  for (  Dependency dep : dependencies) {
     boolean reexport=dep.isReexport();
     if (!(reexport)) {
       continue;
