@@ -1,45 +1,43 @@
 {
   Set<String> classpathItems=SetSequence.fromSet(new LinkedHashSet<String>());
-  final Iterable<String> OTHER_CLASSES=Arrays.asList("jetbrains.mps.internal.collections.runtime.ListSequence","jetbrains.mps.baseLanguage.closures.runtime._FunctionTypes","jetbrains.mps.typesystem.inference.TypeChecker","jetbrains.mps.ide.findusages.FindersManager","jetbrains.mps.analyzers.runtime.framework.CustomAnalyzerRunner","jetbrains.mps.baseLanguage.tuples.runtime.MultiTuple");
-  Iterable<Class> classes=Arrays.<Class>asList(MergeDriverMain.class,FileUtil.class,MergeSession.class,SModel.class);
-  classes=Sequence.fromIterable(OTHER_CLASSES).select(new ISelector<String,Class>(){
-    public Class select(    String cn){
-      try {
-        return (Class)Class.forName(cn);
-      }
- catch (      ClassNotFoundException e) {
-        if (log.isErrorEnabled()) {
-          log.error("",e);
-        }
-        return null;
+  final IdeaPluginDescriptor mpsCorePlugin=PluginManager.getPlugin(PluginId.getId("jetbrains.mps.core"));
+  if (mpsCorePlugin != null) {
+    SetSequence.fromSet(classpathItems).addSequence(Sequence.fromIterable(mpsAddJars).select(new ISelector<String,String>(){
+      public String select(      String it){
+        return mpsCorePlugin.getPath() + File.separator + "lib"+ File.separator+ it;
       }
     }
-  }
-).concat(Sequence.fromIterable(classes));
-  SetSequence.fromSet(classpathItems).addSequence(Sequence.fromIterable(classes).select(new ISelector<Class,String>(){
-    public String select(    Class c){
-      return PathUtil.getJarPathForClass(c);
-    }
-  }
 ));
-  final Wrappers._T<String> diffUtilsPath=new Wrappers._T<String>(PathManager.getLibPath());
-  File diffUtils=new File(diffUtilsPath.value + File.separator + "diffutils-1.2.1.jar");
-  if (!(diffUtils.exists())) {
-    IdeaPluginDescriptor mpsCorePlugin=PluginManager.getPlugin(PluginId.getId("jetbrains.mps.core"));
-    if (mpsCorePlugin == null) {
-      if (log.isErrorEnabled()) {
-        log.error("couldn't find diffutils-1.2.1.jar");
-      }
-    }
+    SetSequence.fromSet(classpathItems).addElement(mpsCorePlugin.getPath() + File.separator + "classes");
+    SetSequence.fromSet(classpathItems).addElement(getVCSCorePluginPath() + File.separator + "classes");
+  }
  else {
-      diffUtilsPath.value=mpsCorePlugin.getPath() + File.separator + "lib";
+    SetSequence.fromSet(classpathItems).addSequence(Sequence.fromIterable(mpsAddJars).select(new ISelector<String,String>(){
+      public String select(      String it){
+        return PathManager.getLibPath() + File.separator + it;
+      }
     }
-  }
-  SetSequence.fromSet(classpathItems).addSequence(Sequence.fromIterable(mpsAddJars).select(new ISelector<String,String>(){
-    public String select(    String it){
-      return diffUtilsPath.value + File.separator + it;
-    }
-  }
 ));
+    final Iterable<String> CLASSPATHS=Arrays.asList("runtime","kernel","make-runtime","generator","typesystemEngine","findUsages-runtime","refactoring-runtime","analyzers");
+    String homePath=PathManager.getHomePath();
+    final String corePath=homePath + File.separator + "core";
+    SetSequence.fromSet(classpathItems).addSequence(Sequence.fromIterable(CLASSPATHS).select(new ISelector<String,String>(){
+      public String select(      String it){
+        return corePath + File.separator + it+ File.separator+ "classes";
+      }
+    }
+));
+    final String languagesPath=homePath + File.separator + "languages";
+    final Iterable<String> OTHER_CLASSES=Arrays.asList("closures","collections","tuples");
+    SetSequence.fromSet(classpathItems).addSequence(Sequence.fromIterable(OTHER_CLASSES).select(new ISelector<String,String>(){
+      public String select(      String it){
+        return languagesPath + File.separator + "baseLanguage"+ File.separator+ it+ File.separator+ "runtime"+ File.separator+ "classes";
+      }
+    }
+));
+    SetSequence.fromSet(classpathItems).addElement(languagesPath + File.separator + "baseLanguage"+ File.separator+ "baseLanguage"+ File.separator+ "solutions"+ File.separator+ "jetbrains.mps.baseLanguage.search"+ File.separator+ "classes");
+    SetSequence.fromSet(classpathItems).addElement(languagesPath + File.separator + "baseLanguage"+ File.separator+ "baseLanguage"+ File.separator+ "solutions"+ File.separator+ "jetbrains.mps.baseLanguage.util"+ File.separator+ "classes");
+    SetSequence.fromSet(classpathItems).addElement(getVCSCorePluginPath() + File.separator + "lib"+ File.separator+ "classes");
+  }
   return classpathItems;
 }
