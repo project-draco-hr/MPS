@@ -11,7 +11,17 @@
       usedModuleIds.put(SPropertyOperations.getString(onModule,"targetId"),SPropertyOperations.getBoolean(onModule,"reexport"));
     }
   }
-  for (  Dependency dep : myModuleDescriptor.getDependencies()) {
+  Iterable<Dependency> dependencies=myModuleDescriptor.getDependencies();
+  if (myModuleDescriptor instanceof LanguageDescriptor) {
+    Iterable<GeneratorDescriptor> generators=((LanguageDescriptor)myModuleDescriptor).getGenerators();
+    dependencies=Sequence.fromIterable(dependencies).union(Sequence.fromIterable(generators).translate(new ITranslator2<GeneratorDescriptor,Dependency>(){
+      public Iterable<Dependency> translate(      GeneratorDescriptor it){
+        return it.getDependencies();
+      }
+    }
+));
+  }
+  for (  Dependency dep : dependencies) {
     boolean reexport=dep.isReexport();
     ModuleReference moduleRef=dep.getModuleRef();
     SNode resolved=SNodeOperations.as(visible.resolve(moduleRef.getModuleFqName(),moduleRef.getModuleId().toString()),"jetbrains.mps.build.mps.structure.BuildMps_Module");
@@ -25,7 +35,7 @@
     }
     if (!(found)) {
       if (reexport) {
-        report("reexport dependency should be extracted into build script: " + dep.toString(),myOriginalModule);
+        report("reexport dependency should be extracted into build script: " + dep.getModuleRef().toString(),myOriginalModule);
       }
       if (checkOnly) {
         continue;
