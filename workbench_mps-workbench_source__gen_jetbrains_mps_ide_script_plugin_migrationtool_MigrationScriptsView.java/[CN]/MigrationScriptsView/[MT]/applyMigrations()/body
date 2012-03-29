@@ -1,58 +1,26 @@
 {
-  if (!(ThreadUtils.isEventDispatchThread())) {
-    throw new IllegalStateException("Can't use this outside of EDT");
-  }
-  final List<SearchResult<SNode>> aliveIncludedResults=new ArrayList<SearchResult<SNode>>();
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      List<SNodePointer> includedNodes=myUsagesView.getIncludedResultNodes();
-      Set<SNode> aliveIncludedNodes=new HashSet<SNode>();
-      for (      SNodePointer includedNode : includedNodes) {
-        if (includedNode.getNode() != null) {
-          aliveIncludedNodes.add(includedNode.getNode());
-        }
-      }
-      List<SearchResult<SNode>> aliveResults=myFinder.getLastSearchResults().getAliveResults();
-      for (      SearchResult<SNode> aliveResult : aliveResults) {
-        if (aliveIncludedNodes.contains(aliveResult.getObject())) {
-          aliveIncludedResults.add(aliveResult);
-        }
-      }
-    }
-  }
-);
+  ThreadUtils.assertEDT();
+  final Collection<SearchResult<SNode>> aliveIncludedResults=myController.computeAliveIncludedResults(myUsagesView.getIncludedResultNodes());
   if (aliveIncludedResults.size() == 0) {
     JOptionPane.showMessageDialog(myTool.getComponent(),"No job");
     return;
   }
-  final JProgressBar progress=new JProgressBar(0,aliveIncludedResults.size());
-  progress.setString("applying migrations...");
-  progress.setStringPainted(true);
-  progress.setBorderPainted(false);
-  updateControls(false,progress);
-  SwingUtilities.invokeLater(new Runnable(){
+  updateControls(false,myIndicator.getComponent());
+  final TaskInfo task=createTaskInfo();
+  final Object cmd=((CommandProcessorEx)CommandProcessor.getInstance()).startCommand(myProject,task.getTitle(),null,UndoConfirmationPolicy.REQUEST_CONFIRMATION);
+  final Runnable finishCommand=new Runnable(){
     public void run(){
-      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-        public void run(){
-          int progressCount=0;
-          for (          SearchResult<SNode> aliveIncludedResult : aliveIncludedResults) {
-            progress.setValue((progressCount++));
-            progress.paintImmediately(new Rectangle(progress.getSize()));
-            SNode node=aliveIncludedResult.getObject();
-            if (node != null && node.isRegistered()) {
-              AbstractMigrationRefactoring migrationRefactoring=myFinder.getRefactoring(aliveIncludedResult);
-              if (MigrationScriptUtil.isApplicableRefactoring(node,migrationRefactoring)) {
-                MigrationScriptUtil.performRefactoring(node,migrationRefactoring);
-              }
-            }
-          }
-          progress.setValue(aliveIncludedResults.size());
-          progress.paintImmediately(new Rectangle(progress.getSize()));
-          checkMigrationResults();
-        }
-      }
-,"migration refactoring",null,true,(myProject != null ? myProject.getComponent(MPSProject.class) : null));
+      ((CommandProcessorEx)CommandProcessor.getInstance()).finishCommand(myProject,cmd,null);
     }
   }
-);
+;
+  Runnable process=new Runnable(){
+    public void run(){
+      myController.process(new ProgressMonitorAdapter(myIndicator),aliveIncludedResults);
+      ModelAccess.instance().runCommandInEDT(finishCommand,getMPSProject());
+      checkMigrationResults();
+    }
+  }
+;
+  ((ApplicationEx)ApplicationManagerEx.getApplicationEx()).runProcessWithProgressSynchronously(process,task.getTitle(),task.isCancellable(),myProject,getComponent(),task.getCancelText());
 }
