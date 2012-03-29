@@ -1,14 +1,19 @@
 {
   SNode module=SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Module");
   Map<String,Boolean> usedModuleIds=new HashMap<String,Boolean>();
+  Set<String> extractedModules=new HashSet<String>();
   for (  SNode dep : SLinkOperations.getTargets(module,"dependencies",true)) {
+    boolean extracted=false;
+    if (SNodeOperations.isInstanceOf(dep,"jetbrains.mps.build.mps.structure.BuildMps_ExtractedModuleDependency")) {
+      dep=SLinkOperations.getTarget(SNodeOperations.cast(dep,"jetbrains.mps.build.mps.structure.BuildMps_ExtractedModuleDependency"),"dependency",true);
+      extracted=true;
+    }
     if (SNodeOperations.isInstanceOf(dep,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule")) {
       SNode onModule=SNodeOperations.cast(dep,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule");
       usedModuleIds.put(SPropertyOperations.getString(SLinkOperations.getTarget(onModule,"module",false),"uuid"),SPropertyOperations.getBoolean(onModule,"reexport"));
-    }
- else     if (SNodeOperations.isInstanceOf(dep,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModuleById")) {
-      SNode onModule=SNodeOperations.cast(dep,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModuleById");
-      usedModuleIds.put(SPropertyOperations.getString(onModule,"targetId"),SPropertyOperations.getBoolean(onModule,"reexport"));
+      if (extracted) {
+        extractedModules.add(SPropertyOperations.getString(SLinkOperations.getTarget(onModule,"module",false),"uuid"));
+      }
     }
   }
   Iterable<Dependency> dependencies=myModuleDescriptor.getDependencies();
@@ -33,10 +38,10 @@
         report("wrong reexport status for dependency in build script for: " + moduleRef.getModuleId().toString(),myOriginalModule);
       }
     }
+    if (reexport && !(extractedModules.contains(moduleRef.getModuleId().toString()))) {
+      report("reexport dependency should be extracted into build script: " + dep.getModuleRef().toString(),myOriginalModule);
+    }
     if (!(found)) {
-      if (reexport) {
-        report("reexport dependency should be extracted into build script: " + dep.getModuleRef().toString(),myOriginalModule);
-      }
       if (checkOnly) {
         continue;
       }
