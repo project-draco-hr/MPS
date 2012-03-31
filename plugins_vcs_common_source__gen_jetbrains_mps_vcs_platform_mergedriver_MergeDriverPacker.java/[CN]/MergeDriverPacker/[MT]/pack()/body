@@ -1,0 +1,27 @@
+{
+  File tmpDir=FileUtil.createTmpDir();
+  getFile().delete();
+  Iterable<String> classpathDirs=getClasspath(false);
+  for (  String classpathDir : Sequence.fromIterable(classpathDirs).where(new IWhereFilter<String>(){
+    public boolean accept(    String cpd){
+      return cpd.endsWith(".jar");
+    }
+  }
+)) {
+    FileUtil.copyFile(new File(classpathDir),tmpDir);
+  }
+  if (Sequence.fromIterable(classpathDirs).isEmpty()) {
+    FileUtil.write(new File(tmpDir,"dummy.txt"),new byte[0]);
+  }
+  if (InternalFlag.isInternalMode()) {
+    Iterable<String> classpathInternal=Sequence.fromIterable(classpathDirs).where(new IWhereFilter<String>(){
+      public boolean accept(      String cpi){
+        return !(cpi.endsWith(".jar"));
+      }
+    }
+);
+    FileUtil.zip(InternalRuntimePacker.pack(classpathInternal),new File(tmpDir + File.separator + InternalRuntimePacker.getPath()));
+  }
+  FileUtil.copyDir(tmpDir,getFile());
+  tmpDir.delete();
+}

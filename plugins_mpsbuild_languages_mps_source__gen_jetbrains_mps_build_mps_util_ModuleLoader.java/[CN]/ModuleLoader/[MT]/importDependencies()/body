@@ -1,6 +1,16 @@
 {
   SNode module=SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Module");
-  for (  Dependency dep : myModuleDescriptor.getDependencies()) {
+  Iterable<Dependency> dependencies=myModuleDescriptor.getDependencies();
+  if (myModuleDescriptor instanceof LanguageDescriptor) {
+    Iterable<GeneratorDescriptor> generators=((LanguageDescriptor)myModuleDescriptor).getGenerators();
+    dependencies=Sequence.fromIterable(dependencies).union(Sequence.fromIterable(generators).translate(new ITranslator2<GeneratorDescriptor,Dependency>(){
+      public Iterable<Dependency> translate(      GeneratorDescriptor it){
+        return it.getDependencies();
+      }
+    }
+));
+  }
+  for (  Dependency dep : dependencies) {
     boolean reexport=dep.isReexport();
     if (!(reexport)) {
       continue;
@@ -11,14 +21,18 @@
       SNode res=SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule",null);
       SLinkOperations.setTarget(res,"module",resolved,false);
       SPropertyOperations.set(res,"reexport","" + reexport);
-      ListSequence.fromList(SLinkOperations.getTargets(module,"dependencies",true)).addElement(res);
+      SNode extr=SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_ExtractedModuleDependency",null);
+      SLinkOperations.setTarget(extr,"dependency",res,true);
+      ListSequence.fromList(SLinkOperations.getTargets(module,"dependencies",true)).addElement(extr);
     }
  else {
       SNode res=SModelOperations.createNewNode(SNodeOperations.getModel(myModule),"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModuleById",null);
       SPropertyOperations.set(res,"targetId",moduleRef.getModuleId().toString());
       SPropertyOperations.set(res,"targetName",moduleRef.getModuleFqName());
       SPropertyOperations.set(res,"reexport","" + reexport);
-      ListSequence.fromList(SLinkOperations.getTargets(module,"dependencies",true)).addElement(res);
+      SNode extr=SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_ExtractedModuleDependency",null);
+      SLinkOperations.setTarget(extr,"dependency",res,true);
+      ListSequence.fromList(SLinkOperations.getTargets(module,"dependencies",true)).addElement(extr);
     }
   }
 }
