@@ -1,0 +1,46 @@
+{
+  IModule[] modules={MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("6ed54515-acc8-4d1e-a16c-9fd6cfe951ea")),MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("1ed103c3-3aa6-49b7-9c21-6765ee11f224")),MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("742f6602-5a2f-4313-aa6e-ae1cd4ffdc61")),MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("86441d7a-e194-42da-81a5-2161ec62a379"))};
+  SModel model=SNodeOperations.getModel(node);
+  IModule module=check_xpwqv8_a0d0a(model.getModelDescriptor());
+  for (  SReference ref : Sequence.fromIterable(SNodeOperations.getReferences(node))) {
+    SModelReference oldModelRef=ref.getTargetSModelReference();
+    final String fqname=check_xpwqv8_a0b0f0a(oldModelRef);
+    for (    IModule newModule : modules) {
+      List<SModelDescriptor> models=newModule.getOwnModelDescriptors();
+      SModelReference modelRef=check_xpwqv8_a0b0c0f0a(ListSequence.fromList(models).findFirst(new IWhereFilter<SModelDescriptor>(){
+        public boolean accept(        SModelDescriptor it){
+          return eq_xpwqv8_a0a0a0a0a0a0b0c0f0a(it.getLongName(),fqname);
+        }
+      }
+));
+      if (modelRef == null) {
+        continue;
+      }
+      if (modelRef.equals(oldModelRef)) {
+        break;
+      }
+      ref.setTargetSModelReference(modelRef);
+      if ((SLinkOperations.getTargetNode(ref) == null)) {
+        ref.setTargetSModelReference(oldModelRef);
+        continue;
+      }
+      model.addModelImport(modelRef,false);
+      model.deleteModelImport(oldModelRef);
+      SModelRepository.getInstance().markChanged(model);
+      if (module != null && module.getModuleDescriptor() != null) {
+        Collection<Dependency> dependencies=module.getModuleDescriptor().getDependencies();
+        Dependency dep=CollectionSequence.fromCollection(((Collection<Dependency>)dependencies)).findFirst(new IWhereFilter<Dependency>(){
+          public boolean accept(          Dependency it){
+            return it.getModuleRef().getModuleFqName().contains("MPS.Classpath");
+          }
+        }
+);
+        module.addDependency(newModule.getModuleReference(),dep != null && dep.isReexport());
+        if (dep != null) {
+          dependencies.remove(dep);
+        }
+      }
+      break;
+    }
+  }
+}
