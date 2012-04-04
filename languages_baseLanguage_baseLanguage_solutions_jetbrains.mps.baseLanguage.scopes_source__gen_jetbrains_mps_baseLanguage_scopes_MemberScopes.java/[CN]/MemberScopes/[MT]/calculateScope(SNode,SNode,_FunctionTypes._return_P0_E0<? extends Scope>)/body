@@ -1,0 +1,26 @@
+{
+  Tuples._2<SNode,SNode> key=MultiTuple.<SNode,SNode>from(classifier,kind);
+  TransactionCache cache=ModelAccess.instance().getTransactionCache(MemberScopes.class);
+  Scope cached=(Scope)cache.get(key);
+  if (cached != null) {
+    return cached;
+  }
+  if (SetSequence.fromSet(inCalculatingScopes.get()).contains(key)) {
+    if (log.isWarnEnabled()) {
+      log.warn("Recursion preventing for " + key);
+    }
+    return new EmptyScope();
+  }
+  SetSequence.fromSet(inCalculatingScopes.get()).addElement(key);
+  Scope result=null;
+  try {
+    result=scope.invoke();
+  }
+  finally {
+    SetSequence.fromSet(inCalculatingScopes.get()).removeElement(key);
+  }
+  if (result != null) {
+    cache.put(key,result);
+  }
+  return result;
+}
