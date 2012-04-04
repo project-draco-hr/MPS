@@ -1,5 +1,56 @@
 {
   try {
+    TreeFileChooser chooser=new TreeFileChooser();
+    chooser.setMode(TreeFileChooser.MODE_DIRECTORIES);
+    chooser.setContext(((IOperationContext)MapSequence.fromMap(_params).get("context")));
+    final Wrappers._T<IFile> projectFolder=new Wrappers._T<IFile>(null);
+    final Wrappers._T<String> basePath=new Wrappers._T<String>(null);
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        basePath.value=BuildProject_Behavior.call_getBasePath_4959435991187146924(((SNode)MapSequence.fromMap(_params).get("node")),Context.defaultContext());
+        if (basePath.value != null && StringUtils.isNotEmpty(basePath.value)) {
+          projectFolder.value=FileSystem.getInstance().getFileByPath(basePath.value);
+        }
+      }
+    }
+);
+    if (basePath.value == null) {
+      if (log.isErrorEnabled()) {
+        log.error("working directory is not available");
+      }
+      return;
+    }
+    if (projectFolder.value != null) {
+      chooser.setInitialFile(projectFolder.value);
+    }
+    final IFile dir=chooser.showDialog(((Frame)MapSequence.fromMap(_params).get("frame")));
+    if (dir == null || !(dir.isDirectory())) {
+      return;
+    }
+    ModelAccess.instance().runCommandInEDT(new Runnable(){
+      public void run(){
+        List<ModulesMiner.ModuleHandle> modules=ModulesMiner.getInstance().collectModules(dir,false);
+        VisibleModules visible=new VisibleModules(((SNode)MapSequence.fromMap(_params).get("node")),null);
+        visible.collect();
+        PathConverter converter=new PathConverter(((SNode)MapSequence.fromMap(_params).get("node")));
+        List<ImportModuleHelper> helpers=new ArrayList<ImportModuleHelper>();
+        for (        ModulesMiner.ModuleHandle handle : modules) {
+          ModuleReference modRef=handle.getDescriptor().getModuleReference();
+          if (visible.resolve(modRef.getModuleFqName(),modRef.getModuleId().toString()) != null) {
+            continue;
+          }
+          ImportModuleHelper helper=new ImportModuleHelper(((SNode)MapSequence.fromMap(_params).get("node")),converter,handle.getFile(),handle.getDescriptor());
+          helper.create();
+          helpers.add(helper);
+        }
+        visible=new VisibleModules(((SNode)MapSequence.fromMap(_params).get("node")),null);
+        visible.collect();
+        for (        ImportModuleHelper helper : helpers) {
+          helper.update(visible);
+        }
+      }
+    }
+,((IOperationContext)MapSequence.fromMap(_params).get("context")).getProject());
   }
  catch (  Throwable t) {
     if (log.isErrorEnabled()) {

@@ -1,0 +1,35 @@
+{
+  List<SModelReference> allLoadedModels=new ArrayList<SModelReference>();
+  ModuleDescriptor descriptor=getModuleDescriptor();
+  Set<SModelRoot> result=new jetbrains.mps.util.misc.hash.HashSet<SModelRoot>();
+  if (descriptor != null) {
+    SModelRepository smRepo=SModelRepository.getInstance();
+    Collection<ModelRoot> roots=descriptor.getModelRoots();
+    for (    ModelRoot modelRoot : roots) {
+      try {
+        SModelRoot root=new SModelRoot(modelRoot);
+        result.add(root);
+        IModelRootManager manager=root.getManager();
+        if (manager == null)         continue;
+        Collection<SModelDescriptor> models=manager.load(root.getModelRoot(),this);
+        for (        SModelDescriptor model : models) {
+          allLoadedModels.add(model.getSModelReference());
+          if (smRepo.getModelDescriptor(model.getSModelReference()) == null) {
+            smRepo.registerModelDescriptor(model,this);
+          }
+        }
+      }
+ catch (      ManagerNotFoundException e) {
+      }
+catch (      Exception e) {
+        LOG.error("Error loading models from root: " + "\" path: \"" + modelRoot.getPath() + "\". Requested by: "+ this,e);
+      }
+    }
+    for (    SModelDescriptor md : smRepo.getModelDescriptors(this)) {
+      if (allLoadedModels.contains(md.getSModelReference()))       continue;
+      if (!(md instanceof BaseSModelDescriptorWithSource))       continue;
+      smRepo.unRegisterModelDescriptor(md,this);
+    }
+  }
+  return result;
+}
