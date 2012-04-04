@@ -1,2 +1,60 @@
 {
+  if (node == null)   return;
+  myQueue.add(node);
+  myQueue.addAll(additionalNodes);
+  MyEventsReadListener nodesReadListener=new MyEventsReadListener();
+  for (SNode sNode=myQueue.poll(); sNode != null; sNode=myQueue.poll()) {
+    if (myFullyCheckedNodes.contains(sNode)) {
+      continue;
+    }
+    Set<SNode> candidatesForFrontier=new LinkedHashSet<SNode>();
+    if (myNodeTypesComponent.isSpecial()) {
+      candidatesForFrontier.addAll(myTypeChecker.getRulesManager().getDependencies(sNode));
+    }
+    if (forceChildrenCheck) {
+      candidatesForFrontier.addAll(sNode.getChildren());
+    }
+    for (    SNode candidate : candidatesForFrontier) {
+      if (candidate == null || myFullyCheckedNodes.contains(candidate))       continue;
+      myQueue.add(candidate);
+    }
+    if (!myPartlyCheckedNodes.contains(sNode)) {
+      MyLanguageCachesReadListener languageCachesReadListener=null;
+      if (isIncrementalMode()) {
+        languageCachesReadListener=new MyLanguageCachesReadListener();
+        nodesReadListener.clear();
+        NodeReadEventsCaster.setNodesReadListener(nodesReadListener);
+        LanguageHierarchyCache.getInstance().setReadAccessListener(languageCachesReadListener);
+      }
+      boolean typeAffected=false;
+      try {
+        myJustInvalidatedNodes.add(sNode);
+        typeAffected=applyRulesToNode(sNode);
+      }
+  finally {
+        if (isIncrementalMode()) {
+          NodeReadEventsCaster.removeNodesReadListener();
+        }
+      }
+      if (isIncrementalMode()) {
+synchronized (ACCESS_LOCK) {
+          nodesReadListener.setAccessReport(true);
+          Set<SNode> accessedNodes=nodesReadListener.getAccessedNodes();
+          addDependentNodesTypeSystem(sNode,accessedNodes,typeAffected);
+          nodesReadListener.setAccessReport(false);
+          if (languageCachesReadListener != null) {
+            languageCachesReadListener.setAccessReport(true);
+            if (languageCachesReadListener.myIsCacheAccessed) {
+              addCacheDependentNodesTypesystem(sNode);
+            }
+            languageCachesReadListener.setAccessReport(false);
+          }
+        }
+        nodesReadListener.clear();
+      }
+      myPartlyCheckedNodes.add(sNode);
+    }
+    myFullyCheckedNodes.add(sNode);
+    if (typeCalculated(targetNode) != null)     return;
+  }
 }
