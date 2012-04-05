@@ -9,51 +9,61 @@ case 0:
           return new IResult.SUCCESS(_output_wf1ya0_a0a);
         }
       pa.global().properties(Target_compile.this.getName(),JavaCompile_Facet.Target_compile.Parameters.class).compiledAnything(false);
-    int work=Sequence.fromIterable(input).foldLeft(0,new ILeftCombinator<IResource,Integer>(){
-      public Integer combine(      Integer s,      IResource it){
-        return s + ((((TResource)it).module().isCompileInMPS() ? 100 : 0));
+    final Iterable<IModule> toCompile=Sequence.fromIterable(input).select(new ISelector<IResource,IModule>(){
+      public IModule select(      IResource it){
+        return ((TResource)it).module();
       }
     }
-);
-  if (work == 0) {
+).where(new IWhereFilter<IModule>(){
+      public boolean accept(      IModule it){
+        return it != null && it.isCompileInMPS();
+      }
+    }
+).distinct();
+  if ((int)Sequence.fromIterable(toCompile).count() == 0) {
     return new IResult.SUCCESS(_output_wf1ya0_a0a);
   }
-monitor.currentProgress().beginWork("Compiling",work,monitor.currentProgress().workLeft());
-for (IResource resource : Sequence.fromIterable(input)) {
-final TResource tres=(TResource)resource;
-if (tres.module() == null) {
-  return new IResult.FAILURE(_output_wf1ya0_a0a);
-}
-if (!(tres.module().isCompileInMPS())) {
-  continue;
-}
-monitor.currentProgress().advanceWork("Compiling",100,tres.module().getModuleReference().getModuleFqName());
+monitor.currentProgress().beginWork("Compiling",1,monitor.currentProgress().workLeft());
 final Wrappers._T<MPSCompilationResult> cr=new Wrappers._T<MPSCompilationResult>();
 ModelAccess.instance().runReadAction(new Runnable(){
-  public void run(){
-    cr.value=new ModuleMaker().make(CollectionUtil.set(tres.module()),new EmptyProgressMonitor());
-  }
+public void run(){
+cr.value=new ModuleMaker().make(SetSequence.fromSetWithValues(new HashSet<IModule>(),toCompile),new EmptyProgressMonitor());
+}
 }
 );
+monitor.currentProgress().advanceWork("Compiling",1,IterableUtils.join(Sequence.fromIterable(toCompile).select(new ISelector<IModule,String>(){
+public String select(IModule it){
+return it.getModuleReference().getModuleFqName();
+}
+}
+),", "));
 if (cr.value != null) {
-  pa.global().properties(Target_compile.this.getName(),JavaCompile_Facet.Target_compile.Parameters.class).compiledAnything(pa.global().properties(Target_compile.this.getName(),JavaCompile_Facet.Target_compile.Parameters.class).compiledAnything() || cr.value.isCompiledAnything());
-  for (  IMessage msg : cr.value.getMessages()) {
-    monitor.reportFeedback(new IFeedback.MESSAGE(msg));
-  }
+pa.global().properties(Target_compile.this.getName(),JavaCompile_Facet.Target_compile.Parameters.class).compiledAnything(pa.global().properties(Target_compile.this.getName(),JavaCompile_Facet.Target_compile.Parameters.class).compiledAnything() || cr.value.isCompiledAnything());
+for (IMessage msg : cr.value.getMessages()) {
+monitor.reportFeedback(new IFeedback.MESSAGE(msg));
+}
 }
 if (cr.value == null || !(cr.value.isOk())) {
-  if (cr.value != null) {
-    if (cr.value.getErrors() > 0) {
-      monitor.reportFeedback(new IFeedback.ERROR(String.valueOf(cr.value)));
-    }
- else     if (cr.value.getWarnings() > 0) {
-      monitor.reportFeedback(new IFeedback.WARNING(String.valueOf(cr.value)));
-    }
+if (cr.value != null) {
+if (cr.value.getErrors() > 0) {
+monitor.reportFeedback(new IFeedback.ERROR(String.valueOf(cr.value)));
+}
+ else if (cr.value.getWarnings() > 0) {
+monitor.reportFeedback(new IFeedback.WARNING(String.valueOf(cr.value)));
+}
  else {
-      monitor.reportFeedback(new IFeedback.INFORMATION(String.valueOf(cr.value)));
-    }
-  }
-  return new IResult.FAILURE(_output_wf1ya0_a0a);
+monitor.reportFeedback(new IFeedback.INFORMATION(String.valueOf(cr.value)));
+}
+}
+return new IResult.FAILURE(_output_wf1ya0_a0a);
+}
+for (IResource resource : Sequence.fromIterable(input)) {
+TResource tres=(TResource)resource;
+if (tres.module() == null) {
+return new IResult.FAILURE(_output_wf1ya0_a0a);
+}
+if (!(tres.module().isCompileInMPS())) {
+continue;
 }
 _output_wf1ya0_a0a=Sequence.fromIterable(_output_wf1ya0_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(tres)));
 }
