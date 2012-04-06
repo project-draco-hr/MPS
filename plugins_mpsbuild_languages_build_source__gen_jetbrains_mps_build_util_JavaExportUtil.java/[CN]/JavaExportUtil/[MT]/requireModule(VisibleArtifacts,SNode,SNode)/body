@@ -1,0 +1,37 @@
+{
+  if (SNodeOperations.getContainingRoot(module) == SNodeOperations.getContainingRoot(contextNode)) {
+    return null;
+  }
+  SNode target=SNodeOperations.as(artifacts.toOriginalNode(module),"jetbrains.mps.build.structure.BuildSource_JavaModule");
+  Set<SNode> modules=new LinkedHashSet<SNode>();
+  Set<SNode> libraries=new LinkedHashSet<SNode>();
+  modules.add(target);
+  libraries.addAll(ListSequence.fromList(SLinkOperations.getTargets(target,"dependencies",true)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.structure.BuildSource_JavaDependencyLibrary");
+    }
+  }
+).select(new ISelector<SNode,SNode>(){
+    public SNode select(    SNode it){
+      return SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.build.structure.BuildSource_JavaDependencyLibrary"),"library",false);
+    }
+  }
+).toListSequence());
+  new JavaModulesClosure(modules,libraries).closure();
+  Iterable<SNode> required=SetSequence.fromSet(((Set<SNode>)modules)).concat(SetSequence.fromSet(((Set<SNode>)libraries)));
+  List<SNode> result=new ArrayList<SNode>();
+  for (  SNode n : Sequence.fromIterable(required)) {
+    if (SNodeOperations.getContainingRoot(n) == SNodeOperations.getContainingRoot(contextNode)) {
+      continue;
+    }
+    SNode artifact=SNodeOperations.as(artifacts.findArtifact(n),"jetbrains.mps.build.structure.BuildLayout_Node");
+    if (artifact != null) {
+      ListSequence.fromList(result).addElement(artifact);
+    }
+  }
+  if (ListSequence.fromList(result).isNotEmpty()) {
+    artifacts.needsFetch(contextNode);
+    return result;
+  }
+  return null;
+}
