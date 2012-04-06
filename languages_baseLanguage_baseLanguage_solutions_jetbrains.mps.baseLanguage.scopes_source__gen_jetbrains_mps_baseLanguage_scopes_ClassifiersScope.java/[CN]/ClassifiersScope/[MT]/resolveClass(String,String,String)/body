@@ -1,0 +1,58 @@
+{
+  Collection<IModule> visibleModules=IterableUtil.asCollection(scope.getVisibleModules());
+  List<SNode> classifiers=new ArrayList<SNode>();
+  for (  SModelDescriptor model : Sequence.fromIterable(((Iterable<IModule>)visibleModules)).translate(new ITranslator2<IModule,SModelDescriptor>(){
+    public Iterable<SModelDescriptor> translate(    IModule it){
+      return it.getOwnModelDescriptors();
+    }
+  }
+).distinct()) {
+    SModelFqName modelFqName=model.getSModelReference().getSModelFqName();
+    if (!(modelFqName.getLongName().equals(modelname))) {
+      continue;
+    }
+    if (stereotype != null && !(modelFqName.getStereotype().equals(stereotype))) {
+      continue;
+    }
+    ListSequence.fromList(classifiers).addSequence(ListSequence.fromList(getClassifiersByRefName(model.getSModel(),nestedClassName)));
+  }
+  if (ListSequence.fromList(classifiers).isEmpty()) {
+    return null;
+  }
+  if (ListSequence.fromList(classifiers).count() > 1) {
+    for (    SNode cls : ListSequence.fromList(classifiers)) {
+      if (SNodeOperations.getModel(cls) == model) {
+        return cls;
+      }
+      if (check_npo0wh_a0b0a0g0c_0(check_npo0wh_a0a1a0a6a2_0(model)) == check_npo0wh_a0b0a0g0c(check_npo0wh_a0a1a0a6a2(SNodeOperations.getModel(cls)))) {
+        return cls;
+      }
+    }
+    Iterable<SNode> userClassifiers=ListSequence.fromList(classifiers).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return SModelStereotype.isUserModel(SNodeOperations.getModel(it));
+      }
+    }
+);
+    if ((int)Sequence.fromIterable(userClassifiers).count() == 1) {
+      return Sequence.fromIterable(userClassifiers).first();
+    }
+    final StringBuilder warn=new StringBuilder();
+    warn.append("reference can't be resolved: ");
+    warn.append(nestedClassName);
+    warn.append(" in ");
+    warn.append(model.getLongName());
+    warn.append(" can reference nodes from models: ");
+    ListSequence.fromList(classifiers).visitAll(new IVisitor<SNode>(){
+      public void visit(      SNode it){
+        warn.append(SNodeOperations.getModel(it).getSModelReference()).append("; ");
+      }
+    }
+);
+    if (log.isWarnEnabled()) {
+      log.warn(warn);
+    }
+    return null;
+  }
+  return ListSequence.fromList(classifiers).getElement(0);
+}

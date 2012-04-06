@@ -1,57 +1,23 @@
 {
-  String className=refText;
-  int dotIndex=className.lastIndexOf(".");
-  final String simpleName=(dotIndex == -1 ? className : className.substring(dotIndex + 1));
-  Iterable<SNode> possibleClassifiers=ListSequence.fromList(getAvailableElements(simpleName)).select(new ISelector<SNode,SNode>(){
-    public SNode select(    SNode it){
-      return SNodeOperations.cast(it,"jetbrains.mps.baseLanguage.structure.Classifier");
+  String classname=refText;
+  int dotIndex=classname.lastIndexOf(".");
+  if (dotIndex >= 0) {
+    List<SNode> localClassifiers=getClassifiersByRefName(model,classname);
+    if (ListSequence.fromList(localClassifiers).count() >= 1) {
+      return ListSequence.fromList(localClassifiers).first();
     }
+    String package_=classname.substring(0,dotIndex);
+    classname=classname.substring(dotIndex + 1).replace('$','.');
+    return resolveClass(package_,null,classname);
   }
-).where(new IWhereFilter<SNode>(){
-    public boolean accept(    SNode it){
-      return SPropertyOperations.getString(it,"name").equals(simpleName);
-    }
-  }
-);
-  if (dotIndex == -1) {
-    if ((int)Sequence.fromIterable(possibleClassifiers).count() == 1) {
-      return Sequence.fromIterable(possibleClassifiers).first();
-    }
- else {
-      if (log.isWarnEnabled()) {
-        log.warn("Cannot resolve class at " + contextNode + " with refText "+ refText);
-      }
+  SModelReference targetModelReference=model.getSModelReference();
+  if (targetModelReference.getSModelId() != null) {
+    SModelDescriptor targetModel=scope.getModelDescriptor(targetModelReference);
+    if (targetModel == null) {
       return null;
     }
+    return ListSequence.fromList(getClassifiersByRefName(targetModel.getSModel(),classname)).first();
   }
- else {
-    Iterable<SNode> possibleWithEqualFqName=Sequence.fromIterable(possibleClassifiers).where(new IWhereFilter<SNode>(){
-      public boolean accept(      SNode it){
-        return INamedConcept_Behavior.call_getFqName_1213877404258(it).endsWith(refText);
-      }
-    }
-);
-    if (Sequence.fromIterable(possibleWithEqualFqName).isNotEmpty()) {
-      if ((int)Sequence.fromIterable(possibleWithEqualFqName).count() == 1) {
-        return Sequence.fromIterable(possibleWithEqualFqName).first();
-      }
- else {
-        if (log.isWarnEnabled()) {
-          log.warn("Cannot resolve class at " + contextNode + " with refText "+ refText);
-        }
-        return null;
-      }
-    }
- else {
-      if ((int)Sequence.fromIterable(possibleClassifiers).count() == 1) {
-        return Sequence.fromIterable(possibleClassifiers).first();
-      }
- else {
-        if (log.isWarnEnabled()) {
-          log.warn("Cannot resolve class at " + contextNode + " with refText "+ refText);
-        }
-        return null;
-      }
-    }
-  }
+  SModelFqName modelname=targetModelReference.getSModelFqName();
+  return resolveClass(modelname.getLongName(),modelname.getStereotype(),classname);
 }
