@@ -1,0 +1,21 @@
+{
+  try {
+    ModuleReference pluginRef=MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("28f9e497-3b42-4291-aeba-0a1039153ab1")).getModuleReference();
+    ModuleReference standaloneRef=MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("ef7bf5ac-d06c-4342-b11d-e42104eb9343")).getModuleReference();
+    for (    SModelDescriptor m : ListSequence.fromList(((MPSProject)MapSequence.fromMap(_params).get("project")).getProjectModels())) {
+      if (m.getSModel().importedLanguages().contains(pluginRef)) {
+        SModelOperations.createNewRootNode(((SModel)m.getSModel()),"jetbrains.mps.lang.plugin.standalone.structure.StandalonePluginDescriptor",null);
+        m.getSModel().addLanguage(standaloneRef);
+        new MissingDependenciesFixer(m).fix(false);
+        m.getModule().invalidateCaches();
+      }
+    }
+    SModelRepository.getInstance().saveAll();
+    ClassLoaderManager.getInstance().reloadAll(new EmptyProgressMonitor());
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "AddPluginDependencies",t);
+    }
+  }
+}
