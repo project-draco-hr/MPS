@@ -1,5 +1,4 @@
 {
-  TypeCheckingContextNew typeCheckingContextNew=state == null ? null : state.getTypeCheckingContext();
   StructuralNodeSet<?> frontier=new StructuralNodeSet();
   StructuralNodeSet<?> newFrontier=new StructuralNodeSet();
   StructuralNodeSet<?> yetPassed=new StructuralNodeSet();
@@ -8,7 +7,7 @@
     Set<SNode> yetPassedRaw=new THashSet<SNode>();
     StructuralNodeSet<?> ancestors=new StructuralNodeSet();
     for (    SNode node : frontier) {
-      collectImmediateSuperTypes(node,isWeak,ancestors,typeCheckingContextNew);
+      mySubTyping.collectImmediateSuperTypes(node,isWeak,ancestors,null);
       yetPassedRaw.add(node);
     }
     ArrayList<SNode> ancestorsSorted;
@@ -19,23 +18,18 @@
       }
     }
 );
-    if (superType instanceof NodeMatcher) {
-      for (      SNode ancestor : ancestorsSorted) {
-        if (superType.matchesWith(ancestor)) {
-          addToCache(subType,superType,true,isWeak);
-          return true;
-        }
+    List<SNode> results=new ArrayList<SNode>();
+    for (    SNode ancestor : ancestorsSorted) {
+      if (superType.matchesWith(ancestor)) {
+        results.add(ancestor);
       }
     }
- else {
-      boolean result=false;
-      for (      SNode ancestor : ancestorsSorted) {
-        if (superType.matchesWith(ancestor)) {
-          result=true;
-        }
+    if (!results.isEmpty()) {
+      if (results.size() > 1) {
+        results=mySubTyping.eliminateSuperTypes(results);
       }
-      if (result) {
-        return true;
+      if (!results.isEmpty()) {
+        return results.get(0);
       }
     }
     for (    SNode passedNodeRaw : yetPassedRaw) {
@@ -44,11 +38,18 @@
     for (    SNode passedNode : yetPassed) {
       ancestors.removeStructurally(passedNode);
     }
-    newFrontier.addAllStructurally(ancestors);
-    yetPassed.addAllStructurally(ancestors);
+    for (    SNode ancestor : ancestors) {
+      Pair<Boolean,SNode> answer=getCoerceCahceAnswer(ancestor,superType.getMatchingPattern(),isWeak);
+      if (answer != null) {
+        if (answer.o1 && answer.o2 == null) {
+          continue;
+        }
+      }
+      newFrontier.addStructurally(ancestor);
+      yetPassed.addStructurally(ancestor);
+    }
     frontier=newFrontier;
     newFrontier=new StructuralNodeSet();
   }
-  addToCache(subType,superType,false,isWeak);
-  return false;
+  return null;
 }
