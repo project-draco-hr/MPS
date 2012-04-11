@@ -1,12 +1,14 @@
 {
   Tuples._2<SNode,SNode> key=MultiTuple.<SNode,SNode>from(classifier,kind);
   boolean isTransient=SNodeOperations.getModel(classifier).isTransient();
-  TransactionCache cache=null;
+  ConcurrentMap<Tuples._2<SNode,SNode>,Scope> cache=null;
   if (!(isTransient)) {
-    cache=ModelAccess.instance().getTransactionCache(MemberScopes.class);
-    Scope cached=(Scope)cache.get(key);
-    if (cached != null) {
-      return cached;
+    cache=ModelAccess.instance().getTransactionCacheNew(MemberScopes.class);
+    if (cache != null) {
+      Scope cached=cache.get(((Object)key));
+      if (cached != null) {
+        return cached;
+      }
     }
   }
   if (SetSequence.fromSet(inCalculatingScopes.get()).contains(key)) {
@@ -23,7 +25,7 @@
   finally {
     SetSequence.fromSet(inCalculatingScopes.get()).removeElement(key);
   }
-  if (result != null && !(isTransient)) {
+  if (result != null && !(isTransient) && cache != null) {
     cache.put(key,result);
   }
   return result;
