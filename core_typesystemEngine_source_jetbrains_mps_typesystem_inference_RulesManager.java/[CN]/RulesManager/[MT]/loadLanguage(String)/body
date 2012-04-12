@@ -1,44 +1,43 @@
 {
-synchronized (RULES_LOCK) {
-    if (myLoadedLanguages.contains(languageNamespace)) {
-      return true;
+  ModelAccess.assertLegalWrite();
+  if (myLoadedLanguages.contains(languageNamespace)) {
+    return true;
+  }
+  LanguageRuntime language=LanguageRegistry.getInstance().getLanguage(languageNamespace);
+  if (language == null)   return false;
+  IHelginsDescriptor typesystemDescriptor=null;
+  try {
+    typesystemDescriptor=language.getTypesystem();
+  }
+ catch (  Throwable t) {
+    LOG.error("Error while loading language: " + t);
+  }
+  if (typesystemDescriptor == null)   return false;
+  try {
+    myInferenceRules.addRuleSetItem(typesystemDescriptor.getInferenceRules());
+    myNonTypesystemRules.addRuleSetItem(typesystemDescriptor.getNonTypesystemRules());
+    mySubtypingRules.addRuleSetItem(typesystemDescriptor.getSubtypingRules());
+    Set<ComparisonRule_Runtime> comparisonRule_runtimes=typesystemDescriptor.getComparisonRules();
+    myComparisonRules.addRuleSetItem(comparisonRule_runtimes);
+    myReplacementRules.addRuleSetItem(typesystemDescriptor.getEliminationRules());
+    myDependenciesContainer.addDependencies(typesystemDescriptor.getDependencies());
+    myVariableConverters.addAll(typesystemDescriptor.getVariableConverters());
+    myOverloadedOperationsManager.addOverloadedOperationsTypeProviders(typesystemDescriptor.getOverloadedOperationsTypesProviders());
+    Set<AbstractDependentComputation_Runtime> dependentComputations=typesystemDescriptor.getDependentComputations();
+    myDependentComputations.addRuleSetItem(dependentComputations);
+    for (    AbstractDependentComputation_Runtime dependentComputation : dependentComputations) {
+      myDependentComputationsBlockedNodes.addRule(dependentComputation.getWrapper());
     }
-    LanguageRuntime language=LanguageRegistry.getInstance().getLanguage(languageNamespace);
-    if (language == null)     return false;
-    IHelginsDescriptor typesystemDescriptor=null;
-    try {
-      typesystemDescriptor=language.getTypesystem();
-    }
- catch (    Throwable t) {
-      LOG.error("Error while loading language: " + t);
-    }
-    if (typesystemDescriptor == null)     return false;
-    try {
-      myInferenceRules.addRuleSetItem(typesystemDescriptor.getInferenceRules());
-      myNonTypesystemRules.addRuleSetItem(typesystemDescriptor.getNonTypesystemRules());
-      mySubtypingRules.addRuleSetItem(typesystemDescriptor.getSubtypingRules());
-      Set<ComparisonRule_Runtime> comparisonRule_runtimes=typesystemDescriptor.getComparisonRules();
-      myComparisonRules.addRuleSetItem(comparisonRule_runtimes);
-      myReplacementRules.addRuleSetItem(typesystemDescriptor.getEliminationRules());
-      myDependenciesContainer.addDependencies(typesystemDescriptor.getDependencies());
-      myVariableConverters.addAll(typesystemDescriptor.getVariableConverters());
-      myOverloadedOperationsManager.addOverloadedOperationsTypeProviders(typesystemDescriptor.getOverloadedOperationsTypesProviders());
-      Set<AbstractDependentComputation_Runtime> dependentComputations=typesystemDescriptor.getDependentComputations();
-      myDependentComputations.addRuleSetItem(dependentComputations);
-      for (      AbstractDependentComputation_Runtime dependentComputation : dependentComputations) {
-        myDependentComputationsBlockedNodes.addRule(dependentComputation.getWrapper());
-      }
-      myComparisonRules.makeConsistent();
-      myReplacementRules.makeConsistent();
-      myDependenciesContainer.makeConsistent();
-      myOverloadedOperationsManager.makeConsistent();
-      return true;
-    }
- catch (    Throwable t) {
-      return false;
-    }
+    myComparisonRules.makeConsistent();
+    myReplacementRules.makeConsistent();
+    myDependenciesContainer.makeConsistent();
+    myOverloadedOperationsManager.makeConsistent();
+    return true;
+  }
+ catch (  Throwable t) {
+    return false;
+  }
  finally {
-      myLoadedLanguages.add(languageNamespace);
-    }
+    myLoadedLanguages.add(languageNamespace);
   }
 }
