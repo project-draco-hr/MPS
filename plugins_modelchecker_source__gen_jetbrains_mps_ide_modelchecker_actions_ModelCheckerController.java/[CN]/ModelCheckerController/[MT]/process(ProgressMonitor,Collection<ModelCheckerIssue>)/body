@@ -1,0 +1,27 @@
+{
+  promon.start("",CollectionSequence.fromCollection(issues).count());
+  final List<ModelCheckerIssue> issuesCopy=ListSequence.fromListWithValues(new LinkedList<ModelCheckerIssue>(),issues);
+  int issuesSize=0;
+  while (issuesSize != ListSequence.fromList(issuesCopy).count()) {
+    issuesSize=ListSequence.fromList(issuesCopy).count();
+    final CountDownLatch latch=new CountDownLatch(1);
+    runCommand(new Runnable(){
+      public void run(){
+        for (Iterator<ModelCheckerIssue> lit=ListSequence.fromList(issuesCopy).iterator(); lit.hasNext(); ) {
+          ModelCheckerIssue issue=lit.next();
+          if (issue.fix()) {
+            lit.remove();
+            promon.advance(1);
+          }
+        }
+        latch.countDown();
+      }
+    }
+);
+    try {
+      latch.await();
+    }
+ catch (    InterruptedException ignore) {
+    }
+  }
+}
