@@ -1,0 +1,56 @@
+{
+  ModelAccess.assertLegalRead();
+  if (node == null)   return null;
+  ITypeContextOwner owner=new ITypeContextOwner(){
+  }
+;
+  SNode root=node.getTopmostAncestor();
+  boolean isResolveMode=myResolveMode.get();
+  Set<SNode> resolveNodes=getMyResolveNodes();
+  if (isResolveMode) {
+    if (resolveNodes.contains(node)) {
+      return TypesUtil.createRuntimeErrorType();
+    }
+    resolveNodes.add(node);
+    if (resolveNodes.size() > 10) {
+      LOG.warning("There are too many nodes in resolve");
+    }
+  }
+  try {
+    if (myTypeChecker.isGenerationMode()) {
+      TypeCheckingContext context=myTypeChecker.hasPerformanceTracer() ? createTracingTypeCheckingContext(node) : createTypeCheckingContext(node);
+      if (context == null)       return null;
+      try {
+        return context.getTypeOf_generationMode(node);
+      }
+  finally {
+        context.dispose();
+      }
+    }
+    TypeCheckingContext context=getOrCreateContext(root,owner,true);
+    try {
+      if (myComputeInNormalMode && context != null && context.isCheckedRoot(false)) {
+        myComputeInNormalMode=false;
+        SNode type=context.getTypeOf_normalMode(node);
+        myComputeInNormalMode=true;
+        return type;
+      }
+      if (isResolveMode) {
+        if (context == null || !context.isNonTypesystemComputation()) {
+          TypeCheckingContext resolveContext=createTypeCheckingContextForResolve(node);
+          SNode type=resolveContext.getTypeOf(node,myTypeChecker);
+          resolveContext.dispose();
+          return type;
+        }
+      }
+      if (context == null)       return null;
+      return context.getTypeOf(node,myTypeChecker);
+    }
+  finally {
+      removeOwnerForRootNodeContext(root,owner);
+    }
+  }
+  finally {
+    resolveNodes.remove(node);
+  }
+}

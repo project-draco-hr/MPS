@@ -1,0 +1,55 @@
+{
+  StructuralNodeSet<?> frontier=new StructuralNodeSet();
+  StructuralNodeSet<?> newFrontier=new StructuralNodeSet();
+  StructuralNodeSet<?> yetPassed=new StructuralNodeSet();
+  frontier.add(subType);
+  while (!frontier.isEmpty()) {
+    Set<SNode> yetPassedRaw=new THashSet<SNode>();
+    StructuralNodeSet<?> ancestors=new StructuralNodeSet();
+    for (    SNode node : frontier) {
+      mySubTyping.collectImmediateSuperTypes(node,isWeak,ancestors,null);
+      yetPassedRaw.add(node);
+    }
+    ArrayList<SNode> ancestorsSorted;
+    ancestorsSorted=new ArrayList<SNode>(ancestors);
+    Collections.sort(ancestorsSorted,new Comparator<SNode>(){
+      public int compare(      SNode o1,      SNode o2){
+        return TypesUtil.depth(o2) - TypesUtil.depth(o1);
+      }
+    }
+);
+    List<SNode> results=new ArrayList<SNode>();
+    for (    SNode ancestor : ancestorsSorted) {
+      if (superType.matchesWith(ancestor)) {
+        results.add(ancestor);
+      }
+    }
+    if (!results.isEmpty()) {
+      if (results.size() > 1) {
+        results=mySubTyping.eliminateSuperTypes(results);
+      }
+      if (!results.isEmpty()) {
+        return results.get(0);
+      }
+    }
+    for (    SNode passedNodeRaw : yetPassedRaw) {
+      yetPassed.add(passedNodeRaw);
+    }
+    for (    SNode passedNode : yetPassed) {
+      ancestors.removeStructurally(passedNode);
+    }
+    for (    SNode ancestor : ancestors) {
+      Pair<Boolean,SNode> answer=getCoerceCacheAnswer(ancestor,superType.getMatchingPattern(),isWeak);
+      if (answer != null) {
+        if (answer.o1 && answer.o2 == null) {
+          continue;
+        }
+      }
+      newFrontier.addStructurally(ancestor);
+      yetPassed.addStructurally(ancestor);
+    }
+    frontier=newFrontier;
+    newFrontier=new StructuralNodeSet();
+  }
+  return null;
+}
