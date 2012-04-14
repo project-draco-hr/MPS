@@ -1,10 +1,12 @@
 {
-  return NodeReadAccessCasterInEditor.runReadTransparentAction(new Computable<Boolean>(){
+  long start=System.nanoTime();
+  Boolean aBoolean=NodeReadAccessCasterInEditor.runReadTransparentAction(new Computable<Boolean>(){
     public Boolean compute(){
       if (null == subType || null == superType)       return false;
       if (subType == superType)       return true;
-      if (!TypesUtil.hasVariablesInside(superType) && !TypesUtil.hasVariablesInside(subType)) {
-        Boolean answer=getCacheAnswer(subType,superType,isWeak);
+      boolean canAskCache=(!TypesUtil.hasVariablesInside(superType) && !TypesUtil.hasVariablesInside(subType));
+      if (canAskCache) {
+        Boolean answer=getIsSubTypeCacheAnswer(subType,superType,isWeak);
         if (answer != null) {
           return answer;
         }
@@ -22,8 +24,10 @@
       if (meetsAndJoins(subType,superType,info,isWeak,state)) {
         return true;
       }
-      return searchInSuperTypes(subType,new NodeMatcher(superType,equations,info),info,isWeak,state);
+      return searchInSuperTypes(subType,new NodeMatcher(superType,equations,info),isWeak,state,canAskCache);
     }
   }
 );
+  TypeSystemReporter.getInstance().reportIsSubType(subType,superType,(System.nanoTime() - start));
+  return aBoolean;
 }
