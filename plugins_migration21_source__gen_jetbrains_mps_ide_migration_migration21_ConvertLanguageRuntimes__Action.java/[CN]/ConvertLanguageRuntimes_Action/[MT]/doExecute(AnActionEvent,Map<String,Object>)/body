@@ -1,0 +1,27 @@
+{
+  try {
+    for (    Language language : ListSequence.fromList(((MPSProject)MapSequence.fromMap(_params).get("project")).getProjectModules(Language.class))) {
+      if (language.getRuntimeModelsEntries().isEmpty()) {
+        continue;
+      }
+      Solution runtime=NewModuleUtil.createSolution(language.getModuleFqName() + ".runtime",language.getBundleHome().getDescendant("solutions").getDescendant("runtime").getPath(),((MPSProject)MapSequence.fromMap(_params).get("project")));
+      SolutionDescriptor sd=runtime.getModuleDescriptor();
+      sd.getStubModelEntries().addAll(language.getRuntimeModelsEntries());
+      sd.getModelRoots().addAll(language.getRuntimeModelsEntries());
+      runtime.setSolutionDescriptor(sd,false);
+      LanguageDescriptor ld=language.getModuleDescriptor();
+      ld.getRuntimeModules().add(runtime.getModuleReference());
+      ld.getRuntimeStubModels().clear();
+      language.setModuleDescriptor(ld,false);
+      ((MPSProject)MapSequence.fromMap(_params).get("project")).addModule(runtime.getModuleReference());
+      StandaloneMPSProject project=(StandaloneMPSProject)((MPSProject)MapSequence.fromMap(_params).get("project"));
+      project.setFolderFor(runtime,project.getFolderFor(language));
+    }
+    ClassLoaderManager.getInstance().reloadAll(new EmptyProgressMonitor());
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "ConvertLanguageRuntimes",t);
+    }
+  }
+}
