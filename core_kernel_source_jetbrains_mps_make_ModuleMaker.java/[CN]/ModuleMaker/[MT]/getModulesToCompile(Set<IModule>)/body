@@ -7,23 +7,14 @@
     }
   }
   ttrace.pop();
-  Map<IModule,Set<IModule>> backDependencies=new HashMap<IModule,Set<IModule>>();
-  ttrace.push("building back deps",false);
-  for (  IModule m : modules) {
-    for (    IModule dep : m.getDependenciesManager().getRequiredModules()) {
-      Set<IModule> incoming=backDependencies.get(dep);
-      if (incoming == null) {
-        incoming=new HashSet<IModule>();
-        backDependencies.put(dep,incoming);
-      }
-      incoming.add(m);
-    }
-  }
-  ttrace.pop();
-  ttrace.push("adding modules dependent on dirty ones - " + dirtyModules.size(),false);
   Set<IModule> toCompile=new LinkedHashSet<IModule>();
-  for (  IModule dirty : dirtyModules) {
-    collectToCompile(dirty,toCompile,backDependencies);
+  ttrace.push("adding modules dependent on dirty ones - " + dirtyModules.size(),false);
+  for (  IModule m : MPSModuleRepository.getInstance().getAllModules()) {
+    if (m.isPackaged())     continue;
+    for (    IModule dep : new GlobalModuleDependenciesManager(m).getModules(Deptype.COMPILE)) {
+      if (!dirtyModules.contains(dep))       continue;
+      toCompile.add(m);
+    }
   }
   ttrace.pop();
   return toCompile;
