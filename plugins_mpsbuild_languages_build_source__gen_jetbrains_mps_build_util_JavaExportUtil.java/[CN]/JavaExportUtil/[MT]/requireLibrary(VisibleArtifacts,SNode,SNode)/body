@@ -3,6 +3,45 @@
     return null;
   }
   SNode target=SNodeOperations.as(artifacts.toOriginalNode(library),"jetbrains.mps.build.structure.BuildSource_JavaLibrary");
+  if (target == null || SNodeOperations.getModel(target).isTransient()) {
+    return Collections.emptyList();
+  }
+  if (BuildSource_JavaLibrary_Behavior.call_canExportByParts_5610619299014309362(target)) {
+    List<SNode> result=new ArrayList<SNode>();
+    for (    SNode element : ListSequence.fromList(SLinkOperations.getTargets(target,"elements",true))) {
+      SNode jcp=SNodeOperations.as(element,"jetbrains.mps.build.structure.BuildSource_JavaLibraryCP");
+      if ((jcp == null)) {
+        return null;
+      }
+      SNode classpath=SLinkOperations.getTarget(jcp,"classpath",true);
+      if (SNodeOperations.isInstanceOf(classpath,"jetbrains.mps.build.structure.BuildSource_JavaJar")) {
+        SNode jarArtifact=SNodeOperations.as(artifacts.findArtifact(SLinkOperations.getTarget(SNodeOperations.cast(classpath,"jetbrains.mps.build.structure.BuildSource_JavaJar"),"path",true)),"jetbrains.mps.build.structure.BuildLayout_Node");
+        if (jarArtifact != null) {
+          ListSequence.fromList(result).addElement(jarArtifact);
+        }
+      }
+ else       if (SNodeOperations.isInstanceOf(classpath,"jetbrains.mps.build.structure.BuildSource_JavaLibraryExternalJar")) {
+        SNode requiredJar=requireJar(artifacts,SLinkOperations.getTarget(SLinkOperations.getTarget(SNodeOperations.cast(classpath,"jetbrains.mps.build.structure.BuildSource_JavaLibraryExternalJar"),"extJar",true),"jar",false),contextNode);
+        if (requiredJar != null) {
+          ListSequence.fromList(result).addElement(requiredJar);
+        }
+      }
+ else       if (SNodeOperations.isInstanceOf(classpath,"jetbrains.mps.build.structure.BuildSource_JavaLibraryExternalJarFolder")) {
+        SNode requiredJarFolder=requireJarFolder(artifacts,SLinkOperations.getTarget(SLinkOperations.getTarget(SNodeOperations.cast(classpath,"jetbrains.mps.build.structure.BuildSource_JavaLibraryExternalJarFolder"),"extFolder",true),"folder",false),contextNode);
+        if (requiredJarFolder != null) {
+          ListSequence.fromList(result).addSequence(ListSequence.fromList(SLinkOperations.getTargets(requiredJarFolder,"children",true)));
+        }
+      }
+ else {
+        ListSequence.fromList(result).clear();
+        break;
+      }
+    }
+    if (ListSequence.fromList(result).isNotEmpty()) {
+      artifacts.needsFetch(contextNode);
+      return result;
+    }
+  }
   SNode artifact=SNodeOperations.as(artifacts.findArtifact(target),"jetbrains.mps.build.structure.BuildLayout_Node");
   if (artifact != null) {
     artifacts.needsFetch(contextNode);
