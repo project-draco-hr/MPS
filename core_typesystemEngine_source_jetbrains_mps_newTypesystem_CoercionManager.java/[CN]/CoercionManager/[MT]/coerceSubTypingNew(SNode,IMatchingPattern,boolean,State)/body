@@ -1,6 +1,7 @@
 {
   if (subtype == null)   return null;
   if (pattern.match(subtype))   return subtype;
+  if (!CoerceUtil.canBeCoerced(subtype,pattern.getConceptFQName()))   return null;
   if ("jetbrains.mps.lang.typesystem.structure.MeetType".equals(subtype.getConceptFqName())) {
     List<SNode> children=subtype.getChildren("argument");
     for (    SNode child : children) {
@@ -17,39 +18,19 @@
   }
   return NodeReadAccessCasterInEditor.runReadTransparentAction(new Computable<SNode>(){
     public SNode compute(){
-      SubtypingCache cache=myTypeChecker.getSubtypingCache();
-      if (cache != null) {
-        Pair<Boolean,SNode> nodePair=cache.getCoerced(subtype,pattern,isWeak);
-        if (nodePair.o1) {
-          return nodePair.o2;
-        }
-      }
-      cache=myTypeChecker.getGlobalSubtypingCache();
-      if (cache != null) {
-        Pair<Boolean,SNode> nodePair=cache.getCoerced(subtype,pattern,isWeak);
-        if (nodePair.o1) {
-          return nodePair.o2;
-        }
+      Pair<Boolean,SNode> answer=getCoerceCacheAnswer(subtype,pattern,isWeak);
+      if (answer != null && answer.o1) {
+        return answer.o2;
       }
       CoercionMatcher coercionMatcher=new CoercionMatcher(pattern);
-      boolean success=mySubTyping.searchInSuperTypes(subtype,coercionMatcher,null,isWeak,null);
-      SNode result=null;
-      if (success) {
-        List<SNode> nodes=coercionMatcher.getResults();
-        if (nodes.size() > 1) {
-          nodes=mySubTyping.eliminateSuperTypes(nodes);
-        }
-        if (!nodes.isEmpty()) {
-          result=nodes.get(0);
-        }
-      }
+      SNode result=searchInSuperTypes(subtype,coercionMatcher,isWeak);
       SubtypingCache subtypingCache=myTypeChecker.getSubtypingCache();
       if (subtypingCache != null) {
-        subtypingCache.addCacheEntry(subtype,pattern,result,isWeak);
+        subtypingCache.cacheCoerce(subtype,pattern,result,isWeak);
       }
       subtypingCache=myTypeChecker.getGlobalSubtypingCache();
       if (subtypingCache != null) {
-        subtypingCache.addCacheEntry(subtype,pattern,result,isWeak);
+        subtypingCache.cacheCoerce(subtype,pattern,result,isWeak);
       }
       return result;
     }
