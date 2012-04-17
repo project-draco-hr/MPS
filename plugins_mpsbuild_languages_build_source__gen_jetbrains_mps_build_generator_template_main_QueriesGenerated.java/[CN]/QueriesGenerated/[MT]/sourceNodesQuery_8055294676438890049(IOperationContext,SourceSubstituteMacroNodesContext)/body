@@ -1,0 +1,43 @@
+{
+  Iterable<String> folders=ListSequence.fromList(SLinkOperations.getTargets(_context.getNode(),"sources",true)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.structure.BuildSource_JavaFiles");
+    }
+  }
+).select(new ISelector<SNode,String>(){
+    public String select(    SNode it){
+      return BuildSourcePath_Behavior.call_getRelativePath_5481553824944787371(SLinkOperations.getTarget(SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.build.structure.BuildSource_JavaFiles"),"resset",true),"path",true));
+    }
+  }
+);
+  folders=Sequence.fromIterable(folders).concat(ListSequence.fromList(SLinkOperations.getTargets(_context.getNode(),"sources",true)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.structure.BuildSource_JavaContentRoot");
+    }
+  }
+).translate(new ITranslator2<SNode,String>(){
+    public Iterable<String> translate(    SNode it){
+      SNode croot=SNodeOperations.cast(it,"jetbrains.mps.build.structure.BuildSource_JavaContentRoot");
+      final String relativePath=BuildSourcePath_Behavior.call_getRelativePath_5481553824944787371(SLinkOperations.getTarget(croot,"basePath",true));
+      return ListSequence.fromList(SLinkOperations.getTargets(croot,"folders",true)).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode ifolder){
+          return SPropertyOperations.hasValue(ifolder,"kind","source",null);
+        }
+      }
+).select(new ISelector<SNode,String>(){
+        public String select(        SNode ifolder){
+          return relativePath + "/" + SPropertyOperations.getString(ifolder,"relativePath");
+        }
+      }
+);
+    }
+  }
+));
+  List<SNode> result=new ArrayList<SNode>();
+  for (  String fname : folders) {
+    SNode loopnode=SModelOperations.createNewNode(_context.getOutputModel(),"jetbrains.mps.lang.core.structure.BaseConcept",null);
+    loopnode.setProperty("folderName",fname,false);
+    ListSequence.fromList(result).addElement(loopnode);
+  }
+  return result;
+}
