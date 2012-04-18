@@ -1,14 +1,16 @@
 {
-  Set<IModule> modules=new LinkedHashSet<IModule>();
-  Set<Language> usedLanguages=new LinkedHashSet<Language>();
-  for (  IModule m : myStart) {
-    m.getDependenciesManager().collectAllCompileTimeDependencies(modules,usedLanguages);
+  Collection<IModule> modules=new GlobalModuleDependenciesManager(myStart).getModules(Deptype.COMPILE);
+  Set<IModule> fromGenerators=new HashSet<IModule>();
+  for (  IModule m : modules) {
+    if (!(m instanceof Language))     continue;
+    for (    Generator generator : ((Language)m).getGenerators()) {
+      if (modules.contains(generator))       continue;
+      fromGenerators.addAll(new GlobalModuleDependenciesManager(generator).getModules(Deptype.COMPILE));
+    }
   }
+  modules.addAll(fromGenerators);
   for (  IModule module : modules) {
     addPart(module.getClassPathItem());
-  }
-  for (  Language l : usedLanguages) {
-    addPart(l.getLanguageRuntimeClasspath());
   }
   CompositeClassPathItem result=new CompositeClassPathItem();
   if (includeStubSolutions) {
