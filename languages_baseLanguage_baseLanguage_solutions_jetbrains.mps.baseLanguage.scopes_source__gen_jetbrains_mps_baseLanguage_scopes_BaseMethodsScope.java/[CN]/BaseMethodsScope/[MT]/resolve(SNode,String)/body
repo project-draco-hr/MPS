@@ -1,0 +1,28 @@
+{
+  List<SNode> methods=Sequence.fromIterable(this.getAvailableElements(refText)).select(new ISelector<SNode,SNode>(){
+    public SNode select(    SNode it){
+      return SNodeOperations.cast(it,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration");
+    }
+  }
+).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return refText.equals(SPropertyOperations.getString(it,"name"));
+    }
+  }
+).toListSequence();
+  if (methods.isEmpty()) {
+    return null;
+  }
+  if (methods.size() == 1) {
+    return ListSequence.fromList(methods).first();
+  }
+  if (!(SNodeOperations.isInstanceOf(contextNode,"jetbrains.mps.baseLanguage.structure.IMethodCall"))) {
+    return null;
+  }
+  List<SNode> actualArguments=SLinkOperations.getTargets((SNodeOperations.cast(contextNode,"jetbrains.mps.baseLanguage.structure.IMethodCall")),"actualArgument",true);
+  methods=MethodResolveUtil.selectByParmCount(methods,actualArguments);
+  if (methods.size() == 1) {
+    return ListSequence.fromList(methods).first();
+  }
+  return resolveMethod(contextNode,refText,actualArguments,methods);
+}
