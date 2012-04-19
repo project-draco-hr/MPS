@@ -1,0 +1,42 @@
+{
+  SReference reference=classifierRef;
+  if (reference == null) {
+    textGen.foundError("null reference");
+    return null;
+  }
+  String shortName="";
+  String packageName="";
+  if (reference instanceof DynamicReference) {
+    shortName=reference.getResolveInfo();
+    if (shortName.startsWith("[")) {
+      return MultiTuple.<String,String>from(shortName.substring(1,shortName.lastIndexOf("]")).trim(),shortName.substring(shortName.lastIndexOf("]") + 1).trim());
+    }
+ else {
+      final SModelReference modelReference=reference.getTargetSModelReference();
+      if (modelReference != null) {
+        packageName=modelReference.getLongName();
+        LOG.warning("generating classifier reference with target model reference " + modelReference + " @ "+ classifierRef);
+      }
+ else {
+        int lastDot=shortName.lastIndexOf('.');
+        if (lastDot >= 0) {
+          packageName=shortName.substring(0,lastDot);
+          shortName=shortName.substring(lastDot + 1).replace('$','.');
+        }
+ else {
+          SModelReference sModelReference=classifierRef.getSourceNode().getModel().getSModelReference();
+          packageName=(sModelReference != null ? sModelReference.getLongName() : "");
+        }
+      }
+      return MultiTuple.<String,String>from(packageName,shortName);
+    }
+  }
+ else {
+    SNode targetNode=reference.getTargetNodeSilently();
+    if (targetNode == null) {
+      textGen.foundError();
+      return null;
+    }
+    return MultiTuple.<String,String>from(targetNode.getModel().getSModelReference().getLongName(),(SNodeOperations.isInstanceOf(targetNode,"jetbrains.mps.baseLanguage.structure.Classifier") ? SPropertyOperations.getString(SNodeOperations.cast(targetNode,"jetbrains.mps.baseLanguage.structure.Classifier"),"nestedName") : targetNode.getResolveInfo()));
+  }
+}
