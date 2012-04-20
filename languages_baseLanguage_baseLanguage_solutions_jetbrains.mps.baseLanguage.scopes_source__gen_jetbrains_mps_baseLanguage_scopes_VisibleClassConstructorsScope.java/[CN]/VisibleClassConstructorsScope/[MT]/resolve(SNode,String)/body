@@ -1,0 +1,26 @@
+{
+  SNode classifier=SNodeOperations.cast(classifiers.resolve(contextNode,refText),"jetbrains.mps.baseLanguage.structure.Classifier");
+  if (classifier == null || !(SNodeOperations.isInstanceOf(classifier,"jetbrains.mps.baseLanguage.structure.ClassConcept"))) {
+    return null;
+  }
+  List<SNode> constructors=SLinkOperations.getTargets(SNodeOperations.cast(classifier,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"constructor",true);
+  if ((int)ListSequence.fromList(constructors).count() == 1) {
+    return ListSequence.fromList(constructors).first();
+  }
+  if (!(SNodeOperations.isInstanceOf(contextNode,"jetbrains.mps.baseLanguage.structure.ClassCreator"))) {
+    return null;
+  }
+  List<SNode> actualArguments=SLinkOperations.getTargets(SNodeOperations.cast(contextNode,"jetbrains.mps.baseLanguage.structure.ClassCreator"),"actualArgument",true);
+  List<SNode> typeParameters=SLinkOperations.getTargets(SNodeOperations.cast(contextNode,"jetbrains.mps.baseLanguage.structure.ClassCreator"),"typeParameter",true);
+  constructors=(List<SNode>)MethodResolveUtil.selectByParmCount(constructors,actualArguments);
+  if (constructors.size() == 1) {
+    return ListSequence.fromList(constructors).first();
+  }
+  Iterator<SNode> typeParms=(Iterator<SNode>)typeParameters.iterator();
+  Iterator<SNode> typeVars=(Iterator<SNode>)SLinkOperations.getTargets(classifier,"typeVariableDeclaration",true).iterator();
+  Map<SNode,SNode> typeByTypeVar=new HashMap<SNode,SNode>();
+  while (typeParms.hasNext() && typeVars.hasNext()) {
+    typeByTypeVar.put(typeVars.next(),typeParms.next());
+  }
+  return MethodResolveUtil.chooseByParameterType(constructors,actualArguments,typeByTypeVar);
+}
