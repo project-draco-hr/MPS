@@ -1,0 +1,59 @@
+{
+  int threads=maxThreads;
+  final RuntimeException[] rex=new RuntimeException[maxThreads];
+  final CyclicBarrier cbstart=new CyclicBarrier(threads);
+  final CyclicBarrier cbend=new CyclicBarrier(threads + 1);
+  while (--threads >= 0) {
+    final int reidx=threads;
+    new Thread(new Runnable(){
+      public void run(){
+        try {
+          cbstart.await();
+        }
+ catch (        InterruptedException ignore) {
+        }
+catch (        BrokenBarrierException ignore) {
+        }
+        try {
+          runnable.run();
+        }
+ catch (        RuntimeException re) {
+          rex[reidx]=re;
+        }
+catch (        Error er) {
+          rex[reidx]=new RuntimeException(er);
+        }
+        try {
+          cbend.await();
+        }
+ catch (        InterruptedException ignore) {
+        }
+catch (        BrokenBarrierException ignore) {
+        }
+      }
+    }
+).start();
+  }
+  try {
+    cbend.await();
+  }
+ catch (  InterruptedException ignore) {
+  }
+catch (  BrokenBarrierException ignore) {
+  }
+  List<RuntimeException> rexlist=new ArrayList<RuntimeException>();
+  for (int i=rex.length - 1; i >= 0; --i) {
+    if (rex[i] != null) {
+      rexlist.add(rex[i]);
+    }
+  }
+  if (rexlist.size() == 1) {
+    throw rexlist.get(0);
+  }
+  if (rexlist.size() > 1) {
+    for (    RuntimeException re : rexlist) {
+      re.printStackTrace();
+    }
+    throw new CompositeRuntimeException(rexlist);
+  }
+}
