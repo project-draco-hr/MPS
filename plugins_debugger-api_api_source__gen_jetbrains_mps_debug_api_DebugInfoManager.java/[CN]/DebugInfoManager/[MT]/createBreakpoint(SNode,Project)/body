@@ -1,10 +1,9 @@
 {
-  for (  String concept : myDebuggableConcepts.keySet()) {
-    if (SNodeOperations.isInstanceOf(node,concept)) {
-      return createBreakpoint(concept,node,project);
-    }
+  ILocationBreakpoint breakpoint=createBreakpoint(SNodeOperations.getConceptDeclaration(node),node,project);
+  if (breakpoint != null) {
+    return breakpoint;
   }
-  DebugInfo debugInfo=TraceInfoCache.getInstance().get(node.getModel().getModelDescriptor());
+  DebugInfo debugInfo=TraceInfoCache.getInstance().get(SNodeOperations.getModel(node).getModelDescriptor());
   if (debugInfo != null) {
     TraceablePositionInfo position=debugInfo.getPositionForNode(node.getId());
     if (position != null) {
@@ -12,13 +11,8 @@
       if (conceptFqName == null) {
         return null;
       }
-      List<SNode> superConcepts=SConceptOperations.getAllSuperConcepts(SConceptOperations.findConceptDeclaration(conceptFqName),true);
-      for (      SNode superConcept : superConcepts) {
-        String superConceptFqName=NameUtil.nodeFQName(superConcept);
-        if (myDebuggableConcepts.keySet().contains(superConceptFqName)) {
-          return createBreakpoint(superConceptFqName,node,project);
-        }
-      }
+      SNode concept=(SNode)SModelUtil.findConceptDeclaration(conceptFqName,ProjectHelper.toMPSProject(project).getScope());
+      createBreakpoint(concept,node,project);
     }
   }
   return null;
