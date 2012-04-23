@@ -1,27 +1,26 @@
 {
   File tmpDir=FileUtil.createTmpDir();
-  getFile().delete();
+  FileUtil.delete(getFile());
   Iterable<String> classpathDirs=getClasspath(false);
-  for (  String classpathDir : Sequence.fromIterable(classpathDirs).where(new IWhereFilter<String>(){
+  Iterable<String> classPathJars=Sequence.fromIterable(classpathDirs).where(new IWhereFilter<String>(){
     public boolean accept(    String cpd){
       return cpd.endsWith(".jar");
     }
   }
-)) {
-    FileUtil.copyFile(new File(classpathDir),tmpDir);
-  }
-  if (Sequence.fromIterable(classpathDirs).isEmpty()) {
-    FileUtil.write(new File(tmpDir,"dummy.txt"),new byte[0]);
-  }
+);
+  internalPack(classPathJars,tmpDir,false);
   if (InternalFlag.isInternalMode()) {
     Iterable<String> classpathInternal=Sequence.fromIterable(classpathDirs).where(new IWhereFilter<String>(){
-      public boolean accept(      String cpi){
-        return !(cpi.endsWith(".jar"));
+      public boolean accept(      String cpd){
+        return !(cpd.endsWith(".jar"));
       }
     }
 );
-    FileUtil.zip(InternalRuntimePacker.pack(classpathInternal),new File(tmpDir + File.separator + InternalRuntimePacker.getPath()));
+    File tmpDirRT=FileUtil.createTmpDir();
+    internalPack(classpathInternal,tmpDirRT,true);
+    FileUtil.zip(tmpDirRT,new File(tmpDir + File.separator + MERGER_RT));
+    FileUtil.delete(tmpDirRT);
   }
   FileUtil.copyDir(tmpDir,getFile());
-  tmpDir.delete();
+  FileUtil.delete(tmpDir);
 }
