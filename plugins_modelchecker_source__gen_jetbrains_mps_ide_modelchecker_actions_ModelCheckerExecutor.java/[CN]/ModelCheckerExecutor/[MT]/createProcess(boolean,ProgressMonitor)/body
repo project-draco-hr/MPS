@@ -1,0 +1,42 @@
+{
+  return new Runnable(){
+    public void run(){
+      IResultProvider resultProvider=FindUtils.makeProvider(new ModelCheckerIssueFinder(){
+        @Override protected List<SpecificChecker> getSpecificCheckers(){
+          return getMySpecificCheckers();
+        }
+      }
+);
+      final ProgressMonitor promon=getOrCreateProgressMonitor(monitor);
+      promon.start("Executing Model Fixes",200);
+      SearchQuery searchQuery=new SearchQuery(new ModulesHolder(modules,context),getMPSProject().getScope());
+      SearchResults searchResults=FindUtils.getSearchResults(promon.subTask(100),searchQuery,resultProvider);
+      searchResults.removeDuplicates();
+      List<ModelCheckerIssue> issuesToFix=ListSequence.fromList(((List<SearchResult<ModelCheckerIssue>>)searchResults.getSearchResults())).select(new ISelector<SearchResult<ModelCheckerIssue>,ModelCheckerIssue>(){
+        public ModelCheckerIssue select(        SearchResult<ModelCheckerIssue> sr){
+          return sr.getObject();
+        }
+      }
+).where(new IWhereFilter<ModelCheckerIssue>(){
+        public boolean accept(        ModelCheckerIssue sro){
+          return sro instanceof ModelCheckerIssue.NodeIssue && sro.isFixable();
+        }
+      }
+).toListSequence();
+      ModelCheckerController controller=new ModelCheckerController(){
+        public void runCommand(        Runnable cmd){
+          if (spawnCommands) {
+            ModelAccess.instance().runCommandInEDT(cmd,getMPSProject());
+          }
+ else {
+            cmd.run();
+          }
+        }
+      }
+;
+      controller.process(promon.subTask(100),issuesToFix);
+      promon.done();
+    }
+  }
+;
+}

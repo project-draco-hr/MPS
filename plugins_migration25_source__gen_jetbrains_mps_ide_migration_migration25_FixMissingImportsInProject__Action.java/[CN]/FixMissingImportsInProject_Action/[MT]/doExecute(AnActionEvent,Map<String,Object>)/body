@@ -1,0 +1,35 @@
+{
+  try {
+    Queue<IModule> modules=QueueSequence.fromQueueWithValues(new LinkedList<IModule>(),((Project)MapSequence.fromMap(_params).get("project")).getComponent(MPSProject.class).getModules());
+    while (QueueSequence.fromQueue(modules).isNotEmpty()) {
+      IModule module=QueueSequence.fromQueue(modules).removeFirstElement();
+      if (module.isPackaged()) {
+        continue;
+      }
+      if (module instanceof Language) {
+        QueueSequence.fromQueue(modules).addSequence(CollectionSequence.fromCollection(((Language)module).getGenerators()));
+      }
+      for (      SModelDescriptor model : ListSequence.fromList(module.getOwnModelDescriptors())) {
+        if (!(SModelStereotype.isUserModel(model))) {
+          continue;
+        }
+        if (!(model instanceof EditableSModelDescriptor)) {
+          continue;
+        }
+        new MissingDependenciesFixer(model).fix(false);
+        module.invalidateCaches();
+      }
+    }
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        ClassLoaderManager.getInstance().reloadAll(new EmptyProgressMonitor());
+      }
+    }
+);
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "FixMissingImportsInProject",t);
+    }
+  }
+}
