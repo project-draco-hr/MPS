@@ -1,0 +1,63 @@
+{
+  try {
+    final Queue<IModule> modules=QueueSequence.fromQueueWithValues(new LinkedList<IModule>(),((Project)MapSequence.fromMap(_params).get("project")).getComponent(MPSProject.class).getModules());
+    final List<SModelDescriptor> modelsToFix=ListSequence.fromList(new ArrayList<SModelDescriptor>());
+    final CountDownLatch latch=new CountDownLatch(1);
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        try {
+          while (QueueSequence.fromQueue(modules).isNotEmpty()) {
+            IModule module=QueueSequence.fromQueue(modules).removeFirstElement();
+            if (module.isPackaged()) {
+              continue;
+            }
+            if (module instanceof Language) {
+              QueueSequence.fromQueue(modules).addSequence(CollectionSequence.fromCollection(((Language)module).getGenerators()));
+            }
+            final IScope moduleScope=module.getScope();
+            for (            SModelDescriptor model : ListSequence.fromList(module.getOwnModelDescriptors())) {
+              if (!(SModelStereotype.isUserModel(model))) {
+                continue;
+              }
+              if (!(model instanceof EditableSModelDescriptor)) {
+                continue;
+              }
+              List<SModelReference> imports=SModelOperations.getImportedModelUIDs(model.getSModel());
+              if (ListSequence.fromList(imports).any(new IWhereFilter<SModelReference>(){
+                public boolean accept(                SModelReference imp){
+                  return moduleScope.getModelDescriptor(imp) == null;
+                }
+              }
+)) {
+                ListSequence.fromList(modelsToFix).addElement(model);
+              }
+            }
+          }
+        }
+  finally {
+          latch.countDown();
+        }
+      }
+    }
+);
+    try {
+      latch.await();
+    }
+ catch (    InterruptedException ignore) {
+    }
+    if (ListSequence.fromList(modelsToFix).isNotEmpty()) {
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          new OptimizeImportsHelper(((IOperationContext)MapSequence.fromMap(_params).get("context"))).optimizeModelsImports(modelsToFix);
+          SModelRepository.getInstance().saveAll();
+        }
+      }
+);
+    }
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "OptimizeImportsInProject",t);
+    }
+  }
+}
