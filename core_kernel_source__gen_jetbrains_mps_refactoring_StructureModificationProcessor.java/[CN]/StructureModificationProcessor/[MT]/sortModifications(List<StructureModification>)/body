@@ -1,0 +1,40 @@
+{
+  Map<Integer,Set<Integer>> graph=MapSequence.fromMap(new HashMap<Integer,Set<Integer>>());
+  lCompare:   for (int i=0; i < ListSequence.fromList(list).count(); i++) {
+    Set<Integer> cur=SetSequence.fromSet(new HashSet<Integer>());
+    for (int j=0; j < i; j++) {
+      StructureModification.Relation rel=StructureModification.compare(ListSequence.fromList(list).getElement(j),ListSequence.fromList(list).getElement(i));
+      if (rel == StructureModification.Relation.EQUAL) {
+        continue lCompare;
+      }
+      if (rel == StructureModification.Relation.BEFORE) {
+        SetSequence.fromSet(cur).addElement(j);
+      }
+      if (rel == StructureModification.Relation.AFTER) {
+        SetSequence.fromSet(MapSequence.fromMap(graph).get(j)).addElement(i);
+      }
+    }
+    MapSequence.fromMap(graph).put(i,cur);
+  }
+  List<StructureModification> result=ListSequence.fromList(new ArrayList<StructureModification>());
+  lfind:   while (MapSequence.fromMap(graph).isNotEmpty()) {
+    for (    final int k : SetSequence.fromSet(MapSequence.fromMap(graph).keySet())) {
+      if (SetSequence.fromSet(MapSequence.fromMap(graph).get(k)).isEmpty()) {
+        ListSequence.fromList(result).addElement(ListSequence.fromList(list).getElement(k));
+        MapSequence.fromMap(graph).removeKey(k);
+        Sequence.fromIterable(MapSequence.fromMap(graph).values()).visitAll(new IVisitor<Set<Integer>>(){
+          public void visit(          Set<Integer> it){
+            SetSequence.fromSet(it).removeElement(k);
+          }
+        }
+);
+        continue lfind;
+      }
+    }
+    if (log.isErrorEnabled()) {
+      log.error("Loop found in applicable refactorings for " + myModel + "");
+    }
+    break;
+  }
+  return result;
+}
