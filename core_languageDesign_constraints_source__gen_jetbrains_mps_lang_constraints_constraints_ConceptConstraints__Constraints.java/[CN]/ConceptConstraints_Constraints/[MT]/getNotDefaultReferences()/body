@@ -7,9 +7,17 @@
     @Nullable @Override public ReferenceScopeProvider getScopeProvider(){
       return new BaseReferenceScopeProvider(){
         @Override public Object createSearchScopeOrListOfNodes(        final IOperationContext operationContext,        final ReferenceConstraintsContext _context){
-          SNode concept=SLinkOperations.getTarget(SNodeOperations.getAncestor(_context.getReferenceNode(),"jetbrains.mps.lang.constraints.structure.ConceptConstraints",true,false),"concept",false);
-          List<SNode> concepts=SConceptOperations.getAllSubConcepts(concept,_context.getModel(),operationContext.getScope());
-          return concepts;
+          Language currentLanguage=Language.getLanguageForLanguageAspect(_context.getModel().getModelDescriptor());
+          if (currentLanguage == null) {
+            return ListSequence.fromList(new ArrayList<SNode>());
+          }
+          List<SNode> subConcepts=(List<SNode>)SConceptOperations.getAllSubConcepts(SLinkOperations.getTarget(SNodeOperations.as(_context.getReferenceNode(),"jetbrains.mps.lang.constraints.structure.ConceptConstraints"),"concept",false),Collections.singleton(currentLanguage));
+          return ListSequence.fromList(subConcepts).where(new IWhereFilter<SNode>(){
+            public boolean accept(            SNode it){
+              return !(SConceptPropertyOperations.getBoolean(it,"abstract"));
+            }
+          }
+);
         }
         @Override public SNodePointer getSearchScopeValidatorNode(){
           return breakingNode_guz8cy_a0a1a0a0a1a0b0a1a3;
