@@ -1,0 +1,33 @@
+{
+  Set<UsageTarget> usageTargets=new LinkedHashSet<UsageTarget>();
+  UsageViewManager viewManager=UsageViewManager.getInstance(myProject);
+  for (  Object searchedNode : searchResults.getAliveNodes()) {
+    if (searchedNode instanceof SNode) {
+      usageTargets.add(new NodeUsageTarget((SNode)searchedNode,myProject));
+    }
+  }
+  Set<Usage> usages=new LinkedHashSet<Usage>();
+  for (  SearchResult searchResult : (List<SearchResult>)searchResults.getAliveResults()) {
+    Object usage=searchResult.getObject();
+    if (usage instanceof SNode) {
+      usages.add(new NodeUsage((SNode)usage,myProject));
+    }
+  }
+  final UsageViewPresentation presentation=createPresentation(usages.toArray(new Usage[usages.size()]));
+  usageView=viewManager.showUsages(usageTargets.toArray(new UsageTarget[usageTargets.size()]),usages.toArray(new Usage[usages.size()]),presentation);
+  usageView.addPerformOperationAction(new Runnable(){
+    @Override public void run(){
+      callback.performAction(RefactoringViewItemImpl.this);
+    }
+  }
+,name,"",RefactoringBundle.message("usageView.doAction"));
+  myDoesGenerateModels=hasModelsToGenerate;
+  if (myDoesGenerateModels || myRefactoringContext.getRefactoring() instanceof ILoggableRefactoring) {
+    usageView.addButtonToLowerPane(new Runnable(){
+      @Override public void run(){
+        showRefactoringOptions(hasModelsToGenerate);
+      }
+    }
+,"Set Refactoring Options");
+  }
+}
