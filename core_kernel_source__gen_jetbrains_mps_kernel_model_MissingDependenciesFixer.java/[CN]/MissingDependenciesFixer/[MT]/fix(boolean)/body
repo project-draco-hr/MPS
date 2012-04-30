@@ -1,2 +1,65 @@
 {
+  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+    public void run(){
+      boolean wereChanges=false;
+      IModule module=myModelDescriptor.getModule();
+      if (module == null) {
+        LOG.error("Module is null: " + myModelDescriptor.getSModelReference().toString());
+        return;
+      }
+      IScope moduleScope=module.getScope();
+      ModuleDescriptor md=module.getModuleDescriptor();
+      for (      SModelReference modelImport : SModelOperations.getImportedModelUIDs(myModelDescriptor.getSModel())) {
+        if (moduleScope.getModelDescriptor(modelImport) != null) {
+          continue;
+        }
+        SModelDescriptor sm=GlobalScope.getInstance().getModelDescriptor(modelImport);
+        if (sm == null) {
+          SModelFqName fqName=modelImport.getSModelFqName();
+          sm=(fqName != null ? GlobalScope.getInstance().getModelDescriptor(fqName) : null);
+          if (sm == null) {
+            continue;
+          }
+        }
+        IModule anotherModule=sm.getModule();
+        if (anotherModule == null || anotherModule == module) {
+          continue;
+        }
+        Dependency dep=new Dependency();
+        dep.setModuleRef(anotherModule.getModuleReference());
+        md.getDependencies().add(dep);
+        wereChanges=true;
+      }
+      for (      ModuleReference namespace : CollectionUtil.union(myModelDescriptor.getSModel().importedLanguages(),myModelDescriptor.getSModel().engagedOnGenerationLanguages())) {
+        if (moduleScope.getLanguage(namespace) != null) {
+          continue;
+        }
+        Language lang=GlobalScope.getInstance().getLanguage(namespace);
+        if (lang == null) {
+          continue;
+        }
+        ModuleReference ref=ModuleReference.fromString(namespace.toString());
+        md.getUsedLanguages().add(ref);
+        wereChanges=true;
+      }
+      for (      ModuleReference devKitNamespace : myModelDescriptor.getSModel().importedDevkits()) {
+        if (moduleScope.getDevKit(devKitNamespace) != null) {
+          continue;
+        }
+        DevKit devKit=GlobalScope.getInstance().getDevKit(devKitNamespace);
+        if (devKit == null) {
+          continue;
+        }
+        ModuleReference ref=ModuleReference.fromString(devKitNamespace.toString());
+        md.getUsedDevkits().add(ref);
+        wereChanges=true;
+      }
+      if (wereChanges) {
+        module.setModuleDescriptor(md,reload);
+        module.invalidateCaches();
+        module.save();
+      }
+    }
+  }
+);
 }
