@@ -4,18 +4,21 @@
     if (c != null)     return c;
     byte[] bytes=myModule.findClassBytes(name);
     if (bytes != null) {
-      definePackageIfNecessary(name);
+      String pack=NameUtil.namespaceFromLongName(name);
+      if (getPackage(pack) == null) {
+        definePackage(pack,null,null,null,null,null,null,null);
+      }
       ClassLoaderManager.getInstance().classLoaded(name,((ClassLoadingModule)myModule).getModuleReference());
       return defineClass(name,bytes,0,bytes.length,ProtectionDomainUtil.loadedClassDomain());
     }
   }
-  if (dependencies) {
+  if (!selfOnly) {
     Set<IClassLoadingModule> mayContainNonOwned=new HashSet<IClassLoadingModule>();
     for (    IClassLoadingModule m : myModule.getClassLoadingDependencies()) {
       if (m.equals(myModule))       continue;
       if (m.canLoad() && m.canLoadFromSelf() && m.canFindClass(name)) {
         try {
-          return m.getClassLoader().loadClass(name,false,false,false);
+          return m.getClassLoader().loadClass(name,false,true);
         }
  catch (        ClassNotFoundException e) {
         }
@@ -26,12 +29,12 @@
     }
     for (    IClassLoadingModule m : mayContainNonOwned) {
       try {
-        return m.getClassLoader().loadClass(name,false,false,false);
+        return m.getClassLoader().loadClass(name,false,true);
       }
  catch (      ClassNotFoundException e) {
       }
     }
   }
-  if (!loadFromApp && getParent() == ModuleClassLoader.class.getClassLoader())   throw new ClassNotFoundException(name);
+  if (!selfOnly && getParent() == ModuleClassLoader.class.getClassLoader())   throw new ClassNotFoundException(name);
   return getParent().loadClass(name);
 }
