@@ -1,4 +1,25 @@
 {
+  SModelReference targetModelReference=model.getSModelReference();
+  if (refText.startsWith("[")) {
+    String[] modelNameAndTheRest=refText.split("]");
+    if (modelNameAndTheRest.length > 1 || (modelNameAndTheRest.length == 1 && refText.endsWith("]"))) {
+      refText=refText.substring(refText.indexOf("]") + 1).trim();
+      String modelName=modelNameAndTheRest[0].substring(1).trim();
+      if (modelName.length() > 0) {
+        if (!(modelName.equals(model.getLongName()))) {
+          String stereo=SModelStereotype.getStubStereotypeForId(LanguageID.JAVA);
+          Iterable<IModule> modules=model.getModelDescriptor().getModule().getScope().getVisibleModules();
+          SModelId id=StubMigrationHelper.convertModelUIDInScope(stereo + "#" + modelName,Sequence.fromIterable(modules).translate(new ITranslator2<IModule,SModelDescriptor>(){
+            public Iterable<SModelDescriptor> translate(            IModule it){
+              return it.getOwnModelDescriptors();
+            }
+          }
+));
+          targetModelReference=new SModelReference(new SModelFqName(modelName,stereo),id);
+        }
+      }
+    }
+  }
   String classname=refText;
   int dotIndex=classname.lastIndexOf(".");
   if (dotIndex >= 0) {
@@ -26,7 +47,6 @@
     classname=classname.substring(dotIndex + 1).replace('$','.');
     return resolveClass(package_,null,classname);
   }
-  SModelReference targetModelReference=model.getSModelReference();
   if (targetModelReference.getSModelId() != null) {
     SModelDescriptor targetModel=scope.getModelDescriptor(targetModelReference);
     if (targetModel == null) {
