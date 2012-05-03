@@ -1,7 +1,7 @@
 {
   Iterable<SNode> dependencies=Sequence.fromIterable(dependencies(module)).where(new IWhereFilter<SNode>(){
     public boolean accept(    SNode it){
-      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule") && SPropertyOperations.getBoolean(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule"),"reexport") == reexport;
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule") && (!(reexportOnly) || SPropertyOperations.getBoolean(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule"),"reexport"));
     }
   }
 ).select(new ISelector<SNode,SNode>(){
@@ -10,20 +10,18 @@
     }
   }
 );
-  if (reexport) {
-    dependencies=Sequence.fromIterable(dependencies).concat(Sequence.fromIterable(dependencies(module)).where(new IWhereFilter<SNode>(){
-      public boolean accept(      SNode it){
-        return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyExtendLanguage");
-      }
+  dependencies=Sequence.fromIterable(dependencies).concat(Sequence.fromIterable(dependencies(module)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyExtendLanguage");
     }
-).select(new ISelector<SNode,SNode>(){
-      public SNode select(      SNode it){
-        return SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyExtendLanguage"),"language",false);
-      }
-    }
-));
   }
-  if (reexport) {
+).select(new ISelector<SNode,SNode>(){
+    public SNode select(    SNode it){
+      return SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyExtendLanguage"),"language",false);
+    }
+  }
+));
+  if (reexportOnly) {
     return toOriginal(dependencies);
   }
   Iterable<SNode> solutionsFromDevkits=Sequence.fromIterable(includingExtended(usedDevkits(module))).translate(new ITranslator2<SNode,SNode>(){
