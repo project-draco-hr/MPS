@@ -1,0 +1,44 @@
+{
+  Map<String,ZipEntry> expEntries=loadEntries(expected);
+  Map<String,ZipEntry> actEntries=loadEntries(actual);
+  List<String> common=new ArrayList<String>(Sets.intersection(expEntries.keySet(),actEntries.keySet()));
+  Collections.sort(common);
+  for (  String entry : common) {
+    ZipEntry exp=expEntries.get(entry);
+    ZipEntry act=actEntries.get(entry);
+    if (exp.isDirectory() && !act.isDirectory()) {
+      status.report(path(path,"!" + entry),"file was found instead of directory");
+    }
+ else     if (!exp.isDirectory() && act.isDirectory()) {
+      status.report(path(path,"!" + entry),"directory was found instead of file");
+    }
+ else     if (!exp.isDirectory() && !act.isDirectory()) {
+      compareZipEntries(exp,expected,act,actual,path(path,"!" + entry));
+    }
+ else     if (exp.isDirectory() && act.isDirectory()) {
+    }
+ else {
+      status.report(path,"internal error");
+    }
+  }
+  expEntries.keySet().removeAll(common);
+  actEntries.keySet().removeAll(common);
+  List<String> strings=new ArrayList<String>(expEntries.keySet());
+  Collections.sort(strings);
+  ZipFoldersReporter reporter=new ZipFoldersReporter(actual);
+  for (  String s : strings) {
+    boolean isDir=expEntries.get(s).isDirectory();
+    if (isDir)     continue;
+    String entryName=reporter.report(s);
+    if (entryName != null)     absentFile(path(path,"!" + entryName),false);
+  }
+  reporter=new ZipFoldersReporter(expected);
+  strings=new ArrayList<String>(actEntries.keySet());
+  Collections.sort(strings);
+  for (  String s : strings) {
+    boolean isDir=actEntries.get(s).isDirectory();
+    if (isDir)     continue;
+    String entryName=reporter.report(s);
+    if (entryName != null)     createdFile(path(path,"!" + entryName),false);
+  }
+}
