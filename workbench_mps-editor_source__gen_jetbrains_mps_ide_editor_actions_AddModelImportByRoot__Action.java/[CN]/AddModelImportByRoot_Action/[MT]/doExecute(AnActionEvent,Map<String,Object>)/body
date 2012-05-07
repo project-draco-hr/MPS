@@ -1,0 +1,43 @@
+{
+  try {
+    final Wrappers._T<String> initialText=new Wrappers._T<String>("");
+    final EditorCell_Label errorLabel=AddModelImportByRoot_Action.this.getErrorCell(_params);
+    final SNode unresolvedReference=SNodeOperations.as(((SNode)MapSequence.fromMap(_params).get("node")),"jetbrains.mps.baseLanguage.structure.UnresolvedNameReference");
+    if (errorLabel != null) {
+      initialText.value=errorLabel.getRenderedText();
+    }
+ else     if (unresolvedReference != null) {
+      initialText.value=SPropertyOperations.getString(unresolvedReference,"resolveName");
+    }
+    ImportHelper.addModelImportByRoot(((Project)MapSequence.fromMap(_params).get("project")),((IModule)MapSequence.fromMap(_params).get("module")),((SModelDescriptor)MapSequence.fromMap(_params).get("model")),initialText.value,new ImportHelper.ModelImportByRootCallback(){
+      public void importForRootAdded(      String rootName){
+        String textToMatch=(rootName != null ? rootName : initialText.value);
+        if (textToMatch.length() == 0) {
+          return;
+        }
+        NodeSubstituteInfo substituteInfo=null;
+        if (errorLabel != null) {
+          substituteInfo=errorLabel.getSubstituteInfo();
+        }
+ else         if (unresolvedReference != null && ((EditorContext)MapSequence.fromMap(_params).get("editorContext")) != null) {
+          substituteInfo=new DefaultChildSubstituteInfo(SNodeOperations.getParent(unresolvedReference),unresolvedReference,SNodeOperations.getContainingLinkDeclaration(unresolvedReference),((EditorContext)MapSequence.fromMap(_params).get("editorContext")));
+          substituteInfo.setOriginalText(initialText.value);
+        }
+        if (substituteInfo == null) {
+          return;
+        }
+        substituteInfo.invalidateActions();
+        List<INodeSubstituteAction> matchingActions=substituteInfo.getMatchingActions(textToMatch,true);
+        if ((int)ListSequence.fromList(matchingActions).count() == 1) {
+          ListSequence.fromList(matchingActions).first().substitute(((EditorContext)MapSequence.fromMap(_params).get("editorContext")),initialText.value);
+        }
+      }
+    }
+);
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "AddModelImportByRoot",t);
+    }
+  }
+}

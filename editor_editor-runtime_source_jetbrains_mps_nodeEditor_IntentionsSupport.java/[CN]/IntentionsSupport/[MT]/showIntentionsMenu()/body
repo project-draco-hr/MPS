@@ -1,26 +1,25 @@
 {
-  EditorContext editorContext=myEditor.getEditorContext();
+  final EditorContext editorContext=myEditor.getEditorContext();
+  ListPopup popup=ModelAccess.instance().runReadAction(new Computable<ListPopup>(){
+    public ListPopup compute(){
+      DataContext dataContext=DataManager.getInstance().getDataContext(editorContext.getNodeEditorComponent());
+      BaseGroup group=getIntentionsGroup(dataContext);
+      if (group == null) {
+        return null;
+      }
+      return JBPopupFactory.getInstance().createActionGroupPopup("Intentions",group,dataContext,JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,false);
+    }
+  }
+);
+  if (popup == null) {
+    return;
+  }
   final EditorCell selectedCell=editorContext.getSelectedCell();
   int x=selectedCell.getX();
   int y=selectedCell.getY();
   if (selectedCell instanceof EditorCell_Label) {
     y+=((EditorCell_Label)selectedCell).getHeight();
   }
-  final DataContext dataContext=DataManager.getInstance().getDataContext(editorContext.getNodeEditorComponent(),x,y);
-  ListPopup popup=ModelAccess.instance().runReadAction(new Computable<ListPopup>(){
-    public ListPopup compute(){
-      BaseGroup group=getIntentionsGroup();
-      addActionsAsIntentions(ActionManager.getInstance().getAction(MPSActions.ACTIONS_AS_INTENTIONS_GROUP),group,dataContext);
-      ListPopup popup=null;
-      if (group != null) {
-        popup=JBPopupFactory.getInstance().createActionGroupPopup("Intentions",group,dataContext,JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,false);
-      }
-      return popup;
-    }
-  }
-);
   RelativePoint relativePoint=new RelativePoint(editorContext.getNodeEditorComponent(),new Point(x,y));
-  if (popup != null) {
-    popup.show(relativePoint);
-  }
+  popup.show(relativePoint);
 }

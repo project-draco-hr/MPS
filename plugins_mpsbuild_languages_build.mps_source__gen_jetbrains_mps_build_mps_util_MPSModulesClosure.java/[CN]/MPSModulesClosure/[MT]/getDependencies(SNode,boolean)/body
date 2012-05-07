@@ -1,0 +1,44 @@
+{
+  Iterable<SNode> dependencies=Sequence.fromIterable(dependencies(module)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule") && (!(reexportOnly) || SPropertyOperations.getBoolean(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule"),"reexport"));
+    }
+  }
+).select(new ISelector<SNode,SNode>(){
+    public SNode select(    SNode it){
+      return SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule"),"module",false);
+    }
+  }
+);
+  dependencies=Sequence.fromIterable(dependencies).concat(Sequence.fromIterable(dependencies(module)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyExtendLanguage");
+    }
+  }
+).select(new ISelector<SNode,SNode>(){
+    public SNode select(    SNode it){
+      return SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyExtendLanguage"),"language",false);
+    }
+  }
+));
+  if (reexportOnly) {
+    return toOriginal(dependencies);
+  }
+  Iterable<SNode> solutionsFromDevkits=Sequence.fromIterable(includingExtended(usedDevkits(module))).translate(new ITranslator2<SNode,SNode>(){
+    public Iterable<SNode> translate(    SNode it){
+      return ListSequence.fromList(SLinkOperations.getTargets(it,"exports",true)).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode iit){
+          return SNodeOperations.isInstanceOf(iit,"jetbrains.mps.build.mps.structure.BuildMps_DevKitExportSolution");
+        }
+      }
+).select(new ISelector<SNode,SNode>(){
+        public SNode select(        SNode iit){
+          return SLinkOperations.getTarget(SNodeOperations.cast(iit,"jetbrains.mps.build.mps.structure.BuildMps_DevKitExportSolution"),"solution",false);
+        }
+      }
+);
+    }
+  }
+);
+  return toOriginal(IterableUtil.distinct(IterableUtil.merge(dependencies,solutionsFromDevkits)));
+}
