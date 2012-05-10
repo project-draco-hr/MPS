@@ -14,12 +14,18 @@
       queue.add(m);
     }
   }
+  Set<ClassLoader> processedParentClassLoaders=new HashSet<ClassLoader>();
   for (  IClassLoadingModule m : queue) {
     try {
-      return m.getClassLoader().loadFromParent(name);
+      ModuleClassLoader classLoader=m.getClassLoader();
+      if (processedParentClassLoaders.contains(classLoader.getParent())) {
+        continue;
+      }
+      processedParentClassLoaders.add(classLoader.getParent());
+      return classLoader.loadFromParent(name);
     }
  catch (    ClassNotFoundException e) {
     }
   }
-  return loadFromParent(name);
+  return processedParentClassLoaders.contains(getParent()) ? null : loadFromParent(name);
 }
