@@ -1,0 +1,34 @@
+{
+  reexpRes.add(myModule);
+  HashSet<IModule> reexported=new HashSet<IModule>();
+  HashSet<IModule> nonReexported=new HashSet<IModule>();
+  if (runtimes) {
+    collectUsedModulesAndRuntimes(reexported,nonReexported,collector);
+  }
+ else {
+    collectUsedModules(reexported,nonReexported,collector);
+  }
+  if (reexports == Reexports.ALL_WITH_RESPECT) {
+    for (    IModule m : nonReexported) {
+      collector.getOrCreateWalker(ourReexportedOtherAxis).walkAllFrom(m);
+    }
+    nonReexpRes.addAll(collector.getCollected(REEXPORTED_DEPENDENCIES_OTHER));
+  }
+  if (reexports == Reexports.DONT_RESPECT) {
+    reexported.addAll(nonReexported);
+    for (    IModule m : reexported) {
+      ((ModuleDependenciesManager)m.getDependenciesManager()).collectAllMergedUsedModules(reexpRes,collector);
+      if (runtimes) {
+        for (        IModule lang : ourUsedLanguagesAxis.next(m)) {
+          ((Language)lang).getDependenciesManager().collectAllRuntimes(reexpRes,collector);
+        }
+      }
+    }
+  }
+ else {
+    for (    IModule m : reexported) {
+      collector.getOrCreateWalker(ourReexportedAxis).walkAllFrom(m);
+    }
+    reexpRes.addAll(collector.getCollected(REEXPORTED_DEPENDENCIES));
+  }
+}
