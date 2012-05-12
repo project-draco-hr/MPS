@@ -8,20 +8,17 @@
       return new BaseReferenceScopeProvider(){
         @Override public Object createSearchScopeOrListOfNodes(        final IOperationContext operationContext,        final ReferenceConstraintsContext _context){
           SNode concept=SLinkOperations.getTarget(SNodeOperations.getAncestor(_context.getReferenceNode(),"jetbrains.mps.lang.constraints.structure.ConceptConstraints",true,false),"concept",false);
-          Language currentLanguage=SModelUtil.getDeclaringLanguage(concept);
-          Set<String> allDescendants=LanguageHierarchyCache.getInstance().getAllDescendantsOfConcept(NameUtil.nodeFQName(concept));
-          List<SNode> result=ListSequence.fromList(new ArrayList<SNode>());
-          for (          String descendant : allDescendants) {
-            SNode declaration=SNodeOperations.cast(SModelUtil.findConceptDeclaration(descendant,GlobalScope.getInstance()),"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration");
-            if (!(SNodeOperations.isInstanceOf(declaration,"jetbrains.mps.lang.structure.structure.ConceptDeclaration"))) {
-              continue;
-            }
-            Language declaringLanguage=SModelUtil.getDeclaringLanguage(declaration);
-            if (eq_guz8cy_a0d0i0a0a0a0b0a1a0b0d(currentLanguage,declaringLanguage)) {
-              ListSequence.fromList(result).addElement(SNodeOperations.cast(declaration,"jetbrains.mps.lang.structure.structure.ConceptDeclaration"));
+          Language currentLanguage=Language.getLanguageForLanguageAspect(_context.getModel().getModelDescriptor());
+          if (currentLanguage == null) {
+            return ListSequence.fromList(new ArrayList<SNode>());
+          }
+          List<SNode> subConcepts=(List<SNode>)SConceptOperations.getAllSubConcepts(SLinkOperations.getTarget(SNodeOperations.as(_context.getReferenceNode(),"jetbrains.mps.lang.constraints.structure.ConceptConstraints"),"concept",false),Collections.singleton(currentLanguage));
+          return ListSequence.fromList(subConcepts).where(new IWhereFilter<SNode>(){
+            public boolean accept(            SNode it){
+              return !(SConceptPropertyOperations.getBoolean(it,"abstract"));
             }
           }
-          return result;
+);
         }
         @Override public SNodePointer getSearchScopeValidatorNode(){
           return breakingNode_guz8cy_a0a1a0a0a1a0b0a1a3;

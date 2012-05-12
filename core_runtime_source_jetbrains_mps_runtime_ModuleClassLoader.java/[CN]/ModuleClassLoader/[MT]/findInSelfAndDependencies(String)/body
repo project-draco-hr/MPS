@@ -1,0 +1,31 @@
+{
+  Class c=loadFromSelf(name);
+  if (c != null) {
+    return c;
+  }
+  List<IClassLoadingModule> queue=new ArrayList<IClassLoadingModule>();
+  for (  IClassLoadingModule m : myModule.getClassLoadingDependencies()) {
+    if (m.equals(myModule))     continue;
+    if (!m.canLoad())     continue;
+    if (m.canLoadFromSelf() && m.canFindClass(name)) {
+      return Class.forName(name,false,m.getClassLoader());
+    }
+ else {
+      queue.add(m);
+    }
+  }
+  Set<ClassLoader> processedParentClassLoaders=new HashSet<ClassLoader>();
+  for (  IClassLoadingModule m : queue) {
+    try {
+      ModuleClassLoader classLoader=m.getClassLoader();
+      if (processedParentClassLoaders.contains(classLoader.getParent())) {
+        continue;
+      }
+      processedParentClassLoaders.add(classLoader.getParent());
+      return Class.forName(name,false,classLoader.getParent());
+    }
+ catch (    ClassNotFoundException e) {
+    }
+  }
+  return processedParentClassLoaders.contains(getParent()) ? null : loadFromParent(name);
+}
