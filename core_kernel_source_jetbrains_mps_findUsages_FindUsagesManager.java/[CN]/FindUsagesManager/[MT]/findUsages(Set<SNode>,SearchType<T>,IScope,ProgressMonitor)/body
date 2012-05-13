@@ -13,31 +13,20 @@
     }
   }
   Set<T> result=new HashSet<T>();
-  final ProgressMonitor finalMon=monitor != null ? monitor : new EmptyProgressMonitor();
-  finalMon.start("Finding usages...",changed.size() + notChanged.size());
+  if (monitor == null)   monitor=new EmptyProgressMonitor();
+  monitor.start("Finding usages...",changed.size() + notChanged.size());
   try {
-    finalMon.step("Finding in cache");
+    monitor.step("Finding in cache");
+    Computable<Boolean> progressNotifier=new MyProgressNotifier(monitor);
     if (myCacheHandler != null) {
-      result.addAll(type.findInUnchanged(nodes,notChanged,myCacheHandler,new Computable<Boolean>(){
-        public Boolean compute(){
-          finalMon.advance(1);
-          return !finalMon.isCanceled();
-        }
-      }
-));
+      result.addAll(type.findInUnchanged(nodes,notChanged,myCacheHandler,progressNotifier));
     }
-    finalMon.advance(nodes.size());
-    finalMon.step("Finding in changed models");
-    result.addAll(type.findInChanged(nodes,changed,new Computable<Boolean>(){
-      public Boolean compute(){
-        finalMon.advance(1);
-        return !finalMon.isCanceled();
-      }
-    }
-));
+    monitor.advance(nodes.size());
+    monitor.step("Finding in changed models");
+    result.addAll(type.findInChanged(nodes,changed,progressNotifier));
   }
   finally {
-    finalMon.done();
+    monitor.done();
   }
   return result;
 }
