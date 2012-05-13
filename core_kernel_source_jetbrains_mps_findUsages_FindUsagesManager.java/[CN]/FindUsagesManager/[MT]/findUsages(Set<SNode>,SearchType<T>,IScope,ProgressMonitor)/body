@@ -1,0 +1,43 @@
+{
+  Set<SModelDescriptor> changed=new THashSet<SModelDescriptor>();
+  Set<SModelDescriptor> notChanged=new THashSet<SModelDescriptor>();
+  for (  SModelDescriptor model : scope.getModelDescriptors()) {
+    if (myCacheHandler == null) {
+      changed.add(model);
+    }
+ else     if ((model instanceof EditableSModelDescriptor) && ((EditableSModelDescriptor)model).isChanged()) {
+      changed.add(model);
+    }
+ else {
+      notChanged.add(model);
+    }
+  }
+  Set<T> result=new HashSet<T>();
+  final ProgressMonitor finalMon=monitor != null ? monitor : new EmptyProgressMonitor();
+  finalMon.start("Finding usages...",changed.size() + notChanged.size());
+  try {
+    finalMon.step("Finding in cache");
+    if (myCacheHandler != null) {
+      result.addAll(type.findInUnchanged(nodes,notChanged,myCacheHandler,new Computable<Boolean>(){
+        public Boolean compute(){
+          finalMon.advance(1);
+          return !finalMon.isCanceled();
+        }
+      }
+));
+    }
+    finalMon.advance(nodes.size());
+    finalMon.step("Finding in changed models");
+    result.addAll(type.findInChanged(nodes,changed,new Computable<Boolean>(){
+      public Boolean compute(){
+        finalMon.advance(1);
+        return !finalMon.isCanceled();
+      }
+    }
+));
+  }
+  finally {
+    finalMon.done();
+  }
+  return result;
+}
