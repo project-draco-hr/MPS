@@ -37,7 +37,10 @@
     String canonicalPath=FileUtil.getCanonicalPath(path).toLowerCase();
     String suffix=descriptor.getCompileInMPS() ? "classes_gen" : "classes";
     if (canonicalPath.endsWith(suffix)) {
-      IFile parent=getDescriptorFile().getParent();
+      IFile parent=dd == null ? getDescriptorFile().getParent() : ModulesMiner.getRealDescriptorFile(getDescriptorFile().getPath(),dd);
+      if (dd != null && parent != null) {
+        parent=parent.getParent();
+      }
       IFile classes=parent != null ? parent.getDescendant(suffix) : null;
       addBundleAsModelRoot=classes != null && FileUtil.getCanonicalPath(classes.getPath()).equalsIgnoreCase(canonicalPath);
     }
@@ -54,15 +57,15 @@
     toRemove.add(sme);
   }
   descriptor.getModelRoots().removeAll(toRemove);
-  if (dd == null) {
-    if (addBundleAsModelRoot) {
-      ClassPathEntry jarEntry=new ClassPathEntry();
-      jarEntry.setPath(bundleHomeFile.getPath());
-      ModelRoot mr=jetbrains.mps.project.structure.model.ModelRootUtil.fromClassPathEntry(jarEntry);
-      if (!descriptor.getModelRoots().contains(mr)) {
-        descriptor.getModelRoots().add(mr);
-      }
+  if (addBundleAsModelRoot) {
+    ClassPathEntry jarEntry=new ClassPathEntry();
+    jarEntry.setPath(bundleHomeFile.getPath());
+    ModelRoot mr=jetbrains.mps.project.structure.model.ModelRootUtil.fromClassPathEntry(jarEntry);
+    if (!descriptor.getModelRoots().contains(mr)) {
+      descriptor.getModelRoots().add(mr);
     }
+  }
+  if (dd == null) {
     return;
   }
   for (  String jarFile : dd.getLibraries()) {
