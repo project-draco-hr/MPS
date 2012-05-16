@@ -1,4 +1,20 @@
 {
-  ModuleDependencyCollector collector=new ModuleDependencyCollector();
-  collectModules(reexpRes,nonReexpRes,runtimes,reexports,collector);
+  reexpRes.add(myModule);
+  HashSet<IModule> reexported=new HashSet<IModule>();
+  HashSet<IModule> nonReexported=new HashSet<IModule>();
+  collectUsedModules(runtimes,reexported,nonReexported);
+  if (reexports == Reexports.DONT_RESPECT) {
+    reexported.addAll(nonReexported);
+  }
+ else   if (reexports == Reexports.ALL_WITH_RESPECT) {
+    for (    IModule m : nonReexported) {
+      HashSet<IModule> r=new HashSet<IModule>();
+      m.getDependenciesManager().collectModules(r,new HashSet<IModule>(),runtimes,Reexports.REEXPORTED_ONLY);
+      nonReexpRes.addAll(r);
+    }
+  }
+  for (  IModule m : reexported) {
+    if (reexpRes.contains(m))     continue;
+    ((ModuleDependenciesManager)m.getDependenciesManager()).collectModules(reexpRes,nonReexpRes,runtimes,reexports == Reexports.DONT_RESPECT ? Reexports.DONT_RESPECT : Reexports.REEXPORTED_ONLY);
+  }
 }
