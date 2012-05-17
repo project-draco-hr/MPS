@@ -12,14 +12,23 @@ case 0:
             MapSequence.fromMap(pa.global().properties(Target_collectScriptDirectories.this.getName(),CopyGeneratedScripts_Facet.Target_collectScriptDirectories.Parameters.class).fileNameToDestination()).put(gres.model().getSModelReference(),MapSequence.fromMap(new HashMap<String,String>()));
             Iterable<SNode> buildScriptDescendants=ListSequence.fromList(SModelOperations.getRoots(gres.status().getOutputModel(),null)).where(new IWhereFilter<SNode>(){
               public boolean accept(              SNode it){
-                Object userObject=it.getUserObject(GenerationUtil.SCRIPTS_DIR_PROPERTY);
+                Object userObject=it.getUserObject(GenerationUtil.SCRIPTS_TARGET_PROPERTY);
                 return userObject != null && userObject instanceof String;
               }
             }
 );
             for (            SNode descendant : Sequence.fromIterable(buildScriptDescendants)) {
               String fileName=TextGenerator.getFileName(descendant);
-              MapSequence.fromMap(MapSequence.fromMap(pa.global().properties(Target_collectScriptDirectories.this.getName(),CopyGeneratedScripts_Facet.Target_collectScriptDirectories.Parameters.class).fileNameToDestination()).get(gres.model().getSModelReference())).put(fileName,((String)descendant.getUserObject(GenerationUtil.SCRIPTS_DIR_PROPERTY)));
+              String targetXml=((String)descendant.getUserObject(GenerationUtil.SCRIPTS_TARGET_PROPERTY));
+              if (!(fileName.endsWith(".xml"))) {
+                String ext=Utils.getExtensionWithDot(fileName);
+                if ((ext == null || ext.length() == 0)) {
+                  monitor.reportFeedback(new IFeedback.WARNING(String.valueOf("Ignored " + fileName)));
+                  continue;
+                }
+                targetXml=Utils.withoutExtension(targetXml) + ext;
+              }
+              MapSequence.fromMap(MapSequence.fromMap(pa.global().properties(Target_collectScriptDirectories.this.getName(),CopyGeneratedScripts_Facet.Target_collectScriptDirectories.Parameters.class).fileNameToDestination()).get(gres.model().getSModelReference())).put(fileName,targetXml);
             }
           }
         }
