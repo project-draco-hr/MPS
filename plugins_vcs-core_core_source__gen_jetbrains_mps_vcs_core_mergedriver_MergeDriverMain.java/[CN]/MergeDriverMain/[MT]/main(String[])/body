@@ -26,11 +26,17 @@
   configureLog4j();
   String systemPath=new File(System.getProperty(LOG_PROPERTY)).getParentFile().getParentFile().getAbsolutePath();
   MergeDriverBackupUtil.setMergeBackupDirPath(systemPath + File.separator + "merge-backup");
-  AbstractContentMerger merger=selectMerger(baseFile,currentFile,otherFile);
+  File[] files={baseFile,currentFile,otherFile};
+  AbstractContentMerger merger=selectMerger(files);
   if (merger == null) {
     merger=(SVN_OPTION.equals(args[0]) ? new TextMerger() : new SimpleMerger());
   }
-  boolean convertCRLF=GIT_OPTION.equals(args[0]) && false;
+  boolean convertCRLF=GIT_OPTION.equals(args[0]) && !(hasCRLF(Sequence.fromIterable(Sequence.fromArray(files)).findFirst(new IWhereFilter<File>(){
+    public boolean accept(    File f){
+      return f != null;
+    }
+  }
+)));
   int status=FileMerger.mergeFiles(merger,baseFile,currentFile,otherFile,conflictStart,conflictEnd,conflictSeparator,overwrite,convertCRLF);
   System.exit(status);
 }
