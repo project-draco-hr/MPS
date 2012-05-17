@@ -1,19 +1,37 @@
 {
-  ttrace.push("checking if " + modules.size() + " modules are dirty",false);
-  List<IModule> dirtyModules=new ArrayList<IModule>(modules.size());
-  for (  IModule m : modules) {
+  ttrace.push("checking if " + candidates.size() + " modules are dirty",false);
+  Set<IModule> allModules=candidates instanceof Set ? (Set<IModule>)candidates : new HashSet<IModule>(candidates);
+  List<IModule> dirtyModules=new ArrayList<IModule>(candidates.size());
+  for (  IModule m : candidates) {
     if (isDirty(m)) {
       dirtyModules.add(m);
     }
   }
   ttrace.pop();
-  Set<IModule> toCompile=new LinkedHashSet<IModule>();
-  ttrace.push("adding modules dependent on dirty ones - " + dirtyModules.size(),false);
-  for (  IModule m : MPSModuleRepository.getInstance().getAllModules()) {
-    if (m.isPackaged())     continue;
+  Map<IModule,Set<IModule>> backDependencies=new HashMap<IModule,Set<IModule>>();
+  ttrace.push("building back deps",false);
+  for (  IModule m : candidates) {
     for (    IModule dep : new GlobalModuleDependenciesManager(m).getModules(Deptype.COMPILE)) {
-      if (!dirtyModules.contains(dep))       continue;
+      Set<IModule> incoming=backDependencies.get(dep);
+      if (incoming == null) {
+        incoming=new HashSet<IModule>();
+        backDependencies.put(dep,incoming);
+      }
+      incoming.add(m);
+    }
+  }
+  ttrace.pop();
+  ttrace.push("adding modules dependent on dirty ones - " + dirtyModules.size(),false);
+  Set<IModule> toCompile=new LinkedHashSet<IModule>();
+  LinkedList<IModule> queue=new LinkedList<IModule>(dirtyModules);
+  while (!queue.isEmpty()) {
+    IModule m=queue.removeFirst();
+    if (allModules.contains(m)) {
       toCompile.add(m);
+    }
+    Set<IModule> backDeps=backDependencies.remove(m);
+    if (backDeps != null) {
+      queue.addAll(backDeps);
     }
   }
   ttrace.pop();
