@@ -1,0 +1,35 @@
+{
+  Map<NodeData,SNode> createdComponent=MapSequence.fromMap(new HashMap<NodeData,SNode>());
+  Set<SNode> topLevel=SetSequence.fromSet(new LinkedHashSet<SNode>());
+  for (  NodeData data : ListSequence.fromList(selectedData)) {
+    SNode component=createComponent(data,targetSModel,modules);
+    if (component == null) {
+      continue;
+    }
+    MapSequence.fromMap(createdComponent).put(data,component);
+    SetSequence.fromSet(topLevel).addElement(component);
+    if (SNodeOperations.isInstanceOf(component,"jetbrains.mps.build.structure.BuildLayout_AbstractContainer")) {
+      List<NodeData> children=data.getChildren();
+      for (      NodeData child : ListSequence.fromList(children)) {
+        if (MapSequence.fromMap(createdComponent).containsKey(child)) {
+          SNode childComponent=MapSequence.fromMap(createdComponent).get(child);
+          ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(component,"jetbrains.mps.build.structure.BuildLayout_AbstractContainer"),"children",true)).addElement(childComponent);
+          if (SetSequence.fromSet(topLevel).contains(childComponent)) {
+            SetSequence.fromSet(topLevel).removeElement(childComponent);
+          }
+        }
+      }
+    }
+    NodeData parent=data.getParent();
+    if (parent == null) {
+      break;
+    }
+    if (MapSequence.fromMap(createdComponent).containsKey(parent)) {
+      ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(MapSequence.fromMap(createdComponent).get(parent),"jetbrains.mps.build.structure.BuildLayout_AbstractContainer"),"children",true)).addElement(component);
+      SetSequence.fromSet(topLevel).removeElement(component);
+    }
+  }
+  for (  SNode topLevelComponent : SetSequence.fromSet(topLevel)) {
+    ListSequence.fromList(SLinkOperations.getTargets(folder,"children",true)).addElement(topLevelComponent);
+  }
+}

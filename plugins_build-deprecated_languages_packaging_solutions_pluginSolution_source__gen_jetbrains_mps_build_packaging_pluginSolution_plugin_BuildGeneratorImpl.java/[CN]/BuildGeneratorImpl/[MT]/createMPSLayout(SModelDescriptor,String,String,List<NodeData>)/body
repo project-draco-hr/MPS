@@ -1,28 +1,27 @@
 {
-  SNode mpsLayout=SConceptOperations.createNewNode("jetbrains.mps.build.packaging.structure.Layout",null);
+  Set<SNode> modules=SetSequence.fromSet(new LinkedHashSet<SNode>());
+  SNode folder=new BuildGeneratorImpl.QuotationClass_un708i_a0a1a5().createNode(name);
   SModel targetSModel=targetModelDescriptor.getSModel();
-  SModelOperations.addRootNode(targetSModel,mpsLayout);
-  SPropertyOperations.set(mpsLayout,"name",name);
-  SNode basedirPath;
-  String result=MacrosFactory.mpsHomeMacros().shrinkPath(basedir,new File("")).replace("\\",File.separator);
-  int index=result.lastIndexOf("}");
-  if (index > -1) {
-    String macro=result.substring(result.indexOf("{") + 1,index);
-    basedirPath=PackagingLanguageGenerator.createBasedirPath(macro,result.substring(index + 2));
+  BuildGeneratorImpl.createContent(selectedData,folder,modules,targetSModel);
+  Set<String> userMacroNames=PathMacros.getInstance().getUserMacroNames();
+  List<SNode> macroses=new ArrayList<SNode>();
+  for (  String macro : SetSequence.fromSet(userMacroNames)) {
+    ListSequence.fromList(macroses).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0i0f().createNode(macro));
   }
- else {
-    basedirPath=PackagingLanguageGenerator.createBasedirPath("",basedir);
+  SNode buildProject=new BuildGeneratorImpl.QuotationClass_un708i_a0a01a5().createNode(name + ".zip",folder,name,SetSequence.fromSet(modules).toListSequence(),macroses);
+  SModelOperations.addRootNode(targetSModel,buildProject);
+  PathConverter pathConverter=new PathConverter(buildProject);
+  VisibleModules visible=new VisibleModules(buildProject,null);
+  visible.collect();
+  for (  SNode module : SetSequence.fromSet(modules)) {
+    try {
+      new ModuleLoader(module,visible,pathConverter,null).importRequired();
+    }
+ catch (    ModuleLoader.ModuleLoaderException ex) {
+      if (log.isErrorEnabled()) {
+        log.error(ex.getMessage());
+      }
+    }
   }
-  SLinkOperations.setTarget(mpsLayout,"baseDirectory",basedirPath,true);
-  SLinkOperations.setTarget(mpsLayout,"scriptsDirectory",new BuildGeneratorImpl.QuotationClass_un708i_a0a0n0f().createNode(Layout_Behavior.getBasedirName_1226509010730()),true);
-  SLinkOperations.setTarget(mpsLayout,"deployDirectory",new BuildGeneratorImpl.QuotationClass_un708i_a0a0o0f().createNode(Layout_Behavior.getBasedirName_1226509010730()),true);
-  SPropertyOperations.set(mpsLayout,"compile","" + (true));
-  SPropertyOperations.set(ListSequence.fromList(SLinkOperations.getTargets(mpsLayout,"configuration",true)).first(),"name","default");
-  SNode zip=SConceptOperations.createNewNode("jetbrains.mps.build.packaging.structure.Zip",null);
-  SLinkOperations.setTarget(zip,"title",PackagingLanguageGenerator.createSimpleString(name + ".zip"),true);
-  ListSequence.fromList(SLinkOperations.getTargets(mpsLayout,"component",true)).addElement(zip);
-  SNode folder=PackagingLanguageGenerator.createFolder(name);
-  ListSequence.fromList(SLinkOperations.getTargets(zip,"entry",true)).addElement(folder);
-  BuildGeneratorImpl.createContent(selectedData,folder,targetSModel);
-  return mpsLayout;
+  return buildProject;
 }
