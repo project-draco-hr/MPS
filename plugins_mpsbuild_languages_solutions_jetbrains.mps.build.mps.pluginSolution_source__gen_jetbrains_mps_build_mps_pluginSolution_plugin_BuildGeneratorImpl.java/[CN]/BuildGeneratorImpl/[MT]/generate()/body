@@ -1,23 +1,23 @@
 {
   ModelAccess.instance().runCommandInEDT(new Runnable(){
     public void run(){
-      final SModelDescriptor descriptor=BuildGeneratorImpl.this.getSModelDescriptor(new EmptyProgressIndicator());
-      final String projectName=BuildGeneratorImpl.this.getProjectName();
-      final String projectBasedirPath=BuildGeneratorImpl.this.myProject.getBaseDir().getPath();
-      final List<NodeData> modules=BuildGeneratorImpl.this.getModules();
-      final List<ModuleReference> moduleReferencesToAdd=BuildGeneratorImpl.this.getModuleReferencesToAdd();
-      Runnable runnable;
-      Solution solution=(Solution)descriptor.getModule();
-      for (      ModuleReference ref : ListSequence.fromList(moduleReferencesToAdd)) {
-        (solution).getModuleDescriptor().getUsedLanguages().add(ref);
+      SModelDescriptor descriptor=BuildGeneratorImpl.this.getSModelDescriptor(new EmptyProgressIndicator());
+      descriptor.getModule().getModuleDescriptor().getUsedLanguages().add(ModuleRepositoryFacade.getInstance().getModule("jetbrains.mps.build",Language.class).getModuleReference());
+      descriptor.getModule().getModuleDescriptor().getUsedLanguages().add(ModuleRepositoryFacade.getInstance().getModule("jetbrains.mps.build.mps",Language.class).getModuleReference());
+      descriptor.getSModel().addLanguage(ModuleRepositoryFacade.getInstance().getModule("jetbrains.mps.build",Language.class).getModuleReference());
+      descriptor.getSModel().addLanguage(ModuleRepositoryFacade.getInstance().getModule("jetbrains.mps.build.mps",Language.class).getModuleReference());
+      final EditableSModelDescriptor targetModelDescriptor=((EditableSModelDescriptor)descriptor);
+      SNode buildProject=createMPSLayout(targetModelDescriptor,BuildGeneratorImpl.this.getProjectName(),BuildGeneratorImpl.this.myProject.getBaseDir().getPath(),BuildGeneratorImpl.this.getModules());
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          targetModelDescriptor.getModule().save();
+          targetModelDescriptor.save();
+        }
       }
-      for (      ModuleReference ref : ListSequence.fromList(moduleReferencesToAdd)) {
-        descriptor.getSModel().addLanguage(ref);
-      }
-      runnable=BuildGeneratorImpl.this.generate(((EditableSModelDescriptor)descriptor),projectName,projectBasedirPath,modules);
-      runnable.run();
-      final MPSProject project=BuildGeneratorImpl.this.myProject.getComponent(MPSProject.class);
-      project.addModule(solution.getModuleReference());
+);
+      NavigationSupport.getInstance().openNode(myOperationContext,buildProject,true,true);
+      MPSProject project=BuildGeneratorImpl.this.myProject.getComponent(MPSProject.class);
+      project.addModule(descriptor.getModule().getModuleReference());
     }
   }
 ,myProject.getComponent(MPSProject.class));
