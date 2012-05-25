@@ -1,0 +1,36 @@
+{
+  Set<SNode> modules=SetSequence.fromSet(new LinkedHashSet<SNode>());
+  SNode folder=new BuildGeneratorImpl.QuotationClass_un708i_a0a1a3().createNode(name);
+  SModel targetSModel=targetModelDescriptor.getSModel();
+  createContent(selectedData,folder,modules,targetSModel);
+  Set<String> userMacroNames=PathMacros.getInstance().getUserMacroNames();
+  List<SNode> macroses=new ArrayList<SNode>();
+  for (  String macro : SetSequence.fromSet(userMacroNames)) {
+    ListSequence.fromList(macroses).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0i0d().createNode(macro));
+  }
+  SNode buildProject=new BuildGeneratorImpl.QuotationClass_un708i_a0a01a3().createNode(name + ".zip",folder,name,SetSequence.fromSet(modules).toListSequence(),macroses);
+  try {
+    String relativeToModuleProjectPath=Context.defaultContext().getRelativePathHelper(targetSModel).makeRelative(myProject.getBasePath());
+    SPropertyOperations.set(buildProject,"internalBaseDirectory",relativeToModuleProjectPath);
+  }
+ catch (  RelativePathHelper.PathException e) {
+    if (log.isWarnEnabled()) {
+      log.warn("Cant calculate project path relative to module " + targetModelDescriptor.getModule(),e);
+    }
+  }
+  SModelOperations.addRootNode(targetSModel,buildProject);
+  PathConverter pathConverter=new PathConverter(buildProject);
+  VisibleModules visible=new VisibleModules(buildProject,null);
+  visible.collect();
+  for (  SNode module : SetSequence.fromSet(modules)) {
+    try {
+      new ModuleLoader(module,visible,pathConverter,null).importRequired();
+    }
+ catch (    ModuleLoader.ModuleLoaderException ex) {
+      if (log.isErrorEnabled()) {
+        log.error(ex.getMessage());
+      }
+    }
+  }
+  return buildProject;
+}
