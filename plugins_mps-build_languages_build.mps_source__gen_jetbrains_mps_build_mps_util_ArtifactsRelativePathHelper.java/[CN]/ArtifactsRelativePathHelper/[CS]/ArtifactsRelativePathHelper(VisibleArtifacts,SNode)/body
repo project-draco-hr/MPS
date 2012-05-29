@@ -1,10 +1,25 @@
 {
   this.artifacts=output;
-  SNode parent=output.parent(anchor);
+  final Wrappers._T<SNode> parent=new Wrappers._T<SNode>(output.parent(anchor));
   StringBuilder sb=new StringBuilder();
-  while (parent != null) {
-    MapSequence.fromMap(prefixes).put(parent,sb.toString());
-    parent=output.parent(parent);
+  while (parent.value != null) {
+    MapSequence.fromMap(prefixes).put(parent.value,sb.toString());
+    if (SNodeOperations.isInstanceOf(parent.value,"jetbrains.mps.build.structure.BuildLayout_Folder")) {
+      for (      SNode sfolder : ListSequence.fromList(SNodeOperations.getAllSiblings(parent.value,false)).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.structure.BuildLayout_Folder") && it != parent.value && equalFolders(SNodeOperations.cast(parent.value,"jetbrains.mps.build.structure.BuildLayout_Folder"),SNodeOperations.cast(it,"jetbrains.mps.build.structure.BuildLayout_Folder"));
+        }
+      }
+).select(new ISelector<SNode,SNode>(){
+        public SNode select(        SNode it){
+          return SNodeOperations.cast(it,"jetbrains.mps.build.structure.BuildLayout_Folder");
+        }
+      }
+)) {
+        MapSequence.fromMap(prefixes).put(sfolder,sb.toString());
+      }
+    }
+    parent.value=output.parent(parent.value);
     sb.append("../");
   }
 }
