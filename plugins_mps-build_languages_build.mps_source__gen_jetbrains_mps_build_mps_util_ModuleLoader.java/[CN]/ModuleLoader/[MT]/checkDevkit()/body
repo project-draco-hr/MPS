@@ -1,0 +1,49 @@
+{
+  DevkitDescriptor descriptor=((DevkitDescriptor)myModuleDescriptor);
+  SNode devkit=SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_DevKit");
+  for (  ModuleReference module : descriptor.getExtendedDevkits()) {
+    final SNode resolved=SNodeOperations.as(visible.resolve(module.getModuleFqName(),module.getModuleId().toString()),"jetbrains.mps.build.mps.structure.BuildMps_DevKit");
+    if (resolved == null) {
+      report("cannot find devkit in dependencies: " + module.getModuleFqName(),myModule);
+      continue;
+    }
+    if (!(ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_DevKit"),"extends",true)).any(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return asOriginal(SLinkOperations.getTarget(it,"devkit",false)) == resolved;
+      }
+    }
+))) {
+      report("extends devkit dependency should be extracted into build script: " + module.toString(),myOriginalModule);
+    }
+  }
+  for (  ModuleReference module : descriptor.getExportedLanguages()) {
+    final SNode resolved=SNodeOperations.as(visible.resolve(module.getModuleFqName(),module.getModuleId().toString()),"jetbrains.mps.build.mps.structure.BuildMps_Language");
+    if (resolved == null) {
+      report("cannot find exported languages in dependencies: " + module.getModuleFqName(),myModule);
+      continue;
+    }
+    if (!(ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_DevKit"),"exports",true)).any(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_DevKitExportLanguage") && asOriginal(SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_DevKitExportLanguage"),"language",false)) == resolved;
+      }
+    }
+))) {
+      report("export language dependency should be extracted into build script: " + module.toString(),myOriginalModule);
+    }
+  }
+  for (  ModuleReference module : descriptor.getExportedSolutions()) {
+    final SNode resolved=SNodeOperations.as(visible.resolve(module.getModuleFqName(),module.getModuleId().toString()),"jetbrains.mps.build.mps.structure.BuildMps_Solution");
+    if (resolved == null) {
+      report("cannot find exported solution in dependencies: " + module.getModuleFqName(),myModule);
+      continue;
+    }
+    if (!(ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_DevKit"),"exports",true)).any(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_DevKitExportSolution") && asOriginal(SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_DevKitExportSolution"),"solution",false)) == resolved;
+      }
+    }
+))) {
+      report("export solution dependency should be extracted into build script: " + module.toString(),myOriginalModule);
+    }
+  }
+}

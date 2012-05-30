@@ -1,0 +1,52 @@
+{
+  SNode buildProject=SConceptOperations.createNewNode("jetbrains.mps.build.structure.BuildProject",null);
+  SPropertyOperations.set(buildProject,"name",name);
+  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"plugins",true)).addElement(SConceptOperations.createNewNode("jetbrains.mps.build.structure.BuildJavaPlugin",null));
+  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"plugins",true)).addElement(SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMPSPlugin",null));
+  SModel targetSModel=targetModelDescriptor.getSModel();
+  try {
+    String relativeToModuleProjectPath=Context.defaultContext().getRelativePathHelper(targetSModel).makeRelative(myProject.getBasePath());
+    SPropertyOperations.set(buildProject,"internalBaseDirectory",relativeToModuleProjectPath);
+  }
+ catch (  RelativePathHelper.PathException e) {
+    if (log.isWarnEnabled()) {
+      log.warn("Can't calculate project path relative to module " + targetModelDescriptor.getModule(),e);
+    }
+  }
+  Set<String> userMacroNames=PathMacros.getInstance().getUserMacroNames();
+  List<SNode> macroses=new ArrayList<SNode>();
+  List<SNode> dependencies=new ArrayList<SNode>();
+  for (  String macro : SetSequence.fromSet(userMacroNames)) {
+    ListSequence.fromList(macroses).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0o0e().createNode(macro));
+  }
+  if (eq_un708i_a0p0e(getDependencyKind(),DependencyStep.DependencyKind.MPS)) {
+    ListSequence.fromList(macroses).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0p0e().createNode());
+    ListSequence.fromList(dependencies).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0b0p0e().createNode(SNodeOperations.getNode("r:874d959d-e3b4-4d04-b931-ca849af130dd(jetbrains.mps.ide.build)","4301118715654192646")));
+  }
+ else   if (eq_un708i_a0a51a4(getDependencyKind(),DependencyStep.DependencyKind.IDEA_AND_MPS_PLUGIN)) {
+    SNode macro=new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0p0e_0().createNode();
+    ListSequence.fromList(macroses).addElement(macro);
+    ListSequence.fromList(dependencies).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0c0a51a4().createNode(macro));
+  }
+  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"macros",true)).addSequence(ListSequence.fromList(macroses));
+  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"dependencies",true)).addSequence(ListSequence.fromList(dependencies));
+  Tuples._2<List<SNode>,SNode> structureAndLayout=createProjectContent(name,selectedData,targetSModel);
+  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"parts",true)).addSequence(ListSequence.fromList(structureAndLayout._0()));
+  SLinkOperations.setNewChild(buildProject,"layout","jetbrains.mps.build.structure.BuildLayout");
+  ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(buildProject,"layout",true),"children",true)).addElement(structureAndLayout._1());
+  SModelOperations.addRootNode(targetSModel,buildProject);
+  PathConverter pathConverter=new PathConverter(buildProject);
+  VisibleModules visible=new VisibleModules(buildProject,null);
+  visible.collect();
+  for (  SNode module : ListSequence.fromList(SNodeOperations.getDescendants(buildProject,"jetbrains.mps.build.mps.structure.BuildMps_Module",false,new String[]{}))) {
+    try {
+      new ModuleLoader(module,visible,pathConverter,null).importRequired();
+    }
+ catch (    ModuleLoader.ModuleLoaderException ex) {
+      if (log.isErrorEnabled()) {
+        log.error(ex.getMessage());
+      }
+    }
+  }
+  return buildProject;
+}

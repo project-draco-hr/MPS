@@ -1,28 +1,15 @@
 {
   try {
-    ModuleReference pluginRef=MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("28f9e497-3b42-4291-aeba-0a1039153ab1")).getModuleReference();
     ModuleReference standaloneRef=MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("ef7bf5ac-d06c-4342-b11d-e42104eb9343")).getModuleReference();
-    for (    IModule module : ListSequence.fromList(((MPSProject)MapSequence.fromMap(_params).get("project")).getProjectModules(IModule.class))) {
-      if (!(module.getUsedLanguagesReferences().contains(pluginRef))) {
+    for (    Language lang : ListSequence.fromList(((MPSProject)MapSequence.fromMap(_params).get("project")).getProjectModules(Language.class))) {
+      DefaultSModelDescriptor aspect=LanguageAspect.PLUGIN.get(lang);
+      if (aspect == null) {
         continue;
       }
-      if (module.getUsedLanguagesReferences().contains(standaloneRef)) {
-        continue;
-      }
-      for (      SModelDescriptor model : ListSequence.fromList(module.getOwnModelDescriptors())) {
-        if (SModelStereotype.isStubModelStereotype(model.getStereotype())) {
-          continue;
-        }
-        if (!(model.getSModel().importedLanguages().contains(pluginRef))) {
-          continue;
-        }
-        if (model.getSModel().importedLanguages().contains(standaloneRef)) {
-          continue;
-        }
-        SModelOperations.createNewRootNode(((SModel)model.getSModel()),"jetbrains.mps.lang.plugin.standalone.structure.StandalonePluginDescriptor",null);
-        model.getSModel().addLanguage(standaloneRef);
-        model.getModule().addDependency(standaloneRef,false);
-      }
+      lang.addDependency(standaloneRef,false);
+      SModel model=aspect.getSModel();
+      model.addLanguage(standaloneRef);
+      SModelOperations.createNewRootNode(model,"jetbrains.mps.lang.plugin.standalone.structure.StandalonePluginDescriptor",null);
     }
     SModelRepository.getInstance().saveAll();
     ClassLoaderManager.getInstance().reloadAll(new EmptyProgressMonitor());

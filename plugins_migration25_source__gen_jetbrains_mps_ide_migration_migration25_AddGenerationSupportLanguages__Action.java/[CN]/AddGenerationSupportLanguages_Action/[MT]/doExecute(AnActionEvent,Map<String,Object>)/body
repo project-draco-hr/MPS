@@ -1,0 +1,49 @@
+{
+  try {
+    final ModuleReference genPurpose=MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("fbc25dd2-5da4-483a-8b19-70928e1b62d7")).getModuleReference();
+    final ModuleReference generator=MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("b401a680-8325-4110-8fd3-84331ff25bef")).getModuleReference();
+    final ModuleReference genContext=MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("d7706f63-9be2-479c-a3da-ae92af1e64d5")).getModuleReference();
+    List<IModule> modules=((MPSProject)MapSequence.fromMap(_params).get("project")).getModulesWithGenerators();
+    Iterable<Generator> generators=ListSequence.fromList(modules).where(new IWhereFilter<IModule>(){
+      public boolean accept(      IModule it){
+        return it instanceof Generator;
+      }
+    }
+).select(new ISelector<IModule,Generator>(){
+      public Generator select(      IModule it){
+        return ((Generator)it);
+      }
+    }
+);
+    Sequence.fromIterable(generators).visitAll(new IVisitor<Generator>(){
+      public void visit(      Generator it){
+        it.addUsedDevkit(genPurpose);
+        it.addUsedLanguage(generator);
+        it.addUsedLanguage(genContext);
+        it.invalidateCaches();
+        it.invalidateDependencies();
+        it.save();
+      }
+    }
+);
+    Sequence.fromIterable(generators).translate(new ITranslator2<Generator,SModelDescriptor>(){
+      public Iterable<SModelDescriptor> translate(      Generator it){
+        return it.getOwnTemplateModels();
+      }
+    }
+).visitAll(new IVisitor<SModelDescriptor>(){
+      public void visit(      SModelDescriptor it){
+        it.getSModel().addDevKit(genPurpose);
+        it.getSModel().addLanguage(generator);
+        it.getSModel().addLanguage(genContext);
+      }
+    }
+);
+    SModelRepository.getInstance().saveAll();
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "AddGenerationSupportLanguages",t);
+    }
+  }
+}

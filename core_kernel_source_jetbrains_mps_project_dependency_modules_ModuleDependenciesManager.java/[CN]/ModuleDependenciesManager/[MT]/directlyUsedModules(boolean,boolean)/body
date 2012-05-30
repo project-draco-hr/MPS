@@ -1,0 +1,26 @@
+{
+  HashSet<IModule> result=new HashSet<IModule>();
+  for (  Dependency dependency : myModule.getDependencies()) {
+    IModule m=ModuleRepositoryFacade.getInstance().getModule(dependency.getModuleRef());
+    if (m == null)     continue;
+    if (includeNonReexport || dependency.isReexport()) {
+      result.add(m);
+    }
+  }
+  if (includeNonReexport) {
+    for (    DevKit dk : ModuleUtil.refsToDevkits(myModule.getUsedDevkitReferences())) {
+      result.addAll(dk.getAllExportedSolutions());
+    }
+    if (runtimes) {
+      HashSet<Language> lang=new HashSet<Language>();
+      for (      Language l : directlyUsedLanguages()) {
+        if (lang.contains(l))         continue;
+        l.getDependenciesManager().collectAllExtendedLanguages(lang);
+      }
+      for (      IModule l : lang) {
+        result.addAll(ModuleUtil.refsToModules(((Language)l).getRuntimeModulesReferences()));
+      }
+    }
+  }
+  return result;
+}

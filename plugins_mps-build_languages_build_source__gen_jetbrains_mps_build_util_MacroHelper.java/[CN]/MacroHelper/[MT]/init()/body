@@ -1,0 +1,40 @@
+{
+  for (  SNode m : SLinkOperations.getTargets(project,"macros",true)) {
+    if (usedNames.contains(SPropertyOperations.getString(m,"name"))) {
+      context.reportProblem("duplicate macro name",m);
+    }
+    add(m,null,(BuildMacro_Behavior.call_isPublic_6547494638219688113(m) ? SPropertyOperations.getString(project,"name") + "." + SPropertyOperations.getString(m,"name") : null));
+  }
+  for (  SNode dep : ListSequence.fromList(SLinkOperations.getTargets(project,"dependencies",true)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.structure.BuildProjectDependency");
+    }
+  }
+).select(new ISelector<SNode,SNode>(){
+    public SNode select(    SNode it){
+      return SNodeOperations.cast(it,"jetbrains.mps.build.structure.BuildProjectDependency");
+    }
+  }
+)) {
+    SNode depProject=SLinkOperations.getTarget(dep,"script",false);
+    MacroHelper depHelper=context.getMacros(depProject);
+    if (depHelper == null) {
+      continue;
+    }
+    for (    SNode m : depHelper.getAvailableMacros()) {
+      if (macroToName.containsKey(m)) {
+        continue;
+      }
+      String exportName=depHelper.getExportName(m);
+      if (exportName == null) {
+        continue;
+      }
+      String depprefix=depPrefixes.get(dep);
+      if (depprefix == null) {
+        depprefix=makeUnique("import." + SPropertyOperations.getString(SLinkOperations.getTarget(dep,"script",false),"name"),usedPrefixes);
+        depPrefixes.put(dep,depprefix);
+      }
+      add(m,depprefix + "." + exportName,exportName);
+    }
+  }
+}
