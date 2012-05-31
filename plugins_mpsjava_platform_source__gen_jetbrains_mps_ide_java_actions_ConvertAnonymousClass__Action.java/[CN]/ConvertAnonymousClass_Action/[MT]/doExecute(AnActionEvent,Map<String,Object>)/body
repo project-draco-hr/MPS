@@ -1,16 +1,25 @@
 {
   try {
-    final Wrappers._T<String> newName=new Wrappers._T<String>();
+    final Wrappers._T<String> classifierName=new Wrappers._T<String>();
     ModelAccess.instance().runReadAction(new Runnable(){
       public void run(){
-        newName.value=StringChooserDialog.getString(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject(),"Convert Anonymous Class","Class Name","My" + SPropertyOperations.getString(SLinkOperations.getTarget(((SNode)MapSequence.fromMap(_params).get("target")),"classifier",false),"name"));
+        classifierName.value=SPropertyOperations.getString(SLinkOperations.getTarget(((SNode)MapSequence.fromMap(_params).get("target")),"classifier",false),"name");
       }
     }
 );
-    if (newName.value == null) {
+    final String newName=StringChooserDialog.getString(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject(),"Convert Anonymous Class","Class Name","My" + classifierName.value);
+    if (newName == null) {
       return;
     }
-    RefactoringAccess.getInstance().getRefactoringFacade().execute(RefactoringContext.createRefactoringContextByName("jetbrains.mps.baseLanguage.refactorings.ConvertAnonymousClass",Arrays.asList("name"),Arrays.asList(newName.value),((SNode)MapSequence.fromMap(_params).get("target")),((MPSProject)MapSequence.fromMap(_params).get("project"))));
+    ModelAccess.instance().runReadInEDT(new Runnable(){
+      public void run(){
+        if (!(((SNode)((SNode)MapSequence.fromMap(_params).get("target"))).isRegistered()) || ((SNode)((SNode)MapSequence.fromMap(_params).get("target"))).isDisposed()) {
+          return;
+        }
+        RefactoringAccess.getInstance().getRefactoringFacade().execute(RefactoringContext.createRefactoringContextByName("jetbrains.mps.baseLanguage.refactorings.ConvertAnonymousClass",Arrays.asList("name"),Arrays.asList(newName),((SNode)MapSequence.fromMap(_params).get("target")),((MPSProject)MapSequence.fromMap(_params).get("project"))));
+      }
+    }
+);
   }
  catch (  Throwable t) {
     if (log.isErrorEnabled()) {

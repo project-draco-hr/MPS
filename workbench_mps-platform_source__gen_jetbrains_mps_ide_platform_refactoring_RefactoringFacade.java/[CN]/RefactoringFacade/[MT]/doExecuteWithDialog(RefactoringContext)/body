@@ -1,16 +1,19 @@
 {
-  final boolean[] cancelled=new boolean[]{true};
-  ThreadUtils.runInUIThreadAndWait(new Runnable(){
+  final IRefactoring refactoring=refactoringContext.getRefactoring();
+  final Project ideaProject=ProjectHelper.toIdeaProject(refactoringContext.getCurrentOperationContext().getProject());
+  final List<SModel> modelsToGenerate=getModelsToGenerate(refactoring,refactoringContext);
+  SwingUtilities.invokeLater(new Runnable(){
     public void run(){
-      IRefactoring refactoring=refactoringContext.getRefactoring();
-      Project ideaProject=ProjectHelper.toIdeaProject(refactoringContext.getCurrentOperationContext().getProject());
-      List<SModel> modelsToGenerate=getModelsToGenerate(refactoring,refactoringContext);
-      cancelled[0]=RefactoringAccess.getInstance().showRefactoringDialog(ideaProject,refactoringContext,refactoring,!(modelsToGenerate.isEmpty()));
+      final boolean cancelled=RefactoringAccess.getInstance().showRefactoringDialog(ideaProject,refactoringContext,refactoring,!(modelsToGenerate.isEmpty()));
+      ModelAccess.instance().runWriteInEDT(new Runnable(){
+        public void run(){
+          if (!(cancelled)) {
+            executeSimple(refactoringContext);
+          }
+        }
+      }
+);
     }
   }
 );
-  if (cancelled[0]) {
-    return;
-  }
-  doExecute(refactoringContext);
 }
