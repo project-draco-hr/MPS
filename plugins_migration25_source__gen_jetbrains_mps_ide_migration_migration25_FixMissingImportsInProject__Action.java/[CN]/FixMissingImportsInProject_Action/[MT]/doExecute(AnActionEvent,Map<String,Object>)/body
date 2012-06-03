@@ -1,13 +1,19 @@
 {
   try {
-    Queue<IModule> modules=QueueSequence.fromQueueWithValues(new LinkedList<IModule>(),((Project)MapSequence.fromMap(_params).get("project")).getComponent(MPSProject.class).getModules());
+    Queue<ModuleReference> modules=QueueSequence.fromQueueWithValues(new LinkedList<ModuleReference>(),((Project)MapSequence.fromMap(_params).get("project")).getComponent(MPSProject.class).getModuleReferences());
     while (QueueSequence.fromQueue(modules).isNotEmpty()) {
-      IModule module=QueueSequence.fromQueue(modules).removeFirstElement();
+      IModule module=ModuleRepositoryFacade.getInstance().getModule(QueueSequence.fromQueue(modules).removeFirstElement());
       if (module.isPackaged()) {
         continue;
       }
       if (module instanceof Language) {
-        QueueSequence.fromQueue(modules).addSequence(CollectionSequence.fromCollection(((Language)module).getGenerators()));
+        Iterable<Generator> generators=((Language)module).getGenerators();
+        QueueSequence.fromQueue(modules).addSequence(Sequence.fromIterable(generators).select(new ISelector<Generator,ModuleReference>(){
+          public ModuleReference select(          Generator it){
+            return it.getModuleReference();
+          }
+        }
+));
       }
       for (      SModelDescriptor model : ListSequence.fromList(module.getOwnModelDescriptors())) {
         if (!(SModelStereotype.isUserModel(model))) {
