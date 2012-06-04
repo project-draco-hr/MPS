@@ -1,0 +1,22 @@
+{
+  if (!event.level.isGreaterOrEqual(Priority.ERROR))   return;
+  myEventsQueue.add(event);
+  DiagnosticUpdater.queue(new Update(myUpdateIdentity){
+    @Override public void run(){
+      if (!canAppendToLoggers())       return;
+      List<ErrorLogger> loggers=new ArrayList<ErrorLogger>();
+      loggers.add(DEFAULT_LOGGER);
+      Application application=ApplicationManager.getApplication();
+      if (application != null) {
+        if (application.isHeadlessEnvironment() || application.isDisposed())         return;
+        ContainerUtil.addAll(loggers,application.getComponents(ErrorLogger.class));
+      }
+      List<LoggingEvent> events=new ArrayList<LoggingEvent>();
+      while (!myEventsQueue.isEmpty()) {
+        events.add(myEventsQueue.remove());
+      }
+      appendToLoggers(events,loggers.toArray(new ErrorLogger[loggers.size()]));
+    }
+  }
+);
+}
