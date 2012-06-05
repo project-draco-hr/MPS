@@ -1,12 +1,26 @@
 {
-  SearchResults<SNode> searchResults=FindUtils.getSearchResults(new EmptyProgressMonitor(),refactoringContext.getSelectedNode(),GlobalScope.getInstance(),"jetbrains.mps.lang.structure.findUsages.NodeAndDescendantsUsages_Finder");
-  List<SearchResult<SNode>> searchResultsList=searchResults.getSearchResults();
-  List<SearchResult<SNode>> searchResultsCopy=ListSequence.fromListWithValues(new ArrayList<SearchResult<SNode>>(),searchResultsList);
-  for (  SearchResult<SNode> searchResult : searchResultsCopy) {
-    SNode resultNode=searchResult.getObject();
-    if (ListSequence.fromList(SNodeOperations.getAncestors(resultNode,null,true)).contains(refactoringContext.getSelectedNode())) {
-      searchResults.remove(searchResult);
+  final Set<SearchResult<SNode>> results=SetSequence.fromSet(new HashSet<SearchResult<SNode>>());
+  ListSequence.fromList(refactoringContext.getSelectedNodes()).visitAll(new IVisitor<SNode>(){
+    public void visit(    SNode it){
+      SearchResults<SNode> searchResults=FindUtils.getSearchResults(new EmptyProgressMonitor(),refactoringContext.getSelectedNode(),GlobalScope.getInstance(),"jetbrains.mps.lang.structure.findUsages.NodeAndDescendantsUsages_Finder");
+      SetSequence.fromSet(results).addSequence(ListSequence.fromList(searchResults.getSearchResults()));
     }
   }
-  return searchResults;
+);
+  Set<SNode> nodes=SetSequence.fromSetWithValues(new HashSet<SNode>(),SetSequence.fromSet(results).select(new ISelector<SearchResult<SNode>,SNode>(){
+    public SNode select(    SearchResult<SNode> it){
+      return it.getObject();
+    }
+  }
+));
+  for (  SearchResult<SNode> searchResult : ListSequence.fromListWithValues(new ArrayList<SearchResult<SNode>>(),results)) {
+    SNode resultNode=searchResult.getObject();
+    for (    SNode anc : ListSequence.fromList(SNodeOperations.getAncestors(resultNode,null,false))) {
+      if (SetSequence.fromSet(nodes).contains(anc)) {
+        SetSequence.fromSet(results).removeElement(searchResult);
+        break;
+      }
+    }
+  }
+  return new SearchResults(SetSequence.fromSetWithValues(new HashSet<SNode>(),refactoringContext.getSelectedNodes()),SetSequence.fromSet(results).toListSequence());
 }
