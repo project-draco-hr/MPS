@@ -1,0 +1,40 @@
+{
+  try {
+    final String fullClassName=this.myAuxModel.getLongName() + "." + AbstractEvaluationModel.EVALUATOR_NAME;
+    InMemoryJavaGenerationHandler handler=new MyInMemoryJavaGenerationHandler(false,true,myGenerationListeners);
+    AbstractEvaluationModel.MyCompilationResultAdapter compilationResult=new AbstractEvaluationModel.MyCompilationResultAdapter();
+    handler.setCompilationListener(compilationResult);
+    Project ideaProject=this.myAuxModule.getMPSProject().getProject();
+    DefaultMessageHandler messageHandler=new DefaultMessageHandler(ideaProject);
+    ProgressWindow progressWindow=new ProgressWindow(false,ideaProject);
+    boolean successful=GenerationFacade.generateModels(myContext.getProject(),Collections.singletonList((SModelDescriptor)myAuxModel),myContext,handler,new ProgressMonitorAdapter(progressWindow),messageHandler,GenerationOptions.getDefaults().incremental(new AbstractEvaluationModel.MyIncrementalGenerationStrategy()).saveTransientModels(IS_DEVELOPER_MODE).rebuildAll(false).reporting(false,false,false,0).create(),myContext.getProject().getComponent(TransientModelsComponent.class));
+    Disposer.dispose(progressWindow);
+    String source=handler.getSources().get(fullClassName);
+    if (successful && (source != null && source.length() > 0)) {
+      if (isDeveloperMode()) {
+        System.err.println(source);
+      }
+      ClassLoader parentClassLoader=this.myUiState.getClass().getClassLoader();
+      return Class.forName(fullClassName,true,handler.getCompiler().getClassLoader(parentClassLoader));
+    }
+ else     if ((source != null && source.length() > 0) && !(successful)) {
+      String text="Errors during compilation";
+      if (compilationResult.hasErrors()) {
+        text+=":\n" + compilationResult.getMessage();
+      }
+ else {
+        text+=".";
+      }
+      throw new EvaluationException(text);
+    }
+ else {
+      throw new EvaluationException("Errors during generation.");
+    }
+  }
+ catch (  EvaluationException e) {
+    throw e;
+  }
+catch (  ClassNotFoundException e) {
+    throw new EvaluationException(e);
+  }
+}
