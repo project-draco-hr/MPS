@@ -13,27 +13,65 @@
       log.warn("Can't calculate project path relative to module " + targetModelDescriptor.getModule(),e);
     }
   }
-  Set<String> userMacroNames=PathMacros.getInstance().getUserMacroNames();
-  List<SNode> macroses=new ArrayList<SNode>();
+  Set<String> userMacroNames=new LinkedHashSet<String>(PathMacros.getInstance().getUserMacroNames());
+  List<SNode> macros=new ArrayList<SNode>();
   List<SNode> dependencies=new ArrayList<SNode>();
+  SNode dateMacro=null;
+  SNode buildNumber=null;
+  SNode branding=null;
+  if (eq_un708i_a0s0e(getDependencyKind(),DependencyStep.DependencyKind.MPS)) {
+    SNode macro=new BuildGeneratorImpl.QuotationClass_un708i_a0a0a81a4().createNode();
+    ListSequence.fromList(macros).addElement(macro);
+    ListSequence.fromList(dependencies).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0c0s0e().createNode(macro));
+    userMacroNames.remove("mps_home");
+  }
+ else   if (eq_un708i_a0a81a4(getDependencyKind(),DependencyStep.DependencyKind.IDEA)) {
+    SNode macro=new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0s0e().createNode();
+    ListSequence.fromList(macros).addElement(macro);
+    userMacroNames.remove("idea_home");
+    ListSequence.fromList(dependencies).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0d0a81a4().createNode(macro));
+    macro=new BuildGeneratorImpl.QuotationClass_un708i_a0a4a0s0e().createNode(macro);
+    ListSequence.fromList(macros).addElement(macro);
+    userMacroNames.remove("plugins_home");
+    ListSequence.fromList(dependencies).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0h0a81a4().createNode(macro));
+  }
+ else   if (eq_un708i_a0b81a4(getDependencyKind(),DependencyStep.DependencyKind.STANDALONE)) {
+    dateMacro=new BuildGeneratorImpl.QuotationClass_un708i_a0a0a1s0e().createNode();
+    ListSequence.fromList(macros).addElement(dateMacro);
+    buildNumber=new BuildGeneratorImpl.QuotationClass_un708i_a0a2a1s0e().createNode(name + "-SNAPSHOT");
+    ListSequence.fromList(macros).addElement(buildNumber);
+    SNode macro=new BuildGeneratorImpl.QuotationClass_un708i_a0a4a1s0e().createNode();
+    ListSequence.fromList(macros).addElement(macro);
+    ListSequence.fromList(dependencies).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0g0b81a4().createNode(macro));
+    userMacroNames.remove("mps_home");
+    userMacroNames.remove("date");
+    userMacroNames.remove("build.number");
+    branding=new BuildGeneratorImpl.QuotationClass_un708i_a0a01a1s0e().createNode(buildNumber,name,name,name,dateMacro);
+    ListSequence.fromList(SLinkOperations.getTargets(buildProject,"parts",true)).addElement(branding);
+  }
   for (  String macro : SetSequence.fromSet(userMacroNames)) {
-    ListSequence.fromList(macroses).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0o0e().createNode(macro));
+    ListSequence.fromList(macros).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0t0e().createNode(macro));
   }
-  if (eq_un708i_a0p0e(getDependencyKind(),DependencyStep.DependencyKind.MPS)) {
-    ListSequence.fromList(macroses).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0p0e().createNode());
-    ListSequence.fromList(dependencies).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0b0p0e().createNode(SNodeOperations.getNode("r:874d959d-e3b4-4d04-b931-ca849af130dd(jetbrains.mps.ide.build)","4301118715654192646")));
-  }
- else   if (eq_un708i_a0a51a4(getDependencyKind(),DependencyStep.DependencyKind.IDEA_AND_MPS_PLUGIN)) {
-    SNode macro=new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0p0e_0().createNode();
-    ListSequence.fromList(macroses).addElement(macro);
-    ListSequence.fromList(dependencies).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0c0a51a4().createNode(macro));
-  }
-  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"macros",true)).addSequence(ListSequence.fromList(macroses));
+  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"macros",true)).addSequence(ListSequence.fromList(macros));
   ListSequence.fromList(SLinkOperations.getTargets(buildProject,"dependencies",true)).addSequence(ListSequence.fromList(dependencies));
-  Tuples._2<List<SNode>,SNode> structureAndLayout=createProjectContent(name,selectedData,targetSModel);
-  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"parts",true)).addSequence(ListSequence.fromList(structureAndLayout._0()));
+  Set<ModuleData> moduleData=SetSequence.fromSet(new LinkedHashSet<ModuleData>());
+  extractModules(selectedData,moduleData);
+  SNode group=new BuildGeneratorImpl.QuotationClass_un708i_a0a62a4().createNode(SetSequence.fromSet(moduleData).select(new ISelector<ModuleData,SNode>(){
+    public SNode select(    ModuleData it){
+      return createModuleNode(it);
+    }
+  }
+).toListSequence(),name);
+  SNode plugin=new BuildGeneratorImpl.QuotationClass_un708i_a0a72a4().createNode(name,group,name,name);
   SLinkOperations.setNewChild(buildProject,"layout","jetbrains.mps.build.structure.BuildLayout");
-  ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(buildProject,"layout",true),"children",true)).addElement(structureAndLayout._1());
+  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"parts",true)).addElement(plugin);
+  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"parts",true)).addElement(group);
+  if (eq_un708i_a0gb0e(getDependencyKind(),DependencyStep.DependencyKind.STANDALONE)) {
+    ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(buildProject,"layout",true),"children",true)).addSequence(ListSequence.fromList(SLinkOperations.getTargets(new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0a0gb0e().createNode(branding,plugin,buildNumber,dateMacro),"children",true)));
+  }
+ else {
+    ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(buildProject,"layout",true),"children",true)).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0a23a4().createNode(name + ".zip",plugin));
+  }
   SModelOperations.addRootNode(targetSModel,buildProject);
   PathConverter pathConverter=new PathConverter(buildProject);
   VisibleModules visible=new VisibleModules(buildProject,null);
