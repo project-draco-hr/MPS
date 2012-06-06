@@ -1,34 +1,47 @@
 {
   if (MPSCore.getInstance().isTestMode())   return;
   myMessagesInProgress.incrementAndGet();
+  myMessagesQueue.add(message);
   myUpdateQueue.queue(new Update(myUpdateIdentity){
     @Override public void run(){
       if (isDisposed()) {
         return;
       }
-      int messages=myMessagesInProgress.decrementAndGet();
-      if (myMessages.size() >= MAX_SIZE) {
-        IMessage toRemove=myMessages.remove();
-        updateMessageCounters(message,-1);
-        if (isVisible(toRemove)) {
-          myModel.removeFirst();
+      final List<IMessage> messagesToAdd=new ArrayList<IMessage>();
+      int maxWidth=-1;
+      while (!myMessagesQueue.isEmpty()) {
+        IMessage message=myMessagesQueue.remove();
+        myMessagesInProgress.decrementAndGet();
+        if (isVisible(message)) {
+          messagesToAdd.add(message);
+        }
+        myMessages.add(message);
+        updateMessageCounters(message,1);
+        maxWidth=Math.max(maxWidth,getMessageWidth(message));
+      }
+      int toRemoveCount=0;
+      if (myMessages.size() + messagesToAdd.size() > MAX_SIZE) {
+        for (int i=0; i < messagesToAdd.size(); i++) {
+          IMessage toRemove=myMessages.remove();
+          updateMessageCounters(toRemove,-1);
+          if (isVisible(toRemove)) {
+            toRemoveCount++;
+          }
         }
       }
-      if (isVisible(message)) {
-        myModel.add(message);
-        int index=myModel.getSize() - 1;
-        if (myList.getAutoscrolls()) {
-          myList.getSelectionModel().setSelectionInterval(index,index);
-        }
-        if (messages == 0) {
-          myList.ensureIndexIsVisible(index);
-        }
+      if (toRemoveCount > 0) {
+        myModel.removeFirst(toRemoveCount);
       }
-      myMessages.add(message);
-      updateMessageCounters(message,1);
-      int width=getMessageWidth(message);
-      if (width > myList.getFixedCellWidth()) {
-        myList.setFixedCellWidth(width);
+      myModel.addAll(messagesToAdd);
+      int index=myModel.getSize() - 1;
+      if (myList.getAutoscrolls()) {
+        myList.getSelectionModel().setSelectionInterval(index,index);
+      }
+      if (myMessagesInProgress.get() == 0) {
+        myList.ensureIndexIsVisible(index);
+      }
+      if (maxWidth > myList.getFixedCellWidth()) {
+        myList.setFixedCellWidth(maxWidth);
       }
       updateHeader();
       updateActions();
