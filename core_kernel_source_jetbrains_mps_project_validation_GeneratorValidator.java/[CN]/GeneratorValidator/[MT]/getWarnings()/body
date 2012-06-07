@@ -1,0 +1,25 @@
+{
+  List<String> warnings=new ArrayList<String>(super.getWarnings());
+  Set<String> usedLanguages=new HashSet<String>();
+  for (  SModelDescriptor model : myModule.getOwnTemplateModels()) {
+    if (SModelStereotype.isGeneratorModel(model)) {
+      usedLanguages.addAll(ModelContentUtil.getUsedLanguageNamespacesInTemplateModel(model.getSModel()));
+    }
+  }
+  Set<String> extendedLanguages=new HashSet<String>();
+  Language sourceLanguage=myModule.getSourceLanguage();
+  usedLanguages.remove(sourceLanguage.getModuleFqName());
+  Set<Language> ext=new LinkedHashSet<Language>();
+  sourceLanguage.getDependenciesManager().collectAllExtendedLanguages(ext);
+  for (  Language language : ext) {
+    extendedLanguages.add(language.getModuleFqName());
+  }
+  for (  String lang : usedLanguages) {
+    Language language=ModuleRepositoryFacade.getInstance().getModule(lang,Language.class);
+    if (language == null)     continue;
+    if (!extendedLanguages.contains(lang) && !language.getRuntimeModulesReferences().isEmpty()) {
+      warnings.add(sourceLanguage + " should extend " + lang);
+    }
+  }
+  return warnings;
+}
