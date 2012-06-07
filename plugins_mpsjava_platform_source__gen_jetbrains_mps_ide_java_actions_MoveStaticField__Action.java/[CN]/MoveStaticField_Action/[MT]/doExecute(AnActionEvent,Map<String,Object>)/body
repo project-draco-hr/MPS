@@ -1,21 +1,27 @@
 {
   try {
-    final Wrappers._T<SNode> whereToMove=new Wrappers._T<SNode>();
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        whereToMove.value=MoveNodeDialog.getSelectedObject(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject(),((SNode)MapSequence.fromMap(_params).get("target")),new MoveNodeDialog.NodeFilter("Select class to move: refactoring can't be applied to selected node"){
-          public boolean check(          SNode selectedObject,          SNode nodeToMove,          SModelDescriptor modelOfSelectedObject){
-            return SNodeOperations.isInstanceOf(selectedObject,"jetbrains.mps.baseLanguage.structure.Classifier") && !(ListSequence.fromList(SNodeOperations.getAncestors(nodeToMove,null,false)).contains(selectedObject));
-          }
-        }
-);
+    final SNode whereToMove;
+    whereToMove=MoveNodeDialog.getSelectedObject(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject(),((SNode)MapSequence.fromMap(_params).get("target")),new MoveNodeDialog.NodeFilter("Select class to move: refactoring can't be applied to selected node"){
+      public boolean check(      SNode selectedObject,      SNode nodeToMove,      SModelDescriptor modelOfSelectedObject){
+        return SNodeOperations.isInstanceOf(selectedObject,"jetbrains.mps.baseLanguage.structure.Classifier") && !(ListSequence.fromList(SNodeOperations.getAncestors(nodeToMove,null,false)).contains(selectedObject));
       }
     }
 );
-    if (whereToMove.value == null) {
+    if (whereToMove == null) {
       return;
     }
-    RefactoringAccess.getInstance().getRefactoringFacade().execute(RefactoringContext.createRefactoringContextByName("jetbrains.mps.baseLanguage.refactorings.MoveStaticField",Arrays.asList("destination"),Arrays.asList(whereToMove.value),((SNode)MapSequence.fromMap(_params).get("target")),((MPSProject)MapSequence.fromMap(_params).get("project"))));
+    ModelAccess.instance().runReadInEDT(new Runnable(){
+      public void run(){
+        if (!(((SNode)((SNode)MapSequence.fromMap(_params).get("target"))).isRegistered()) || ((SNode)((SNode)MapSequence.fromMap(_params).get("target"))).isDisposed()) {
+          return;
+        }
+        if (!(((SNode)whereToMove).isRegistered()) || ((SNode)whereToMove).isDisposed()) {
+          return;
+        }
+        RefactoringAccess.getInstance().getRefactoringFacade().execute(RefactoringContext.createRefactoringContextByName("jetbrains.mps.baseLanguage.refactorings.MoveStaticField",Arrays.asList("destination"),Arrays.asList(whereToMove),((SNode)MapSequence.fromMap(_params).get("target")),((MPSProject)MapSequence.fromMap(_params).get("project"))));
+      }
+    }
+);
   }
  catch (  Throwable t) {
     if (log.isErrorEnabled()) {
