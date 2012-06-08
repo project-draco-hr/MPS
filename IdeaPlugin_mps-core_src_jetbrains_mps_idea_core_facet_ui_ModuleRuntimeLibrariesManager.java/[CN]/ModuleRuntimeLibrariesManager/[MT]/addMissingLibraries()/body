@@ -1,0 +1,50 @@
+{
+  final Set<String> libFiles=new HashSet<String>();
+  myContext.getRootModel().orderEntries().forEachLibrary(new Processor<Library>(){
+    @Override public boolean process(    Library library){
+      for (      VirtualFile vFile : library.getFiles(OrderRootType.CLASSES)) {
+        libFiles.add(vFile.getName());
+      }
+      return true;
+    }
+  }
+);
+  Map<String,Library> projectLibFiles=new HashMap<String,Library>();
+  for (  Library library : myContext.getLibraries()) {
+    for (    VirtualFile file : library.getFiles(OrderRootType.CLASSES)) {
+      projectLibFiles.put(file.getName(),library);
+    }
+  }
+  Collection<Library> projectLibs2Add=new HashSet<Library>();
+  Map<String,List<VirtualFile>> projectLibs2Create=new HashMap<String,List<VirtualFile>>();
+  for (  IModule usedModule : collectRuntimeModules(myAddedLanguages)) {
+    if (!(usedModule instanceof Solution) || !usedModule.isPackaged() || BootstrapLanguages.JDK.equals(usedModule.getModuleReference())) {
+      continue;
+    }
+    for (    String stubPath : ((Solution)usedModule).getAllStubPaths()) {
+      VirtualFile jarFile=getJarFile(stubPath);
+      if (jarFile == null || libFiles.contains(jarFile.getName())) {
+        continue;
+      }
+      Library projectLibrary=projectLibFiles.get(jarFile.getName());
+      if (projectLibrary != null) {
+        projectLibs2Add.add(projectLibrary);
+      }
+ else {
+        List<VirtualFile> virtualFiles=projectLibs2Create.get(usedModule.getModuleFqName());
+        if (virtualFiles == null) {
+          virtualFiles=new ArrayList<VirtualFile>();
+          projectLibs2Create.put(usedModule.getModuleFqName(),virtualFiles);
+        }
+        virtualFiles.add(jarFile);
+      }
+    }
+  }
+  for (  Library projectLibrary : projectLibs2Add) {
+    myContext.getModifiableRootModel().addLibraryEntry(projectLibrary);
+  }
+  for (  String libraryName : projectLibs2Create.keySet()) {
+    List<VirtualFile> libraryFiles=projectLibs2Create.get(libraryName);
+    myContext.getModifiableRootModel().addLibraryEntry(myContext.createProjectLibrary("mps." + libraryName,libraryFiles.toArray(new VirtualFile[libraryFiles.size()]),new VirtualFile[0]));
+  }
+}
