@@ -1,0 +1,34 @@
+{
+  List<UsageTarget> usageTargets=new LinkedList<UsageTarget>();
+  UsageViewManager viewManager=UsageViewManager.getInstance(myProject);
+  myCallback=callback;
+  myHasModelsToGenerate=hasModelsToGenerate;
+  for (  Object searchedNode : searchResults.getAliveNodes()) {
+    if (searchedNode instanceof SNode) {
+      usageTargets.add(new NodeUsageTarget((SNode)searchedNode,myProject));
+    }
+  }
+  List<Usage> usages=new ArrayList<Usage>();
+  Set<SNode> nodes=new HashSet<SNode>();
+  for (  SearchResult searchResult : (List<SearchResult>)searchResults.getAliveResults()) {
+    Object usage=searchResult.getObject();
+    if (usage instanceof SNode && !(nodes.contains((SNode)usage))) {
+      nodes.add((SNode)usage);
+      usages.add(new NodeUsage((SNode)usage,myProject,searchResult.getCategory()));
+    }
+  }
+  final UsageViewPresentation presentation=createPresentation();
+  usageView=viewManager.showUsages(usageTargets.toArray(new UsageTarget[usageTargets.size()]),usages.toArray(new Usage[usages.size()]),presentation);
+  String canNotMakeString=RefactoringBundle.message("usageView.need.reRun");
+  usageView.addPerformOperationAction(new Runnable(){
+    @Override public void run(){
+      if (myRefactoringContext != null && myRefactoringContext.getRefactoring() instanceof ILoggableRefactoring) {
+        showRefactoringOptions();
+      }
+ else {
+        myCallback.performAction(RefactoringViewItemImpl.this);
+      }
+    }
+  }
+,name,canNotMakeString,RefactoringBundle.message("usageView.doAction"));
+}
