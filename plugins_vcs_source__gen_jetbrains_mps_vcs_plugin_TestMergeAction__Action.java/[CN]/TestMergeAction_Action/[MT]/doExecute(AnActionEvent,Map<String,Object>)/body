@@ -1,0 +1,55 @@
+{
+  try {
+    final FileChooserDescriptor descriptor=new FileChooserDescriptor(true,true,true,true,false,false){
+      @Override public boolean isFileSelectable(      VirtualFile file){
+        return !((file.isDirectory())) && file.getName().toLowerCase().endsWith(".zip");
+      }
+    }
+;
+    descriptor.setTitle("select archive with merge files");
+    descriptor.setDescription("Zip files (*.zip) ");
+    SwingUtilities.invokeLater(new Runnable(){
+      public void run(){
+        VirtualFile vFile=FileChooser.chooseFile(((Project)MapSequence.fromMap(_params).get("project")),descriptor);
+        String resString;
+        SModel[] zipped;
+        try {
+          zipped=MergeBackupUtil.loadZippedModels(new File(vFile.getCanonicalPath()),MergeVersion.values());
+          resString=File.createTempFile("mpstmp",".result").getAbsolutePath();
+        }
+ catch (        Exception e) {
+          e.printStackTrace();
+          return;
+        }
+        final String resFile=resString;
+        final SModel[] models=zipped;
+        MergeModelsDialog dialog=ModelAccess.instance().runReadAction(new Computable<MergeModelsDialog>(){
+          public MergeModelsDialog compute(){
+            return new MergeModelsDialog(models[0],models[1],models[2],new SimpleDiffRequest(((Project)MapSequence.fromMap(_params).get("project")),null,new String[]{"Local Version","Merge Result","Remote Version"}));
+          }
+        }
+);
+        dialog.show();
+        final SModel result=dialog.getResultModel();
+        if (result != null) {
+          ModelAccess.instance().runWriteAction(new Runnable(){
+            public void run(){
+              IFile iFile=FileSystem.getInstance().getFileByPath(resFile);
+              if (!(iFile.exists())) {
+                iFile.createNewFile();
+              }
+              ModelPersistence.saveModel(result,iFile);
+            }
+          }
+);
+        }
+      }
+    }
+);
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "TestMergeAction",t);
+    }
+  }
+}
