@@ -1,0 +1,52 @@
+{
+  ModelAccess.assertLegalWrite();
+  boolean success=true;
+  for (  LanguageRuntime language : languages) {
+    String namespace=language.getNamespace();
+    if (myLoadedLanguages.contains(namespace))     continue;
+    IHelginsDescriptor typesystem=null;
+    try {
+      typesystem=language.getTypesystem();
+    }
+ catch (    Throwable t) {
+      LOG.error("Error while loading language: " + t);
+    }
+    if (typesystem == null) {
+      success=false;
+      continue;
+    }
+    try {
+      myInferenceRules.addRuleSetItem(typesystem.getInferenceRules());
+      myNonTypesystemRules.addRuleSetItem(typesystem.getNonTypesystemRules());
+      mySubtypingRules.addRuleSetItem(typesystem.getSubtypingRules());
+      Set<ComparisonRule_Runtime> comparisonRule_runtimes=typesystem.getComparisonRules();
+      myComparisonRules.addRuleSetItem(comparisonRule_runtimes);
+      myReplacementRules.addRuleSetItem(typesystem.getEliminationRules());
+      myDependenciesContainer.addDependencies(typesystem.getDependencies());
+      myVariableConverters.addAll(typesystem.getVariableConverters());
+      myOverloadedOperationsManager.addOverloadedOperationsTypeProviders(typesystem.getOverloadedOperationsTypesProviders());
+      Set<AbstractDependentComputation_Runtime> dependentComputations=typesystem.getDependentComputations();
+      myDependentComputations.addRuleSetItem(dependentComputations);
+      for (      AbstractDependentComputation_Runtime dependentComputation : dependentComputations) {
+        myDependentComputationsBlockedNodes.addRule(dependentComputation.getWrapper());
+      }
+    }
+ catch (    RuntimeException t) {
+      success=false;
+    }
+ finally {
+      myLoadedLanguages.add(namespace);
+    }
+  }
+  try {
+    myComparisonRules.makeConsistent();
+    myReplacementRules.makeConsistent();
+    myDependenciesContainer.makeConsistent();
+    myOverloadedOperationsManager.makeConsistent();
+  }
+ catch (  RuntimeException ex) {
+    LOG.error("internal error: " + ex.getMessage(),ex);
+    success=false;
+  }
+  return success;
+}
