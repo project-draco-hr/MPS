@@ -18,14 +18,29 @@
  else {
       commandLine.addAll(myJvmArgs);
     }
+    String javaHome=JavaEnvUtils.getJavaHome();
     StringBuilder sb=new StringBuilder();
-    String pathSeparator=System.getProperty("path.separator");
+    Set<String> entries=new HashSet<String>();
+    String pathSeparator="";
+    for (    String entry : currentClassPathString.split(File.pathSeparator)) {
+      if (!(entries.contains(entry)) && !(startsWith(entry,javaHome))) {
+        entries.add(entry);
+        sb.append(pathSeparator);
+        sb.append(entry);
+        pathSeparator=File.pathSeparator;
+      }
+    }
     for (    File cp : classPaths) {
-      sb.append(pathSeparator);
-      sb.append(cp.getAbsolutePath());
+      String entry=cp.getAbsolutePath();
+      if (!(entries.contains(entry))) {
+        entries.add(entry);
+        sb.append(pathSeparator);
+        sb.append(entry);
+        pathSeparator=File.pathSeparator;
+      }
     }
     commandLine.add("-classpath");
-    commandLine.add(currentClassPathString + sb.toString());
+    commandLine.add(sb.toString());
     commandLine.add(AntBootstrap.class.getCanonicalName());
     commandLine.add(getWorkerClass().getCanonicalName());
     dumpPropertiesToWhatToDo();
