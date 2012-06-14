@@ -1,0 +1,20 @@
+{
+  myMessageBusConnection=myProject.getMessageBus().connect();
+  myMessageBusConnection.subscribe(CompilerTopics.COMPILATION_STATUS,new CompilationStatusAdapter(){
+    @Override public void compilationFinished(    boolean aborted,    int errors,    int warnings,    CompileContext compileContext){
+      super.compilationFinished(aborted,errors,warnings,compileContext);
+      Module[] affectedModules=compileContext.getCompileScope().getAffectedModules();
+      for (      Module module : affectedModules) {
+        MPSFacet mpsFacet=FacetManager.getInstance(module).getFacetByType(MPSFacetType.ID);
+        if (mpsFacet == null) {
+          continue;
+        }
+        List<SModelDescriptor> modelDescriptors=SModelRepository.getInstance().getModelDescriptors(mpsFacet.getSolution());
+        for (        SModelDescriptor descriptor : modelDescriptors) {
+          TraceInfoCache.getInstance().clean(descriptor);
+        }
+      }
+    }
+  }
+);
+}
