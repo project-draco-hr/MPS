@@ -1,0 +1,94 @@
+{
+  SNode buildProject=SConceptOperations.createNewNode("jetbrains.mps.build.structure.BuildProject",null);
+  SPropertyOperations.set(buildProject,"name",name);
+  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"plugins",true)).addElement(SConceptOperations.createNewNode("jetbrains.mps.build.structure.BuildJavaPlugin",null));
+  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"plugins",true)).addElement(SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMPSPlugin",null));
+  SModel targetSModel=targetModelDescriptor.getSModel();
+  try {
+    String relativeToModuleProjectPath=Context.defaultContext().getRelativePathHelper(targetSModel).makeRelative(myProject.getBasePath());
+    SPropertyOperations.set(buildProject,"internalBaseDirectory",relativeToModuleProjectPath);
+  }
+ catch (  RelativePathHelper.PathException e) {
+    if (log.isWarnEnabled()) {
+      log.warn("Can't calculate project path relative to module " + targetModelDescriptor.getModule(),e);
+    }
+  }
+  Set<String> userMacroNames=new LinkedHashSet<String>(PathMacros.getInstance().getUserMacroNames());
+  List<SNode> macros=new ArrayList<SNode>();
+  List<SNode> dependencies=new ArrayList<SNode>();
+  SNode dateMacro=null;
+  SNode buildNumber=null;
+  SNode branding=null;
+  if (eq_un708i_a0s0j(getDependencyKind(),DependencyStep.DependencyKind.MPS)) {
+    SNode macro=new BuildGeneratorImpl.QuotationClass_un708i_a0a0a81a9().createNode();
+    ListSequence.fromList(macros).addElement(macro);
+    ListSequence.fromList(dependencies).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0c0s0j().createNode(macro));
+    userMacroNames.remove("mps_home");
+  }
+ else   if (eq_un708i_a0a81a9(getDependencyKind(),DependencyStep.DependencyKind.IDEA)) {
+    SNode macro=new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0s0j().createNode();
+    ListSequence.fromList(macros).addElement(macro);
+    userMacroNames.remove("idea_home");
+    ListSequence.fromList(dependencies).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0d0a81a9().createNode(macro));
+    macro=new BuildGeneratorImpl.QuotationClass_un708i_a0a4a0s0j().createNode(macro);
+    ListSequence.fromList(macros).addElement(macro);
+    userMacroNames.remove("plugins_home");
+    ListSequence.fromList(dependencies).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0h0a81a9().createNode(macro));
+  }
+ else   if (eq_un708i_a0b81a9(getDependencyKind(),DependencyStep.DependencyKind.STANDALONE)) {
+    dateMacro=new BuildGeneratorImpl.QuotationClass_un708i_a0a0a1s0j().createNode();
+    ListSequence.fromList(macros).addElement(dateMacro);
+    buildNumber=new BuildGeneratorImpl.QuotationClass_un708i_a0a2a1s0j().createNode(name + "-SNAPSHOT");
+    ListSequence.fromList(macros).addElement(buildNumber);
+    SNode macro=new BuildGeneratorImpl.QuotationClass_un708i_a0a4a1s0j().createNode();
+    ListSequence.fromList(macros).addElement(macro);
+    ListSequence.fromList(dependencies).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0g0b81a9().createNode(macro));
+    userMacroNames.remove("mps_home");
+    userMacroNames.remove("date");
+    userMacroNames.remove("build.number");
+    branding=new BuildGeneratorImpl.QuotationClass_un708i_a0a01a1s0j().createNode(buildNumber,ICONS,name,name,name,ICONS,dateMacro,ICONS,ICONS,ICONS,ICONS,ICONS,ICONS);
+    ListSequence.fromList(SLinkOperations.getTargets(buildProject,"parts",true)).addElement(branding);
+  }
+  for (  String macro : SetSequence.fromSet(userMacroNames)) {
+    ListSequence.fromList(macros).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0t0j().createNode(macro));
+  }
+  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"macros",true)).addSequence(ListSequence.fromList(macros));
+  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"dependencies",true)).addSequence(ListSequence.fromList(dependencies));
+  Set<ModuleData> moduleData=SetSequence.fromSet(new LinkedHashSet<ModuleData>());
+  extractModules(selectedData,moduleData);
+  SNode group=new BuildGeneratorImpl.QuotationClass_un708i_a0a62a9().createNode(SetSequence.fromSet(moduleData).select(new ISelector<ModuleData,SNode>(){
+    public SNode select(    ModuleData it){
+      return createModuleNode(it);
+    }
+  }
+).toListSequence(),name);
+  SNode plugin=new BuildGeneratorImpl.QuotationClass_un708i_a0a72a9().createNode(name,group,name,name);
+  SLinkOperations.setNewChild(buildProject,"layout","jetbrains.mps.build.structure.BuildLayout");
+  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"parts",true)).addElement(plugin);
+  ListSequence.fromList(SLinkOperations.getTargets(buildProject,"parts",true)).addElement(group);
+  if (eq_un708i_a0gb0j(getDependencyKind(),DependencyStep.DependencyKind.STANDALONE)) {
+    ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(buildProject,"layout",true),"children",true)).addSequence(ListSequence.fromList(SLinkOperations.getTargets(new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0a0gb0j().createNode(branding,plugin,buildNumber,dateMacro),"children",true)));
+  }
+ else {
+    ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(buildProject,"layout",true),"children",true)).addElement(new BuildGeneratorImpl.QuotationClass_un708i_a0a0a0a23a9().createNode(name + ".zip",plugin));
+  }
+  SModelOperations.addRootNode(targetSModel,buildProject);
+  PathConverter pathConverter=new PathConverter(buildProject);
+  VisibleModules visible=new VisibleModules(buildProject,null);
+  visible.collect();
+  for (  SNode module : ListSequence.fromList(SNodeOperations.getDescendants(buildProject,"jetbrains.mps.build.mps.structure.BuildMps_Module",false,new String[]{}))) {
+    try {
+      new ModuleLoader(module,visible,pathConverter,null).importRequired();
+    }
+ catch (    ModuleLoader.ModuleLoaderException ex) {
+      if (log.isErrorEnabled()) {
+        log.error(ex.getMessage());
+      }
+    }
+  }
+  if (eq_un708i_a0qb0j(getDependencyKind(),DependencyStep.DependencyKind.STANDALONE)) {
+    SNode buildStandalone=addStandaloneBuild(targetSModel,buildProject);
+    return ListSequence.fromListAndArray(new ArrayList<SNode>(),buildProject,buildStandalone);
+  }
+  return Sequence.<SNode>singleton(buildProject);
+}
