@@ -1,6 +1,6 @@
 {
   setupEnvironment();
-  boolean doneSomething=false;
+  final Wrappers._boolean doneSomething=new Wrappers._boolean(false);
   Map<File,List<String>> mpsProjects=myWhatToDo.getMPSProjectFiles();
   for (  File file : mpsProjects.keySet()) {
     if (!(file.getName().endsWith(MPSExtentions.DOT_MPS_PROJECT))) {
@@ -14,14 +14,19 @@
     executeTask(p,new MpsWorker.ObjectsToProcess(Collections.singleton(p),new HashSet<IModule>(),new HashSet<SModelDescriptor>()));
     p.projectClosed();
     disposeProject(p);
-    doneSomething=true;
+    doneSomething.value=true;
   }
   LinkedHashSet<IModule> modules=new LinkedHashSet<IModule>();
   LinkedHashSet<SModelDescriptor> models=new LinkedHashSet<SModelDescriptor>();
   collectFromModuleFiles(modules);
   ModelAccess.instance().runWriteAction(new Runnable(){
     public void run(){
-      LibrariesLoader.getInstance().loadNewLibs();
+      if (doneSomething.value) {
+        ClassLoaderManager.getInstance().reloadAll(new EmptyProgressMonitor());
+      }
+ else {
+        LibrariesLoader.getInstance().loadNewLibs();
+      }
     }
   }
 );
@@ -30,9 +35,9 @@
   if (go.hasAnythingToGenerate()) {
     Project project=createDummyProject();
     executeTask(project,go);
-    doneSomething=true;
+    doneSomething.value=true;
   }
-  if (!(doneSomething)) {
+  if (!(doneSomething.value)) {
     error("Could not find anything to generate.");
     myTestFailed=true;
   }
