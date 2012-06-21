@@ -3,11 +3,22 @@
   if (application.isDisposeInProgress() || application.isDisposed()) {
     return;
   }
+  if (ListSequence.fromList(events).where(new IWhereFilter<VFileEvent>(){
+    public boolean accept(    VFileEvent it){
+      return !(VirtualFileUtils.isEventFromSave(it));
+    }
+  }
+).isEmpty()) {
+    return;
+  }
 synchronized (myLock) {
     if (myReloadSession == null) {
       myReloadSession=new ReloadSession(getReloadListeners());
     }
     for (    final VFileEvent event : events) {
+      if (VirtualFileUtils.isEventFromSave(event)) {
+        continue;
+      }
       FSChangesWatcher.LOG.debug("Got event " + event);
       processAfterEvent(event,myReloadSession);
     }
