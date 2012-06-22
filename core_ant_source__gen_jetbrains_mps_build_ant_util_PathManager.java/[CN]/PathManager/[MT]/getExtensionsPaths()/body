@@ -1,17 +1,24 @@
 {
   String pluginsPath=System.getProperty("plugin.path");
-  List<String> paths=new ArrayList<String>();
+  List<LibraryContributor.LibDescriptor> paths=new ArrayList<LibraryContributor.LibDescriptor>();
   if (pluginsPath != null) {
     for (    String plugin : pluginsPath.split(File.pathSeparator)) {
       File lib=new File(plugin + File.separator + "lib");
+      UrlClassLoader pluginCL=null;
       if (lib.exists() && lib.isDirectory()) {
         for (        File jar : lib.listFiles(JARS)) {
-          paths.add(jar.getAbsolutePath() + MODULES_PREFIX);
+          if (pluginCL == null) {
+            pluginCL=createPluginClassLoader(lib);
+          }
+          paths.add(new LibraryContributor.LibDescriptor(jar.getAbsolutePath() + MODULES_PREFIX,pluginCL));
         }
       }
       File languages=new File(plugin + File.separator + "languages");
       if (languages.exists() && languages.isDirectory()) {
-        paths.add(languages.getAbsolutePath());
+        if (pluginCL == null) {
+          pluginCL=createPluginClassLoader(lib);
+        }
+        paths.add(new LibraryContributor.LibDescriptor(languages.getAbsolutePath(),pluginCL));
       }
     }
   }
