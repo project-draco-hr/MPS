@@ -1,15 +1,18 @@
 {
   myParentLoaders.clear();
+  Set<String> newLibs=new HashSet<String>();
   for (  LibraryContributor lc : myContributors) {
     for (    LibDescriptor s : lc.getLibraries()) {
-      myParentLoaders.put(s.path,s.parentLoader != null ? s.parentLoader : LibraryInitializer.class.getClassLoader());
+      IFile path=FileSystem.getInstance().getFileByPath(s.path);
+      IFile bundlePath=FileSystem.getInstance().isPackaged(path) ? FileSystem.getInstance().getBundleHome(path) : null;
+      myParentLoaders.put(bundlePath != null ? bundlePath.getPath() : s.path,s.parentLoader != null ? s.parentLoader : LibraryInitializer.class.getClassLoader());
+      newLibs.add(s.path);
       Boolean oldValue=myHiddenPaths.get(s.path);
       if (oldValue == null || !oldValue) {
         myHiddenPaths.put(s.path,lc.hiddenLanguages());
       }
     }
   }
-  Set<String> newLibs=new HashSet<String>(myParentLoaders.keySet());
   reload(myLoadedLibs,newLibs,refreshFiles);
   myLoadedLibs=newLibs;
 }
