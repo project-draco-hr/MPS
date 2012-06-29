@@ -1,3 +1,23 @@
 {
-  return null;
+  PsiFile psiFile=getFile();
+  Document document=PsiDocumentManager.getInstance(myProject).getDocument(psiFile);
+  if (document == null) {
+    return null;
+  }
+  int line=getLine();
+  if (line < 0) {
+    return psiFile;
+  }
+  int startOffset=document.getLineStartOffset(line);
+  PsiElement element=psiFile.findElementAt(startOffset);
+  for (; element instanceof PsiWhiteSpace || element instanceof PsiComment; element=psiFile.findElementAt(startOffset)) {
+    startOffset=element.getTextRange().getEndOffset();
+  }
+  if (element != null && element.getParent() instanceof PsiForStatement) {
+    PsiStatement initialization=((PsiForStatement)element.getParent()).getInitialization();
+    if (initialization != null) {
+      element=initialization;
+    }
+  }
+  return element;
 }
