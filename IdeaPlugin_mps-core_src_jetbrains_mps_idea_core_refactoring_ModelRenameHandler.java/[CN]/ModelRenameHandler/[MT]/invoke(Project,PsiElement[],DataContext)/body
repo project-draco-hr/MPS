@@ -1,0 +1,47 @@
+{
+  IFile modelFile=getModelFile(dataContext);
+  if (modelFile == null)   return;
+  SModelDescriptor descriptor=SModelRepository.getInstance().findModel(modelFile);
+  if (!(descriptor instanceof EditableSModelDescriptor))   return;
+  final EditableSModelDescriptor modelDescriptor=(EditableSModelDescriptor)descriptor;
+  final AtomicReference<SModelFqName> targetFqName=new AtomicReference<SModelFqName>(null);
+  Pair<String,Boolean> result=Messages.showInputDialogWithCheckBox(MPSBundle.message("rename.model.to",modelDescriptor.getLongName()),MPSBundle.message("rename.model"),MPSBundle.message("update.all.references"),true,true,null,modelDescriptor.getLongName(),new MyInputValidator(){
+    @Override protected void doRename(    SModelFqName fqName){
+      targetFqName.set(fqName);
+    }
+  }
+);
+  if (targetFqName.get() != null) {
+    ApplicationManager.getApplication().runWriteAction(new Runnable(){
+      @Override public void run(){
+        deleteGeneratedFiles(modelDescriptor);
+      }
+    }
+);
+    final ModelRenamer renamer=new ModelRenamer(modelDescriptor,targetFqName.get(),!(result.getSecond()));
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      @Override public void run(){
+        renamer.rename();
+      }
+    }
+,ProjectHelper.toMPSProject(project));
+    ProgressManager.getInstance().run(new Task.Modal(project,"Updating model usages...",false){
+      @Override public void run(      @NotNull ProgressIndicator indicator){
+        indicator.pushState();
+        indicator.setIndeterminate(true);
+        try {
+          ModelAccess.instance().runWriteAction(new Runnable(){
+            public void run(){
+              renamer.updateReferencesIfNeeded();
+            }
+          }
+);
+        }
+  finally {
+          indicator.popState();
+        }
+      }
+    }
+);
+  }
+}
