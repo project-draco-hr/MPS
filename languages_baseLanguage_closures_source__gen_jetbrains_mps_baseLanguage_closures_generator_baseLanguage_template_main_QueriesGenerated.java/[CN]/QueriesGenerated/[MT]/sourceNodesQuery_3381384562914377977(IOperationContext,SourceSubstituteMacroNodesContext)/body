@@ -1,0 +1,20 @@
+{
+  List<SNode> paramDecls=SLinkOperations.getTargets(_context.getNode(),"parameter",true);
+  SNode ct=(SNode)Values.LITERAL_TARGET.get(_context,_context.getNode());
+  SNode imd=ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(ct,"classifier",false),"method",true)).first();
+  List<SNode> res=ListSequence.fromList(new ArrayList<SNode>());
+  int idx=0;
+  for (  SNode pd : SLinkOperations.getTargets(imd,"parameter",true)) {
+    if (idx >= ListSequence.fromList(paramDecls).count()) {
+      _context.showErrorMessage(_context.getNode(),"Method parameters count doesn't match closure parameters count: " + SPropertyOperations.getString(imd,"shortDescription"));
+      break;
+    }
+    SNode newpd=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ParameterDeclaration",null);
+    SLinkOperations.setTarget(newpd,"type",SNodeOperations.cast(FunctionTypeUtil.unbound(ClassifierTypeUtil.resolveType(SLinkOperations.getTarget(pd,"type",true),ct)),"jetbrains.mps.baseLanguage.structure.Type"),true);
+    SPropertyOperations.set(newpd,"name",SPropertyOperations.getString(ListSequence.fromList(paramDecls).getElement(idx),"name"));
+    SPropertyOperations.set(newpd,"isFinal","" + (SPropertyOperations.getBoolean(ListSequence.fromList(paramDecls).getElement(idx),"isFinal")));
+    idx++;
+    ListSequence.fromList(res).addElement(newpd);
+  }
+  return res;
+}
