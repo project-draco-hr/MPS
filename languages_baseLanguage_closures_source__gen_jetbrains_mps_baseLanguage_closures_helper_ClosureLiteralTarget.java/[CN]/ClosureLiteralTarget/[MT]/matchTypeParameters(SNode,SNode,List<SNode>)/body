@@ -1,0 +1,72 @@
+{
+  SNode meth=getFunctionMethod(literal,targetIfaceErase);
+  SNode funType=SNodeOperations.cast(TypeChecker.getInstance().getTypeOf(literal),"jetbrains.mps.baseLanguage.closures.structure.FunctionType");
+  ClosureLiteralTarget.TypeMatcher matcher=new ClosureLiteralTarget.TypeMatcher();
+  if ((SLinkOperations.getTarget(meth,"returnType",true) != null) && !(SNodeOperations.isInstanceOf(SLinkOperations.getTarget(meth,"returnType",true),"jetbrains.mps.baseLanguage.structure.VoidType"))) {
+    matcher.matchReturnType(SLinkOperations.getTarget(meth,"returnType",true),FunctionType_Behavior.call_getNormalizedReturnType_1213877405252(funType));
+    if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(meth,"returnType",true),"jetbrains.mps.baseLanguage.structure.ClassifierType")) {
+      SNode absRetCT=SNodeOperations.copyNode(SNodeOperations.cast(SLinkOperations.getTarget(meth,"returnType",true),"jetbrains.mps.baseLanguage.structure.ClassifierType"));
+      SNode ftResCT=FunctionTypeUtil.unmeet(FunctionType_Behavior.call_getNormalizedReturnType_1213877405252(funType));
+      String adapterName=JavaNameUtil.shortName(SPropertyOperations.getString(SLinkOperations.getTarget(absRetCT,"classifier",false),"name")) + JavaNameUtil.shortName(SPropertyOperations.getString(SLinkOperations.getTarget(SNodeOperations.as(FunctionTypeUtil.unbound(ftResCT),"jetbrains.mps.baseLanguage.structure.ClassifierType"),"classifier",false),"name")) + "Adapter";
+      for (      SNode cls : SModelOperations.getNodes(SNodeOperations.getModel(SLinkOperations.getTarget(absRetCT,"classifier",false)),"jetbrains.mps.baseLanguage.structure.Classifier")) {
+        if (adapterName.equals(JavaNameUtil.shortName(SPropertyOperations.getString(cls,"name")))) {
+          SNode newRetCT=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ClassifierType",null);
+          SLinkOperations.setTarget(newRetCT,"classifier",cls,false);
+          Values.RETURN_TYPE.set(genContext,targetIfaceErase,newRetCT);
+          break;
+        }
+      }
+    }
+  }
+{
+    Iterator<SNode> funParamIt=ListSequence.fromList(FunctionType_Behavior.call_getNormalizedParameterTypes_1213877405276(funType)).iterator();
+    Iterator<SNode> methParamIt=ListSequence.fromList(SLinkOperations.getTargets(meth,"parameter",true)).iterator();
+    while (funParamIt.hasNext() && methParamIt.hasNext()) {
+      matcher.matchType(SLinkOperations.getTarget(methParamIt.next(),"type",true),funParamIt.next());
+    }
+    if (funParamIt.hasNext() || methParamIt.hasNext()) {
+      genContext.showErrorMessage(literal,"Closure parameters count doesn't match method '" + SPropertyOperations.getString(meth,"name") + "' in "+ JavaNameUtil.fqClassName(SLinkOperations.getTarget(targetIfaceErase,"classifier",false),SPropertyOperations.getString(SLinkOperations.getTarget(targetIfaceErase,"classifier",false),"name")));
+    }
+  }
+{
+    Iterator<SNode> funThrIt=ListSequence.fromList(FunctionType_Behavior.call_getNormalizedThrowsTypes_3448422702164385781(funType)).iterator();
+    Iterator<SNode> methThrIt=ListSequence.fromList(FunctionTypeUtil.normalizeThrowsTypes(SLinkOperations.getTargets(meth,"throwsItem",true))).iterator();
+    while (funThrIt.hasNext() && methThrIt.hasNext()) {
+      matcher.matchType(methThrIt.next(),funThrIt.next());
+    }
+    if (funThrIt.hasNext() || methThrIt.hasNext()) {
+      genContext.showWarningMessage(literal,"Closure generic throws types count doesn't match method '" + SPropertyOperations.getString(meth,"name") + "' in "+ JavaNameUtil.fqClassName(SLinkOperations.getTarget(targetIfaceErase,"classifier",false),SPropertyOperations.getString(SLinkOperations.getTarget(targetIfaceErase,"classifier",false),"name")));
+    }
+  }
+  Values.TYPE_MAP.set(genContext,targetIfaceErase,matcher.getMap());
+  Map<SNode,SNode> map=matcher.getMap();
+  if (map != null) {
+    Iterator<SNode> reifiedTypeIt=ListSequence.fromList(reifiedTargetIfaceTypeParams).iterator();
+    Iterator<SNode> targetTypeVarIt=ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(targetIfaceErase,"classifier",false),"typeVariableDeclaration",true)).iterator();
+    while (reifiedTypeIt.hasNext() && targetTypeVarIt.hasNext()) {
+      SNode typeVar=targetTypeVarIt.next();
+      SNode rtp=reifiedTypeIt.next();
+      SNode substituteType=(MapSequence.fromMap(map).containsKey(typeVar) ? SNodeOperations.copyNode(MapSequence.fromMap(map).get(typeVar)) : SNodeOperations.copyNode(rtp));
+      List<SNode> queue=ListSequence.fromListAndArray(new LinkedList<SNode>(),ListSequence.fromList(SLinkOperations.getTargets(targetIfaceErase,"parameter",true)).addElement(substituteType));
+      with_queue:       while (!(ListSequence.fromList(queue).isEmpty())) {
+        SNode n=ListSequence.fromList(queue).removeElementAt(0);
+        if ((n != null)) {
+          if (SNodeOperations.isInstanceOf(n,"jetbrains.mps.baseLanguage.structure.UpperBoundType")) {
+            n=SNodeOperations.replaceWithAnother(n,SLinkOperations.getTarget(SNodeOperations.cast(n,"jetbrains.mps.baseLanguage.structure.UpperBoundType"),"bound",true));
+          }
+ else           if (SNodeOperations.isInstanceOf(n,"jetbrains.mps.baseLanguage.structure.LowerBoundType")) {
+            n=SNodeOperations.replaceWithAnother(n,SLinkOperations.getTarget(SNodeOperations.cast(n,"jetbrains.mps.baseLanguage.structure.LowerBoundType"),"bound",true));
+          }
+ else {
+            continue with_queue;
+          }
+          ListSequence.fromList(queue).addElement(n);
+          ListSequence.fromList(queue).addSequence(ListSequence.fromList(SNodeOperations.getChildren(n)));
+        }
+      }
+    }
+    if (reifiedTypeIt.hasNext() || targetTypeVarIt.hasNext()) {
+      genContext.showWarningMessage(literal,"Reified type parameters count doesn't match method declaration '" + SPropertyOperations.getString(meth,"name") + "' in "+ JavaNameUtil.fqClassName(SLinkOperations.getTarget(targetIfaceErase,"classifier",false),SPropertyOperations.getString(SLinkOperations.getTarget(targetIfaceErase,"classifier",false),"name")));
+    }
+  }
+}
