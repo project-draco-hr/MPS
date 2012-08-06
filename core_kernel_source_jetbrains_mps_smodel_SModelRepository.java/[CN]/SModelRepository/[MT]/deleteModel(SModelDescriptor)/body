@@ -1,12 +1,17 @@
 {
   ModelAccess.assertLegalWrite();
-  fireModelWillBeDeletedEvent(modelDescriptor);
-  removeModelDescriptor(modelDescriptor);
-  if (modelDescriptor instanceof EditableSModelDescriptor) {
-    IFile modelFile=((EditableSModelDescriptor)modelDescriptor).getModelFile();
-    if (modelFile != null && modelFile.exists()) {
-      modelFile.delete();
+  fireModelWillBeDeletedEvent(d);
+  removeModelDescriptor(d);
+  if (d instanceof BaseSModelDescriptorWithSource) {
+    ModelDataSource source=((BaseSModelDescriptorWithSource)d).getSource();
+    if (source instanceof FileBasedModelDataSource) {
+      for (      String file : ((FileBasedModelDataSource)source).getFilesToListen()) {
+        IFile modelFile=FileSystem.getInstance().getFileByPath(file);
+        if (modelFile != null && modelFile.exists()) {
+          modelFile.delete();
+        }
+      }
     }
   }
-  SModelRepository.getInstance().fireModelDeletedEvent(modelDescriptor);
+  SModelRepository.getInstance().fireModelDeletedEvent(d);
 }
