@@ -1,30 +1,71 @@
 {
   try {
-    Set<SNode> changed=SetSequence.fromSet(new HashSet<SNode>());
-    SNode oldSnodeNode=SNodeOperations.cast(SLinkOperations.getTarget(new MigrateToOpenAPI_Action.QuotationClass_mo9yth_a0a0a1a0a3().createNode(),"classifier",false),"jetbrains.mps.baseLanguage.structure.ClassConcept");
-    SNode newSnodeNode=SNodeOperations.cast(SLinkOperations.getTarget(new MigrateToOpenAPI_Action.QuotationClass_mo9yth_a0a0a2a0a3().createNode(),"classifier",false),"jetbrains.mps.baseLanguage.structure.Interface");
+    SNode oldSnodeNode=SNodeOperations.cast(SLinkOperations.getTarget(new MigrateToOpenAPI_Action.QuotationClass_mo9yth_a0a0a0a0a3().createNode(),"classifier",false),"jetbrains.mps.baseLanguage.structure.ClassConcept");
+    SNode newSnodeNode=SNodeOperations.cast(SLinkOperations.getTarget(new MigrateToOpenAPI_Action.QuotationClass_mo9yth_a0a0a1a0a3().createNode(),"classifier",false),"jetbrains.mps.baseLanguage.structure.Interface");
     Set<SNode> nodes=SetSequence.fromSet(new HashSet<SNode>());
     SetSequence.fromSet(nodes).addElement(oldSnodeNode);
-    SetSequence.fromSet(nodes).addSequence(ListSequence.fromList(SLinkOperations.getTargets(oldSnodeNode,"method",true)));
     Set<SReference> usages=FindUsagesManager.getInstance().findUsages(nodes,SearchType.USAGES,((MPSProject)MapSequence.fromMap(_params).get("project")).getScope(),new EmptyProgressMonitor());
+    Set<SNode> changedClassUsages=SetSequence.fromSet(new HashSet<SNode>());
     for (    SReference ref : SetSequence.fromSet(usages)) {
       SNode rNode=ref.getSourceNode();
       if (rNode.getModel().isNotEditable()) {
         continue;
       }
-      SetSequence.fromSet(changed).addElement(rNode);
+      SetSequence.fromSet(changedClassUsages).addElement(rNode);
+      rNode.replaceReference(ref,new StaticReference(ref.getRole(),rNode,newSnodeNode));
     }
-    SearchResults res=new SearchResults(nodes,SetSequence.fromSet(changed).select(new ISelector<SNode,SearchResult<SNode>>(){
+    Set<SNode> methods=SetSequence.fromSet(new HashSet<SNode>());
+    SetSequence.fromSet(methods).addSequence(ListSequence.fromList(SLinkOperations.getTargets(oldSnodeNode,"method",true)));
+    Set<SReference> musages=FindUsagesManager.getInstance().findUsages(methods,SearchType.USAGES,((MPSProject)MapSequence.fromMap(_params).get("project")).getScope(),new EmptyProgressMonitor());
+    Set<SNode> changedMethodCalls=SetSequence.fromSet(new HashSet<SNode>());
+    Set<SNode> castedMethodCalls=SetSequence.fromSet(new HashSet<SNode>());
+    Set<SNode> unknownMethodCalls=SetSequence.fromSet(new HashSet<SNode>());
+    for (    SReference ref : SetSequence.fromSet(musages)) {
+      SNode rNode=ref.getSourceNode();
+      if (rNode.getModel().isNotEditable()) {
+        continue;
+      }
+      SNode newMethod=MigrateToOpenAPI_Action.this.getNewMethod(((SNode)ref.getTargetNode()),_params);
+      if (newMethod != null) {
+        rNode.replaceReference(ref,new StaticReference(ref.getRole(),rNode,newMethod));
+        SetSequence.fromSet(changedMethodCalls).addElement(rNode);
+        continue;
+      }
+      SNode n=(SNode)rNode;
+      if (SNodeOperations.getContainingLinkDeclaration(n) == SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.DotExpression","operation")) {
+        SNode operand=SLinkOperations.getTarget(SNodeOperations.cast(SNodeOperations.getParent(n),"jetbrains.mps.baseLanguage.structure.DotExpression"),"operand",true);
+        SNodeOperations.replaceWithAnother(operand,new MigrateToOpenAPI_Action.QuotationClass_mo9yth_a0a0b0h0w0a0d().createNode(operand));
+        SetSequence.fromSet(castedMethodCalls).addElement(rNode);
+        continue;
+      }
+      SetSequence.fromSet(unknownMethodCalls).addElement(rNode);
+    }
+    Iterable<SearchResult<SNode>> results=SetSequence.fromSet(changedClassUsages).select(new ISelector<SNode,SearchResult<SNode>>(){
       public SearchResult<SNode> select(      SNode it){
-        return new SearchResult<SNode>(it,"usage");
+        return new SearchResult<SNode>(it,"replaced SNode occurences");
       }
     }
-).toListSequence());
+).union(SetSequence.fromSet(changedMethodCalls).select(new ISelector<SNode,SearchResult<SNode>>(){
+      public SearchResult<SNode> select(      SNode it){
+        return new SearchResult<SNode>(it,"replaced method call");
+      }
+    }
+)).union(SetSequence.fromSet(castedMethodCalls).select(new ISelector<SNode,SearchResult<SNode>>(){
+      public SearchResult<SNode> select(      SNode it){
+        return new SearchResult<SNode>(it,"casted method call");
+      }
+    }
+)).union(SetSequence.fromSet(unknownMethodCalls).select(new ISelector<SNode,SearchResult<SNode>>(){
+      public SearchResult<SNode> select(      SNode it){
+        return new SearchResult<SNode>(it,"not migrated method call");
+      }
+    }
+));
     ((Project)MapSequence.fromMap(_params).get("iproject")).getComponent(RefactoringView.class).showRefactoringView(((Project)MapSequence.fromMap(_params).get("iproject")),new RefactoringViewAction(){
       public void performAction(      RefactoringViewItem refactoringViewItem){
       }
     }
-,res,false,"usages");
+,new SearchResults(nodes,Sequence.fromIterable(results).toListSequence()),false,"usages");
   }
  catch (  Throwable t) {
     if (log.isErrorEnabled()) {
