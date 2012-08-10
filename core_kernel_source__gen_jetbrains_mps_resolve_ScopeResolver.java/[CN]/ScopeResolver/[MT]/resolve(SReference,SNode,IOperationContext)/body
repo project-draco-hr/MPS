@@ -1,0 +1,33 @@
+{
+  SNode linkDeclaration=((SNode)BehaviorManager.getInstance().invoke(Object.class,SNodeOperations.getConceptDeclaration(sourceNode),"call_findLinkDeclaration_1213877394467",new Class[]{SNode.class,String.class},reference.getRole()));
+  if (linkDeclaration == null) {
+    return null;
+  }
+  final SNode referentConcept=SLinkOperations.getTarget(linkDeclaration,"target",false);
+  return TypeContextManager.getInstance().runResolveAction(new Computable<ResolveResult>(){
+    @Override public ResolveResult compute(){
+      Scope refScope=ModelConstraintsUtil.getScope(reference,operationContext);
+      if (refScope instanceof ErrorScope) {
+        LOG.error("Couldn't create referent search scope : " + ((ErrorScope)refScope).getMessage());
+        return null;
+      }
+      SNode result=null;
+      String resolveInfo=reference.getResolveInfo();
+      for (      SNode node : refScope.getAvailableElements(null)) {
+        if (!(SNodeOperations.isInstanceOf(node,NameUtil.nodeFQName(referentConcept)))) {
+          continue;
+        }
+        if (resolveInfo != null && (resolveInfo.equals(node.getName()) || resolveInfo.equals(node.getProperty("nestedName")))) {
+          if (result == null) {
+            result=node;
+          }
+ else {
+            return null;
+          }
+        }
+      }
+      return (result != null ? new ResolveResult(sourceNode,result,reference.getRole(),null) : null);
+    }
+  }
+);
+}
