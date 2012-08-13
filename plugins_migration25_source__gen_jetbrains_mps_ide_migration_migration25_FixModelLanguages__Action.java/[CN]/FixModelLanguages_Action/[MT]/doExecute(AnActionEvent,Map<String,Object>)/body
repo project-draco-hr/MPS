@@ -1,0 +1,31 @@
+{
+  try {
+    for (    IModule module : ListSequence.fromList(((MPSProject)MapSequence.fromMap(_params).get("project")).getModulesWithGenerators())) {
+      if (module.isPackaged()) {
+        continue;
+      }
+      for (      SModelDescriptor md : ListSequence.fromList(module.getOwnModelDescriptors())) {
+        if (!(md instanceof DefaultSModelDescriptor)) {
+          continue;
+        }
+        if (((DefaultSModelDescriptor)md).isReadOnly()) {
+          continue;
+        }
+        SModel m=md.getSModel();
+        for (        SNode node : SModelOperations.getNodes(m,null)) {
+          Language l=node.getLanguage();
+          ModuleReference lr=l.getModuleReference();
+          if (!(md.getSModel().importedLanguages().contains(lr))) {
+            md.getSModel().addLanguage(lr);
+          }
+        }
+      }
+    }
+    SModelRepository.getInstance().saveAll();
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "FixModelLanguages",t);
+    }
+  }
+}
