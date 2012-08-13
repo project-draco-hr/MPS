@@ -1,15 +1,15 @@
 {
   SNode linkDeclaration=((SNode)BehaviorManager.getInstance().invoke(Object.class,SNodeOperations.getConceptDeclaration(sourceNode),"call_findLinkDeclaration_1213877394467",new Class[]{SNode.class,String.class},reference.getRole()));
   if (linkDeclaration == null) {
-    return null;
+    return false;
   }
   final SNode referentConcept=SLinkOperations.getTarget(linkDeclaration,"target",false);
-  return TypeContextManager.getInstance().runResolveAction(new Computable<ResolveResult>(){
-    @Override public ResolveResult compute(){
+  return TypeContextManager.getInstance().runResolveAction(new Computable<Boolean>(){
+    @Override public Boolean compute(){
       Scope refScope=ModelConstraintsUtil.getScope(reference,operationContext);
       if (refScope instanceof ErrorScope) {
         LOG.error("Couldn't create referent search scope : " + ((ErrorScope)refScope).getMessage());
-        return null;
+        return false;
       }
       SNode result=null;
       String resolveInfo=reference.getResolveInfo();
@@ -22,11 +22,15 @@
             result=node;
           }
  else {
-            return null;
+            return false;
           }
         }
       }
-      return (result != null ? new ResolveResult(sourceNode,result,reference.getRole(),null) : null);
+      if (result == null) {
+        return false;
+      }
+      sourceNode.setReferent(reference.getRole(),result,false);
+      return true;
     }
   }
 );
