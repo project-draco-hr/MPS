@@ -1,0 +1,61 @@
+{
+  final List<Tuples._2<Set<SNode>,Set<SNode>>> usages=ListSequence.fromList(new ArrayList<Tuples._2<Set<SNode>,Set<SNode>>>());
+  for (  Tuples._4<String,SNode,_FunctionTypes._return_P1_E0<? extends Boolean,? super SNode>,_FunctionTypes._void_P1_E0<? super SNode>> transformation : ListSequence.fromList(transformations)) {
+    Set<SNode> method=SetSequence.fromSetAndArray(new HashSet<SNode>(),transformation._1());
+    Set<SReference> musages=FindUsagesManager.getInstance().findUsages(method,SearchType.USAGES,scope,new EmptyProgressMonitor());
+    Set<SNode> unknown=SetSequence.fromSet(new HashSet<SNode>());
+    Set<SNode> known=SetSequence.fromSet(new HashSet<SNode>());
+    for (    SReference usage : SetSequence.fromSet(musages)) {
+      SNode n=usage.getSourceNode();
+      if (!(transformation._2().invoke(n))) {
+        SetSequence.fromSet(unknown).addElement(n);
+        continue;
+      }
+      SetSequence.fromSet(known).addElement(n);
+    }
+    ListSequence.fromList(usages).addElement(MultiTuple.<Set<SNode>,Set<SNode>>from(known,unknown));
+  }
+  List<SearchResult<SNode>> results=ListSequence.fromList(new ArrayList<SearchResult<SNode>>());
+  for (int i=0; i < ListSequence.fromList(usages).count(); i++) {
+    final String cat=ListSequence.fromList(transformations).getElement(i)._0();
+    ListSequence.fromList(results).addSequence(SetSequence.fromSet(ListSequence.fromList(usages).getElement(i)._0()).select(new ISelector<SNode,SearchResult<SNode>>(){
+      public SearchResult<SNode> select(      SNode it){
+        return new SearchResult<SNode>(it,cat);
+      }
+    }
+));
+    ListSequence.fromList(results).addSequence(SetSequence.fromSet(ListSequence.fromList(usages).getElement(i)._1()).select(new ISelector<SNode,SearchResult<SNode>>(){
+      public SearchResult<SNode> select(      SNode it){
+        return new SearchResult<SNode>(it,"unknown: " + cat);
+      }
+    }
+));
+  }
+  ip.getComponent(RefactoringView.class).showRefactoringView(ip,new RefactoringViewAction(){
+    public void performAction(    RefactoringViewItem refactoringViewItem){
+      refactoringViewItem.close();
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          for (int i=0; i < ListSequence.fromList(usages).count(); i++) {
+            _FunctionTypes._void_P1_E0<? super SNode> transformer=ListSequence.fromList(transformations).getElement(i)._3();
+            for (            SNode known : SetSequence.fromSet(ListSequence.fromList(usages).getElement(i)._0())) {
+              transformer.invoke(known);
+            }
+          }
+        }
+      }
+);
+    }
+  }
+,new SearchResults(SetSequence.fromSetWithValues(new HashSet<SNode>(),ListSequence.fromList(transformations).select(new ISelector<Tuples._4<String,SNode,_FunctionTypes._return_P1_E0<? extends Boolean,? super SNode>,_FunctionTypes._void_P1_E0<? super SNode>>,SNode>(){
+    public SNode select(    Tuples._4<String,SNode,_FunctionTypes._return_P1_E0<? extends Boolean,? super SNode>,_FunctionTypes._void_P1_E0<? super SNode>> it){
+      return it._1();
+    }
+  }
+)),ListSequence.fromList(results).where(new IWhereFilter<SearchResult<SNode>>(){
+    public boolean accept(    SearchResult<SNode> it){
+      return !(it.getObject().isDetached());
+    }
+  }
+).toListSequence()),false,"usages");
+}
