@@ -1,27 +1,17 @@
 {
-  IRefactoring ref=OldRefactoringAdapter.createAdapterFor(new SafeDeleteModelRefactoring(deleteFiles));
-  GenericRefactoringAction safeDeleteAction=new GenericRefactoringAction(ref){
-    protected Applicability getMinApplicabilityLevel(){
-      return Applicability.OVERRIDDEN;
-    }
-  }
-;
-  DataContext dc=new DataContext(){
-    private DataContext myRealContext=DataManager.getInstance().getDataContext();
-    @Nullable public Object getData(    @NonNls String dataId){
-      if (dataId.equals(MPSDataKeys.PROJECT.getName()))       return project;
- else       if (dataId.equals(MPSDataKeys.CONTEXT_MODEL.getName()))       return modelDescriptor;
- else       if (dataId.equals(MPSDataKeys.OPERATION_CONTEXT.getName())) {
-        Object operationContext=myRealContext.getData(dataId);
-        if (operationContext == null) {
-          operationContext=new ProjectOperationContext(ProjectHelper.toMPSProject(project));
-        }
-        return operationContext;
+  IRefactoring ref=new SafeDeleteModelRefactoring(deleteFiles);
+  final RefactoringContext context=new RefactoringContext(ref);
+  context.setSelectedModel(modelDescriptor);
+  context.setSelectedModule(modelDescriptor.getModule());
+  context.setSelectedProject(ProjectHelper.toMPSProject(project));
+  context.setCurrentOperationContext(new ProjectOperationContext(ProjectHelper.toMPSProject(project)));
+  ModelAccess.instance().runWriteInEDT(new Runnable(){
+    @Override public void run(){
+      if (!(modelDescriptor.isRegistered())) {
+        return;
       }
- else       return myRealContext.getData(dataId);
+      RefactoringAccess.getInstance().getRefactoringFacade().execute(context);
     }
   }
-;
-  AnActionEvent event=ActionUtils.createEvent(ActionPlaces.UNKNOWN,dc);
-  ActionUtils.updateAndPerformAction(safeDeleteAction,event);
+);
 }
