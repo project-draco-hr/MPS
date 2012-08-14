@@ -1,2 +1,54 @@
 {
+  try {
+    GoByReference_ActionGroup.this.removeAll();
+    final IOperationContext context=event.getData(MPSCommonDataKeys.OPERATION_CONTEXT);
+    SNode node=event.getData(MPSCommonDataKeys.NODE);
+    if (node == null || context == null) {
+      GoByReference_ActionGroup.this.disable(event.getPresentation());
+      return;
+    }
+    List<SReference> refs=node.getReferences();
+    if (ListSequence.fromList(refs).isEmpty()) {
+      GoByReference_ActionGroup.this.disable(event.getPresentation());
+      return;
+    }
+    for (    SReference ref : ListSequence.fromList(refs)) {
+      SNode targetNode=ref.getTargetNode();
+      if (targetNode != null) {
+        String text="[" + ref.getRole() + "] -> "+ ref.getResolveInfo();
+        GoByReference_ActionGroup.this.addParameterizedAction(new EditGivenNode_Action(new SNodePointer(targetNode),text),PluginId.getId("jetbrains.mps.ide"),new SNodePointer(targetNode),text);
+        continue;
+      }
+      final SReference finalRef=ref;
+      ModelAccess.instance().runWriteInEDT(new Runnable(){
+        public void run(){
+          String text="Bad reference: [" + finalRef.getRole() + "] -> "+ finalRef.getResolveInfo();
+          ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
+            public void run(){
+              ResolverComponent.getInstance().resolve(finalRef,context);
+            }
+          }
+,context.getProject());
+          String role=finalRef.getRole();
+          SNode sourceNode=finalRef.getSourceNode();
+          SReference newRef=sourceNode.getReference(role);
+          if (newRef == null) {
+            return;
+          }
+          SNode newTarget=finalRef.getTargetNode();
+          if (newTarget == null) {
+            return;
+          }
+          GoByReference_ActionGroup.this.addParameterizedAction(new EditGivenNode_Action(new SNodePointer(newTarget),text),PluginId.getId("jetbrains.mps.ide"),new SNodePointer(newTarget),text);
+        }
+      }
+);
+    }
+  }
+ catch (  Throwable t) {
+    LOG.error("User group error",t);
+  }
+  for (  Pair<ActionPlace,Condition<BaseAction>> p : this.myPlaces) {
+    this.addPlace(p.first,p.second);
+  }
 }
