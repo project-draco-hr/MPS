@@ -4,8 +4,15 @@
 synchronized (myModelsLock) {
     modelsToRefresh=getModelsToSave();
   }
+  FileSystem fs=FileSystem.getInstance();
   for (  EditableSModelDescriptor emd : modelsToRefresh) {
-    FileSystem.getInstance().refresh(emd.getModelFile());
+    if (!(emd instanceof BaseSModelDescriptorWithSource))     return;
+    ModelDataSource source=((BaseSModelDescriptorWithSource)emd).getSource();
+    if (!(source instanceof FileBasedModelDataSource))     continue;
+    Collection<String> files=((FileBasedModelDataSource)source).getFilesToListen();
+    for (    String file : files) {
+      fs.refresh(fs.getFileByPath(file));
+    }
   }
 synchronized (myModelsLock) {
     for (    EditableSModelDescriptor emd : getModelsToSave()) {

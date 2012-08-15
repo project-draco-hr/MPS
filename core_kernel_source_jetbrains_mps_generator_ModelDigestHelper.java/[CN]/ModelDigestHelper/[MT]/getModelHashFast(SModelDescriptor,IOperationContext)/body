@@ -1,12 +1,14 @@
 {
-  if (descriptor instanceof EditableSModelDescriptor) {
-    IFile modelFile=((EditableSModelDescriptor)descriptor).getModelFile();
-    if (modelFile != null) {
-      for (      DigestProvider p : myProviders) {
-        Map<String,String> result=p.getGenerationHashes(operationContext,modelFile);
-        if (result != null)         return result.get(FILE);
-      }
-    }
+  if (!(descriptor instanceof BaseSModelDescriptorWithSource))   return descriptor.getModelHash();
+  ModelDataSource source=((BaseSModelDescriptorWithSource)descriptor).getSource();
+  if (!(source instanceof FileBasedModelDataSource))   return descriptor.getModelHash();
+  Collection<String> files=((FileBasedModelDataSource)source).getFilesToListen();
+  if (files.size() != 1)   return descriptor.getModelHash();
+  IFile modelFile=FileSystem.getInstance().getFileByPath(files.iterator().next());
+  if (modelFile == null)   return descriptor.getModelHash();
+  for (  DigestProvider p : myProviders) {
+    Map<String,String> result=p.getGenerationHashes(operationContext,modelFile);
+    if (result != null)     return result.get(FILE);
   }
   return descriptor.getModelHash();
 }
