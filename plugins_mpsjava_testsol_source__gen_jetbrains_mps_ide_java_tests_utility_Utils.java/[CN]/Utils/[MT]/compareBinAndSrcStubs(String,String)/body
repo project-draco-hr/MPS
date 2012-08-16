@@ -1,0 +1,36 @@
+{
+  JavaStubs bin=new JavaStubs();
+  JavaSourceStubs src=new JavaSourceStubs();
+  IModule mod1=MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("c3786d2b-aba2-45e5-8de0-1124fd14259b"));
+  IModule mod2=MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("49166c31-952a-46f6-8970-ea45964379d0"));
+  List<SModel> binModels=ListSequence.fromList(new ArrayList<SModel>());
+  Collection<SModelDescriptor> binStubModels=bin.load(new ModelRoot(binPath),mod1);
+  for (  SModelDescriptor md : CollectionSequence.fromCollection(binStubModels)) {
+    SModel m=md.getSModel();
+    ListSequence.fromList(binModels).addElement(m);
+    System.out.println(m.getLongName());
+    for (    SNode binRoot : ListSequence.fromList(SModelOperations.getRoots(m,null))) {
+      NodePatcher.fixNonStatic(binRoot);
+      NodePatcher.removeConstructorName(binRoot);
+      NodePatcher.removeExtendsObject(binRoot);
+      NodePatcher.removeInitializers(binRoot);
+      NodePatcher.sortNestedClass(SNodeOperations.cast(binRoot,"jetbrains.mps.baseLanguage.structure.Classifier"));
+      NodePatcher.removeStatements(binRoot);
+    }
+  }
+  System.out.println("-------------------------");
+  List<SModel> srcModels=ListSequence.fromList(new ArrayList<SModel>());
+  Collection<SModelDescriptor> srcStubModels;
+  srcStubModels=src.load(new ModelRoot(sourcePath),mod2);
+  for (  SModelDescriptor md : CollectionSequence.fromCollection(srcStubModels)) {
+    SModel m=md.getSModel();
+    ListSequence.fromList(srcModels).addElement(m);
+    System.out.println(m.getLongName());
+    for (    SNode srcRoot : ListSequence.fromList(SModelOperations.getRoots(m,null))) {
+      NodePatcher.fixNonStatic(srcRoot);
+      NodePatcher.removeSourceLevelAnnotations(srcRoot);
+      NodePatcher.sortNestedClass(SNodeOperations.cast(srcRoot,"jetbrains.mps.baseLanguage.structure.Classifier"));
+    }
+  }
+  compare(binModels,srcModels);
+}

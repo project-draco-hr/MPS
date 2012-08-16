@@ -1,0 +1,44 @@
+{
+  Map<String,SModel> leftModelMap=MapSequence.fromMap(new HashMap<String,SModel>());
+  for (  SModel m : ListSequence.fromList(leftModels)) {
+    MapSequence.fromMap(leftModelMap).put(m.getLongName(),m);
+  }
+  Map<String,SModel> rightModelMap=MapSequence.fromMap(new HashMap<String,SModel>());
+  for (  SModel m : ListSequence.fromList(rightModels)) {
+    MapSequence.fromMap(rightModelMap).put(m.getLongName(),m);
+  }
+  Assert.assertTrue(SetSequence.fromSet(MapSequence.fromMap(leftModelMap).keySet()).containsSequence(SetSequence.fromSet(MapSequence.fromMap(rightModelMap).keySet())) && SetSequence.fromSet(MapSequence.fromMap(rightModelMap).keySet()).containsSequence(SetSequence.fromSet(MapSequence.fromMap(leftModelMap).keySet())));
+  Map<SNode,SNode> classMap=MapSequence.fromMap(new HashMap<SNode,SNode>());
+  for (  String name : SetSequence.fromSet(MapSequence.fromMap(leftModelMap).keySet())) {
+    SModel binModel=MapSequence.fromMap(leftModelMap).get(name);
+    SModel srcModel=MapSequence.fromMap(rightModelMap).get(name);
+    buildNodeMap(binModel,srcModel,classMap);
+  }
+  System.out.println("-------------------------");
+  boolean errors=false;
+  for (  String name : SetSequence.fromSet(MapSequence.fromMap(leftModelMap).keySet())) {
+    SModel binModel=MapSequence.fromMap(leftModelMap).get(name);
+    SModel srcModel=MapSequence.fromMap(rightModelMap).get(name);
+    List<SNode> binRoots=SModelOperations.getRoots(binModel,null);
+    List<SNode> srcRoots=SModelOperations.getRoots(srcModel,null);
+    binRoots=ListSequence.fromList(binRoots).sort(new ISelector<SNode,Comparable<?>>(){
+      public Comparable<?> select(      SNode it){
+        return SPropertyOperations.getString(SNodeOperations.cast(it,"jetbrains.mps.baseLanguage.structure.Classifier"),"name");
+      }
+    }
+,true).toListSequence();
+    srcRoots=ListSequence.fromList(srcRoots).sort(new ISelector<SNode,Comparable<?>>(){
+      public Comparable<?> select(      SNode it){
+        return SPropertyOperations.getString(SNodeOperations.cast(it,"jetbrains.mps.baseLanguage.structure.Classifier"),"name");
+      }
+    }
+,true).toListSequence();
+    System.out.println("Checking " + name);
+    List<NodeDifference> diff=NodesMatcher.matchNodes(binRoots,srcRoots,classMap);
+    if (diff != null) {
+      errors=true;
+      System.err.println("Diff: " + diff);
+    }
+  }
+  Assert.assertFalse(errors);
+}
