@@ -2,7 +2,7 @@
   final Semaphore semaphore=new Semaphore();
   semaphore.down();
   final boolean[] connectorIsReady={false};
-  final DebugProcessMulticaster processMulticaster=myDebugVMEventsProcessor.getMulticaster();
+  final DebugProcessMulticaster processMulticaster=myEventsProcessor.getMulticaster();
   processMulticaster.addListener(new DebugProcessAdapter(){
     public void connectorIsReady(){
       VmCreator.LOG.debug("Connector is ready.");
@@ -12,15 +12,15 @@
     }
   }
 );
-  myDebuggerManagerThread.schedule(new DebuggerCommand(){
-    protected void action(){
-      VirtualMachine vm=null;
+  myEventsProcessor.schedule(new _FunctionTypes._void_P0_E0(){
+    public void invoke(){
+      final Wrappers._T<VirtualMachine> vm=new Wrappers._T<VirtualMachine>(null);
       try {
         final long time=System.currentTimeMillis();
-        while (System.currentTimeMillis() - time < VmCreator.LOCAL_START_TIMEOUT) {
+        while (System.currentTimeMillis() - time < LOCAL_START_TIMEOUT) {
           try {
-            vm=doCreateVirtualMachine();
-            VmCreator.LOG.debug("Created VM " + vm);
+            vm.value=doCreateVirtualMachine();
+            LOG.debug("Created VM " + vm.value);
             break;
           }
  catch (          Throwable t) {
@@ -32,14 +32,13 @@
   finally {
         semaphore.up();
       }
-      if (vm != null) {
-        final VirtualMachine vm1=vm;
+      if (vm.value != null) {
         executeAfterProcessStarted(new Runnable(){
           public void run(){
             VmCreator.LOG.debug("Schedule commit command.");
-            myDebuggerManagerThread.schedule(new DebuggerCommand(){
-              protected void action() throws Exception {
-                myDebugVMEventsProcessor.commitVM(vm1);
+            myEventsProcessor.schedule(new _FunctionTypes._void_P0_E0(){
+              public void invoke(){
+                myEventsProcessor.commitVm(vm.value);
               }
             }
 );
@@ -48,17 +47,13 @@
 );
       }
  else {
-        VmCreator.LOG.debug("VM is null.");
+        LOG.debug("VM is null.");
       }
     }
-    protected void commandCancelled(){
-      try {
-        super.commandCancelled();
-        VmCreator.LOG.debug("Command cancelled.");
-      }
-  finally {
-        semaphore.up();
-      }
+  }
+,new _FunctionTypes._void_P0_E0(){
+    public void invoke(){
+      semaphore.up();
     }
   }
 );
