@@ -1,0 +1,36 @@
+{
+  BaseModelModel goToModelModel=new BaseModelModel(project){
+    public NavigationItem doGetNavigationItem(    final SModelReference modelReference){
+      return new AddModelItem(project,model,modelReference,module);
+    }
+    public SModelReference[] find(    IScope scope){
+      Condition<SModelDescriptor> cond=new Condition<SModelDescriptor>(){
+        public boolean met(        SModelDescriptor modelDescriptor){
+          boolean rightStereotype=SModelStereotype.isUserModel(modelDescriptor) || SModelStereotype.isStubModelStereotype(modelDescriptor.getStereotype());
+          boolean hasModule=modelDescriptor.getModule() != null;
+          return rightStereotype && hasModule;
+        }
+      }
+;
+      ConditionalIterable<SModelDescriptor> iter=new ConditionalIterable<SModelDescriptor>(scope.getModelDescriptors(),cond);
+      List<SModelReference> filteredModelRefs=new ArrayList<SModelReference>();
+      for (      SModelDescriptor md : iter) {
+        filteredModelRefs.add(md.getSModelReference());
+      }
+      return filteredModelRefs.toArray(new SModelReference[filteredModelRefs.size()]);
+    }
+    @Nullable public String getPromptText(){
+      return "Import model:";
+    }
+  }
+;
+  ChooseByNamePopup popup=MpsPopupFactory.createPackagePopup(project,goToModelModel,parentAction);
+  popup.invoke(new ChooseByNamePopupComponent.Callback(){
+    public void onClose(){
+    }
+    public void elementChosen(    final Object element){
+      ((NavigationItem)element).navigate(true);
+    }
+  }
+,ModalityState.current(),true);
+}

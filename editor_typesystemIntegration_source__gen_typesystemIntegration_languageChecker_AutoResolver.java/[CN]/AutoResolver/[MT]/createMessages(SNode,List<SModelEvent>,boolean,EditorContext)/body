@@ -1,55 +1,21 @@
 {
-  Set<EditorMessage> messages=new LinkedHashSet<EditorMessage>();
-  if (rootNode.getModel() == null || rootNode.getModel().getModelDescriptor() == null) {
+  Set<EditorMessage> messages=SetSequence.fromSet(new LinkedHashSet<EditorMessage>());
+  if (SNodeOperations.getModel(rootNode) == null || SNodeOperations.getModel(rootNode).getModelDescriptor() == null) {
     return messages;
   }
-  if (rootNode.getModel().isTransient()) {
+  if (SNodeOperations.getModel(rootNode).isTransient()) {
     return messages;
   }
-  List<SReference> yetBadReferences=new ArrayList<SReference>();
-  SReference.disableLogging();
-  final ArrayList<ResolveResult> resolveResultArrayList=new ArrayList<ResolveResult>();
-  try {
-    Set<SReference> badReferences=collectBadReferences(rootNode);
-    if (!(badReferences.isEmpty())) {
-      TypeContextManager.getInstance().setComputeInNormalMode(true);
-      yetBadReferences=Resolver.resolveReferences(badReferences,editorContext.getOperationContext(),resolveResultArrayList,false);
-      TypeContextManager.getInstance().setComputeInNormalMode(false);
-      for (Iterator<ResolveResult> it=resolveResultArrayList.iterator(); it.hasNext(); ) {
-        ResolveResult resolveResult=it.next();
-        if (isNewTargetFromAnotherModel(resolveResult)) {
-          yetBadReferences.add(getResolvedReference(resolveResult));
-          it.remove();
-        }
-      }
-    }
+  boolean autoresolve=!(hasUnresolvedImportedModels(SNodeOperations.getModel(rootNode),editorContext));
+  if (!(autoresolve)) {
+    SetSequence.fromSet(messages).addElement(HighlightUtil.createWarningMessage(rootNode,"Containing model has unresolved model imports. Automatic refrence resolving is switched off to avoid incorrect reference target resolving.",this));
   }
-  finally {
-    SReference.enableLogging();
-  }
-  ModelAccess.instance().runWriteInEDT(new Runnable(){
-    public void run(){
-      if (resolveResultArrayList.isEmpty()) {
-        return;
-      }
-      Project p=(editorContext != null && editorContext.getOperationContext() != null ? editorContext.getOperationContext().getProject() : null);
-      if (p == null) {
-        return;
-      }
-      ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
-        public void run(){
-          for (          ResolveResult resolveResult : resolveResultArrayList) {
-            resolveResult.setTarget();
-          }
-        }
-      }
-,p);
-    }
-  }
-);
-  for (  SReference ref : yetBadReferences) {
+  for (  SReference ref : SetSequence.fromSet(collectBadReferences(rootNode))) {
     EditorMessage message=HighlightUtil.createHighlighterMessage(ref.getSourceNode(),"Unresolved reference",this,editorContext);
-    messages.add(message);
+    SetSequence.fromSet(messages).addElement(message);
+    if (autoresolve) {
+      autoresolveReference(ref,editorContext);
+    }
   }
   return messages;
 }
