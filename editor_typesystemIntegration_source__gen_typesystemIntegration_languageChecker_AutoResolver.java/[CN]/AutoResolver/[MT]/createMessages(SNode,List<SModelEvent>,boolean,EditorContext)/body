@@ -10,11 +10,17 @@
   if (!(autoresolve)) {
     SetSequence.fromSet(messages).addElement(HighlightUtil.createWarningMessage(rootNode,"Containing model has unresolved model imports. Automatic refrence resolving is switched off to avoid incorrect reference target resolving.",this));
   }
-  for (  SReference ref : SetSequence.fromSet(collectBadReferences(rootNode))) {
+  Set<SReference> badReferences=collectBadReferences(rootNode);
+  for (  SReference ref : SetSequence.fromSet(badReferences)) {
     EditorMessage message=HighlightUtil.createHighlighterMessage(ref.getSourceNode(),"Unresolved reference",this,editorContext);
     SetSequence.fromSet(messages).addElement(message);
-    if (autoresolve) {
-      autoresolveReference(ref,editorContext);
+  }
+  if (autoresolve) {
+    IOperationContext operationContext=editorContext.getOperationContext();
+    if (operationContext != null) {
+      TypeContextManager.getInstance().setComputeInNormalMode(true);
+      ResolverComponent.getInstance().resolveScopesOnly(badReferences,operationContext);
+      TypeContextManager.getInstance().setComputeInNormalMode(false);
     }
   }
   return messages;
