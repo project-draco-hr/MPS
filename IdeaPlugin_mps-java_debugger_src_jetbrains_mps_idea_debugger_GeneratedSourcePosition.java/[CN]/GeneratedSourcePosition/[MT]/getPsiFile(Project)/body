@@ -1,30 +1,15 @@
 {
-  final String fullPath=ModelAccess.instance().runReadAction(new Computable<String>(){
-    @Override public String compute(){
+  SModelReference reference=ModelAccess.instance().runReadAction(new Computable<SModelReference>(){
+    @Override public SModelReference compute(){
       SNode node=getNode();
       if (node == null)       return null;
       SModelDescriptor modelDescriptor=node.getModel().getModelDescriptor();
-      IModule module=modelDescriptor.getModule();
-      IFile defaultOutputDir=FileGenerationUtil.getDefaultOutputDir(modelDescriptor,FileSystem.getInstance().getFileByPath(module.getGeneratorOutputPath()));
-      IFile file=defaultOutputDir.getDescendant(myFileName);
-      if (!file.exists()) {
-        return null;
-      }
-      return file.getPath();
+      return modelDescriptor.getSModelReference();
     }
   }
 );
-  if (fullPath == null) {
+  if (reference == null) {
     return null;
   }
-  return ApplicationManager.getApplication().runReadAction(new com.intellij.openapi.util.Computable<PsiFile>(){
-    @Override public PsiFile compute(){
-      VirtualFile file=LocalFileSystem.getInstance().findFileByPath(fullPath);
-      if (file == null) {
-        return null;
-      }
-      return PsiManager.getInstance(project).findFile(file);
-    }
-  }
-);
+  return getPsiFile(project,reference,myFileName);
 }

@@ -1,0 +1,28 @@
+{
+  final String fullPath=ModelAccess.instance().runReadAction(new Computable<String>(){
+    @Override public String compute(){
+      SModelDescriptor modelDescriptor=SModelRepository.getInstance().getModelDescriptor(modelReference);
+      IModule module=modelDescriptor.getModule();
+      IFile defaultOutputDir=FileGenerationUtil.getDefaultOutputDir(modelDescriptor,FileSystem.getInstance().getFileByPath(module.getGeneratorOutputPath()));
+      IFile file=defaultOutputDir.getDescendant(generatedFileName);
+      if (!file.exists()) {
+        return null;
+      }
+      return file.getPath();
+    }
+  }
+);
+  if (fullPath == null) {
+    return null;
+  }
+  return ApplicationManager.getApplication().runReadAction(new com.intellij.openapi.util.Computable<PsiFile>(){
+    @Override public PsiFile compute(){
+      VirtualFile file=LocalFileSystem.getInstance().findFileByPath(fullPath);
+      if (file == null) {
+        return null;
+      }
+      return PsiManager.getInstance(project).findFile(file);
+    }
+  }
+);
+}
