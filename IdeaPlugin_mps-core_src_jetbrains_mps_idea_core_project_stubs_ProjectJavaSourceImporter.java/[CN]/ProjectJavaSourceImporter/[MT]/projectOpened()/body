@@ -1,0 +1,31 @@
+{
+  final ArrayList<VirtualFile> allSourcePaths=new ArrayList<VirtualFile>();
+  for (  Module mod : myModuleManager.getModules()) {
+    System.out.println("*** " + mod.toString());
+    VirtualFile[] roots=ModuleRootManager.getInstance(mod).getSourceRoots(false);
+    allSourcePaths.addAll(Arrays.asList(roots));
+    for (    VirtualFile root : roots) {
+      System.out.println(" -- " + root);
+    }
+  }
+  ModelAccess.instance().runWriteAction(new Runnable(){
+    @Override public void run(){
+      Solution s=addSolution("fooBar",allSourcePaths.toArray(new VirtualFile[0]),true);
+      s.updateModelsSet();
+      ourSolution=s;
+      for (      SModelDescriptor desc : SModelRepository.getInstance().getModelDescriptors(ourSolution)) {
+        if (desc instanceof JavaSourceStubModelDescriptor) {
+          JavaSourceStubModelDescriptor sourceDesc=(JavaSourceStubModelDescriptor)desc;
+          Collection<String> files=((JavaSourceStubModelDS)sourceDesc.getSource()).getFilesToListen();
+          System.out.println("Model: " + desc.getLongName());
+          for (          String f : files) {
+            System.out.println("path: " + f);
+          }
+        }
+      }
+    }
+  }
+);
+  workDone=true;
+  myPsiManager.addPsiTreeChangeListener(new PsiTreeChangeWatcher());
+}
