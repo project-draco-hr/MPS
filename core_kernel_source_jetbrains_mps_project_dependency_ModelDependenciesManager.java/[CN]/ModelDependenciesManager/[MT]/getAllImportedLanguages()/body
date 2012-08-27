@@ -1,12 +1,28 @@
 {
-  Set<ModuleReference> result=new LinkedHashSet<ModuleReference>();
-  result.addAll(myModel.importedLanguages());
-  for (  ModuleReference dk : myModel.importedDevkits()) {
-    DevKit devkit=ModuleRepositoryFacade.getInstance().getModule(dk,DevKit.class);
-    if (devkit == null)     continue;
-    for (    Language l : devkit.getAllExportedLanguages()) {
-      result.add(l.getModuleReference());
+  if (myModel == null)   throw new IllegalStateException("access after disposal");
+  if (myInvalidatedFlag.compareAndSet(true,false)) {
+    if (mySModelWatcher == null) {
+      mySModelWatcher=new MySModelWatcher(myModel.getModelDescriptor());
     }
+    myModuleWatcher.clear();
+    Set<ModuleReference> result=new LinkedHashSet<ModuleReference>();
+    for (    ModuleReference lang : myModel.importedLanguages()) {
+      result.add(lang);
+      myModuleWatcher.watchLanguage(ModuleRepositoryFacade.getInstance().getModule(lang,Language.class));
+    }
+    for (    ModuleReference dk : myModel.importedDevkits()) {
+      DevKit devkit=ModuleRepositoryFacade.getInstance().getModule(dk,DevKit.class);
+      if (devkit == null)       continue;
+      myModuleWatcher.watchDevKit(devkit);
+      for (      Language dkLang : devkit.getAllExportedLanguages()) {
+        result.add(dkLang.getModuleReference());
+        myModuleWatcher.watchLanguage(dkLang);
+      }
+      for (      DevKit exDevKit : devkit.getAllExtendedDevkits()) {
+        myModuleWatcher.watchDevKit(exDevKit);
+      }
+    }
+    this.myCachedDeps=result;
   }
-  return result;
+  return myCachedDeps;
 }
