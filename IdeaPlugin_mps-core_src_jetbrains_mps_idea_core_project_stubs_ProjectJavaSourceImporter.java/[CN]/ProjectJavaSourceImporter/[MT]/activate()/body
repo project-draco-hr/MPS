@@ -1,0 +1,44 @@
+{
+  for (  final Module mod : myModuleManager.getModules()) {
+    if (!hasMPSFacet(mod))     continue;
+    System.out.println("*** " + mod.toString());
+    trackModule(mod,false);
+    updatePsiListener();
+  }
+  workDone=true;
+  workerConnection=myProject.getMessageBus().connect();
+  workerConnection.subscribe(ProjectTopics.MODULES,new ModuleWatcher(myProject));
+  workerConnection.subscribe(ProjectTopics.PROJECT_ROOTS,new ModuleRootListener(){
+    @Override public void beforeRootsChange(    ModuleRootEvent moduleRootEvent){
+    }
+    @Override public void rootsChanged(    ModuleRootEvent moduleRootEvent){
+      System.out.println("ROOTS DEBUG: event");
+    }
+  }
+);
+  VirtualFileManager.getInstance().addVirtualFileListener(new VirtualFileAdapter(){
+    @Override public void fileCreated(    VirtualFileEvent event){
+      System.out.println("VIRT FILE DEBUG: " + event.getFile().getName());
+      try {
+        System.out.println("CONTENTS: " + new String(event.getFile().contentsToByteArray()));
+      }
+ catch (      IOException e) {
+        e.printStackTrace();
+      }
+      VirtualFile vfile=event.getFile();
+      VirtualFile parent=vfile.getParent();
+      if (vfile.getName().endsWith(".java") && files2Models.containsKey(parent)) {
+        System.out.println("Updating psi listener");
+        myListenedFiles.add(vfile);
+        updatePsiListener();
+        BaseStubModelDescriptor model=files2Models.get(vfile.getParent());
+        if (model != null) {
+          ((StubModelDataSource)model.getSource()).addPath(vfile.toString());
+          files2Models.put(vfile,model);
+        }
+      }
+    }
+  }
+);
+  myIsActivated=true;
+}
