@@ -1,0 +1,39 @@
+{
+  if (SNodeOperations.isInstanceOf(contextNode,"jetbrains.mps.baseLanguage.structure.AnonymousClass")) {
+    contextNode=SNodeOperations.getParent(contextNode);
+  }
+  if (SNodeOperations.isInstanceOf(contextNode,"jetbrains.mps.baseLanguage.structure.Classifier")) {
+    LOG.warning("contextNode is classifier in getContextClassifiers: " + contextNode);
+    return Collections.emptyMap();
+  }
+  Map<String,String> bindings=MapSequence.fromMap(new HashMap<String,String>());
+  SNode child=null;
+  while ((contextNode != null)) {
+    if (SNodeOperations.isInstanceOf(contextNode,"jetbrains.mps.baseLanguage.structure.Classifier")) {
+      boolean processNestedClassifiers=false;
+      if (SNodeOperations.isInstanceOf(contextNode,"jetbrains.mps.baseLanguage.structure.AnonymousClass") || SNodeOperations.isInstanceOf(contextNode,"jetbrains.mps.baseLanguage.structure.EnumClass")) {
+        processNestedClassifiers=true;
+      }
+ else       if (SNodeOperations.isInstanceOf(contextNode,"jetbrains.mps.baseLanguage.structure.Interface")) {
+        processNestedClassifiers=!(SNodeOperations.hasRole(child,"jetbrains.mps.baseLanguage.structure.Interface","extendedInterface"));
+      }
+ else       if (SNodeOperations.isInstanceOf(contextNode,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
+        processNestedClassifiers=!(SNodeOperations.hasRole(child,"jetbrains.mps.baseLanguage.structure.ClassConcept","implementedInterface") || SNodeOperations.hasRole(child,"jetbrains.mps.baseLanguage.structure.ClassConcept","superclass"));
+      }
+ else {
+        LOG.warning("Illegal classifier node in bl textgen: " + contextNode);
+      }
+      addClassifierToBindingMap(bindings,SNodeOperations.cast(contextNode,"jetbrains.mps.baseLanguage.structure.Classifier"));
+      if (processNestedClassifiers) {
+        for (        SNode superClassifier : Classifier_Behavior.call_getAllExtendedClassifiers_2907982978864985482(SNodeOperations.cast(contextNode,"jetbrains.mps.baseLanguage.structure.Classifier"))) {
+          for (          SNode nestedClassifier : SLinkOperations.getTargets(superClassifier,"staticInnerClassifiers",true)) {
+            addClassifierToBindingMap(bindings,nestedClassifier);
+          }
+        }
+      }
+    }
+    child=contextNode;
+    contextNode=SNodeOperations.getParent(contextNode);
+  }
+  return bindings;
+}

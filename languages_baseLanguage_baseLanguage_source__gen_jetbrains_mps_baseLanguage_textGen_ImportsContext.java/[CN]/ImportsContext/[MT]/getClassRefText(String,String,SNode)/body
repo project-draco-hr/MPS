@@ -1,15 +1,30 @@
 {
   String simpleName=JavaNameUtil.shortName(fqName);
-  if (MapSequence.fromMap(simpleNameToFqName).containsKey(simpleName)) {
-    if (fqName.equals(MapSequence.fromMap(simpleNameToFqName).get(simpleName))) {
+  Map<String,String> nestedClassifiersBinding=getContextClassifiers(contextNode);
+  if (MapSequence.fromMap(nestedClassifiersBinding).containsKey(simpleName)) {
+    if (fqName.equals(MapSequence.fromMap(nestedClassifiersBinding).get(simpleName))) {
       return new ClassifierRefText(simpleName,false);
     }
  else {
       return new ClassifierRefText(fqName,false);
     }
   }
+  if (MapSequence.fromMap(bindings).containsKey(simpleName)) {
+    if (fqName.equals(MapSequence.fromMap(bindings).get(simpleName))) {
+      return new ClassifierRefText(simpleName,false);
+    }
  else {
-    addDependency(packageName,fqName);
-    return new ClassifierRefText(simpleName,isExplicitImport(packageName,fqName));
+      return new ClassifierRefText(fqName,false);
+    }
   }
+  MapSequence.fromMap(bindings).put(simpleName,fqName);
+  addDependency(packageName,fqName);
+  if (packageName.equals(this.packageName)) {
+    boolean isRootClassifier=(packageName.length() + simpleName.length() + 1) == fqName.length();
+    return new ClassifierRefText(simpleName,!(isRootClassifier));
+  }
+  if (packageName.equals("java.lang")) {
+    return new ClassifierRefText(simpleName,SetSequence.fromSet(packageSimpleNames).contains(simpleName));
+  }
+  return new ClassifierRefText(simpleName,true);
 }
