@@ -2,29 +2,16 @@
   long start=System.nanoTime();
   Boolean aBoolean=NodeReadAccessCasterInEditor.runReadTransparentAction(new Computable<Boolean>(){
     public Boolean compute(){
-      if (null == subType || null == superType)       return false;
-      if (subType == superType)       return true;
-      boolean canAskCache=(!TypesUtil.hasVariablesInside(superType) && !TypesUtil.hasVariablesInside(subType));
-      if (canAskCache) {
-        Boolean answer=getIsSubTypeCacheAnswer(subType,superType,isWeak);
-        if (answer != null) {
-          return answer;
+      THashSet<Pair<SNode,SNode>> matchingPairs=new THashSet<Pair<SNode,SNode>>();
+      SubtypingResolver subtypingResolver=new SubtypingResolver(state == null ? null : state.getTypeCheckingContext(),matchingPairs);
+      boolean result=subtypingResolver.isSubType(subType,superType,isWeak);
+      if (result) {
+        Equations equations=state != null ? state.getEquations() : null;
+        if (equations != null) {
+          equations.addEquations(matchingPairs,info);
         }
       }
-      Equations equations=null;
-      if (state != null) {
-        equations=state.getEquations();
-      }
-      if (TypesUtil.match(subType,superType,equations,info)) {
-        return true;
-      }
-      if (isSubTypeByReplacementRules(subType,superType,isWeak)) {
-        return true;
-      }
-      if (meetsAndJoins(subType,superType,info,isWeak,state)) {
-        return true;
-      }
-      return searchInSuperTypes(subType,new NodeMatcher(superType,equations,info),isWeak,state,canAskCache);
+      return result;
     }
   }
 );
