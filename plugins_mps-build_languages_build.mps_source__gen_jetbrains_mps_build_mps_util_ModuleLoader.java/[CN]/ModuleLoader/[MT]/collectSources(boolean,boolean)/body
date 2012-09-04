@@ -1,0 +1,60 @@
+{
+  SNode module=SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Module");
+  Iterable<ModelRoot> modelRoots=myModuleDescriptor.getModelRoots();
+  boolean hasModels=false;
+  if (myModuleDescriptor instanceof LanguageDescriptor) {
+    Iterable<GeneratorDescriptor> generators=((LanguageDescriptor)myModuleDescriptor).getGenerators();
+    modelRoots=Sequence.fromIterable(modelRoots).concat(Sequence.fromIterable(generators).translate(new ITranslator2<GeneratorDescriptor,ModelRoot>(){
+      public Iterable<ModelRoot> translate(      GeneratorDescriptor it){
+        return it.getModelRoots();
+      }
+    }
+));
+  }
+  for (  ModelRoot modelRoot : modelRoots) {
+    if (modelRoot.getManager() != null) {
+      continue;
+    }
+    String path=modelRoot.getPath();
+    SNode p=ListSequence.fromList(convertPath(path,myOriginalModule)).first();
+    if (p == null) {
+      continue;
+    }
+    if (!(checkOnly)) {
+      SNode mroot=SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_ModuleModelRoot",null);
+      SLinkOperations.setTarget(mroot,"folder",p,true);
+      ListSequence.fromList(SLinkOperations.getTargets(module,"sources",true)).addElement(mroot);
+    }
+    hasModels=true;
+  }
+  List<String> res=new ArrayList<String>();
+  for (  String sp : myModuleDescriptor.getSourcePaths()) {
+    res.add(sp);
+  }
+  if (!(SNodeOperations.isInstanceOf(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Solution")) || !(SPropertyOperations.getBoolean(SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Solution"),"doNotCompile")) && hasModels) {
+    IFile genPath=ProjectPathUtil.getGeneratorOutputPath(myModuleFile,myModuleDescriptor);
+    if (genPath != null) {
+      res.add(genPath.getPath());
+    }
+  }
+  boolean doNotCompile=myModuleDescriptor instanceof SolutionDescriptor && (!(((SolutionDescriptor)myModuleDescriptor).getCompileInMPS()) || !(hasModels));
+  if (checkOnly && importOnly) {
+    SPropertyOperations.set(module,"doNotCompile","" + doNotCompile);
+  }
+ else   if (SPropertyOperations.getBoolean(module,"doNotCompile") != doNotCompile) {
+    report("compile in MPS flag doesn't match file content " + SPropertyOperations.getString(myModule,"name") + ", should be: "+ doNotCompile,myOriginalModule);
+  }
+  if (checkOnly) {
+    return;
+  }
+  for (  String path : res) {
+    SNode p=ListSequence.fromList(convertPath(path,myOriginalModule)).first();
+    if (p == null) {
+      continue;
+    }
+    SNode javaSource=SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_ModuleJavaSource",null);
+    SLinkOperations.setTarget(javaSource,"folder",SConceptOperations.createNewNode("jetbrains.mps.build.structure.BuildInputSingleFolder",null),true);
+    SLinkOperations.setTarget(SNodeOperations.cast(SLinkOperations.getTarget(javaSource,"folder",true),"jetbrains.mps.build.structure.BuildInputSingleFolder"),"path",p,true);
+    ListSequence.fromList(SLinkOperations.getTargets(module,"sources",true)).addElement(javaSource);
+  }
+}
