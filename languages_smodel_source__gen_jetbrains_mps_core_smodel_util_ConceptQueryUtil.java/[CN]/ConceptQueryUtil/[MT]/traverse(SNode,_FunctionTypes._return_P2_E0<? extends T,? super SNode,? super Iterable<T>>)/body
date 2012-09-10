@@ -1,0 +1,48 @@
+{
+  Iterable<T> inherited=Sequence.fromIterable(Collections.<T>emptyList());
+  Iterable<SNode> interfaces;
+  if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.core.structure.structure.SConcept")) {
+    if ((SLinkOperations.getTarget(SNodeOperations.cast(node,"jetbrains.mps.core.structure.structure.SConcept"),"extends",false) != null)) {
+      inherited=Sequence.<T>singleton(traverse(SLinkOperations.getTarget(SNodeOperations.cast(node,"jetbrains.mps.core.structure.structure.SConcept"),"extends",false),handler));
+    }
+    interfaces=ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(node,"jetbrains.mps.core.structure.structure.SConcept"),"implements",true)).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return (SLinkOperations.getTarget(it,"target",false) != null);
+      }
+    }
+).select(new ISelector<SNode,SNode>(){
+      public SNode select(      SNode it){
+        return SLinkOperations.getTarget(it,"target",false);
+      }
+    }
+);
+  }
+ else   if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.core.structure.structure.SInterfaceConcept")) {
+    interfaces=ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(node,"jetbrains.mps.core.structure.structure.SInterfaceConcept"),"extends",true)).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return (SLinkOperations.getTarget(it,"target",false) != null);
+      }
+    }
+).select(new ISelector<SNode,SNode>(){
+      public SNode select(      SNode it){
+        return SLinkOperations.getTarget(it,"target",false);
+      }
+    }
+);
+  }
+ else {
+    interfaces=Sequence.fromIterable(Collections.<SNode>emptyList());
+  }
+  inherited=Sequence.fromIterable(inherited).concat(Sequence.fromIterable(interfaces).select(new ISelector<SNode,T>(){
+    public T select(    SNode it){
+      return traverse(it,handler);
+    }
+  }
+));
+  return handler.invoke(node,Sequence.fromIterable(inherited).where(new IWhereFilter<T>(){
+    public boolean accept(    T it){
+      return it != null;
+    }
+  }
+));
+}
