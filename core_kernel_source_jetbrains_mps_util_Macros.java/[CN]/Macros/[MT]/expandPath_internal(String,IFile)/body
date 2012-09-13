@@ -1,29 +1,10 @@
 {
-  IFile result=null;
-  Set<String> macroNames=PathMacros.getInstance().getNames();
-  for (  String macro : macroNames) {
-    String prefix="${" + macro + "}";
-    if (path.startsWith(prefix)) {
-      String relativePath=removePrefix(path,prefix);
-      String macroValue=PathMacros.getInstance().getValue(macro);
-      result=macroValue == null ? null : FileSystem.getInstance().getFileByPath(macroValue).getDescendant(relativePath);
-      break;
-    }
-  }
-  if (result != null)   return IFileUtils.getCanonicalPath(result);
-  if (path.startsWith(MPS_HOME)) {
-    String relativePath=removePrefix(path,MPS_HOME);
-    result=FileSystem.getInstance().getFileByPath(PathManager.getHomePath()).getDescendant(relativePath);
-  }
-  if (result != null)   return IFileUtils.getCanonicalPath(result);
-  if (!path.startsWith("${")) {
-    result=FileSystem.getInstance().getFileByPath(path);
-    return IFileUtils.getCanonicalPath(result);
-  }
-  int end=path.indexOf("}");
-  if (end != -1) {
-    LOG.error("Wasn't able to expand path " + path);
-    LOG.error("Please define path variable " + path.substring(2,end) + " in path variables section of settings");
-  }
-  return path;
+  if (!path.startsWith("${") || !path.contains("}"))   return FileUtil.getCanonicalPath(path);
+  String macro=path.substring(2,path.indexOf("}"));
+  String relativePath=removePrefix(path);
+  if (macro.equals(MPS_HOME_MACRO_NAME))   return getFullPath(PathManager.getHomePath(),relativePath);
+  String macroValue=PathMacros.getInstance().getValue(macro);
+  if (macroValue != null)   return getFullPath(macroValue,relativePath);
+  PathMacros.getInstance().report("Please define path variable in path variables section of settings",macro);
+  return FileUtil.getCanonicalPath(path);
 }
