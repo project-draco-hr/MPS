@@ -5,7 +5,16 @@
       DataManager.getInstance().getDataContextFromFocus().doWhenDone(new Handler<DataContext>(){
         public void run(        DataContext dataContext){
           Project project=PlatformDataKeys.PROJECT.getData(dataContext);
+          Map<String,String> oldMacroses=collectMacroses();
           ShowSettingsUtil.getInstance().showSettingsDialog(project,new PathMacroConfigurable().getDisplayName());
+          Map<String,String> newMacroses=collectMacroses();
+          if (sameMaps(oldMacroses,newMacroses))           return;
+          int res=Messages.showYesNoDialog("All opened projects should be reloaded in order to apply changes.\n" + "Reload all opened projects?","Reload Projects",null);
+          if (res == Messages.NO)           return;
+          ProjectManager pm=ProjectManager.getInstance();
+          for (          Project p : pm.getOpenProjects()) {
+            pm.reloadProject(p);
+          }
         }
       }
 );
