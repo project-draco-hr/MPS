@@ -1,0 +1,63 @@
+{
+  StringBuilder idBuilder=new StringBuilder(idPrefix);
+  convertAnnotations(x.annotations,result);
+  if (!(x instanceof ConstructorDeclaration)) {
+    SPropertyOperations.set(result,"name",new String(x.selector));
+  }
+  idBuilder.append("." + new String(x.selector) + "(");
+{
+    SNode imd=result;
+    if (SNodeOperations.isInstanceOf(imd,"jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration")) {
+      if (flagSet(x.modifiers,ClassFileConstants.AccAbstract)) {
+        SPropertyOperations.set(imd,"isAbstract","" + (true));
+      }
+    }
+  }
+  myClassResolver.newTypeVarFrame();
+  convertTypeVars(x.typeParameters(),result);
+  if (x.arguments != null) {
+    for (    Argument arg : x.arguments) {
+      SNode par=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ParameterDeclaration",null);
+      convertAnnotations(arg.annotations,par);
+      SPropertyOperations.set(par,"name",new String(arg.name));
+      SLinkOperations.setTarget(par,"type",convertTypeRef(arg.type),true);
+      ListSequence.fromList(SLinkOperations.getTargets(result,"parameter",true)).addElement(par);
+      idBuilder.append(getTypeName(SLinkOperations.getTarget(par,"type",true)));
+      idBuilder.append(",");
+    }
+    if (x.arguments.length > 0) {
+      idBuilder.deleteCharAt(idBuilder.length() - 1);
+    }
+  }
+  idBuilder.append(")");
+  if (x.thrownExceptions != null) {
+    ListSequence.fromList(SLinkOperations.getTargets(result,"throwsItem",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(x.thrownExceptions)).select(new ISelector<TypeReference,SNode>(){
+      public SNode select(      TypeReference it){
+        return convertTypeRef(it);
+      }
+    }
+));
+  }
+  if (myConvertBodies) {
+  }
+ else {
+    SLinkOperations.setTarget(result,"body",new ASTConverter.QuotationClass_rbndtb_a0a1a0u0g().createNode(),true);
+  }
+{
+    SNode mem=result;
+    if (SNodeOperations.isInstanceOf(mem,"jetbrains.mps.baseLanguage.structure.ClassifierMember")) {
+      if ((SLinkOperations.getTarget(mem,"visibility",true) == null)) {
+        SLinkOperations.setTarget(mem,"visibility",convertVisibility(x.modifiers),true);
+      }
+    }
+  }
+  SPropertyOperations.set(result,"isFinal","" + (flagSet(x.modifiers,ClassFileConstants.AccFinal)));
+  SPropertyOperations.set(result,"isSynchronized","" + (flagSet(x.modifiers,ClassFileConstants.AccSynchronized)));
+  if (x instanceof MethodDeclaration) {
+    MethodDeclaration mDecl=(MethodDeclaration)x;
+    SLinkOperations.setTarget(result,"returnType",convertTypeRef(mDecl.returnType),true);
+  }
+  result.setId(new SNodeId.Foreign(idBuilder.toString()));
+  myClassResolver.leaveTypeVarFrame();
+  return result;
+}

@@ -1,0 +1,33 @@
+{
+synchronized (LOCK) {
+    final VirtualFile[] roots=ModuleRootManager.getInstance(module).getSourceRoots(false);
+    final Solution[] solutionCell=new Solution[1];
+    for (    VirtualFile root : roots) {
+      System.out.println(" -- " + root);
+    }
+    ModelAccess.instance().runWriteAction(new Runnable(){
+      @Override public void run(){
+        Solution solution=addSolution(SOLUTION_NAME_PREFIX + module.getName(),roots,true);
+        solution.updateModelsSet();
+        myModulesToSolutions.put(module,solution);
+        solutionCell[0]=solution;
+      }
+    }
+);
+    for (    SModelDescriptor desc : SModelRepository.getInstance().getModelDescriptors(solutionCell[0])) {
+      if (desc instanceof BaseStubModelDescriptor) {
+        BaseStubModelDescriptor modelDesc=(BaseStubModelDescriptor)desc;
+        FileBasedModelDataSource modelDataSource=(FileBasedModelDataSource)modelDesc.getSource();
+        Collection<String> files=modelDataSource.getFilesToListen();
+        System.out.println("Model: " + desc.getLongName());
+        for (        String f : files) {
+          System.out.println("path: " + f);
+          VirtualFile vfile=VirtualFileManager.getInstance().refreshAndFindFileByUrl("file://" + f);
+          myListenedFiles.add(vfile);
+          files2Models.put(vfile,modelDesc);
+        }
+      }
+    }
+    if (separate)     updatePsiListener();
+  }
+}
