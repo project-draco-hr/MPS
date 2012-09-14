@@ -1,0 +1,31 @@
+{
+  try {
+    final Set<String> usedConcepts=SetSequence.fromSet(new HashSet<String>());
+    InternalActionsUtils.executeActionOnAllNodesInModal("find used concepts",((Project)MapSequence.fromMap(_params).get("project")),new _FunctionTypes._void_P1_E0<SNode>(){
+      public void invoke(      SNode node){
+        SetSequence.fromSet(usedConcepts).addSequence(SetSequence.fromSet(LanguageHierarchyCache.getAncestorsNames(node.getConceptFqName())));
+      }
+    }
+);
+    List<SNodePointer> concepts=ListSequence.fromList(InternalActionsUtils.getAllConcepts()).where(new IWhereFilter<SNodePointer>(){
+      public boolean accept(      final SNodePointer it){
+        final Wrappers._boolean isOk=new Wrappers._boolean(false);
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            SNode concept=SNodeOperations.cast(it.getNode(),"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration");
+            isOk.value=(concept != null) && (((Boolean)BehaviorManager.getInstance().invoke(Boolean.class,concept,"virtual_isDeprecated_1224609060727",new Class[]{SNode.class})) || !(SetSequence.fromSet(usedConcepts).contains(NameUtil.nodeFQName(concept))));
+          }
+        }
+);
+        return isOk.value;
+      }
+    }
+).toListSequence();
+    InternalActionsUtils.showUsagesViewForNodes(((Project)MapSequence.fromMap(_params).get("project")),concepts);
+  }
+ catch (  Throwable t) {
+    if (log.isErrorEnabled()) {
+      log.error("User's action execute method failed. Action:" + "FindUnusedAndDeprecatedConcepts",t);
+    }
+  }
+}
