@@ -1,0 +1,63 @@
+{
+  final Wrappers._T<Iterable<SModelReference>> modelReferences=new Wrappers._T<Iterable<SModelReference>>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      Iterable<IModule> modules=MPSModuleRepository.getInstance().getAllModules();
+      if (log.isWarnEnabled()) {
+        log.warn("Modules: " + Sequence.fromIterable(modules).count());
+      }
+      modelReferences.value=Sequence.fromIterable(modules).translate(new ITranslator2<IModule,SModelDescriptor>(){
+        public Iterable<SModelDescriptor> translate(        IModule it){
+          return it.getOwnModelDescriptors();
+        }
+      }
+).select(new ISelector<SModelDescriptor,SModelReference>(){
+        public SModelReference select(        SModelDescriptor it){
+          return it.getSModelReference();
+        }
+      }
+);
+      if (log.isWarnEnabled()) {
+        log.warn("Models: " + Sequence.fromIterable(modelReferences.value).count());
+      }
+    }
+  }
+);
+  monitor.start(actionName,Sequence.fromIterable(modelReferences.value).count());
+  try {
+    final Wrappers._int num=new Wrappers._int(0);
+    for (    final SModelReference modelRef : modelReferences.value) {
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          UnregisteredNodes.instance().clear();
+          if (num.value++ % 100 == 0) {
+            if (log.isWarnEnabled()) {
+              log.warn("Model num: " + num.value + ", name: "+ modelRef.getLongName());
+            }
+          }
+          SModel model=check_6btuvs_a0d0a0a2a4a0(SModelRepository.getInstance().getModelDescriptor(modelRef));
+          if (model != null) {
+            for (            SNode node : model.nodes()) {
+              try {
+                nodeCallback.invoke(node);
+              }
+ catch (              Throwable t) {
+                if (log.isErrorEnabled()) {
+                  log.error("Exception in callback for node " + node,t);
+                }
+              }
+            }
+          }
+        }
+      }
+);
+      monitor.advance(1);
+      if (monitor.isCanceled()) {
+        break;
+      }
+    }
+  }
+  finally {
+    monitor.done();
+  }
+}
