@@ -1,0 +1,78 @@
+{
+  return new IJob.Stub(){
+    public IResult execute(    final Iterable<IResource> input,    final IJobMonitor monitor,    final IPropertiesAccessor pa){
+      Iterable<IResource> _output_kp7j54_a0a=null;
+switch (0) {
+case 0:
+        final Wrappers._T<List<SModelDescriptor>> models=new Wrappers._T<List<SModelDescriptor>>();
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          models.value=Sequence.fromIterable(input).translate(new ITranslator2<IResource,SModelDescriptor>(){
+            public Iterable<SModelDescriptor> translate(            IResource in){
+              return ((MResource)in).models();
+            }
+          }
+).where(new IWhereFilter<SModelDescriptor>(){
+            public boolean accept(            SModelDescriptor it){
+              return ListSequence.fromList(SModelOperations.getRoots(((SModel)it.getSModel()),"jetbrains.mps.core.structure.structure.SStructureContainer")).isNotEmpty();
+            }
+          }
+).toListSequence();
+        }
+      }
+);
+    if (ListSequence.fromList(models.value).isEmpty()) {
+      return new IResult.SUCCESS(_output_kp7j54_a0a);
+    }
+  IGenerationHandler gh=new MakeGenerationHandler(new _FunctionTypes._return_P1_E0<Boolean,GResource>(){
+    public Boolean invoke(    GResource data){
+      monitor.currentProgress().advanceWork("Transforming",100);
+      monitor.reportFeedback(new IFeedback.MESSAGE(new Message(MessageKind.INFORMATION,"Generated " + data.model().getLongName())));
+      return true;
+    }
+  }
+);
+IMessageHandler mh=new IMessageHandler(){
+  public void handle(  IMessage msg){
+    monitor.reportFeedback(new IFeedback.MESSAGE(msg));
+  }
+  public void clear(){
+  }
+}
+;
+monitor.reportFeedback(new IFeedback.MESSAGE(new Message(MessageKind.INFORMATION,"Transforming core language descriptors..")));
+monitor.currentProgress().beginWork("Transforming",ListSequence.fromList(models.value).count() * 100,monitor.currentProgress().workLeft());
+Object tmc=null;
+try {
+Class<?> tmcCls=Class.forName("jetbrains.mps.ide.generator.TransientModelsComponent");
+tmc=pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.checkParameters"),Variables.class).project().getComponent(tmcCls);
+}
+ catch (ClassNotFoundException ignore) {
+}
+if (tmc == null) {
+monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("no tmc")));
+}
+final TransientModelsProvider transModels=(tmc != null ? (TransientModelsProvider)tmc : new TransientModelsProvider(pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.checkParameters"),Variables.class).project(),null));
+GenerationOptions options=pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.configure"),jetbrains.mps.lang.core.plugin.Generate_Facet.Target_configure.Variables.class).generationOptions().create();
+final GenerationOptions.OptionsBuilder builder=GenerationOptions.getDefaults().keepOutputModel(true).strictMode(options.isStrictMode()).reporting(options.isShowInfo(),options.isShowWarnings(),options.isKeepModelsWithWarnings(),options.getNumberOfModelsToKeep()).saveTransientModels(options.isSaveTransientModels());
+ModelAccess.instance().runReadAction(new Runnable(){
+public void run(){
+for (SModelDescriptor m : ListSequence.fromList(models.value)) {
+builder.customPlan(m,TransformGenerationPlan.forLanguages("jetbrains.mps.core.gen.transform"));
+}
+}
+}
+);
+options=builder.create();
+boolean generationOk=GenerationFacade.generateModels(pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.checkParameters"),Variables.class).project(),models.value,pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.checkParameters"),Variables.class).operationContext(),gh,new EmptyProgressMonitor(),mh,options,transModels);
+monitor.currentProgress().finishWork("Transforming");
+if (!(generationOk)) {
+return new IResult.FAILURE(_output_kp7j54_a0a);
+}
+default :
+return new IResult.SUCCESS(_output_kp7j54_a0a);
+}
+}
+}
+;
+}
