@@ -1,0 +1,35 @@
+{
+  ModelAccess.assertLegalRead();
+  if (ListSequence.fromList(SModelOperations.getRoots(sourceModel,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration")).isEmpty()) {
+    messageHandler.handle(new Message(MessageKind.ERROR,"No concepts in generated model"));
+    return;
+  }
+  mapping=MapSequence.fromMap(new HashMap<SNode,SNode>());
+  reverseMapping=MapSequence.fromMap(new HashMap<SNode,SNode>());
+  newContent=MapSequence.fromMap(new HashMap<DefaultSModelDescriptor,SModel>());
+  merge(LanguageAspect.STRUCTURE,ListSequence.fromList(SModelOperations.getRoots(sourceModel,null)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return it.getConceptFqName().startsWith("jetbrains.mps.lang.structure");
+    }
+  }
+));
+  merge(LanguageAspect.BEHAVIOR,ListSequence.fromList(SModelOperations.getRoots(sourceModel,null)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return it.getConceptFqName().startsWith("jetbrains.mps.lang.behavior");
+    }
+  }
+));
+  Iterable<SNode> notMerged=ListSequence.fromList(SModelOperations.getRoots(sourceModel,null)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return !(MapSequence.fromMap(mapping).containsKey(it));
+    }
+  }
+);
+  if (Sequence.fromIterable(notMerged).isNotEmpty()) {
+    messageHandler.handle(new Message(MessageKind.ERROR,"Not merged: " + Sequence.fromIterable(notMerged).first().getDebugText()));
+    return;
+  }
+  restoreRefs();
+  mapping=null;
+  reverseMapping=null;
+}
