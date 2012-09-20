@@ -1,0 +1,38 @@
+{
+  char[] source=code.toCharArray();
+  Map<String,String> settings=new HashMap<String,String>();
+  settings.put(CompilerOptions.OPTION_Source,CompilerOptions.VERSION_1_5);
+  List<SNode> res=new ArrayList<SNode>();
+  if (ParseDepth.TOPLEVEL.equals(depth)) {
+    boolean ignoreMethodBodies=true;
+    CodeSnippetParsingUtil util=new CodeSnippetParsingUtil(ignoreMethodBodies);
+    CompilationUnitDeclaration compRes=util.parseCompilationUnit(source,settings,true);
+    if (compRes == null || compRes.types == null && compRes.compilationResult.problems != null) {
+      throw new JavaParseException("Could not parse anything");
+    }
+    ASTNode[] roots=compRes.types;
+    TypeNameResolver typeResolver=new TypeNameResolver(pkg);
+    typeResolver.addImports(extractImports(compRes));
+    ASTConverter converter=new ASTConverter(pkg,compRes,typeResolver);
+    if (compRes.types != null) {
+      for (      ASTNode root : roots) {
+        ListSequence.fromList(res).addElement(converter.convertRoot(root));
+      }
+    }
+  }
+ else   if (ParseDepth.STATEMENTS.equals(depth)) {
+    CodeSnippetParsingUtil util=new CodeSnippetParsingUtil();
+    AbstractMethodDeclaration absMethod=util.parseStatements(source,settings,true,recovery);
+    if (absMethod == null || absMethod.statements == null) {
+      throw new JavaParseException("Could not parse anything");
+    }
+    Statement[] stmts=absMethod.statements;
+    TypeNameResolver typeResolver=new TypeNameResolver(pkg);
+    ASTConverter converter=new ASTConverter(pkg,null,typeResolver);
+    ListSequence.fromList(res).addSequence(ListSequence.fromList(converter.convertStatements(stmts)));
+  }
+ else {
+    throw new IllegalArgumentException("Parsing depth other than top-level is not supported yet ");
+  }
+  return res;
+}
