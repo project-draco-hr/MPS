@@ -1,0 +1,50 @@
+{
+  SNode parent=event.getParent();
+  if (parent.isDeleted()) {
+    return;
+  }
+  final String childRole=event.getChildRole();
+  Set<String> childRoles=MapSequence.fromMap(childChanged).get(parent);
+  if (childRoles == null) {
+    childRoles=SetSequence.fromSet(new HashSet<String>());
+    MapSequence.fromMap(childChanged).put(parent,childRoles);
+  }
+  if (SetSequence.fromSet(childRoles).contains(childRole)) {
+    return;
+  }
+ else {
+    SetSequence.fromSet(childRoles).addElement(childRole);
+  }
+  final SNodeId parentId=parent.getSNodeId();
+  final Wrappers._T<List<SNode>> childrenRightAfterEvent=new Wrappers._T<List<SNode>>(parent.getChildren(childRole));
+  childrenRightAfterEvent.value=ListSequence.fromList(childrenRightAfterEvent.value).select(new ISelector<SNode,SNode>(){
+    public SNode select(    SNode n){
+      return CopyUtil.copyAndPreserveId(n,false);
+    }
+  }
+).toListSequence();
+  runUpdateTask(new _FunctionTypes._void_P0_E0(){
+    public void invoke(){
+      removeChanges(parentId,NodeGroupChange.class,new _FunctionTypes._return_P1_E0<Boolean,NodeGroupChange>(){
+        public Boolean invoke(        NodeGroupChange ch){
+          return childRole.equals(ch.getRole());
+        }
+      }
+);
+      removeDescendantChanges(parentId,childRole);
+      myLastParentAndNewChildrenIds=MultiTuple.<SNodeId,List<SNodeId>>from(parentId,ListSequence.fromList(childrenRightAfterEvent.value).select(new ISelector<SNode,SNodeId>(){
+        public SNodeId select(        SNode n){
+          return n.getSNodeId();
+        }
+      }
+).toListSequence());
+      buildAndAddChanges(new _FunctionTypes._void_P1_E0<ChangeSetBuilder>(){
+        public void invoke(        ChangeSetBuilder b){
+          b.buildForNodeRole(getOldNode(parentId).getChildren(childRole),childrenRightAfterEvent.value,parentId,childRole);
+        }
+      }
+);
+    }
+  }
+,parent,event);
+}
