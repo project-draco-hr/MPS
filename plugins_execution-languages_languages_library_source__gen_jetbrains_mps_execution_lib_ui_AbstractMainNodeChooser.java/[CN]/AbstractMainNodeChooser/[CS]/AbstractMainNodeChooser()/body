@@ -3,17 +3,26 @@
     public void actionPerformed(    ActionEvent p0){
       final FindUsagesManager findUsegesManager=FindUsagesManager.getInstance();
       final ProgressMonitor progressAdapter=new EmptyProgressMonitor();
-      final Wrappers._T<List<SNode>> toChooseFrom=new Wrappers._T<List<SNode>>();
+      final Wrappers._T<List<SNodePointer>> toChooseFrom=new Wrappers._T<List<SNodePointer>>();
       ModelAccess.instance().runReadAction(new Runnable(){
         public void run(){
-          toChooseFrom.value=findToChooseFromOnInit(findUsegesManager,progressAdapter);
+          toChooseFrom.value=ListSequence.fromList(findToChooseFromOnInit(findUsegesManager,progressAdapter)).select(new ISelector<SNode,SNodePointer>(){
+            public SNodePointer select(            SNode it){
+              return new SNodePointer(it);
+            }
+          }
+).toListSequence();
         }
       }
 );
-      NodeChooserDialog chooserDialog=new NodeChooserDialog(MPSDataKeys.PROJECT.getData(DataManager.getInstance().getDataContext(AbstractMainNodeChooser.this)),toChooseFrom.value);
+      final NodeChooserDialog chooserDialog=new NodeChooserDialog(MPSDataKeys.PROJECT.getData(DataManager.getInstance().getDataContext(AbstractMainNodeChooser.this)),toChooseFrom.value);
       chooserDialog.show();
-      SNode selectedNode=chooserDialog.getResult();
-      setNode(selectedNode);
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          setNode(chooserDialog.getResultNode());
+        }
+      }
+);
     }
   }
 );
