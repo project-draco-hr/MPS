@@ -1,0 +1,24 @@
+{
+  Notifications.Bus.notify(new Notification(Notifications.SYSTEM_MESSAGES_GROUP_ID,"Undefined macro",macro + " <html><a href=''>fix...</a></html>",NotificationType.ERROR,new NotificationListener(){
+    public void hyperlinkUpdate(    @NotNull Notification notification,    @NotNull HyperlinkEvent event){
+      if (event.getEventType() != EventType.ACTIVATED)       return;
+      DataManager.getInstance().getDataContextFromFocus().doWhenDone(new Handler<DataContext>(){
+        public void run(        DataContext dataContext){
+          Project project=PlatformDataKeys.PROJECT.getData(dataContext);
+          Map<String,String> oldMacroses=collectMacroses();
+          ShowSettingsUtil.getInstance().showSettingsDialog(project,new PathMacroConfigurable().getDisplayName());
+          Map<String,String> newMacroses=collectMacroses();
+          if (sameMaps(oldMacroses,newMacroses))           return;
+          int res=Messages.showYesNoDialog("All opened projects should be reloaded in order to apply changes.\n" + "Reload all opened projects?","Reload Projects",null);
+          if (res == Messages.NO)           return;
+          ProjectManager pm=ProjectManager.getInstance();
+          for (          Project p : pm.getOpenProjects()) {
+            pm.reloadProject(p);
+          }
+        }
+      }
+);
+    }
+  }
+));
+}

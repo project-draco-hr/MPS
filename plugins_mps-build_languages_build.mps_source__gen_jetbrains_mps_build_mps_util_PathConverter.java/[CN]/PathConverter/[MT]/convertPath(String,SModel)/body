@@ -3,22 +3,26 @@
   String withSlash=normalizePath(path,true);
   List<SNode> result=new ArrayList<SNode>();
   for (  Tuples._2<String,SNode> m : Sequence.fromIterable(macros)) {
-    String mdir=m._0();
+    String mdir=(path.startsWith("$") && m._1() != null ? "${" + SPropertyOperations.getString(m._1(),"name") + "}/" : m._0());
     String currPath=(path.length() < mdir.length() ? withSlash : path);
-    if (!(currPath.startsWith(mdir))) {
-      continue;
-    }
-    currPath=currPath.substring(mdir.length());
-    SNode relPath;
-    if (m._1() == null) {
-      relPath=SModelOperations.createNewNode(model,"jetbrains.mps.build.structure.BuildSourceProjectRelativePath",null);
+    if (currPath.startsWith(mdir)) {
+      currPath=currPath.substring(mdir.length());
     }
  else {
-      relPath=SModelOperations.createNewNode(model,"jetbrains.mps.build.structure.BuildSourceMacroRelativePath",null);
-      SLinkOperations.setTarget(SNodeOperations.cast(relPath,"jetbrains.mps.build.structure.BuildSourceMacroRelativePath"),"macro",m._1(),false);
+      continue;
     }
-    buildCompositePath(relPath,currPath,model);
-    ListSequence.fromList(result).addElement(relPath);
+    ListSequence.fromList(result).addElement(buildRelative(currPath,m._1(),model));
+  }
+  for (  SNode m : Sequence.fromIterable(macrosWithoutPath)) {
+    String mdir="${" + SPropertyOperations.getString(m,"name") + "}/";
+    String currPath=(path.length() < mdir.length() ? withSlash : path);
+    if (currPath.startsWith(mdir)) {
+      currPath=currPath.substring(mdir.length());
+    }
+ else {
+      continue;
+    }
+    ListSequence.fromList(result).addElement(buildRelative(currPath,m,model));
   }
   if ((int)ListSequence.fromList(result).count() == 0) {
     throw new PathConverter.PathConvertException("source path (" + path + ") should be under working directory ("+ workingDirectory+ "), or any macros default directory");

@@ -2,7 +2,6 @@
   Color backgroundColor;
   Color textColor;
   Color textBackgroundColor;
-  FontMetrics metrics=getFontMetrics();
   backgroundColor=getBackgroundColor();
   if (forcedTextColor != null) {
     textColor=forcedTextColor;
@@ -30,40 +29,42 @@
   if (!g.getColor().equals(textColor)) {
     g.setColor(textColor);
   }
-  int deltaShiftX_EndSelection=(myEndTextSelectionPosition <= myText.length()) ? getCaretX(0,myEndTextSelectionPosition) : getPaddingLeft();
-  int deltaShiftX_StartSelection=getCaretX(0,myStartTextSelectionPosition);
-  int endLine=getCaretX(shiftX,myText.length());
+  int selectionStartX=shiftX + getPaddingLeft() + getSelectionStartX();
+  int selectionEndX=shiftX + getPaddingLeft() + getSelectionEndX();
+  int endLineX=shiftX + getPaddingLeft() + getTextEndX();
   int baselineY=shiftY + myHeight - myDescent - getPaddingBottom() - getPaddingTop();
   int centerLineY=shiftY + (myHeight - getPaddingBottom() + getPaddingTop()) / 2;
-  if (myStartTextSelectionPosition > 0) {
-    g.drawString(myText.substring(0,myStartTextSelectionPosition),shiftX + getPaddingLeft(),baselineY);
+  if (getStartTextSelectionPosition() > 0) {
+    g.drawString(myText.substring(0,getStartTextSelectionPosition()),shiftX + getPaddingLeft(),baselineY);
     if (isUnderlined()) {
-      g.drawLine(shiftX + getPaddingLeft(),baselineY + 1,shiftX + deltaShiftX_StartSelection,baselineY + 1);
+      g.drawLine(shiftX + getPaddingLeft(),baselineY + 1,selectionStartX,baselineY + 1);
     }
     if (isStrikeOut()) {
-      drawStrikeOutLine(g,shiftX + getPaddingLeft(),shiftX + deltaShiftX_StartSelection,centerLineY);
+      drawStrikeOutLine(g,shiftX + getPaddingLeft(),selectionStartX,centerLineY);
     }
   }
-  if (myEndTextSelectionPosition <= myText.length()) {
-    g.drawString(myText.substring(myEndTextSelectionPosition),shiftX + deltaShiftX_EndSelection,baselineY);
+  if (getEndTextSelectionPosition() <= myText.length()) {
+    g.drawString(myText.substring(getEndTextSelectionPosition()),selectionEndX,baselineY);
     if (isUnderlined()) {
-      g.drawLine(shiftX + deltaShiftX_EndSelection,baselineY + 1,endLine,baselineY + 1);
+      g.drawLine(selectionEndX,baselineY + 1,endLineX,baselineY + 1);
     }
     if (isStrikeOut()) {
-      drawStrikeOutLine(g,shiftX + deltaShiftX_EndSelection,endLine,centerLineY);
+      drawStrikeOutLine(g,selectionEndX,endLineX,centerLineY);
     }
   }
-  if (myStartTextSelectionPosition < myEndTextSelectionPosition) {
-    Rectangle2D selectedStringBounds=metrics.getStringBounds(getTextuallySelectedText(),g);
+  if (getStartTextSelectionPosition() < getEndTextSelectionPosition()) {
+    String selectedText=getTextuallySelectedText();
     g.setColor(myTextSelectedBackgroundColor);
-    g.fillRect(shiftX + deltaShiftX_StartSelection + 1,shiftY + getPaddingTop() + 1,(int)selectedStringBounds.getWidth() - 2,myTextHeight - 2);
+    if (selectionEndX - selectionStartX - 2 > 0) {
+      g.fillRect(selectionStartX + 1,shiftY + getPaddingTop() + 1,selectionEndX - selectionStartX - 2,myTextHeight - 2);
+    }
     g.setColor(myTextSelectedTextColor);
-    g.drawString(getTextuallySelectedText(),shiftX + deltaShiftX_StartSelection,baselineY);
+    g.drawString(selectedText,selectionStartX,baselineY);
     if (isUnderlined()) {
-      g.drawLine(shiftX + deltaShiftX_StartSelection,baselineY + 1,shiftX + deltaShiftX_EndSelection,baselineY + 1);
+      g.drawLine(selectionStartX,baselineY + 1,selectionEndX,baselineY + 1);
     }
     if (isStrikeOut()) {
-      drawStrikeOutLine(g,shiftX + deltaShiftX_StartSelection,shiftX + deltaShiftX_EndSelection,centerLineY);
+      drawStrikeOutLine(g,selectionStartX,selectionEndX,centerLineY);
     }
     g.setColor(textColor);
   }
