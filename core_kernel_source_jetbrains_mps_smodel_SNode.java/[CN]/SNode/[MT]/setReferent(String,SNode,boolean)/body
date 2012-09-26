@@ -1,58 +1,7 @@
 {
-  if (ourMemberAccessModifier != null) {
-    role=ourMemberAccessModifier.getNewReferentRole(myModel,myConceptFqName,role);
+  if (!useHandler) {
+    LOG.warning("SNode.setReferent does not use the last parameter now");
   }
-  List<SReference> toDelete=new ArrayList<SReference>();
-  if (myReferences != null) {
-    for (    SReference reference : myReferences) {
-      if (reference.getRole().equals(role)) {
-        toDelete.add(reference);
-      }
-    }
-  }
-  SNode oldReferent=null;
-  if (!toDelete.isEmpty()) {
-    oldReferent=toDelete.get(0).getTargetNodeSilently();
-  }
-  if (toDelete.size() > 1) {
-    LOG.errorWithTrace("ERROR! " + toDelete.size() + " references found for role '"+ role+ "' in "+ this.getDebugText());
-  }
-  SReference resultReference=null;
-  boolean handlerFound=false;
-  if (useHandler && myModel.canFireEvent()) {
-    Set<Pair<SNode,String>> threadSet=ourSetReferentEventHandlersInProgress.get();
-    Pair<SNode,String> pair=new Pair<SNode,String>(this,role);
-    if (!threadSet.contains(pair)) {
-      ReferenceConstraintsDescriptor descriptor=ConceptRegistry.getInstance().getConstraintsDescriptor(this.getConcept().getId()).getReference(role);
-      if (!(descriptor instanceof IllegalReferenceConstraintsDescriptor)) {
-        handlerFound=true;
-        threadSet.add(pair);
-        try {
-          if (descriptor.validate(this,oldReferent,newReferent,GlobalScope.getInstance())) {
-            resultReference=doSetReference(role,newReferent,toDelete);
-            descriptor.onReferenceSet(this,oldReferent,newReferent,GlobalScope.getInstance());
-          }
- else {
-            if (myReferences != null) {
-              for (              SReference reference : myReferences) {
-                if (reference.getRole().equals(role)) {
-                  resultReference=reference;
-                  break;
-                }
-              }
-            }
-          }
-        }
-  finally {
-          threadSet.remove(pair);
-        }
-      }
- else {
-      }
-    }
-  }
-  if (!handlerFound) {
-    resultReference=doSetReference(role,newReferent,toDelete);
-  }
-  return resultReference;
+  setReferenceTarget(role,newReferent);
+  return getReference(role);
 }

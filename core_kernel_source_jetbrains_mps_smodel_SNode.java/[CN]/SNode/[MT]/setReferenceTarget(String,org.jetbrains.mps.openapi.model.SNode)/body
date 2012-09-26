@@ -14,6 +14,56 @@
     }
   }
  else {
-    setReferent(role,((SNode)target));
+    if (ourMemberAccessModifier != null) {
+      role=ourMemberAccessModifier.getNewReferentRole(myModel,myConceptFqName,role);
+    }
+    List<SReference> toDelete=new ArrayList<SReference>();
+    if (myReferences != null) {
+      for (      SReference reference : myReferences) {
+        if (reference.getRole().equals(role)) {
+          toDelete.add(reference);
+        }
+      }
+    }
+    SNode oldReferent=null;
+    if (!toDelete.isEmpty()) {
+      oldReferent=toDelete.get(0).getTargetNodeSilently();
+    }
+    if (toDelete.size() > 1) {
+      LOG.errorWithTrace("ERROR! " + toDelete.size() + " references found for role '"+ role+ "' in "+ this.getDebugText());
+    }
+    boolean handlerFound=false;
+    if (myModel.canFireEvent()) {
+      Set<Pair<SNode,String>> threadSet=ourSetReferentEventHandlersInProgress.get();
+      Pair<SNode,String> pair=new Pair<SNode,String>(this,role);
+      if (!threadSet.contains(pair)) {
+        ReferenceConstraintsDescriptor descriptor=ConceptRegistry.getInstance().getConstraintsDescriptor(this.getConcept().getId()).getReference(role);
+        if (!(descriptor instanceof IllegalReferenceConstraintsDescriptor)) {
+          handlerFound=true;
+          threadSet.add(pair);
+          try {
+            if (descriptor.validate(this,oldReferent,((SNode)target),GlobalScope.getInstance())) {
+              doSetReference(role,((SNode)target),toDelete);
+              descriptor.onReferenceSet(this,oldReferent,((SNode)target),GlobalScope.getInstance());
+            }
+ else {
+              if (myReferences != null) {
+                for (                SReference reference : myReferences) {
+                  if (reference.getRole().equals(role))                   break;
+                }
+              }
+            }
+          }
+  finally {
+            threadSet.remove(pair);
+          }
+        }
+ else {
+        }
+      }
+    }
+    if (!handlerFound) {
+      doSetReference(role,((SNode)target),toDelete);
+    }
   }
 }
