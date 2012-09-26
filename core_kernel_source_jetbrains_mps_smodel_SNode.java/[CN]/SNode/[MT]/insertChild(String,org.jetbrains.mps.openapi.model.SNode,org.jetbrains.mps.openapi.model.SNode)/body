@@ -1,3 +1,32 @@
 {
-  insertChild(((SNode)anchor),role,((SNode)child));
+  enforceModelLoad();
+  if (ourMemberAccessModifier != null) {
+    role=ourMemberAccessModifier.getNewChildRole(myModel,myConceptFqName,role);
+  }
+  final String role1=role;
+  SNode parentOfChild=((SNode)child).getParent();
+  if (parentOfChild != null) {
+    throw new RuntimeException(((SNode)child).getDebugText() + " already has parent: " + parentOfChild.getDebugText()+ "\n"+ "Couldn't add it to: "+ this.getDebugText());
+  }
+  if (((SNode)child).isRoot()) {
+    throw new RuntimeException(((SNode)child).getDebugText() + " is root node. Can't add it as a child");
+  }
+  if (getTopmostAncestor() == ((SNode)child)) {
+    throw new RuntimeException("Trying to create a cyclic tree");
+  }
+  ModelChange.assertLegalNodeChange(this);
+  children_insertAfter(((SNode)anchor),((SNode)child));
+  ((SNode)child).setRoleInParent(role1);
+  SModel model=getModel();
+  if (jetbrains.mps.util.SNodeOperations.isRegistered(this)) {
+    ((SNode)child).registerInModel(model);
+  }
+ else {
+    ((SNode)child).changeModel(model);
+  }
+  if (model == null)   return;
+  model.performUndoableAction(new InsertChildAtUndoableAction(this,((SNode)anchor),role,((SNode)child)));
+  if (ModelChange.needFireEvents(model,this)) {
+    model.fireChildAddedEvent(this,role1,((SNode)child),((SNode)anchor));
+  }
 }
