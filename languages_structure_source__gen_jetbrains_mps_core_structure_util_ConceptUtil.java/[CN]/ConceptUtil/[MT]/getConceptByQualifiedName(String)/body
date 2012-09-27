@@ -1,0 +1,23 @@
+{
+  if (qualifiedName == null) {
+    return null;
+  }
+  String language=NameUtil.namespaceFromConceptFQName(qualifiedName);
+  final String name=NameUtil.shortNameFromLongName(qualifiedName);
+  SModelDescriptor mdesc=SModelRepository.getInstance().getModelDescriptor(SModelFqName.fromString(language + ".core"));
+  if (mdesc == null) {
+    return null;
+  }
+  SModel sModel=mdesc.getSModel();
+  return SNodeOperations.as(ListSequence.fromList(SModelOperations.getRoots(sModel,"jetbrains.mps.core.structure.structure.SStructureContainer")).translate(new ITranslator2<SNode,SNode>(){
+    public Iterable<SNode> translate(    SNode it){
+      return SLinkOperations.getTargets(it,"structure",true);
+    }
+  }
+).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.core.structure.structure.SAbstractConcept") && SPropertyOperations.getString(SNodeOperations.cast(it,"jetbrains.mps.core.structure.structure.SAbstractConcept"),"name").equals(name);
+    }
+  }
+).first(),"jetbrains.mps.core.structure.structure.SAbstractConcept");
+}
