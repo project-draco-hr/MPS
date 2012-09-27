@@ -1,19 +1,20 @@
 {
-  List<SNode> result=new ArrayList<SNode>();
-  List<String> referencetRoles=ListSequence.fromList(new ArrayList<String>());
-  ListSequence.fromList(referencetRoles).addSequence(SetSequence.fromSet(_context.getNode().getReferenceRoles()));
-  Collections.sort(referencetRoles);
-  for (  String referentRole : referencetRoles) {
-    if ((AttributeOperations.getAttribute(_context.getNode(),new IAttributeDescriptor.LinkAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.lang.pattern.structure.LinkPatternVariableDeclaration"),referentRole)) != null)) {
-      continue;
+  final List<SNode> result=new ArrayList<SNode>();
+  _context.getNode().visitReferences(new org.jetbrains.mps.openapi.model.SNode.ReferenceVisitor(){
+    public boolean visitReference(    String role,    SReference ref){
+      if (AttributeOperations.getAttribute(_context.getNode(),new IAttributeDescriptor.LinkAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.lang.pattern.structure.LinkPatternVariableDeclaration"),role)) != null) {
+        return true;
+      }
+      SNode referenceNode=SModelOperations.createNewNode(_context.getOutputModel(),"jetbrains.mps.lang.pattern.structure.GeneratorInternal_ReferenceDescriptor",null);
+      SNode referent=((SNode)ref.getTargetNode());
+      SPropertyOperations.set(referenceNode,"role",role);
+      SPropertyOperations.set(referenceNode,"model",referent.getModel().getSModelReference().toString());
+      SPropertyOperations.set(referenceNode,"id",referent.getSNodeId().toString());
+      SLinkOperations.setTarget(referenceNode,"mainNode",_context.getNode(),false);
+      ListSequence.fromList(result).addElement(referenceNode);
+      return true;
     }
-    SNode referenceNode=SModelOperations.createNewNode(_context.getOutputModel(),"jetbrains.mps.lang.pattern.structure.GeneratorInternal_ReferenceDescriptor",null);
-    SNode referent=_context.getNode().getReferent(referentRole);
-    SPropertyOperations.set(referenceNode,"role",referentRole);
-    SPropertyOperations.set(referenceNode,"model",referent.getModel().getSModelReference().toString());
-    SPropertyOperations.set(referenceNode,"id",referent.getSNodeId().toString());
-    SLinkOperations.setTarget(referenceNode,"mainNode",_context.getNode(),false);
-    ListSequence.fromList(result).addElement(referenceNode);
   }
+);
   return result;
 }
