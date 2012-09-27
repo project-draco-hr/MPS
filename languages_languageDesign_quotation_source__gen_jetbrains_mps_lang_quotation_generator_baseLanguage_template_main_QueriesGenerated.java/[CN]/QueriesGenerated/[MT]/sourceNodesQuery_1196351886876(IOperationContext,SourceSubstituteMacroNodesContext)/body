@@ -1,20 +1,21 @@
 {
-  List<SNode> result=new ArrayList<SNode>();
-  for (  SReference reference : _context.getNode().getReferences()) {
-    if (AttributeOperations.getAttribute(_context.getNode(),new IAttributeDescriptor.LinkAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.lang.quotation.structure.ReferenceAntiquotation"),reference.getRole())) != null) {
-      continue;
+  final List<SNode> result=new ArrayList<SNode>();
+  _context.getNode().visitReferences(new org.jetbrains.mps.openapi.model.SNode.ReferenceVisitor(){
+    public boolean visitReference(    String role,    org.jetbrains.mps.openapi.model.SReference ref){
+      SNode targetNode=((SNode)ref.getTargetNode());
+      if (SNodeOperations.getAncestor(targetNode,"jetbrains.mps.lang.quotation.structure.Quotation",false,false) == SNodeOperations.getAncestor(_context.getNode(),"jetbrains.mps.lang.quotation.structure.Quotation",false,false)) {
+        return true;
+      }
+      SNode referenceNode=SModelOperations.createNewNode(_context.getOutputModel(),"jetbrains.mps.lang.core.structure.BaseConcept",null);
+      referenceNode.setProperty("targetModel",((SReference)ref).getTargetSModelReference().toString());
+      referenceNode.setProperty("role",ref.getRole());
+      if (targetNode != null) {
+        referenceNode.setProperty("targetNodeId",targetNode.getSNodeId().toString());
+      }
+      ListSequence.fromList(result).addElement(referenceNode);
+      return true;
     }
-    SNode targetNode=reference.getTargetNode();
-    if (SNodeOperations.getAncestor(targetNode,"jetbrains.mps.lang.quotation.structure.Quotation",false,false) == SNodeOperations.getAncestor(_context.getNode(),"jetbrains.mps.lang.quotation.structure.Quotation",false,false)) {
-      continue;
-    }
-    SNode referenceNode=SModelOperations.createNewNode(_context.getOutputModel(),"jetbrains.mps.lang.core.structure.BaseConcept",null);
-    referenceNode.setProperty("targetModel",reference.getTargetSModelReference().toString());
-    referenceNode.setProperty("role",reference.getRole());
-    if (targetNode != null) {
-      referenceNode.setProperty("targetNodeId",targetNode.getSNodeId().toString());
-    }
-    ListSequence.fromList(result).addElement(referenceNode);
   }
+);
   return result;
 }
