@@ -1,0 +1,46 @@
+{
+  String[] tokens=new String[x.tokens.length];
+  if (tokens.length == 0) {
+    return null;
+  }
+  for (int i=0; i < tokens.length; i++) {
+    tokens[i]=new String(x.tokens[i]);
+  }
+  System.err.println("DEBUG: scoper = " + SPropertyOperations.getString(SNodeOperations.getConceptDeclaration(pos.current),"name") + " parent = "+ SPropertyOperations.getString(SNodeOperations.getConceptDeclaration(SNodeOperations.getParent(pos.current)),"name")+ " role "+ pos.role+ " index "+ pos.index);
+  Scope scope=getScopeAt(pos,SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.VariableDeclaration"));
+  if (scope == null) {
+    System.err.println("DEBUG: sccope is null");
+    return null;
+  }
+  SNode operand;
+  int tokPos=0;
+  if (Sequence.fromIterable(scope.getAvailableElements(tokens[0])).isNotEmpty()) {
+    System.err.println("DEBUG: token = " + tokens[0]);
+    SNode varRef=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.VariableReference",null);
+    SReference sref=new DynamicReference("variableDeclaration",varRef,null,tokens[0]);
+    varRef.addReference(sref);
+    operand=varRef;
+    tokPos=1;
+    System.err.println("DEBUG: normal dot expr");
+  }
+ else {
+    SNode cls=tryGetClassAt(pos,tokens[0]);
+    if ((cls == null)) {
+      return null;
+    }
+    SNode statFieldRef=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StaticFieldReference",null);
+    SLinkOperations.setTarget(statFieldRef,"classifier",cls,false);
+    SReference fieldRef=new DynamicReference("staticFieldDeclaration",statFieldRef,null,tokens[1]);
+    statFieldRef.addReference(fieldRef);
+    operand=statFieldRef;
+    tokPos=2;
+    System.err.println("DEBUG: no variable elements in scope");
+  }
+  while (tokPos < tokens.length) {
+    SNode dotExpr=makeFieldDotExpression(operand,tokens[tokPos]);
+    operand=dotExpr;
+    tokPos++;
+  }
+  insertAt(pos,operand);
+  return operand;
+}
