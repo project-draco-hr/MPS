@@ -1,0 +1,44 @@
+{
+  if (exp instanceof TrueLiteral) {
+    return new ASTConverter.QuotationClass_rbndtb_a0a0a0cd().createNode();
+  }
+ else   if (exp instanceof FalseLiteral) {
+    return new ASTConverter.QuotationClass_rbndtb_a0a0a0a08().createNode();
+  }
+ else   if (exp instanceof StringLiteral) {
+    return new ASTConverter.QuotationClass_rbndtb_a0a0b0a08().createNode(new String(((StringLiteral)exp).source()));
+  }
+ else   if (exp instanceof ArrayInitializer) {
+    SNode arr=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ArrayLiteral",null);
+    for (    Expression e : ((ArrayInitializer)exp).expressions) {
+      ListSequence.fromList(SLinkOperations.getTargets(arr,"item",true)).addElement(convertExpression(e));
+    }
+    return arr;
+  }
+ else   if (exp instanceof QualifiedNameReference) {
+    SNode enumRef=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.EnumConstantReference",null);
+    char[][] tokens=((QualifiedNameReference)exp).tokens;
+    String enumName=new String(tokens[0]);
+    for (int i=1; i < tokens.length - 1; i++) {
+      enumName=enumName + "." + new String(tokens[i]);
+    }
+    String enumConstName=new String(tokens[tokens.length - 1]);
+    SReference enumClRef;
+    if (enumName.contains(".")) {
+      enumClRef=myTypeResolver.resolveQualifiedClassName(enumName,enumRef,"enumClass");
+    }
+ else {
+      enumClRef=myTypeResolver.resolveShortClassName(enumName,enumRef,"enumClass");
+    }
+    SReference enumConstRef=new DynamicReference("enumConstantDeclaration",enumRef,null,enumConstName);
+    enumRef.addReference(enumClRef);
+    enumRef.addReference(enumConstRef);
+    return enumRef;
+  }
+ else   if (exp instanceof SingleNameReference) {
+    return new ASTConverter.QuotationClass_rbndtb_a0b0e0a08().createNode();
+  }
+ else {
+    throw new RuntimeException("This kind of expression is not supported yet: " + exp.getClass().getName());
+  }
+}
