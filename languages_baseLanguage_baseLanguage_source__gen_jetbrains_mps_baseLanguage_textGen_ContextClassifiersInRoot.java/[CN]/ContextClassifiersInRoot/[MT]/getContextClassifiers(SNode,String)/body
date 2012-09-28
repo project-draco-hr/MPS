@@ -1,0 +1,32 @@
+{
+  Map<String,String> bindings=new HashMap<String,String>();
+  SNode current=contextNode;
+  while ((current != null)) {
+    if (SNodeOperations.isInstanceOf(current,"jetbrains.mps.baseLanguage.structure.Classifier")) {
+      boolean processNestedClassifiers=false;
+      if (SNodeOperations.isInstanceOf(current,"jetbrains.mps.baseLanguage.structure.AnonymousClass") || SNodeOperations.isInstanceOf(current,"jetbrains.mps.baseLanguage.structure.EnumClass")) {
+        processNestedClassifiers=true;
+      }
+ else       if (SNodeOperations.isInstanceOf(current,"jetbrains.mps.baseLanguage.structure.Interface")) {
+        processNestedClassifiers=!("extendedInterface".equals(sourceChildRole));
+      }
+ else       if (SNodeOperations.isInstanceOf(current,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
+        processNestedClassifiers=!("superclass".equals(sourceChildRole) || "implementedInterface".equals(sourceChildRole));
+      }
+ else {
+        LOG.warning("Illegal classifier node in bl textgen: " + current);
+      }
+      addClassifierToBindingMap(bindings,SNodeOperations.cast(current,"jetbrains.mps.baseLanguage.structure.Classifier"));
+      if (processNestedClassifiers) {
+        for (        Map.Entry<String,String> simpleToFqName : nestedClassifiersCache.get(SNodeOperations.cast(current,"jetbrains.mps.baseLanguage.structure.Classifier")).entrySet()) {
+          if (!(bindings.containsKey(simpleToFqName.getKey()))) {
+            bindings.put(simpleToFqName.getKey(),simpleToFqName.getValue());
+          }
+        }
+      }
+    }
+    sourceChildRole=current.getRole();
+    current=SNodeOperations.getParent(current);
+  }
+  return bindings;
+}
