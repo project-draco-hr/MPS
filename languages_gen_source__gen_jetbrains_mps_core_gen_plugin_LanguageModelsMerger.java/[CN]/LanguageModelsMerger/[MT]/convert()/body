@@ -1,12 +1,19 @@
 {
   ModelAccess.assertLegalRead();
+  session=new MergeSession(messageHandler){
+    @Override protected SNode merge(    SNode existing,    SNode node,    SModel newmodel){
+      SNode merged=super.merge(existing,node,newmodel);
+      if (isNotEmpty_mx80dq_a0b0a0a0a1a0(SPropertyOperations.getString(SNodeOperations.cast(existing,"jetbrains.mps.lang.core.structure.BaseConcept"),"virtualPackage"))) {
+        SPropertyOperations.set(SNodeOperations.cast(merged,"jetbrains.mps.lang.core.structure.BaseConcept"),"virtualPackage",SPropertyOperations.getString(SNodeOperations.cast(existing,"jetbrains.mps.lang.core.structure.BaseConcept"),"virtualPackage"));
+      }
+      return merged;
+    }
+  }
+;
   if (ListSequence.fromList(SModelOperations.getRoots(sourceModel,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration")).isEmpty()) {
     messageHandler.handle(new Message(MessageKind.ERROR,"No concepts in generated model"));
     return;
   }
-  mapping=MapSequence.fromMap(new HashMap<SNode,SNode>());
-  reverseMapping=MapSequence.fromMap(new HashMap<SNode,SNode>());
-  newContent=MapSequence.fromMap(new HashMap<DefaultSModelDescriptor,SModel>());
   merge(LanguageAspect.STRUCTURE,ListSequence.fromList(SModelOperations.getRoots(sourceModel,null)).where(new IWhereFilter<SNode>(){
     public boolean accept(    SNode it){
       return it.getConceptFqName().startsWith("jetbrains.mps.lang.structure");
@@ -21,7 +28,7 @@
 ));
   Iterable<SNode> notMerged=ListSequence.fromList(SModelOperations.getRoots(sourceModel,null)).where(new IWhereFilter<SNode>(){
     public boolean accept(    SNode it){
-      return !(MapSequence.fromMap(mapping).containsKey(it));
+      return !(session.isMapped(it));
     }
   }
 );
@@ -29,7 +36,5 @@
     messageHandler.handle(new Message(MessageKind.ERROR,"Not merged: " + Sequence.fromIterable(notMerged).first().getDebugText()));
     return;
   }
-  restoreRefs();
-  mapping=null;
-  reverseMapping=null;
+  session.restoreRefs();
 }
