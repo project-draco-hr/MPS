@@ -1,0 +1,32 @@
+{
+  Queue<SNode> queue=new LinkedList<SNode>();
+  StructuralNodeSet<SNode> visited=new StructuralNodeSet<SNode>();
+  queue.add(subType);
+  visited.add(subType);
+  while (!queue.isEmpty()) {
+    SNode cur=queue.poll();
+    if (superType.matchesWith(cur)) {
+      addToCache(subType,superType,true,isWeak);
+      return true;
+    }
+    StructuralNodeSet<?> ancestors=new StructuralNodeSet();
+    TypeChecker.getInstance().getSubtypingManager().collectImmediateSuperTypes(cur,isWeak,ancestors,myTypeCheckingContextNew);
+    for (    SNode ancestor : ancestors) {
+      if (visited.contains(ancestor))       continue;
+      visited.addStructurally(ancestor);
+      if (canAskCache) {
+        Boolean cacheAnswer=getIsSubTypeCacheAnswer(ancestor,superType.getSuperType(),isWeak);
+        if (cacheAnswer != null) {
+          if (cacheAnswer) {
+            addToCache(subType,superType,true,isWeak);
+            return true;
+          }
+          continue;
+        }
+      }
+      queue.add(ancestor);
+    }
+  }
+  addToCache(subType,superType,false,isWeak);
+  return false;
+}
