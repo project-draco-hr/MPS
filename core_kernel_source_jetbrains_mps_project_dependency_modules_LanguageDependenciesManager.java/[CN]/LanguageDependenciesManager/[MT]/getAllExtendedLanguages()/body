@@ -1,0 +1,21 @@
+{
+  if (myInvalidatedFlag.compareAndSet(true,false)) {
+    myModuleWatcher.clear();
+    Set<ModuleReference> result=new LinkedHashSet<ModuleReference>();
+    THashSet<Language> langs=new THashSet<Language>();
+    collectAllExtendedLanguages(langs);
+    for (    Language lang : langs) {
+      myModuleWatcher.watchLanguage(lang);
+      result.add(lang.getModuleReference());
+    }
+    this.myCachedDeps=Collections.unmodifiableSet(result);
+    myCacheInitGuard.countDown();
+  }
+  try {
+    myCacheInitGuard.await();
+  }
+ catch (  InterruptedException e) {
+    throw new RuntimeException(e);
+  }
+  return myCachedDeps;
+}
