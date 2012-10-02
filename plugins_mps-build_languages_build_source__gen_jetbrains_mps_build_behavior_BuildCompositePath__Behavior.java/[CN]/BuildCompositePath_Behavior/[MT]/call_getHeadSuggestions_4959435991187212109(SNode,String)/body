@@ -6,16 +6,21 @@
   if (SNodeOperations.isInstanceOf(SNodeOperations.getParent(thisNode),"jetbrains.mps.build.structure.BuildCompositePath")) {
     relativePath+="/" + BuildCompositePath_Behavior.call_getPathToHead_3968971886499106107(SNodeOperations.cast(SNodeOperations.getParent(thisNode),"jetbrains.mps.build.structure.BuildCompositePath"));
   }
-  File file=new File(relativePath);
+  IFile file=FileSystem.getInstance().getFileByPath(relativePath);
   if (!(file.exists())) {
     return ListSequence.fromList(new ArrayList<String>());
   }
-  return Sequence.fromIterable(Sequence.fromArray(file.listFiles())).select(new ISelector<File,String>(){
-    public String select(    File it){
+  List<IFile> children=file.getChildren();
+  Iterable<String> names=ListSequence.fromList(children).select(new ISelector<IFile,String>(){
+    public String select(    IFile it){
       return it.getName();
     }
   }
-).union(Sequence.fromIterable(Sequence.<String>singleton(".."))).sort(new ISelector<String,Comparable<?>>(){
+);
+  if (file.getParent() != null) {
+    names=Sequence.fromIterable(names).union(Sequence.fromIterable(Sequence.<String>singleton("..")));
+  }
+  return Sequence.fromIterable(names).sort(new ISelector<String,Comparable<?>>(){
     public Comparable<?> select(    String it){
       return it;
     }
