@@ -1,0 +1,68 @@
+{
+  final List<Tuples._2<Set<SNode>,Set<SNode>>> usages=ListSequence.fromList(new ArrayList<Tuples._2<Set<SNode>,Set<SNode>>>());
+  for (  Tuples._3<String,SNode,_FunctionTypes._void_P1_E0<? super SNode>> transformation : ListSequence.fromList(transformations)) {
+    Set<SNode> method=SetSequence.fromSetAndArray(new HashSet<SNode>(),transformation._1());
+    Set<SReference> musages=FindUsagesManager.getInstance().findUsages(method,SearchType.USAGES,scope,new EmptyProgressMonitor());
+    Set<SNode> unknown=SetSequence.fromSet(new HashSet<SNode>());
+    Set<SNode> known=SetSequence.fromSet(new HashSet<SNode>());
+    for (    SReference usage : SetSequence.fromSet(musages)) {
+      SNode n=usage.getSourceNode();
+      if (!(needMigration(n))) {
+        continue;
+      }
+      if (!(SNodeOperations.isInstanceOf(n,"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation") && SConceptOperations.isExactly(SNodeOperations.getConceptDeclaration(SNodeOperations.getParent(n)),"jetbrains.mps.baseLanguage.structure.DotExpression") && (SNodeOperations.getAncestor(n,"jetbrains.mps.lang.quotation.structure.Quotation",false,false) == null))) {
+        SetSequence.fromSet(unknown).addElement(n);
+        continue;
+      }
+      SetSequence.fromSet(known).addElement(n);
+    }
+    ListSequence.fromList(usages).addElement(MultiTuple.<Set<SNode>,Set<SNode>>from(known,unknown));
+  }
+  List<SearchResult<SNode>> results=ListSequence.fromList(new ArrayList<SearchResult<SNode>>());
+  for (int i=0; i < ListSequence.fromList(usages).count(); i++) {
+    final String cat=ListSequence.fromList(transformations).getElement(i)._0();
+    ListSequence.fromList(results).addSequence(SetSequence.fromSet(ListSequence.fromList(usages).getElement(i)._0()).select(new ISelector<SNode,SearchResult<SNode>>(){
+      public SearchResult<SNode> select(      SNode it){
+        return new SearchResult<SNode>(it,cat);
+      }
+    }
+));
+    ListSequence.fromList(results).addSequence(SetSequence.fromSet(ListSequence.fromList(usages).getElement(i)._1()).select(new ISelector<SNode,SearchResult<SNode>>(){
+      public SearchResult<SNode> select(      SNode it){
+        return new SearchResult<SNode>(it,"unknown");
+      }
+    }
+));
+  }
+  ip.getComponent(RefactoringView.class).showRefactoringView(ip,new RefactoringViewAction(){
+    public void performAction(    RefactoringViewItem refactoringViewItem){
+      final List<SNodePointer> included=((RefactoringViewItemImpl)refactoringViewItem).getUsagesView().getIncludedResultNodes();
+      refactoringViewItem.close();
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          for (int i=0; i < ListSequence.fromList(usages).count(); i++) {
+            _FunctionTypes._void_P1_E0<? super SNode> transformer=ListSequence.fromList(transformations).getElement(i)._2();
+            for (            SNode known : SetSequence.fromSet(ListSequence.fromList(usages).getElement(i)._0())) {
+              SNodePointer np=new SNodePointer(known);
+              if (ListSequence.fromList(included).contains(np)) {
+                transformer.invoke(known);
+              }
+            }
+          }
+        }
+      }
+);
+    }
+  }
+,new SearchResults(SetSequence.fromSetWithValues(new HashSet<SNode>(),ListSequence.fromList(transformations).select(new ISelector<Tuples._3<String,SNode,_FunctionTypes._void_P1_E0<? super SNode>>,SNode>(){
+    public SNode select(    Tuples._3<String,SNode,_FunctionTypes._void_P1_E0<? super SNode>> it){
+      return it._1();
+    }
+  }
+)),ListSequence.fromList(results).where(new IWhereFilter<SearchResult<SNode>>(){
+    public boolean accept(    SearchResult<SNode> it){
+      return !(it.getObject().isDetached());
+    }
+  }
+).toListSequence()),false,"usages");
+}
