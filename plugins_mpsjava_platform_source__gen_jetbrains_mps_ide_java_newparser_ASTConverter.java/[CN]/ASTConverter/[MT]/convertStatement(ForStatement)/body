@@ -1,0 +1,49 @@
+{
+  SNode forStatement=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ForStatement",null);
+  List<SNode> init=convertStatements(x.initializations);
+  SNode result=forStatement;
+  if (ListSequence.fromList(init).any(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.baseLanguage.structure.ExpressionStatement");
+    }
+  }
+)) {
+    result=new ASTConverter.QuotationClass_rbndtb_a0a1a3a82().createNode(init,forStatement);
+  }
+ else   if (!(init.isEmpty())) {
+    boolean first=true;
+    for (    SNode statement : init) {
+      if (SNodeOperations.isInstanceOf(statement,"jetbrains.mps.baseLanguage.structure.LocalVariableDeclarationStatement")) {
+        SNode lvds=SNodeOperations.cast(statement,"jetbrains.mps.baseLanguage.structure.LocalVariableDeclarationStatement");
+        SNode variableDeclaration=SLinkOperations.getTarget(lvds,"localVariableDeclaration",true);
+        if (first) {
+          SLinkOperations.setTarget(forStatement,"variable",variableDeclaration,true);
+          first=false;
+        }
+ else {
+          SNode additionalForLoopVariable=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.AdditionalForLoopVariable",null);
+          SPropertyOperations.set(additionalForLoopVariable,"name",SPropertyOperations.getString(variableDeclaration,"name"));
+          SNode inititalizer=SLinkOperations.getTarget(variableDeclaration,"initializer",true);
+          if ((inititalizer != null)) {
+            SLinkOperations.setTarget(additionalForLoopVariable,"initializer",inititalizer,true);
+          }
+          ListSequence.fromList(SLinkOperations.getTargets(forStatement,"additionalVar",true)).addElement(additionalForLoopVariable);
+        }
+      }
+    }
+  }
+  SNode expr=convertExpressionRefl(x.condition);
+  SLinkOperations.setTarget(forStatement,"condition",expr,true);
+  List<SNode> incr=convertExpressionStatements(x.increments);
+  if (!(incr.isEmpty())) {
+    for (    SNode expressionStatement : incr) {
+      SNode expression=SLinkOperations.getTarget(expressionStatement,"expression",true);
+      SNodeOperations.detachNode(expression);
+      ListSequence.fromList(SLinkOperations.getTargets(forStatement,"iteration",true)).addElement(expression);
+    }
+  }
+  SNode loopBody=convertStatementRefl(x.action);
+  SNode body=getStatementListFromStatement(loopBody,x.action);
+  SLinkOperations.setTarget(forStatement,"body",body,true);
+  return result;
+}

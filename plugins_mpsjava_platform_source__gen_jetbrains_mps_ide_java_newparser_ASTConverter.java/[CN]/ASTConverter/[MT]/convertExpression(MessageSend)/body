@@ -1,0 +1,52 @@
+{
+  String methodName=new String(x.selector);
+  SNode result=null;
+  SNode call=null;
+  if (x.receiver instanceof ThisReference && ((ThisReference)x.receiver).isImplicitThis()) {
+    SNode unkCall=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.UnknownLocalCall",null);
+    SPropertyOperations.set(unkCall,"callee",methodName);
+    result=unkCall;
+    call=unkCall;
+  }
+ else {
+    Expression receiver=x.receiver;
+    if (receiver instanceof NameReference) {
+      SNode unkDotCall=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.UnknownDotCall",null);
+      SPropertyOperations.set(unkDotCall,"callee",methodName);
+      String[] tokens;
+      if (x.receiver instanceof SingleNameReference) {
+        tokens=new String[1];
+        tokens[0]=new String(((SingleNameReference)x.receiver).token);
+      }
+ else       if (x.receiver instanceof QualifiedNameReference) {
+        QualifiedNameReference nameRef=((QualifiedNameReference)x.receiver);
+        tokens=new String[nameRef.tokens.length];
+        for (int i=0; i < tokens.length; i++) {
+          tokens[i]=new String(nameRef.tokens[i]);
+        }
+      }
+ else {
+        return null;
+      }
+      for (      String tok : tokens) {
+        ListSequence.fromList(SLinkOperations.getTargets(unkDotCall,"token",true)).addElement(new ASTConverter.QuotationClass_rbndtb_a0a0a0j0g0a8a86().createNode(tok));
+      }
+      result=unkDotCall;
+      call=unkDotCall;
+    }
+ else {
+      SNode dotExpr=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.DotExpression",null);
+      SLinkOperations.setTarget(dotExpr,"operand",convertExpressionRefl(x.receiver),true);
+      SNode instCall=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation",null);
+      SLinkOperations.setTarget(dotExpr,"operation",instCall,true);
+      SReference sref=new DynamicReference("instanceMethodDeclaration",instCall,null,methodName);
+      instCall.addReference(sref);
+      result=dotExpr;
+      call=instCall;
+    }
+  }
+  if ((call != null)) {
+    addCallArgs(call,x.arguments);
+  }
+  return result;
+}
