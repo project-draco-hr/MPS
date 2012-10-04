@@ -1,0 +1,39 @@
+{
+  char[] source=code.toCharArray();
+  Map<String,String> settings=new HashMap<String,String>();
+  settings.put(CompilerOptions.OPTION_Source,CompilerOptions.VERSION_1_6);
+  List<SNode> result=new ArrayList<SNode>();
+  if (FeatureKind.CLASS.equals(what) || FeatureKind.CLASS_STUB.equals(what)) {
+    boolean ignoreMethodBodies=FeatureKind.CLASS_STUB.equals(what);
+    CodeSnippetParsingUtil util=new CodeSnippetParsingUtil(ignoreMethodBodies);
+    CompilationUnitDeclaration compRes=util.parseCompilationUnit(source,settings,true);
+    if (compRes == null || compRes.types == null && compRes.compilationResult.problems != null) {
+      throw new JavaParseException("Could not parse anything");
+    }
+    ASTNode[] roots=compRes.types;
+    TypeNameResolver typeResolver=new TypeNameResolver(pkg);
+    typeResolver.addImports(extractImports(compRes));
+    ASTConverter converter=new ASTConverter(pkg,compRes,ignoreMethodBodies,typeResolver);
+    if (compRes.types != null) {
+      for (      ASTNode root : roots) {
+        ListSequence.fromList(result).addElement(converter.convertRoot(root));
+      }
+    }
+  }
+ else   if (FeatureKind.STATEMENTS.equals(what)) {
+    CodeSnippetParsingUtil util=new CodeSnippetParsingUtil();
+    AbstractMethodDeclaration absMethod=util.parseStatements(source,settings,true,recovery);
+    if (absMethod == null || absMethod.statements == null) {
+      throw new JavaParseException("Could not parse anything");
+    }
+    Statement[] stmts=absMethod.statements;
+    TypeNameResolver typeResolver=new TypeNameResolver(pkg);
+    ASTConverter converter=new ASTConverter(pkg,null,false,typeResolver);
+    List<SNode> nodes=converter.convertStatements(stmts);
+    ListSequence.fromList(result).addSequence(ListSequence.fromList(nodes));
+  }
+ else {
+    throw new IllegalArgumentException("Parsing other than class and statements is not supported yet ");
+  }
+  return result;
+}
