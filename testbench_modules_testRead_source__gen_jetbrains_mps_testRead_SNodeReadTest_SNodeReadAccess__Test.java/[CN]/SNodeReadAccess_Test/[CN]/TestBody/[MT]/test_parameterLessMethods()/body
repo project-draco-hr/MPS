@@ -1,0 +1,66 @@
+{
+  this.addNodeById("8150353254540236423");
+  this.addNodeById("8150353254540236549");
+  this.addNodeById("4195712261513743410");
+  SNode sNode=SNodeOperations.cast(this.getNodeById("8150353254540236424"),"jetbrains.mps.baseLanguage.structure.BlockStatement");
+  StatCountNodeReadAccessInEditorListener listener=new StatCountNodeReadAccessInEditorListener(sNode);
+  NodeReadAccessCasterInEditor.setCellBuildNodeReadAccessListener(listener);
+  Map<String,Integer> prevCheck=this.getReadAccessMap();
+  Map<String,Integer> currentCheckChanged=new HashMap<String,Integer>();
+  Map<String,Integer> currentCheckNew=new HashMap<String,Integer>();
+  Map<String,Exception> currentException=new HashMap<String,Exception>();
+  Set<String> contractMethods=this.getISNodeMethodsNames(false);
+  List<Method> methods=new ArrayList<Method>();
+  methods.addAll(Arrays.asList(SNode.class.getMethods()));
+  for (int i=0; i < methods.size(); i++) {
+    if (methods.get(i).getName().equals("delete") && i != (methods.size() - 1)) {
+      Collections.swap(methods,i,(methods.size() - 1));
+      break;
+    }
+  }
+  for (  Method method : methods) {
+    if ((method.getModifiers() & (Modifier.PUBLIC | Modifier.PROTECTED)) > 0 && method.getParameterAnnotations().length == 0 && contractMethods.contains(method.getName())) {
+      try {
+        method.invoke(sNode);
+      }
+ catch (      Exception e) {
+        currentException.put(method.getName(),e);
+      }
+ finally {
+        Pair<Integer,List<String>> pair=listener.getResults();
+        listener.resetResults();
+        if (prevCheck.containsKey(method.toGenericString())) {
+          if (!(this.isReadsCountUnChanged(prevCheck.get(method.toGenericString()).intValue(),pair.o1.intValue()))) {
+            currentCheckChanged.put(method.toGenericString(),pair.o1);
+          }
+        }
+ else {
+          currentCheckNew.put(method.toGenericString(),pair.o1);
+        }
+      }
+    }
+  }
+  StringBuilder error=new StringBuilder("Some changes occured in read access in SNode after last check:");
+  error.append(System.getProperty("line.separator"));
+  error.append("Methods with changed number of read access:");
+  error.append(System.getProperty("line.separator"));
+  for (  String s : currentCheckChanged.keySet()) {
+    error.append("In method " + s + " current count "+ currentCheckChanged.get(s)+ ", prev count "+ prevCheck.get(s));
+    error.append(System.getProperty("line.separator"));
+  }
+  error.append(System.getProperty("line.separator"));
+  error.append("New methods with read access:");
+  error.append(System.getProperty("line.separator"));
+  for (  String s : currentCheckNew.keySet()) {
+    error.append("In method " + s + " read count "+ currentCheckNew.get(s));
+    error.append(System.getProperty("line.separator"));
+  }
+  error.append(System.getProperty("line.separator"));
+  error.append("Methods ended with exception:");
+  error.append(System.getProperty("line.separator"));
+  for (  String s : currentException.keySet()) {
+    error.append("In method " + s + " was exception "+ Arrays.toString(currentException.get(s).getStackTrace()));
+    error.append(System.getProperty("line.separator"));
+  }
+  Assert.assertTrue(error.toString(),currentCheckChanged.isEmpty() && currentCheckNew.isEmpty() && currentException.isEmpty());
+}
