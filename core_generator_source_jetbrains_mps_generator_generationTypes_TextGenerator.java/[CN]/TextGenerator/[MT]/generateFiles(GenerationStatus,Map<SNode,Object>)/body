@@ -18,11 +18,13 @@
   ModelDependencies modelDep=null;
   GenerationDependencies dependencies=status.getDependencies();
   if (dependencies != null) {
-    for (    GenerationRootDependencies rdep : dependencies.getUnchangedDependencies()) {
+    List<GenerationRootDependencies> unchangedDependencies=dependencies.getUnchangedDependencies();
+    SModelDescriptor originalInputModel=status.getOriginalInputModel();
+    for (    GenerationRootDependencies rdep : unchangedDependencies) {
       for (      String filename : rdep.getFiles()) {
         if (myStreamHandler.touch(filename,false)) {
           if (modelDep == null) {
-            modelDep=BLDependenciesCache.getInstance().get(status.getOriginalInputModel());
+            modelDep=BLDependenciesCache.getInstance().get(originalInputModel);
           }
           if (modelDep != null) {
             RootDependencies root=modelDep.getDependency(filename);
@@ -33,19 +35,26 @@
         }
       }
     }
-    DebugInfo cachedDebugInfo=TraceInfoCache.getInstance().getLastGeneratedDebugInfo(status.getOriginalInputModel());
     DebugInfo generatedDebugInfo=status.getDebugInfo();
-    if (cachedDebugInfo != null && generatedDebugInfo != null) {
-      List<SNode> unchangedRoots=new ArrayList<SNode>();
-      String inputModelUid=status.getOriginalInputModel().getSModelReference().toString();
-      for (      GenerationRootDependencies dependency : dependencies.getUnchangedDependencies()) {
-        String rootId=dependency.getRootId();
-        if (rootId == null)         continue;
-        SNode node=new SNodePointer(inputModelUid,rootId).getNode();
-        if (node == null)         continue;
-        unchangedRoots.add(node);
+    if (!unchangedDependencies.isEmpty()) {
+      if (generatedDebugInfo == null) {
+        myStreamHandler.touch(TraceInfoCache.getInstance().getCacheFileName(),false);
       }
-      DebugInfoBuilder.completeDebugInfoFromCache(cachedDebugInfo,generatedDebugInfo,unchangedRoots);
+ else {
+        DebugInfo cachedDebugInfo=TraceInfoCache.getInstance().getLastGeneratedDebugInfo(status.getOriginalInputModel());
+        if (cachedDebugInfo != null) {
+          List<SNode> unchangedRoots=new ArrayList<SNode>();
+          String inputModelUid=status.getOriginalInputModel().getSModelReference().toString();
+          for (          GenerationRootDependencies dependency : dependencies.getUnchangedDependencies()) {
+            String rootId=dependency.getRootId();
+            if (rootId == null)             continue;
+            SNode node=new SNodePointer(inputModelUid,rootId).getNode();
+            if (node == null)             continue;
+            unchangedRoots.add(node);
+          }
+          DebugInfoBuilder.completeDebugInfoFromCache(cachedDebugInfo,generatedDebugInfo,unchangedRoots);
+        }
+      }
     }
   }
 }
