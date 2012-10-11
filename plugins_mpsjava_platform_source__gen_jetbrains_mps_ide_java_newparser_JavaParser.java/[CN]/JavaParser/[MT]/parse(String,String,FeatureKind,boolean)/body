@@ -2,38 +2,55 @@
   char[] source=code.toCharArray();
   Map<String,String> settings=new HashMap<String,String>();
   settings.put(CompilerOptions.OPTION_Source,CompilerOptions.VERSION_1_6);
-  List<SNode> result=new ArrayList<SNode>();
   if (FeatureKind.CLASS.equals(what) || FeatureKind.CLASS_STUB.equals(what)) {
-    boolean ignoreMethodBodies=FeatureKind.CLASS_STUB.equals(what);
-    CodeSnippetParsingUtil util=new CodeSnippetParsingUtil(ignoreMethodBodies);
+    boolean stubsMode=FeatureKind.CLASS_STUB.equals(what);
+    CodeSnippetParsingUtil util=new CodeSnippetParsingUtil(stubsMode);
     CompilationUnitDeclaration compRes=util.parseCompilationUnit(source,settings,true);
-    if (compRes == null || compRes.types == null && compRes.compilationResult.problems != null) {
-      throw new JavaParseException("Could not parse anything");
+    if (compRes == null) {
+      return JavaParser.JavaParseResult.UNKNOWN_ERROR;
     }
-    ASTNode[] roots=compRes.types;
-    TypeNameResolver typeResolver=new TypeNameResolver(pkg);
-    typeResolver.addImports(extractImports(compRes));
-    ASTConverter converter=new ASTConverter(pkg,compRes,ignoreMethodBodies,typeResolver);
-    if (compRes.types != null) {
-      for (      ASTNode root : roots) {
-        ListSequence.fromList(result).addElement(converter.convertRoot(root));
+    ASTNode[] astNodes=compRes.types;
+    List<SNode> roots=new ArrayList<SNode>();
+    if (astNodes != null && astNodes.length > 0) {
+      TypeNameResolver typeResolver=new TypeNameResolver(pkg);
+      typeResolver.addImports(extractImports(compRes));
+      ASTConverter converter=new ASTConverter(compRes,typeResolver,stubsMode);
+      for (      ASTNode astNode : astNodes) {
+        ListSequence.fromList(roots).addElement(converter.convertRoot(astNode));
       }
     }
+    String pkgName=null;
+    if (compRes.currentPackage != null) {
+      StringBuffer sb=new StringBuffer();
+      compRes.currentPackage.print(0,sb,false);
+      pkgName=sb.toString();
+    }
+    return new JavaParser.JavaParseResult(roots,pkgName,problemDescription(util.recordedParsingInformation));
   }
  else   if (FeatureKind.STATEMENTS.equals(what)) {
     CodeSnippetParsingUtil util=new CodeSnippetParsingUtil();
     AbstractMethodDeclaration absMethod=util.parseStatements(source,settings,true,recovery);
-    if (absMethod == null || absMethod.statements == null) {
-      throw new JavaParseException("Could not parse anything");
+    if (absMethod == null) {
+      return JavaParser.JavaParseResult.UNKNOWN_ERROR;
     }
     Statement[] stmts=absMethod.statements;
+    List<SNode> nodes=new ArrayList<SNode>();
+    if (stmts != null && stmts.length > 0) {
+      TypeNameResolver typeResolver=new TypeNameResolver(pkg);
+      ASTConverter converter=new ASTConverter(null,typeResolver,false);
+      ListSequence.fromList(nodes).addSequence(ListSequence.fromList(converter.convertStatements(stmts)));
+    }
+    return new JavaParser.JavaParseResult(nodes,problemDescription(util.recordedParsingInformation));
+  }
+ else   if (FeatureKind.CLASS_CONTENT.equals(what)) {
+    CodeSnippetParsingUtil util=new CodeSnippetParsingUtil(false);
+    ASTNode[] astNodes=util.parseClassBodyDeclarations(source,0,source.length,settings,false,true);
     TypeNameResolver typeResolver=new TypeNameResolver(pkg);
-    ASTConverter converter=new ASTConverter(pkg,null,false,typeResolver);
-    List<SNode> nodes=converter.convertStatements(stmts);
-    ListSequence.fromList(result).addSequence(ListSequence.fromList(nodes));
+    ASTConverter converter=new ASTConverter(null,typeResolver,false);
+    List<SNode> nodes=converter.convertClassContents(astNodes,SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ClassConcept",null));
+    return new JavaParser.JavaParseResult(nodes,problemDescription(util.recordedParsingInformation));
   }
  else {
     throw new IllegalArgumentException("Parsing other than class and statements is not supported yet ");
   }
-  return result;
 }

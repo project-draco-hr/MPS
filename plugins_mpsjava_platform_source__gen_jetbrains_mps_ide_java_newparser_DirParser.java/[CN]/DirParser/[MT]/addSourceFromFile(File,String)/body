@@ -1,0 +1,73 @@
+{
+  try {
+    final String str="package ";
+    String fileContents=FileUtil.read(file);
+    StringBuilder classFQName=new StringBuilder();
+    for (int i=fileContents.indexOf(str) + str.length(); i < fileContents.length(); i++) {
+      char c=fileContents.charAt(i);
+      if (Character.isWhitespace(c) || c == ';') {
+        break;
+      }
+      classFQName.append(c);
+    }
+    String packageNameFromFile=classFQName.toString();
+    if (myPrefix != null) {
+      String pattern;
+      if ("".equals(packageNameWithoutPrefix) || "".equals(myPrefix)) {
+        pattern=myPrefix + packageNameWithoutPrefix;
+      }
+ else {
+        pattern=myPrefix + "." + packageNameWithoutPrefix;
+      }
+      if (!(pattern.equals(packageNameFromFile))) {
+        LOG.error("package " + packageNameFromFile + " in a source file "+ file.getName()+ " does not correspond to file path: "+ pattern);
+        return;
+      }
+    }
+ else {
+      if (packageNameFromFile.endsWith(packageNameWithoutPrefix)) {
+        int index=packageNameFromFile.length() - packageNameWithoutPrefix.length();
+        myPrefix=packageNameFromFile.substring(0,index);
+        if (myPrefix.endsWith(".")) {
+          myPrefix=myPrefix.substring(0,myPrefix.length() - 1);
+        }
+      }
+ else {
+        LOG.error("package " + packageNameFromFile + " in a source file "+ file.getName()+ " does not correspond to file path: "+ packageNameWithoutPrefix);
+        return;
+      }
+    }
+    String fileName;
+    String nameAndExtension=file.getName();
+    int offset=nameAndExtension.lastIndexOf('.');
+    if (offset < 0) {
+      fileName=nameAndExtension;
+    }
+ else {
+      fileName=nameAndExtension.substring(0,offset);
+    }
+    classFQName.append(".");
+    classFQName.append(fileName);
+    registerModelForPackage(packageNameFromFile);
+    final SModel pkgModel=(packageNameWithoutPrefix.equals("") ? myBaseModelToAddSource : getModelForPackage(packageNameFromFile));
+    if (pkgModel != null) {
+      try {
+        final List<SNode> classes=myJavaParser.parse(fileContents,packageNameFromFile,FeatureKind.CLASS,true).getNodes();
+        ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+          public void run(){
+            for (            SNode cls : ListSequence.fromList(classes)) {
+              SModelOperations.addRootNode(pkgModel,cls);
+            }
+          }
+        }
+);
+      }
+ catch (      Exception e) {
+        e.printStackTrace();
+      }
+    }
+  }
+ catch (  Throwable t) {
+    LOG.error(t);
+  }
+}

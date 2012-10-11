@@ -1,0 +1,37 @@
+{
+  List<SNode> methods;
+  SNode result=null;
+  SNodeId sNodeId=cls.getSNodeId();
+  String clsStringId=(SNodeOperations.isInstanceOf(cls,"jetbrains.mps.baseLanguage.structure.AnonymousClass") || sNodeId instanceof SNodeId.Regular ? null : cls.getId());
+  if (method instanceof MethodDeclaration) {
+    if (flagSet(method.modifiers,ClassFileConstants.AccStatic) && SNodeOperations.isInstanceOf(cls,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
+      methods=SLinkOperations.getTargets(SNodeOperations.cast(cls,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"staticMethod",true);
+      result=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration",null);
+    }
+ else     if (SNodeOperations.isInstanceOf(cls,"jetbrains.mps.baseLanguage.structure.Annotation")) {
+      methods=SLinkOperations.getTargets(SNodeOperations.cast(cls,"jetbrains.mps.baseLanguage.structure.Annotation"),"method",true);
+      result=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.AnnotationMethodDeclaration",null);
+    }
+ else {
+      methods=SLinkOperations.getTargets(cls,"method",true);
+      result=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration",null);
+    }
+    if (SNodeOperations.isInstanceOf(cls,"jetbrains.mps.baseLanguage.structure.Interface")) {
+      SPropertyOperations.set(SNodeOperations.cast(result,"jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration"),"isAbstract","" + (true));
+      SLinkOperations.setTarget(SNodeOperations.cast(result,"jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration"),"visibility",new ASTConverter.QuotationClass_rbndtb_a0a1a3a7a5().createNode(),true);
+    }
+    convertMethodGuts((MethodDeclaration)method,clsStringId,result);
+    if (attach) {
+      methods.add(result);
+    }
+  }
+ else   if (method instanceof ConstructorDeclaration) {
+    result=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ConstructorDeclaration",null);
+    SLinkOperations.setTarget(result,"returnType",new ASTConverter.QuotationClass_rbndtb_a0a2a0h0f().createNode(),true);
+    convertMethodGuts(method,clsStringId,result);
+    if (attach) {
+      ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(cls,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"constructor",true)).addElement(SNodeOperations.cast(result,"jetbrains.mps.baseLanguage.structure.ConstructorDeclaration"));
+    }
+  }
+  return result;
+}
