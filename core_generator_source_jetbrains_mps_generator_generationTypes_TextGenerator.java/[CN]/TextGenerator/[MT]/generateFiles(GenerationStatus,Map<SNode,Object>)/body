@@ -19,11 +19,13 @@
   ModelDependencies modelDep=null;
   GenerationDependencies dependencies=status.getDependencies();
   if (dependencies != null) {
-    for (    GenerationRootDependencies rdep : dependencies.getUnchangedDependencies()) {
+    List<GenerationRootDependencies> unchangedDependencies=dependencies.getUnchangedDependencies();
+    SModelDescriptor originalInputModel=status.getOriginalInputModel();
+    for (    GenerationRootDependencies rdep : unchangedDependencies) {
       for (      String filename : rdep.getFiles()) {
         if (myStreamHandler.touch(filename,false)) {
           if (modelDep == null) {
-            modelDep=BLDependenciesCache.getInstance().get(status.getOriginalInputModel());
+            modelDep=BLDependenciesCache.getInstance().get(originalInputModel);
           }
           if (modelDep != null) {
             RootDependencies root=modelDep.getDependency(filename);
@@ -33,14 +35,24 @@
           }
         }
       }
-      if (debugInfoCache == null) {
-        debugInfoCache=TraceInfoCache.getInstance().get(status.getOriginalInputModel());
+    }
+    DebugInfo statusDebugInfo=status.getDebugInfo();
+    if (!unchangedDependencies.isEmpty()) {
+      if (statusDebugInfo == null) {
+        myStreamHandler.touch(TraceInfoCache.getInstance().getCacheFileName(),false);
       }
-      if (debugInfoCache != null) {
-        SNode node=rdep.getRootId() == null ? null : new SNodePointer(status.getOriginalInputModel().getSModelReference().toString(),rdep.getRootId()).getNode();
-        DebugInfoRoot infoRoot=debugInfoCache.getRootInfo(node);
-        if (infoRoot != null && status.getDebugInfo() != null) {
-          status.getDebugInfo().replaceRoot(infoRoot);
+ else {
+        for (        GenerationRootDependencies rdep : unchangedDependencies) {
+          if (debugInfoCache == null) {
+            debugInfoCache=TraceInfoCache.getInstance().get(originalInputModel);
+          }
+          if (debugInfoCache != null) {
+            SNode node=rdep.getRootId() == null ? null : new SNodePointer(originalInputModel.getSModelReference().toString(),rdep.getRootId()).getNode();
+            DebugInfoRoot infoRoot=debugInfoCache.getRootInfo(node);
+            if (infoRoot != null) {
+              statusDebugInfo.replaceRoot(infoRoot);
+            }
+          }
         }
       }
     }
