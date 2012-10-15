@@ -1,2 +1,107 @@
 {
+  SNode cls;
+  boolean isAnonymous=x.allocation != null;
+  if (isAnonymous) {
+    cls=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.AnonymousClass",null);
+  }
+ else {
+switch (TypeDeclaration.kind(x.modifiers)) {
+case TypeDeclaration.CLASS_DECL:
+      cls=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ClassConcept",null);
+    break;
+case TypeDeclaration.INTERFACE_DECL:
+  cls=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.Interface",null);
+break;
+case TypeDeclaration.ENUM_DECL:
+cls=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.EnumClass",null);
+break;
+case TypeDeclaration.ANNOTATION_TYPE_DECL:
+cls=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.Annotation",null);
+break;
+default :
+throw new JavaParseException("Unknown type declaration type");
+}
+}
+if (!(isAnonymous)) {
+SPropertyOperations.set(cls,"name",new String(x.name));
+SLinkOperations.setTarget(cls,"visibility",convertVisibility(x.modifiers),true);
+if (!(SNodeOperations.isInstanceOf(cls,"jetbrains.mps.baseLanguage.structure.Interface")) && flagSet(x.modifiers,ClassFileConstants.AccStatic)) {
+SPropertyOperations.set(cls,"nonStatic","" + (false));
+}
+if (myOnlyStubs) {
+String clsStringId=SNodeId.Foreign.ID_PREFIX + SPropertyOperations.getString(cls,"name");
+cls.setId(new SNodeId.Foreign(clsStringId));
+}
+}
+myTypeResolver.newTypeVarFrame();
+convertTypeVars(x.typeParameters,cls);
+if (x.memberTypes != null) {
+for (TypeDeclaration innerTyp : x.memberTypes) {
+myTypeResolver.addTypeName(new String(innerTyp.name));
+}
+for (TypeDeclaration innerTyp : x.memberTypes) {
+myTypeResolver.enterType(new String(innerTyp.name));
+try {
+SNode nested=convertTypeDecl(innerTyp);
+SLinkOperations.getTargets(cls,"staticInnerClassifiers",true).add(nested);
+}
+  finally {
+myTypeResolver.leaveType();
+}
+}
+}
+convertAnnotations(x.annotations,cls);
+{
+SNode claz=cls;
+if (SNodeOperations.isInstanceOf(claz,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
+SLinkOperations.setTarget(claz,"superclass",SNodeOperations.cast(convertTypeRef(x.superclass),"jetbrains.mps.baseLanguage.structure.ClassifierType"),true);
+ListSequence.fromList(SLinkOperations.getTargets(claz,"implementedInterface",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(x.superInterfaces)).select(new ISelector<TypeReference,SNode>(){
+public SNode select(TypeReference it){
+return SNodeOperations.cast(convertTypeRef(it),"jetbrains.mps.baseLanguage.structure.ClassifierType");
+}
+}
+));
+SPropertyOperations.set(claz,"abstractClass","" + (flagSet(x.modifiers,ClassFileConstants.AccAbstract)));
+SPropertyOperations.set(claz,"isFinal","" + (flagSet(x.modifiers,ClassFileConstants.AccFinal)));
+}
+}
+{
+SNode iface=cls;
+if (SNodeOperations.isInstanceOf(iface,"jetbrains.mps.baseLanguage.structure.Interface")) {
+ListSequence.fromList(SLinkOperations.getTargets(iface,"extendedInterface",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(x.superInterfaces)).select(new ISelector<TypeReference,SNode>(){
+public SNode select(TypeReference it){
+return SNodeOperations.cast(convertTypeRef(it),"jetbrains.mps.baseLanguage.structure.ClassifierType");
+}
+}
+));
+}
+}
+{
+SNode enm=cls;
+if (SNodeOperations.isInstanceOf(enm,"jetbrains.mps.baseLanguage.structure.EnumClass")) {
+if (x.fields != null) {
+for (FieldDeclaration f : x.fields) {
+if (!(isEnumConstant(f))) {
+continue;
+}
+SNode constr=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ConstructorDeclaration",null);
+SNode item=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.EnumConstantDeclaration",null);
+SPropertyOperations.set(item,"name",enumConstantName(f));
+SLinkOperations.getTargets(enm,"enumConstant",true).add(item);
+}
+}
+}
+}
+if (x.fields != null) {
+for (FieldDeclaration f : x.fields) {
+convertField(cls,f,true);
+}
+}
+if (x.methods != null) {
+for (AbstractMethodDeclaration method : x.methods) {
+convertMethod(cls,method,true);
+}
+}
+myTypeResolver.leaveTypeVarFrame();
+return cls;
 }

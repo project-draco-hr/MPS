@@ -1,0 +1,41 @@
+{
+  IdeMain.setTestMode((uiTest ? IdeMain.TestMode.UI_TEST : IdeMain.TestMode.CORE_TEST));
+  if (reOpenProject) {
+    TestMain.PROJECT_CONTAINER.clear();
+  }
+  TestMain.configureMPS();
+  ApplicationManagerEx.getApplicationEx().doNotSave();
+  clearSystemClipboard();
+  readSystemMacro();
+  if ((projectName == null || projectName.length() == 0)) {
+    for (    Project project : ProjectManager.getInstance().getOpenProjects()) {
+      if (project != null) {
+        test.setProject(project);
+        break;
+      }
+    }
+    if (test.getProject() == null) {
+      Assert.fail("MPS Project was not specfied in test class, no currently open project was not found");
+    }
+  }
+ else {
+    test.setProject(TestMain.PROJECT_CONTAINER.getProject(MacrosFactory.getGlobal().expandPath(projectName)));
+  }
+  SwingUtilities.invokeAndWait(new Runnable(){
+    public void run(){
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          SModelDescriptor modelDescriptor=SModelRepository.getInstance().getModelDescriptor(SModelReference.fromString(model));
+          if (modelDescriptor == null) {
+            Assert.fail("Can't find model " + model + " in projects "+ Arrays.toString(ProjectManager.getInstance().getOpenProjects())+ ".");
+          }
+          test.setModelDescriptor(modelDescriptor);
+          test.init();
+        }
+      }
+);
+    }
+  }
+);
+  ModelAccess.instance().flushEventQueue();
+}
