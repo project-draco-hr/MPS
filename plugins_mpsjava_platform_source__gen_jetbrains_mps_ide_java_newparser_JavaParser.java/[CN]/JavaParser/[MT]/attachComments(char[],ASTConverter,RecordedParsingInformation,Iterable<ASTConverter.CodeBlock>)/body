@@ -1,0 +1,51 @@
+{
+  char[] content=source;
+  int[][] comments=parseInfo.commentPositions;
+  int[] lineends=parseInfo.lineEnds;
+  final Map<SNode,Integer> positions=converter.getPositions();
+  Map<Integer,SNode> javadocs=converter.getJavadocs();
+  Iterable<ASTConverter.CodeBlock> blcks=Sequence.fromIterable(blocks).sort(new Comparator<ASTConverter.CodeBlock>(){
+    public int compare(    ASTConverter.CodeBlock a,    ASTConverter.CodeBlock b){
+      return a.getEndPos() - b.getEndPos();
+    }
+  }
+,true);
+  for (  int[] comment : comments) {
+    if (comment[1] > 0) {
+      SNode doc=MapSequence.fromMap(javadocs).get(comment[0]);
+      List<String> lines=CommentHelper.processJavadoc(CommentHelper.splitString(content,lineends,comment[0],comment[1] + 1));
+      for (      String text : ListSequence.fromList(lines)) {
+        SNode commentLine=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.javadoc.structure.CommentLine",null);
+        SPropertyOperations.set(SNodeOperations.cast(ListSequence.fromList(SLinkOperations.getTargets(commentLine,"part",true)).getElement(0),"jetbrains.mps.baseLanguage.javadoc.structure.TextCommentLinePart"),"text",text);
+        ListSequence.fromList(SLinkOperations.getTargets(doc,"body",true)).addElement(commentLine);
+      }
+      continue;
+    }
+    final int linestart=Math.abs(comment[0]);
+    SNode block=null;
+    for (    ASTConverter.CodeBlock blk : Sequence.fromIterable(blcks)) {
+      if (blk.getStartPos() <= linestart && linestart <= blk.getEndPos()) {
+        block=blk.getStatementList();
+        break;
+      }
+    }
+    if ((block != null)) {
+      int pos=ListSequence.fromList(SLinkOperations.getTargets(block,"statement",true)).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return !(MapSequence.fromMap(positions).containsKey(it)) || Math.abs(MapSequence.fromMap(positions).get(it)) <= linestart;
+        }
+      }
+).count();
+      for (      String line : ListSequence.fromList(CommentHelper.processComment(CommentHelper.splitString(content,lineends,linestart,Math.abs(comment[1]))))) {
+        SNode commentText=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.TextCommentPart",null);
+        SPropertyOperations.set(commentText,"text",line);
+        SNode commentLine=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.SingleLineComment",null);
+        ListSequence.fromList(SLinkOperations.getTargets(commentLine,"commentPart",true)).addElement(commentText);
+        ListSequence.fromList(SLinkOperations.getTargets(block,"statement",true)).insertElement(pos++,commentLine);
+      }
+    }
+ else {
+      LOG.warning("cannot find a place to import comment from " + "<Main type name>" + ":\n"+ new String(content,linestart,Math.abs(comment[1]) - linestart));
+    }
+  }
+}

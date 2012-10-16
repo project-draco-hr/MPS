@@ -1,56 +1,56 @@
 {
-  char[] source=code.toCharArray();
+  boolean stubsMode=FeatureKind.CLASS_STUB.equals(what);
+  CodeSnippetParsingUtil util=new CodeSnippetParsingUtil(stubsMode);
   Map<String,String> settings=new HashMap<String,String>();
   settings.put(CompilerOptions.OPTION_Source,CompilerOptions.VERSION_1_6);
-  if (FeatureKind.CLASS.equals(what) || FeatureKind.CLASS_STUB.equals(what)) {
-    boolean stubsMode=FeatureKind.CLASS_STUB.equals(what);
-    CodeSnippetParsingUtil util=new CodeSnippetParsingUtil(stubsMode);
+  settings.put(CompilerOptions.OPTION_DocCommentSupport,"enabled");
+  TypeNameResolver typeResolver=new TypeNameResolver(pkg);
+  ASTConverter converter=new ASTConverter(null,typeResolver,stubsMode);
+  List<SNode> resultNodes=new ArrayList<SNode>();
+  String resultPackageName=null;
+  char[] source=code.toCharArray();
+switch (what) {
+case CLASS:
+case CLASS_STUB:
     CompilationUnitDeclaration compRes=util.parseCompilationUnit(source,settings,true);
-    if (compRes == null) {
-      return JavaParser.JavaParseResult.UNKNOWN_ERROR;
-    }
-    ASTNode[] astNodes=compRes.types;
-    List<SNode> roots=new ArrayList<SNode>();
-    if (astNodes != null && astNodes.length > 0) {
-      TypeNameResolver typeResolver=new TypeNameResolver(pkg);
-      typeResolver.addImports(extractImports(compRes));
-      ASTConverter converter=new ASTConverter(compRes,typeResolver,stubsMode);
-      for (      ASTNode astNode : astNodes) {
-        ListSequence.fromList(roots).addElement(converter.convertRoot(astNode));
-      }
-    }
-    String pkgName=null;
-    if (compRes.currentPackage != null) {
-      StringBuffer sb=new StringBuffer();
-      compRes.currentPackage.print(0,sb,false);
-      pkgName=sb.toString();
-    }
-    return new JavaParser.JavaParseResult(roots,pkgName,problemDescription(util.recordedParsingInformation));
+  if (compRes == null) {
+    return JavaParser.JavaParseResult.UNKNOWN_ERROR;
   }
- else   if (FeatureKind.STATEMENTS.equals(what)) {
-    CodeSnippetParsingUtil util=new CodeSnippetParsingUtil();
-    AbstractMethodDeclaration absMethod=util.parseStatements(source,settings,true,recovery);
-    if (absMethod == null) {
-      return JavaParser.JavaParseResult.UNKNOWN_ERROR;
-    }
-    Statement[] stmts=absMethod.statements;
-    List<SNode> nodes=new ArrayList<SNode>();
-    if (stmts != null && stmts.length > 0) {
-      TypeNameResolver typeResolver=new TypeNameResolver(pkg);
-      ASTConverter converter=new ASTConverter(null,typeResolver,false);
-      ListSequence.fromList(nodes).addSequence(ListSequence.fromList(converter.convertStatements(stmts)));
-    }
-    return new JavaParser.JavaParseResult(nodes,problemDescription(util.recordedParsingInformation));
-  }
- else   if (FeatureKind.CLASS_CONTENT.equals(what)) {
-    CodeSnippetParsingUtil util=new CodeSnippetParsingUtil(false);
-    ASTNode[] astNodes=util.parseClassBodyDeclarations(source,0,source.length,settings,true,recovery);
-    TypeNameResolver typeResolver=new TypeNameResolver(pkg);
-    ASTConverter converter=new ASTConverter(null,typeResolver,false);
-    List<SNode> nodes=converter.convertClassContents(astNodes,SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ClassConcept",null));
-    return new JavaParser.JavaParseResult(nodes,problemDescription(util.recordedParsingInformation));
-  }
- else {
-    throw new IllegalArgumentException("Parsing other than class and statements is not supported yet ");
-  }
+ASTNode[] astTypes=compRes.types;
+if (astTypes != null && astTypes.length > 0) {
+typeResolver.addImports(extractImports(compRes));
+List<SNode> roots=new ArrayList<SNode>();
+for (ASTNode astNode : astTypes) {
+  ListSequence.fromList(roots).addElement(converter.convertRoot(astNode));
+}
+resultNodes=roots;
+}
+if (compRes.currentPackage != null) {
+StringBuffer sb=new StringBuffer();
+compRes.currentPackage.print(0,sb,false);
+resultPackageName=sb.toString();
+}
+break;
+case CLASS_CONTENT:
+ASTNode[] astNodes=util.parseClassBodyDeclarations(source,0,source.length,settings,true,recovery);
+if (astNodes != null && astNodes.length > 0) {
+resultNodes=converter.convertClassContents(astNodes,SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ClassConcept",null));
+}
+break;
+case STATEMENTS:
+AbstractMethodDeclaration absMethod=util.parseStatements(source,settings,true,recovery);
+if (absMethod == null) {
+return JavaParser.JavaParseResult.UNKNOWN_ERROR;
+}
+Statement[] stmts=absMethod.statements;
+List<SNode> nodes=new ArrayList<SNode>();
+if (stmts != null && stmts.length > 0) {
+resultNodes=converter.convertStatements(stmts);
+}
+break;
+default :
+throw new IllegalArgumentException("Parsing other than class and statements is not supported yet ");
+}
+attachComments(source,converter,util.recordedParsingInformation,converter.getCodeBlocks());
+return new JavaParser.JavaParseResult(resultNodes,resultPackageName,problemDescription(util.recordedParsingInformation));
 }
