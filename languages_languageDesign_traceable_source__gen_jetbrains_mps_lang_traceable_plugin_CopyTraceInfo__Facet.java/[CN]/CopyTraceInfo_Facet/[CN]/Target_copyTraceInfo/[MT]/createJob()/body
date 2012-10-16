@@ -1,54 +1,61 @@
 {
   return new IJob.Stub(){
-    public IResult execute(    final Iterable<IResource> input,    final IJobMonitor monitor,    final IPropertiesAccessor pa){
+    public IResult execute(    final Iterable<IResource> input,    final IJobMonitor monitor,    final IPropertiesAccessor pa,    @NotNull final ProgressMonitor progressMonitor){
       Iterable<IResource> _output_zgz0lb_a0a=null;
 switch (0) {
 case 0:
         if (Boolean.TRUE.equals(pa.global().properties(Target_copyTraceInfo.this.getName(),CopyTraceInfo_Facet.Target_copyTraceInfo.Parameters.class).skipCopying())) {
           return new IResult.SUCCESS(_output_zgz0lb_a0a);
         }
-      final List<IFile> toCreate=ListSequence.fromList(new ArrayList<IFile>());
+      progressMonitor.start("Copying resources",2);
+    progressMonitor.step("trace.info");
+  try {
+    final List<IFile> toCreate=ListSequence.fromList(new ArrayList<IFile>());
     final List<Tuples._2<IFile,IFile>> toCopy=ListSequence.fromList(new ArrayList<Tuples._2<IFile,IFile>>());
-  for (  IResource resource : input) {
-    TResource tres=(TResource)resource;
-    final IFile destination=tres.module().getClassesGen().getDescendant(tres.modelDescriptor().getLongName().replace(".","/"));
-    if (!(destination.exists())) {
-      ListSequence.fromList(toCreate).addElement(destination);
-    }
-    Sequence.fromIterable(tres.delta()).visitAll(new IVisitor<IDelta>(){
-      public void visit(      IDelta it){
-        it.acceptVisitor(new FilesDelta.Visitor(){
-          @Override public boolean acceptWritten(          IFile file){
-            if (file.getName().equals(TraceInfoCache.TRACE_FILE_NAME)) {
-              IFile copy=destination.getDescendant(file.getName());
-              ListSequence.fromList(toCopy).addElement(MultiTuple.<IFile,IFile>from(file,copy));
+    for (    IResource resource : input) {
+      TResource tres=(TResource)resource;
+      final IFile destination=tres.module().getClassesGen().getDescendant(tres.modelDescriptor().getLongName().replace(".","/"));
+      if (!(destination.exists())) {
+        ListSequence.fromList(toCreate).addElement(destination);
+      }
+      Sequence.fromIterable(tres.delta()).visitAll(new IVisitor<IDelta>(){
+        public void visit(        IDelta it){
+          it.acceptVisitor(new FilesDelta.Visitor(){
+            @Override public boolean acceptWritten(            IFile file){
+              if (file.getName().equals(TraceInfoCache.TRACE_FILE_NAME)) {
+                IFile copy=destination.getDescendant(file.getName());
+                ListSequence.fromList(toCopy).addElement(MultiTuple.<IFile,IFile>from(file,copy));
+              }
+              return true;
             }
-            return true;
+          }
+);
+        }
+      }
+);
+      _output_zgz0lb_a0a=Sequence.fromIterable(_output_zgz0lb_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(resource)));
+    }
+    FileSystem.getInstance().runWriteTransaction(new Runnable(){
+      public void run(){
+        ListSequence.fromList(toCreate).visitAll(new IVisitor<IFile>(){
+          public void visit(          IFile it){
+            it.mkdirs();
+          }
+        }
+);
+        ListSequence.fromList(toCopy).visitAll(new IVisitor<Tuples._2<IFile,IFile>>(){
+          public void visit(          Tuples._2<IFile,IFile> ftc){
+            IFileUtils.copyFileContent(ftc._0(),ftc._1());
           }
         }
 );
       }
     }
 );
-    _output_zgz0lb_a0a=Sequence.fromIterable(_output_zgz0lb_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(resource)));
   }
-FileSystem.getInstance().runWriteTransaction(new Runnable(){
-  public void run(){
-    ListSequence.fromList(toCreate).visitAll(new IVisitor<IFile>(){
-      public void visit(      IFile it){
-        it.mkdirs();
-      }
-    }
-);
-    ListSequence.fromList(toCopy).visitAll(new IVisitor<Tuples._2<IFile,IFile>>(){
-      public void visit(      Tuples._2<IFile,IFile> ftc){
-        IFileUtils.copyFileContent(ftc._0(),ftc._1());
-      }
-    }
-);
+  finally {
+    progressMonitor.done();
   }
-}
-);
 default :
 return new IResult.SUCCESS(_output_zgz0lb_a0a);
 }

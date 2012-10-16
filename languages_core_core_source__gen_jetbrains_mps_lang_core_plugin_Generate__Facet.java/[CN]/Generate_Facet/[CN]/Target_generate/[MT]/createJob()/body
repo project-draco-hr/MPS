@@ -1,10 +1,10 @@
 {
   return new IJob.Stub(){
-    public IResult execute(    final Iterable<IResource> input,    final IJobMonitor monitor,    final IPropertiesAccessor pa){
+    public IResult execute(    final Iterable<IResource> input,    final IJobMonitor monitor,    final IPropertiesAccessor pa,    @NotNull final ProgressMonitor progressMonitor){
       final Wrappers._T<Iterable<IResource>> _output_fi61u2_a0d=new Wrappers._T<Iterable<IResource>>(null);
 switch (0) {
 case 0:
-        boolean generationOk;
+        boolean generationOk=false;
       if (!(pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.configure"),Generate_Facet.Target_configure.Variables.class).saveTransient())) {
         IGenerationTracer tracer=pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.checkParameters"),Generate_Facet.Target_checkParameters.Variables.class).project().getComponent(IGenerationTracer.class);
         if (tracer != null) {
@@ -20,7 +20,6 @@ case 0:
 );
 IGenerationHandler gh=new MakeGenerationHandler(new _FunctionTypes._return_P1_E0<Boolean,GResource>(){
   public Boolean invoke(  GResource data){
-    monitor.currentProgress().advanceWork("Generating",1000);
     data.retainedModels(MapSequence.fromMap(retainedModels.value).get(data.module()));
     _output_fi61u2_a0d.value=Sequence.fromIterable(_output_fi61u2_a0d.value).concat(Sequence.fromIterable(Sequence.<IResource>singleton(data)));
     return true;
@@ -35,21 +34,24 @@ public void clear(){
 }
 }
 ;
-monitor.currentProgress().beginWork("Generating",Sequence.fromIterable(input).foldLeft(0,new ILeftCombinator<IResource,Integer>(){
+progressMonitor.start("Generating",Sequence.fromIterable(input).foldLeft(0,new ILeftCombinator<IResource,Integer>(){
 public Integer combine(Integer s,IResource it){
 return s + Sequence.fromIterable(((MResource)it).models()).count() * 1000;
 }
 }
-) + 1000,monitor.currentProgress().workLeft());
-monitor.currentProgress().advanceWork("Generating",1000);
+));
+try {
 List<SModelDescriptor> models=Sequence.fromIterable(input).translate(new ITranslator2<IResource,SModelDescriptor>(){
 public Iterable<SModelDescriptor> translate(IResource in){
 return ((MResource)in).models();
 }
 }
 ).toListSequence();
-generationOk=GenerationFacade.generateModels(pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.checkParameters"),Generate_Facet.Target_checkParameters.Variables.class).project(),models,pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.checkParameters"),Generate_Facet.Target_checkParameters.Variables.class).operationContext(),gh,pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.checkParameters"),Generate_Facet.Target_checkParameters.Variables.class).monitorProvider().invoke(),mh,pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.configure"),Generate_Facet.Target_configure.Variables.class).generationOptions().create(),pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.configure"),Generate_Facet.Target_configure.Variables.class).transientModelsProvider());
-monitor.currentProgress().finishWork("Generating");
+generationOk=GenerationFacade.generateModels(pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.checkParameters"),Generate_Facet.Target_checkParameters.Variables.class).project(),models,pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.checkParameters"),Generate_Facet.Target_checkParameters.Variables.class).operationContext(),gh,progressMonitor.subTask(1000),mh,pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.configure"),Generate_Facet.Target_configure.Variables.class).generationOptions().create(),pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.configure"),Generate_Facet.Target_configure.Variables.class).transientModelsProvider());
+}
+  finally {
+progressMonitor.done();
+}
 if (!(generationOk)) {
 return new IResult.FAILURE(_output_fi61u2_a0d.value);
 }

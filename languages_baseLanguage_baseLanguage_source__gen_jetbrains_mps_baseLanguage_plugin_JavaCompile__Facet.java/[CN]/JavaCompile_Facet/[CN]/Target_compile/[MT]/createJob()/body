@@ -1,6 +1,6 @@
 {
   return new IJob.Stub(){
-    public IResult execute(    final Iterable<IResource> input,    final IJobMonitor monitor,    final IPropertiesAccessor pa){
+    public IResult execute(    final Iterable<IResource> input,    final IJobMonitor monitor,    final IPropertiesAccessor pa,    @NotNull final ProgressMonitor progressMonitor){
       Iterable<IResource> _output_wf1ya0_a0a=null;
 switch (0) {
 case 0:
@@ -23,20 +23,13 @@ case 0:
   if ((int)Sequence.fromIterable(toCompile).count() == 0) {
     return new IResult.SUCCESS(_output_wf1ya0_a0a);
   }
-monitor.currentProgress().beginWork("Compiling",1,monitor.currentProgress().workLeft());
 final Wrappers._T<MPSCompilationResult> cr=new Wrappers._T<MPSCompilationResult>();
 ModelAccess.instance().runReadAction(new Runnable(){
 public void run(){
-cr.value=new ModuleMaker().make(SetSequence.fromSetWithValues(new HashSet<IModule>(),toCompile),new EmptyProgressMonitor());
+  cr.value=new ModuleMaker().make(SetSequence.fromSetWithValues(new HashSet<IModule>(),toCompile),progressMonitor);
 }
 }
 );
-monitor.currentProgress().advanceWork("Compiling",1,IterableUtils.join(Sequence.fromIterable(toCompile).select(new ISelector<IModule,String>(){
-public String select(IModule it){
-return it.getModuleReference().getModuleFqName();
-}
-}
-),", "));
 if (cr.value != null) {
 pa.global().properties(Target_compile.this.getName(),JavaCompile_Facet.Target_compile.Parameters.class).compiledAnything(pa.global().properties(Target_compile.this.getName(),JavaCompile_Facet.Target_compile.Parameters.class).compiledAnything() || cr.value.isCompiledAnything());
 for (IMessage msg : cr.value.getMessages()) {
@@ -67,7 +60,6 @@ continue;
 }
 _output_wf1ya0_a0a=Sequence.fromIterable(_output_wf1ya0_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(tres)));
 }
-monitor.currentProgress().finishWork("Compiling");
 default :
 return new IResult.SUCCESS(_output_wf1ya0_a0a);
 }

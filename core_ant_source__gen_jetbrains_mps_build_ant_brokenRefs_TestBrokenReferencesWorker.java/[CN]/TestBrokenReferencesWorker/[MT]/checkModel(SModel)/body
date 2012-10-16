@@ -1,0 +1,37 @@
+{
+  final IScope scope=((IModule)sm.getModule()).getScope();
+  StringBuffer errorMessages=new StringBuffer();
+  List<String> validationResult=ModelAccess.instance().runReadAction(new Computable<List<String>>(){
+    public List<String> compute(){
+      return new ModelValidator(sm).validate(scope);
+    }
+  }
+);
+  for (  String item : validationResult) {
+    errorMessages.append(item);
+    errorMessages.append("\n");
+  }
+  for (  SNode node : sm.getRootNodes()) {
+    debug("Checking node " + node);
+    if (SModelUtil.findConceptDeclaration(node.getConcept().getId(),GlobalScope.getInstance()) == null) {
+      errorMessages.append("Unknown concept ");
+      errorMessages.append(node.getConcept().getId());
+      errorMessages.append("\n");
+    }
+  }
+  for (  SNode node : sm.getRootNodes()) {
+    for (    SReference ref : ((jetbrains.mps.smodel.SNode)node).getReferences()) {
+      if (SNodeUtil.hasReferenceMacro((jetbrains.mps.smodel.SNode)node,ref.getRole())) {
+        continue;
+      }
+      if (ref.getTargetNode() == null) {
+        errorMessages.append("Broken reference in node ");
+        errorMessages.append(node.getSNodeId().toString());
+        errorMessages.append("(");
+        errorMessages.append(node);
+        errorMessages.append(")\n");
+      }
+    }
+  }
+  return myBuildServerMessageFormat.escapeBuildMessage(errorMessages);
+}

@@ -1,53 +1,60 @@
 {
   return new IJob.Stub(){
-    public IResult execute(    final Iterable<IResource> input,    final IJobMonitor monitor,    final IPropertiesAccessor pa){
+    public IResult execute(    final Iterable<IResource> input,    final IJobMonitor monitor,    final IPropertiesAccessor pa,    @NotNull final ProgressMonitor progressMonitor){
       Iterable<IResource> _output_ehksfb_a0a=null;
 switch (0) {
 case 0:
-        for (        IResource resource : input) {
-          TResource tres=(TResource)resource;
-          String dest=pa.forResource(tres).properties(Target_copyPluginXml.this.getName(),CopyPluginXml_Facet.Target_copyPluginXml.Parameters.class).pluginRoot();
-          if (dest != null) {
-            final IFile destDir=FileSystem.getInstance().getFileByPath(MacrosFactory.forModuleFile(tres.module().getDescriptorFile()).expandPath(dest));
-            if (destDir.exists() && destDir.isDirectory()) {
-              final IFile metaInf=destDir.getDescendant("META-INF");
-              if (!(metaInf.exists()) || metaInf.isDirectory()) {
-                final IFile[] pluginXml=new IFile[1];
-                new DeltaReconciler(tres.delta()).visitAll(new FilesDelta.Visitor(){
-                  @Override public boolean acceptWritten(                  IFile file){
-                    if (eq_mk86fn_a0a0a0a0a0b0b0b0e0a0a1a0a0a0a0a(file.getName(),"plugin.xml")) {
-                      pluginXml[0]=file;
-                      monitor.reportFeedback(new IFeedback.INFORMATION(String.valueOf("Copying " + file + " to "+ metaInf+ " directory.")));
-                      return false;
-                    }
-                    return true;
+        progressMonitor.start("Copying resources",2);
+      progressMonitor.step("plugin.xml");
+    try {
+      for (      IResource resource : input) {
+        TResource tres=(TResource)resource;
+        String dest=pa.forResource(tres).properties(Target_copyPluginXml.this.getName(),CopyPluginXml_Facet.Target_copyPluginXml.Parameters.class).pluginRoot();
+        if (dest != null) {
+          final IFile destDir=FileSystem.getInstance().getFileByPath(MacrosFactory.forModuleFile(tres.module().getDescriptorFile()).expandPath(dest));
+          if (destDir.exists() && destDir.isDirectory()) {
+            final IFile metaInf=destDir.getDescendant("META-INF");
+            if (!(metaInf.exists()) || metaInf.isDirectory()) {
+              final IFile[] pluginXml=new IFile[1];
+              new DeltaReconciler(tres.delta()).visitAll(new FilesDelta.Visitor(){
+                @Override public boolean acceptWritten(                IFile file){
+                  if (eq_mk86fn_a0a0a0a0a0b0b0b0e0a0c0a1a0a0a0a0a(file.getName(),"plugin.xml")) {
+                    pluginXml[0]=file;
+                    monitor.reportFeedback(new IFeedback.INFORMATION(String.valueOf("Copying " + file + " to "+ metaInf+ " directory.")));
+                    return false;
                   }
+                  return true;
                 }
+              }
 );
-                if (pluginXml[0] != null) {
-                  ThreadUtils.runInUIThreadAndWait(new Runnable(){
-                    public void run(){
-                      ModelAccess.instance().requireWrite(new Runnable(){
-                        public void run(){
-                          if (!(metaInf.exists())) {
-                            metaInf.mkdirs();
-                          }
-                          IFileUtils.copyFileContent(pluginXml[0],metaInf.getDescendant(pluginXml[0].getName()));
+              if (pluginXml[0] != null) {
+                ThreadUtils.runInUIThreadAndWait(new Runnable(){
+                  public void run(){
+                    ModelAccess.instance().requireWrite(new Runnable(){
+                      public void run(){
+                        if (!(metaInf.exists())) {
+                          metaInf.mkdirs();
                         }
+                        IFileUtils.copyFileContent(pluginXml[0],metaInf.getDescendant(pluginXml[0].getName()));
                       }
-);
                     }
-                  }
 );
+                  }
                 }
+);
               }
             }
           }
-          _output_ehksfb_a0a=Sequence.fromIterable(_output_ehksfb_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(resource)));
         }
+        _output_ehksfb_a0a=Sequence.fromIterable(_output_ehksfb_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(resource)));
+      }
+    }
+  finally {
+      progressMonitor.done();
+    }
 default :
-      return new IResult.SUCCESS(_output_ehksfb_a0a);
-  }
+  return new IResult.SUCCESS(_output_ehksfb_a0a);
+}
 }
 }
 ;

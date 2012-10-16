@@ -4,11 +4,11 @@
     s.append("\n    ");
     s.append(p);
   }
-  for (  IModule m : go.getModules()) {
+  for (  SModule m : go.getModules()) {
     s.append("\n    ");
     s.append(m);
   }
-  for (  SModelDescriptor m : go.getModels()) {
+  for (  SModel m : go.getModels()) {
     s.append("\n    ");
     s.append(m);
   }
@@ -110,7 +110,48 @@
       }
     }
 ;
-    bms.make(ms,collectResources(context,go.getProjects(),go.getModules(),go.getModels()),null,ctl).get();
+    bms.make(ms,collectResources(context,go.getProjects(),go.getModules(),go.getModels()),null,ctl,new ProgressMonitorBase(){
+      private String prevTitle;
+      protected void update(      double p0){
+      }
+      protected void startInternal(      String text){
+      }
+      protected void doneInternal(      String text){
+      }
+      protected void setTitleInternal(      String text){
+        prevTitle=text;
+      }
+      protected void setStepInternal(      String p0){
+      }
+      public boolean isCanceled(){
+        return false;
+      }
+      public void cancel(){
+      }
+      private ProgressMonitorBase.SubProgressMonitor customSubProgress(      ProgressMonitorBase parent,      int work,      SubProgressKind kind){
+        if (prevTitle != null && prevTitle.startsWith("Generating :: ")) {
+          return new ProgressMonitorBase.SubProgressMonitor(parent,work,kind){
+            @Override protected void startInternal(            String text){
+              reportIfStartsWith("Generating ","Generating " + text,startTestFormat);
+            }
+            @Override protected void doneInternal(            String text){
+              reportIfStartsWith("Generating ","Generating " + text,finishTestFormat);
+            }
+          }
+;
+        }
+        return new ProgressMonitorBase.SubProgressMonitor(parent,work,kind){
+          @Override protected ProgressMonitorBase.SubProgressMonitor subTaskInternal(          int work,          SubProgressKind kind){
+            return customSubProgress(this,work,kind);
+          }
+        }
+;
+      }
+      @Override protected ProgressMonitorBase.SubProgressMonitor subTaskInternal(      int work,      SubProgressKind kind){
+        return customSubProgress(this,work,kind);
+      }
+    }
+).get();
   }
  catch (  InterruptedException ignore) {
   }
