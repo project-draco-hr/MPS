@@ -2,25 +2,30 @@
   if (myNamesLoadingState == ModelLoadingState.FULLY_LOADED)   return myNameToConceptCache.get(conceptName);
   if (myNameToConceptCache.containsKey(conceptName))   return myNameToConceptCache.get(conceptName);
   if (myNamesWithNoConcepts.contains(conceptName))   return null;
-  SModelDescriptor structureModelDescriptor=getStructureModelDescriptor();
-  if (structureModelDescriptor == null)   return null;
-  SModel structureModel=structureModelDescriptor.getSModel();
-  if (myNamesLoadingState.compareTo(ModelLoadingState.FULLY_LOADED) < 0) {
-    for (    SNode root : structureModel.roots()) {
-      String name=getConceptName(root);
-      if (name == null)       continue;
-      myNameToConceptCache.putIfAbsent(name,root);
+  return NodeReadAccessCasterInEditor.runReadTransparentAction(new Computable<SNode>(){
+    @Override public SNode compute(){
+      SModelDescriptor structureModelDescriptor=getStructureModelDescriptor();
+      if (structureModelDescriptor == null)       return null;
+      SModel structureModel=structureModelDescriptor.getSModel();
+      if (myNamesLoadingState.compareTo(ModelLoadingState.FULLY_LOADED) < 0) {
+        for (        SNode root : structureModel.roots()) {
+          String name=getConceptName(root);
+          if (name == null)           continue;
+          myNameToConceptCache.putIfAbsent(name,root);
+        }
+        if (myNameToConceptCache.containsKey(conceptName))         return myNameToConceptCache.get(conceptName);
+      }
+      for (      SNode node : structureModel.nodes()) {
+        String name=getConceptName(node);
+        if (name == null)         continue;
+        myNameToConceptCache.putIfAbsent(name,node);
+      }
+      SNode result=myNameToConceptCache.get(conceptName);
+      if (result == null) {
+        myNamesWithNoConcepts.add(conceptName);
+      }
+      return result;
     }
-    if (myNameToConceptCache.containsKey(conceptName))     return myNameToConceptCache.get(conceptName);
   }
-  for (  SNode node : structureModel.nodes()) {
-    String name=getConceptName(node);
-    if (name == null)     continue;
-    myNameToConceptCache.putIfAbsent(name,node);
-  }
-  SNode result=myNameToConceptCache.get(conceptName);
-  if (result == null) {
-    myNamesWithNoConcepts.add(conceptName);
-  }
-  return result;
+);
 }
