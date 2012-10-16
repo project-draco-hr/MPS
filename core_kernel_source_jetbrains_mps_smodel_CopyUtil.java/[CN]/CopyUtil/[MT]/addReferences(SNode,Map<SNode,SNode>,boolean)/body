@@ -1,0 +1,31 @@
+{
+  if (root == null)   return;
+  Iterable<SNode> thisAndDesc=IterableUtil.merge(Collections.singleton(root),root.getDescendants());
+  for (  SNode inputNode : thisAndDesc) {
+    SNode outputNode=mapping.get(inputNode);
+    if (outputNode == null)     continue;
+    for (    SReference ref : inputNode.getReferences()) {
+      boolean cloneRefs=forceCloneRefs || MPSCore.getInstance().isMergeDriverMode();
+      SNode inputTargetNode=cloneRefs ? null : ref.getTargetNodeSilently();
+      if (inputTargetNode == null) {
+        if (ref instanceof StaticReference) {
+          StaticReference statRef=(StaticReference)ref;
+          SReference reference=new StaticReference(statRef.getRole(),outputNode,statRef.getTargetSModelReference(),statRef.getTargetNodeId(),statRef.getResolveInfo());
+          outputNode.setReference(reference.getRole(),reference);
+        }
+ else         if (ref instanceof DynamicReference && cloneRefs) {
+          DynamicReference dynRef=(DynamicReference)ref;
+          DynamicReference output=new DynamicReference(dynRef.getRole(),outputNode,dynRef.getTargetSModelReference(),dynRef.getResolveInfo());
+          output.setOrigin(dynRef.getOrigin());
+          outputNode.setReference(output.getRole(),output);
+        }
+      }
+ else       if (mapping.containsKey(inputTargetNode)) {
+        outputNode.setReference(ref.getRole(),SReference.create(ref.getRole(),outputNode,mapping.get(inputTargetNode)));
+      }
+ else {
+        outputNode.setReference(ref.getRole(),SReference.create(ref.getRole(),outputNode,inputTargetNode));
+      }
+    }
+  }
+}
