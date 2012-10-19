@@ -16,6 +16,7 @@
     }
     SetSequence.fromSet(allUsages).addElement(new SearchResult<SNode>(node,""));
   }
+  final SearchResults searchResults=new SearchResults<SNode>(searchedNodes,SetSequence.fromSet(allUsages).toListSequence());
   RefactoringAccess.getInstance().showRefactoringView(ideaProject,new RefactoringViewAction(){
     public void performAction(    final RefactoringViewItem refactoringViewItem){
       ModelAccess.instance().runWriteActionInCommand(new Runnable(){
@@ -24,7 +25,7 @@
             SPropertyOperations.set(concept,"conceptAlias",SConceptPropertyOperations.getString(concept,"alias"));
           }
           for (          SNode node : SetSequence.fromSet(accessUsages)) {
-            SNodeOperations.replaceWithAnother(node,SLinkOperations.getTarget(new ConceptPropertiesHelper.QuotationClass_azpnkk_a0a0a0a1a0a0a0a0a0a0b0a9a2().createNode(),"operation",true));
+            SNodeOperations.replaceWithAnother(node,SLinkOperations.getTarget(new ConceptPropertiesHelper.QuotationClass_azpnkk_a0a0a0a1a0a0a0a0a0a0b0a01a2().createNode(),"operation",true));
           }
           refactoringViewItem.close();
         }
@@ -32,5 +33,38 @@
 );
     }
   }
-,new SearchResults<SNode>(searchedNodes,SetSequence.fromSet(allUsages).toListSequence()),false,"remove alias");
+,searchResults,false,"remove alias");
+  final Set<SModel> sourceModels=searchResults.getAffectedModels();
+  if (sourceModels.isEmpty()) {
+    return;
+  }
+  final List<org.jetbrains.mps.openapi.model.SModel> descriptors=new ArrayList<org.jetbrains.mps.openapi.model.SModel>();
+  SModelRepository.getInstance().saveAll();
+  for (  SModel model : sourceModels) {
+    if (!(model.isDisposed())) {
+      descriptors.add(model.getModelDescriptor());
+    }
+  }
+  final IOperationContext operationContext=new ProjectOperationContext(project);
+  new Thread(){
+    public void run(){
+      try {
+        MakeSession sess=new MakeSession(operationContext);
+        if (IMakeService.INSTANCE.get().openNewSession(sess)) {
+          Future<IResult> result=IMakeService.INSTANCE.get().make(sess,new ModelsToResources(operationContext,descriptors).resources(false));
+          result.get();
+        }
+      }
+ catch (      InterruptedException e) {
+      }
+catch (      CancellationException ignore) {
+      }
+catch (      ExecutionException e) {
+        e.printStackTrace();
+      }
+ finally {
+      }
+    }
+  }
+.start();
 }
