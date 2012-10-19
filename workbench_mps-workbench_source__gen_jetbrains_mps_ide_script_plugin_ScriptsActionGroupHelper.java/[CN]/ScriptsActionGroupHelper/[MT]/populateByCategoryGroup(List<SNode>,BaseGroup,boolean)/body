@@ -1,15 +1,15 @@
 {
-  Map<String,List<SNode>> byCategory=new HashMap<String,List<SNode>>();
-  for (  SNode migrationScript : migrationScripts) {
-    String cat=NameUtil.pluralize(NameUtil.capitalize(SPropertyOperations.getString_def(migrationScript,"type","enhancement")));
-    if (cat == null) {
-      cat="<uncategorized>";
+  _FunctionTypes._return_P1_E0<? extends String,? super SNode> getCategoryClosure=new _FunctionTypes._return_P1_E0<String,SNode>(){
+    public String invoke(    SNode script){
+      String cat=NameUtil.pluralize(NameUtil.capitalize(SPropertyOperations.getString_def(script,"type","enhancement")));
+      if (cat == null) {
+        cat="<uncategorized>";
+      }
+      return cat;
     }
-    if (!(byCategory.containsKey(cat))) {
-      byCategory.put(cat,new ArrayList<SNode>());
-    }
-    ListSequence.fromList(byCategory.get(cat)).addElement(migrationScript);
   }
+;
+  Map<String,List<SNode>> byCategory=groupBy(migrationScripts,getCategoryClosure);
   Set<String> sorted=new TreeSet<String>(new Comparator<String>(){
     public int compare(    String o1,    String o2){
       if ("<uncategorized>".equals(o1)) {
@@ -22,13 +22,29 @@
     }
   }
 );
-  sorted.addAll(byCategory.keySet());
+  sorted.addAll(MapSequence.fromMap(byCategory).keySet());
   for (  String cat : sorted) {
-    BaseGroup categoryGroup=new BaseGroup(cat,"");
-    for (    SNode script : byCategory.get(cat)) {
-      categoryGroup.add(new RunMigrationScriptAction(script,ScriptsActionGroupHelper.makeScriptActionName(null,SPropertyOperations.getString(script,"title"),SPropertyOperations.getString(script,"toBuild")),applyToSelection));
+    BaseGroup categoryGroup=createGroup(cat,ownerGroup);
+    _FunctionTypes._return_P1_E0<? extends String,? super SNode> getBuildClosure=new _FunctionTypes._return_P1_E0<String,SNode>(){
+      public String invoke(      SNode script){
+        return (SPropertyOperations.getString(script,"toBuild") == null ? "" : SPropertyOperations.getString(script,"toBuild"));
+      }
     }
-    categoryGroup.setPopup(true);
-    ownerGroup.add(categoryGroup);
+;
+    Map<String,List<SNode>> byBuild=groupBy(MapSequence.fromMap(byCategory).get(cat),getBuildClosure);
+    if (SetSequence.fromSet(MapSequence.fromMap(byBuild).keySet()).count() > 1) {
+{
+        Iterator<String> buildName_it=SortedSetSequence.fromSet(new TreeSet<String>(MapSequence.fromMap(byBuild).keySet())).iterator();
+        String buildName_var;
+        while (buildName_it.hasNext()) {
+          buildName_var=buildName_it.next();
+          BaseGroup subGroup=createGroup(buildName_var,categoryGroup);
+          addActions(subGroup,MapSequence.fromMap(byBuild).get(buildName_var),applyToSelection);
+        }
+      }
+    }
+ else {
+      addActions(categoryGroup,MapSequence.fromMap(byCategory).get(cat),applyToSelection);
+    }
   }
 }

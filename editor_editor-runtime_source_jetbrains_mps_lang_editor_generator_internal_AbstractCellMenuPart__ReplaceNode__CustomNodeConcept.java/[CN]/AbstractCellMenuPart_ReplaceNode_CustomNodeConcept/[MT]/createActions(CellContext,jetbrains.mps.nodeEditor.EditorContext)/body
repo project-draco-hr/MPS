@@ -1,0 +1,35 @@
+{
+  SNode node=(SNode)cellContext.get(PropertyCellContext.EDITED_NODE);
+  SNode parent=node.getParent();
+  if (parent == null) {
+    return new LinkedList<INodeSubstituteAction>();
+  }
+  String replacementConceptFqName=getReplacementConceptName();
+  IOperationContext context=editorContext.getOperationContext();
+  SNode replacementConcept=SModelUtil.findConceptDeclaration(replacementConceptFqName,context.getScope());
+  List<INodeSubstituteAction> actions=ModelActions.createChildSubstituteActions(parent,node,replacementConcept,this,context);
+  List<INodeSubstituteAction> result=new ArrayList<INodeSubstituteAction>();
+  for (  INodeSubstituteAction a : actions) {
+    result.add(new NodeSubstituteActionWrapper(a){
+      public SNode substitute(      @Nullable EditorContext context,      String pattern){
+        String selectedCellId=null;
+        if (context != null) {
+          selectedCellId=context.getSelectedCell().getCellId();
+        }
+        SNode result=super.substitute(context,pattern);
+        if (selectedCellId != null) {
+          EditorCell toSelect=((jetbrains.mps.nodeEditor.EditorContext)context).getNodeEditorComponent().findCellWithId(result,selectedCellId);
+          if (toSelect != null) {
+            ((jetbrains.mps.nodeEditor.EditorContext)context).select(result,selectedCellId);
+            if (context.getSelectedCell() instanceof EditorCell_Label) {
+              ((EditorCell_Label)context.getSelectedCell()).end();
+            }
+          }
+        }
+        return result;
+      }
+    }
+);
+  }
+  return result;
+}
