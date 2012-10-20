@@ -1,21 +1,22 @@
 {
-  Set<IModule> toCompile=new LinkedHashSet<IModule>();
-  toCompile.addAll(go.getModules());
+  Set<SModule> toCompile=SetSequence.fromSet(new LinkedHashSet<SModule>());
+  SetSequence.fromSet(toCompile).addSequence(SetSequence.fromSet(go.getModules()));
   for (  Project p : go.getProjects()) {
-    toCompile.addAll(p.getModules());
+    SetSequence.fromSet(toCompile).addSequence(SetSequence.fromSet(go.getModules()));
   }
-  for (  final SModelDescriptor modelDescriptor : go.getModels()) {
-    IModule owningModule=ModelAccess.instance().runReadAction(new Computable<IModule>(){
-      public IModule compute(){
+  for (  final SModel modelDescriptor : go.getModels()) {
+    SModule owningModule=ModelAccess.instance().runReadAction(new Computable<SModule>(){
+      public SModule compute(){
         return modelDescriptor.getModule();
       }
     }
 );
-    toCompile.add(owningModule);
+    SetSequence.fromSet(toCompile).addElement(owningModule);
   }
-  final Set<IModule> finalToCompile=CollectionUtil.filter(toCompile,new Condition<IModule>(){
-    @Override public boolean met(    IModule module){
-      return module.isCompileInMPS() && !(module.isPackaged());
+  final Set<SModule> finalToCompile=CollectionUtil.filter(toCompile,new Condition<SModule>(){
+    public boolean met(    SModule module){
+      boolean compileInMps=!(module instanceof IModule) || ((IModule)module).isCompileInMPS();
+      return compileInMps && !(module.isPackaged());
     }
   }
 );
@@ -24,9 +25,9 @@
   }
   info("Starting compilation:");
   StringBuffer sb=new StringBuffer();
-  for (  IModule m : finalToCompile) {
+  for (  SModule m : finalToCompile) {
     sb.append("    ");
-    sb.append(m.getModuleFqName());
+    sb.append(m.getModuleName());
     sb.append("\n");
   }
   info(sb.toString());

@@ -1,28 +1,33 @@
 {
-  ProjectStructureSModel model=new ProjectStructureSModel(getSModelReference());
-  final ModuleDescriptor moduleDescriptor=myModule.getModuleDescriptor();
-  IFile file=myModule.getDescriptorFile();
+  final ProjectStructureSModel model=new ProjectStructureSModel(getSModelReference());
+  final ModuleDescriptor moduleDescriptor=((IModule)myModule).getModuleDescriptor();
+  final IFile file=((IModule)myModule).getDescriptorFile();
   if (file != null && moduleDescriptor != null) {
-    new ProjectStructureBuilder(moduleDescriptor,file,model){
-      @Override public Iterable<SModelReference> loadReferences(      SNode m,      ModuleDescriptor descriptor){
-        IModule module=moduleDescriptor == descriptor ? myModule : MPSModuleRepository.getInstance().getModule(descriptor.getModuleReference());
-        if (module == null) {
-          return Collections.emptyList();
-        }
-        return Sequence.<SModelDescriptor>fromIterable(module.getOwnModelDescriptors()).where(new IWhereFilter<SModelDescriptor>(){
-          @Override public boolean accept(          SModelDescriptor o){
-            return SModelStereotype.isUserModel(o);
-          }
-        }
-).select(new ISelector<SModelDescriptor,SModelReference>(){
-          @Override public SModelReference select(          SModelDescriptor o){
-            return o.getSModelReference();
-          }
-        }
+    NodeReadAccessCasterInEditor.runReadTransparentAction(new Runnable(){
+      @Override public void run(){
+        new ProjectStructureBuilder(moduleDescriptor,file,model){
+          @Override public Iterable<org.jetbrains.mps.openapi.model.SModelReference> loadReferences(          SNode m,          ModuleDescriptor descriptor){
+            SModule module=moduleDescriptor == descriptor ? myModule : ModuleRepositoryFacade.getInstance().getModule(descriptor.getModuleReference());
+            if (module == null) {
+              return Collections.emptyList();
+            }
+            return Sequence.<org.jetbrains.mps.openapi.model.SModel>fromIterable(module.getModels()).where(new IWhereFilter<org.jetbrains.mps.openapi.model.SModel>(){
+              @Override public boolean accept(              org.jetbrains.mps.openapi.model.SModel o){
+                return SModelStereotype.isUserModel(o);
+              }
+            }
+).select(new ISelector<org.jetbrains.mps.openapi.model.SModel,org.jetbrains.mps.openapi.model.SModelReference>(){
+              @Override public org.jetbrains.mps.openapi.model.SModelReference select(              org.jetbrains.mps.openapi.model.SModel o){
+                return o.getModelReference();
+              }
+            }
 );
+          }
+        }
+.convert();
       }
     }
-.convert();
+);
   }
   return model;
 }

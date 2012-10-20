@@ -1,0 +1,45 @@
+{
+  if (DescriptorIOFacade.getInstance().fromFileType(FileSystem.getInstance().getFileByPath(moduleFile.getPath())) == null) {
+    return;
+  }
+  List<SModule> tmpmodules;
+  SModule moduleByFile=ModelAccess.instance().runReadAction(new Computable<IModule>(){
+    public IModule compute(){
+      return ModuleFileTracker.getInstance().getModuleByFile(FileSystem.getInstance().getFileByPath(moduleFile.getAbsolutePath()));
+    }
+  }
+);
+  if (moduleByFile != null) {
+    tmpmodules=Collections.singletonList(moduleByFile);
+  }
+ else {
+    tmpmodules=ModelAccess.instance().runWriteAction(new Computable<List<SModule>>(){
+      public List<SModule> compute(){
+        IFile file=FileSystem.getInstance().getFileByPath(moduleFile.getPath());
+        BaseMPSModuleOwner owner=new BaseMPSModuleOwner();
+        List<SModule> modules=new ArrayList<SModule>();
+        for (        ModulesMiner.ModuleHandle moduleHandle : ModulesMiner.getInstance().collectModules(file,false)) {
+          IModule module=ModuleRepositoryFacade.createModule(moduleHandle,owner);
+          if (module != null) {
+            modules.add(module);
+          }
+        }
+        return modules;
+      }
+    }
+);
+  }
+  modules.addAll(tmpmodules);
+  for (  SModule module : tmpmodules) {
+    info("Loaded module " + module);
+    if (module.isPackaged()) {
+      continue;
+    }
+    if (module instanceof Language) {
+      Language language=(Language)module;
+      for (      Generator gen : language.getGenerators()) {
+        modules.add(gen);
+      }
+    }
+  }
+}

@@ -1,46 +1,54 @@
 {
   return findInTraceInfo(unitName,new _FunctionTypes._return_P2_E0<SNode,DebugInfo,SModelDescriptor>(){
     public SNode invoke(    DebugInfo info,    SModelDescriptor modelDescriptor){
-      List<TraceablePositionInfo> resultList=info.getTraceableInfoForPosition(fileName,lineNumber);
-      if (resultList == null || ListSequence.fromList(resultList).isEmpty()) {
+      Map<DebugInfoRoot,List<TraceablePositionInfo>> resultList=info.getRootToInfoForPosition(fileName,lineNumber,new _FunctionTypes._return_P1_E0<Set<TraceablePositionInfo>,DebugInfoRoot>(){
+        public Set<TraceablePositionInfo> invoke(        DebugInfoRoot root){
+          return root.getPositions();
+        }
+      }
+);
+      if (resultList == null || MapSequence.fromMap(resultList).isEmpty()) {
         return null;
       }
-      Iterable<TraceablePositionInfo> sorted=ListSequence.fromList(resultList).sort(new ISelector<TraceablePositionInfo,TraceablePositionInfo>(){
-        public TraceablePositionInfo select(        TraceablePositionInfo it){
-          return it;
-        }
-      }
-,true);
-      final TraceablePositionInfo firstPositionInfo=Sequence.fromIterable(sorted).first();
-      PositionInfo result=firstPositionInfo;
-      if (Sequence.fromIterable(sorted).count() > 1 && firstPositionInfo.getStartLine() == lineNumber && firstPositionInfo.getLineDistance() > 0) {
-        result=ListSequence.fromList(Sequence.fromIterable(sorted).toListSequence()).getElement(1);
-      }
-      if (Sequence.fromIterable(sorted).count() > 1) {
-        Iterable<TraceablePositionInfo> sameSpacePositions=Sequence.fromIterable(sorted).where(new IWhereFilter<TraceablePositionInfo>(){
-          public boolean accept(          TraceablePositionInfo it){
-            return firstPositionInfo.isOccupyTheSameSpace(it);
+      for (      DebugInfoRoot root : SetSequence.fromSet(MapSequence.fromMap(resultList).keySet())) {
+        Iterable<TraceablePositionInfo> sorted=ListSequence.fromList(MapSequence.fromMap(resultList).get(root)).sort(new ISelector<TraceablePositionInfo,TraceablePositionInfo>(){
+          public TraceablePositionInfo select(          TraceablePositionInfo it){
+            return it;
           }
         }
-);
-        if (Sequence.fromIterable(sameSpacePositions).count() > 1) {
-          SNode currentNode=DebugInfo.findNode(firstPositionInfo);
-          boolean finished=false;
-          while (!(finished)) {
-            finished=true;
-            for (            TraceablePositionInfo otherPos : Sequence.fromIterable(sameSpacePositions)) {
-              SNode otherNode=DebugInfo.findNode(otherPos);
-              if ((otherNode != null) && ListSequence.fromList(SNodeOperations.getAncestors(otherNode,null,false)).contains(currentNode)) {
-                currentNode=otherNode;
-                finished=false;
-                break;
-              }
+,true);
+        final TraceablePositionInfo firstPositionInfo=Sequence.fromIterable(sorted).first();
+        PositionInfo result=firstPositionInfo;
+        if (Sequence.fromIterable(sorted).count() > 1 && firstPositionInfo.getStartLine() == lineNumber && firstPositionInfo.getLineDistance() > 0) {
+          result=ListSequence.fromList(Sequence.fromIterable(sorted).toListSequence()).getElement(1);
+        }
+        if (Sequence.fromIterable(sorted).count() > 1) {
+          Iterable<TraceablePositionInfo> sameSpacePositions=Sequence.fromIterable(sorted).where(new IWhereFilter<TraceablePositionInfo>(){
+            public boolean accept(            TraceablePositionInfo it){
+              return firstPositionInfo.isOccupyTheSameSpace(it);
             }
           }
-          return currentNode;
+);
+          if (Sequence.fromIterable(sameSpacePositions).count() > 1) {
+            SNode currentNode=root.findNode(firstPositionInfo);
+            boolean finished=false;
+            while (!(finished)) {
+              finished=true;
+              for (              TraceablePositionInfo otherPos : Sequence.fromIterable(sameSpacePositions)) {
+                SNode otherNode=root.findNode(otherPos);
+                if ((otherNode != null) && ListSequence.fromList(SNodeOperations.getAncestors(otherNode,null,false)).contains(currentNode)) {
+                  currentNode=otherNode;
+                  finished=false;
+                  break;
+                }
+              }
+            }
+            return currentNode;
+          }
         }
+        return root.findNode(result);
       }
-      return DebugInfo.findNode(result);
+      return null;
     }
   }
 );
