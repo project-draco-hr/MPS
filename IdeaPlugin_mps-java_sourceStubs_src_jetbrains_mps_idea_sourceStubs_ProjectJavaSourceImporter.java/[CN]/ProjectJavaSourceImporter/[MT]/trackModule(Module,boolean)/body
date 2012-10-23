@@ -1,20 +1,19 @@
 {
 synchronized (LOCK) {
     final VirtualFile[] roots=ModuleRootManager.getInstance(module).getSourceRoots(false);
-    final Solution[] solutionCell=new Solution[1];
     for (    VirtualFile root : roots) {
       System.out.println(" -- " + root);
     }
-    ModelAccess.instance().runWriteAction(new Runnable(){
-      @Override public void run(){
-        Solution solution=addSolution(SOLUTION_NAME_PREFIX + module.getName(),roots,true);
+    final Solution solution=ModelAccess.instance().runWriteAction(new Computable<Solution>(){
+      @Override public Solution compute(){
+        Solution solution=addSolution(SOLUTION_NAME_PREFIX + module.getName(),roots);
         solution.updateModelsSet();
         myModulesToSolutions.put(module,solution);
-        solutionCell[0]=solution;
+        return solution;
       }
     }
 );
-    for (    SModelDescriptor desc : SModelRepository.getInstance().getModelDescriptors(solutionCell[0])) {
+    for (    SModelDescriptor desc : SModelRepository.getInstance().getModelDescriptors(solution)) {
       if (desc instanceof BaseStubModelDescriptor) {
         BaseStubModelDescriptor modelDesc=(BaseStubModelDescriptor)desc;
         FileBasedModelDataSource modelDataSource=(FileBasedModelDataSource)modelDesc.getSource();
@@ -32,7 +31,7 @@ synchronized (LOCK) {
       @Override public void run(){
         MPSFacet mpsFacet=getMpsFacet(module);
         Solution facetSolution=mpsFacet.getSolution();
-        facetSolution.addDependency(solutionCell[0].getModuleReference(),false);
+        facetSolution.addDependency(solution.getModuleReference(),false);
       }
     }
 );
