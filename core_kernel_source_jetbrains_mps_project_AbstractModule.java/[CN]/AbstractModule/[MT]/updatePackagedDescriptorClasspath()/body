@@ -16,9 +16,8 @@
   boolean addBundleAsModelRoot=false;
   final DeploymentDescriptor dd=descriptor.getDeploymentDescriptor();
   String libPath=dd == null ? FileUtil.getCanonicalPath(PathManager.getHomePath() + File.separator + "lib").toLowerCase() : null;
-  List<ModelRoot> toRemove=new ArrayList<ModelRoot>();
-  for (  ModelRoot sme : descriptor.getStubModelEntries()) {
-    String path=sme.getPath();
+  List<String> toRemovePaths=new ArrayList<String>();
+  for (  String path : descriptor.getAdditionalJavaStubPaths()) {
     String canonicalPath=FileUtil.getCanonicalPath(path).toLowerCase();
     if (packagedSourcesPath == null || !canonicalPath.startsWith(packagedSourcesPath)) {
       String shrinked=MacrosFactory.forModuleFile(getDescriptorFile()).shrinkPath(path);
@@ -27,10 +26,10 @@
     if (dd == null && canonicalPath.startsWith(libPath)) {
       continue;
     }
-    toRemove.add(sme);
+    toRemovePaths.add(path);
   }
-  descriptor.getStubModelEntries().removeAll(toRemove);
-  toRemove.clear();
+  descriptor.getAdditionalJavaStubPaths().removeAll(toRemovePaths);
+  List<ModelRoot> toRemove=new ArrayList<ModelRoot>();
   for (  ModelRoot sme : descriptor.getModelRoots()) {
     if (!LanguageID.JAVA_MANAGER.equals(sme.getManager()))     continue;
     String path=sme.getPath();
@@ -74,7 +73,7 @@
       ClassPathEntry jarEntry=new ClassPathEntry();
       jarEntry.setPath(jar.getPath());
       ModelRoot mr=jetbrains.mps.project.structure.model.ModelRootUtil.fromClassPathEntry(jarEntry);
-      descriptor.getStubModelEntries().add(mr);
+      descriptor.getAdditionalJavaStubPaths().add(mr.getPath());
       descriptor.getModelRoots().add(mr);
     }
   }
