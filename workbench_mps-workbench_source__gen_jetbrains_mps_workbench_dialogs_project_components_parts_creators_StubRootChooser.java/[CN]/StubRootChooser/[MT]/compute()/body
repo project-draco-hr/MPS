@@ -2,12 +2,9 @@
   TreeFileChooser chooser=new TreeFileChooser();
   chooser.setMode(TreeFileChooser.MODE_FILES_AND_DIRECTORIES);
   List<IFile> files=chooser.showMultiSelectionDialog(myOwner.getMainComponent());
-  List<ModelRoot> result=new ArrayList<ModelRoot>();
+  List<String> result=new ArrayList<String>();
   for (  IFile file : files) {
-    ModelRoot sme=new ModelRoot();
-    sme.setPath(file.getPath());
-    sme.setManager(LanguageID.JAVA_MANAGER);
-    ListSequence.fromList(result).addElement(sme);
+    ListSequence.fromList(result).addElement(file.getPath());
   }
   if (ListSequence.fromList(result).isEmpty()) {
     return result;
@@ -15,7 +12,15 @@
   if (myJavaOnly) {
     int res=Messages.showYesNoDialog(myOwner.getMainComponent(),"MPS can try creating models for the specified locations, so that class files can be referenced from MPS models directly. Would you like to import models for the specified locations?","Model Roots",Messages.getQuestionIcon());
     if (res == Messages.YES) {
-      ListSequence.fromList(myRoots).addSequence(ListSequence.fromList(result));
+      ListSequence.fromList(myRoots).addSequence(ListSequence.fromList(result).select(new ISelector<String,ModelRoot>(){
+        public ModelRoot select(        String it){
+          ModelRoot sme=new ModelRoot();
+          sme.setPath(it);
+          sme.setManager(LanguageID.JAVA_MANAGER);
+          return sme;
+        }
+      }
+));
     }
   }
  else {
@@ -42,11 +47,12 @@
         }
       }
 );
-      ListSequence.fromList(myRoots).addSequence(ListSequence.fromList(result).select(new ISelector<ModelRoot,ModelRoot>(){
-        public ModelRoot select(        ModelRoot it){
-          ModelRoot copy=it.getCopy();
-          copy.setManager(manager);
-          return copy;
+      ListSequence.fromList(myRoots).addSequence(ListSequence.fromList(result).select(new ISelector<String,ModelRoot>(){
+        public ModelRoot select(        String it){
+          ModelRoot sme=new ModelRoot();
+          sme.setPath(it);
+          sme.setManager(manager);
+          return sme;
         }
       }
 ));
