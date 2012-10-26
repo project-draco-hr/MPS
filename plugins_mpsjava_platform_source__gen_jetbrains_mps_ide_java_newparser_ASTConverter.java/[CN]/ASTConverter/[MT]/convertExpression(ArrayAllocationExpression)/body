@@ -1,0 +1,50 @@
+{
+  SNode type=convertTypeRef(x.type);
+  if (!(SNodeOperations.isInstanceOf(type,"jetbrains.mps.baseLanguage.structure.ArrayType"))) {
+    throw new JavaParseException("a type of array allocation should be an array type");
+  }
+  SNode arrayType=SNodeOperations.cast(type,"jetbrains.mps.baseLanguage.structure.ArrayType");
+  if (x.initializer != null) {
+    List<SNode> initializers=new ArrayList<SNode>();
+    if (x.initializer.expressions != null) {
+      for (      Expression expression : x.initializer.expressions) {
+        ListSequence.fromList(initializers).addElement(convertExpressionRefl(expression));
+      }
+    }
+    SNode arrayCreator=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ArrayCreatorWithInitializer",null);
+    for (    SNode initializer : initializers) {
+      ListSequence.fromList(SLinkOperations.getTargets(arrayCreator,"initValue",true)).addElement(initializer);
+    }
+    SLinkOperations.setTarget(arrayCreator,"componentType",SNodeOperations.copyNode(SLinkOperations.getTarget(arrayType,"componentType",true)),true);
+    SNode genericNewExpression=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.GenericNewExpression",null);
+    SLinkOperations.setTarget(genericNewExpression,"creator",arrayCreator,true);
+    return genericNewExpression;
+  }
+ else {
+    List<SNode> dims=new ArrayList<SNode>();
+    for (    Expression dimension : x.dimensions) {
+      if (dimension == null) {
+        ListSequence.fromList(dims).addElement(null);
+      }
+ else {
+        ListSequence.fromList(dims).addElement(convertExpressionRefl(dimension));
+      }
+    }
+    SNode arrayCreator=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ArrayCreator",null);
+    for (    SNode dim : dims) {
+      SNode dimensionExpression=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.DimensionExpression",null);
+      ListSequence.fromList(SLinkOperations.getTargets(arrayCreator,"dimensionExpression",true)).addElement(dimensionExpression);
+      if (dim != null) {
+        SLinkOperations.setTarget(dimensionExpression,"expression",dim,true);
+      }
+    }
+    SNode deepestComponentType=SLinkOperations.getTarget(arrayType,"componentType",true);
+    while (SNodeOperations.isInstanceOf(deepestComponentType,"jetbrains.mps.baseLanguage.structure.ArrayType")) {
+      deepestComponentType=SLinkOperations.getTarget(SNodeOperations.cast(deepestComponentType,"jetbrains.mps.baseLanguage.structure.ArrayType"),"componentType",true);
+    }
+    SLinkOperations.setTarget(arrayCreator,"componentType",SNodeOperations.copyNode(deepestComponentType),true);
+    SNode genericNewExpression=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.GenericNewExpression",null);
+    SLinkOperations.setTarget(genericNewExpression,"creator",arrayCreator,true);
+    return genericNewExpression;
+  }
+}

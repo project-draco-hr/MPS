@@ -1,0 +1,65 @@
+{
+  return new SimpleMigration(SConceptOperations.findConceptDeclaration("jetbrains.mps.lang.structure.structure.ConceptDeclaration")){
+    public String getName(){
+      return "Migrate node attributes for " + config.getName();
+    }
+    public boolean isApplicableInstanceNode(    SNode conceptDeclaration){
+      if (!(SConceptOperations.isSubConceptOf(((SNode)conceptDeclaration),"jetbrains.mps.lang.core.structure.NodeAttribute"))) {
+        return false;
+      }
+      SNode concept=(SNode)conceptDeclaration;
+      Iterable<SNode> attributedConcepts=getAttributedConcepts(concept);
+      if (!(Sequence.fromIterable(attributedConcepts).contains(config.sourceConcept))) {
+        return false;
+      }
+      if (config.isPullUp()) {
+        return true;
+      }
+ else {
+        return !(Sequence.fromIterable(attributedConcepts).contains(config.targetConcept));
+      }
+    }
+    public void doUpdateInstanceNode(    SNode conceptDeclaration){
+      SNode concept=(SNode)conceptDeclaration;
+      Iterable<SNode> attributedConcepts=getAttributedConcepts(concept);
+      if (!(Sequence.fromIterable(attributedConcepts).contains(config.targetConcept))) {
+        ListSequence.fromList(SLinkOperations.getTargets(concept,"conceptLink",true)).addElement(new Migrations.QuotationClass_b5gojm_a0a0a0d0c0a0a0d().createNode(config.targetConcept,ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.getNode("r:00000000-0000-4000-0000-011c89590288(jetbrains.mps.lang.core.structure)","5169995583184591161"),"conceptLinkDeclaration",true)).first()));
+      }
+      if (config.isPullUp()) {
+        if (Sequence.fromIterable(attributedConcepts).contains(config.sourceConcept)) {
+          SNodeOperations.deleteNode(ListSequence.fromList(SLinkOperations.getTargets(concept,"conceptLink",true)).where(new IWhereFilter<SNode>(){
+            public boolean accept(            SNode it){
+              return SLinkOperations.getTarget(it,"conceptLinkDeclaration",false) == getAttributedLinkDeclaration();
+            }
+          }
+).where(new IWhereFilter<SNode>(){
+            public boolean accept(            SNode it){
+              return SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.lang.structure.structure.ReferenceConceptLink"),"target",false) == config.sourceConcept;
+            }
+          }
+).first());
+        }
+      }
+    }
+    private Iterable<SNode> getAttributedConcepts(    SNode concept){
+      final SNode attributedLinkDeclaration=getAttributedLinkDeclaration();
+      return ListSequence.fromList(SLinkOperations.getTargets(concept,"conceptLink",true)).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return SLinkOperations.getTarget(it,"conceptLinkDeclaration",false) == attributedLinkDeclaration;
+        }
+      }
+).select(new ISelector<SNode,SNode>(){
+        public SNode select(        SNode it){
+          return SNodeOperations.cast(SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.lang.structure.structure.ReferenceConceptLink"),"target",false),"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration");
+        }
+      }
+);
+    }
+    private SNode getAttributedLinkDeclaration(){
+      SNode attributedLinkDeclaration=ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.getNode("r:00000000-0000-4000-0000-011c89590288(jetbrains.mps.lang.core.structure)","5169995583184591161"),"conceptLinkDeclaration",true)).first();
+      assert(attributedLinkDeclaration != null);
+      return attributedLinkDeclaration;
+    }
+  }
+;
+}
