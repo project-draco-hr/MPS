@@ -1,0 +1,38 @@
+{
+  SNode operand=null;
+  int tokPos=0;
+  SNode mbVarRef=ResolveUnknownUtil.tryFirstTokenAsVarRef(x);
+  if ((mbVarRef != null)) {
+    operand=mbVarRef;
+    tokPos=1;
+    System.err.println("DEBUG: normal dot expr");
+  }
+ else {
+    Tuples._2<SNode,Integer> classAndPos=ResolveUnknownUtil.tryFindClass(x);
+    if (classAndPos == null) {
+      return null;
+    }
+    SNode cls=classAndPos._0();
+    tokPos=(int)classAndPos._1();
+    if (tokPos == (int)ListSequence.fromList(SLinkOperations.getTargets(x,"token",true)).count()) {
+      return cls;
+    }
+ else {
+      SNode statFieldRef=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StaticFieldReference",null);
+      SLinkOperations.setTarget(statFieldRef,"classifier",cls,false);
+      SReference fieldRef=new DynamicReference("staticFieldDeclaration",statFieldRef,null,SPropertyOperations.getString(ListSequence.fromList(SLinkOperations.getTargets(x,"token",true)).getElement(tokPos),"value"));
+      statFieldRef.addReference(fieldRef);
+      operand=statFieldRef;
+      tokPos=tokPos + 1;
+    }
+  }
+  if ((operand == null)) {
+    return null;
+  }
+  while (tokPos < ListSequence.fromList(SLinkOperations.getTargets(x,"token",true)).count()) {
+    SNode dotExpr=ResolveUnknownUtil.makeFieldDotExpression(operand,SPropertyOperations.getString(ListSequence.fromList(SLinkOperations.getTargets(x,"token",true)).getElement(tokPos),"value"));
+    operand=dotExpr;
+    tokPos++;
+  }
+  return operand;
+}
