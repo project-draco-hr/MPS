@@ -1,0 +1,40 @@
+{
+  if ("Entry".equals(unqualName)) {
+    return new DynamicReference(role,source,null,"java.util.Map.Entry");
+  }
+  String nestedTyp=myNestNamespace.resolve(unqualName);
+  if (nestedTyp != null) {
+    String fqname=myPackage + "." + nestedTyp;
+    return new DynamicReference(role,source,null,fqname);
+  }
+  int k=0;
+  for (int i=ListSequence.fromList(myImports).count() - 1; i >= 0; i--) {
+    TypeNameResolver.Import imp=ListSequence.fromList(myImports).getElement(i);
+    if (!(imp.isOnDemand())) {
+      k++;
+      if (imp.myClass.equals(unqualName)) {
+        String fqname=imp.myPackage + "." + imp.myClass;
+        return new DynamicReference(role,source,null,fqname);
+      }
+    }
+  }
+  if (k == (int)ListSequence.fromList(myImports).count()) {
+    SNode javaLangNode=findInJavaLang(unqualName);
+    if (javaLangNode != null) {
+      return SReference.create(role,source,javaLangNode);
+    }
+    String fqname=myPackage + "." + unqualName;
+    return new DynamicReference(role,source,null,fqname);
+  }
+ else {
+    List<String> pkgs=ListSequence.fromList(new ArrayList<String>());
+    pkgs.add(myPackage);
+    ListSequence.fromList(pkgs).addElement("java.lang");
+    for (    TypeNameResolver.Import imp : ListSequence.fromList(myImports)) {
+      if (imp.isOnDemand()) {
+        pkgs.add(imp.myPackage);
+      }
+    }
+    return new JavaPackagesDynReferece(role,source,unqualName,pkgs);
+  }
+}

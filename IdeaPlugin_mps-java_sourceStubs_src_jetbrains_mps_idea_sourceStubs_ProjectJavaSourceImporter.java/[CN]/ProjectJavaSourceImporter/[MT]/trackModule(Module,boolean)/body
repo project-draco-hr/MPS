@@ -1,0 +1,40 @@
+{
+synchronized (LOCK) {
+    final VirtualFile[] roots=ModuleRootManager.getInstance(module).getSourceRoots(false);
+    for (    VirtualFile root : roots) {
+      System.out.println(" -- " + root);
+    }
+    final Solution solution=ModelAccess.instance().runWriteAction(new Computable<Solution>(){
+      @Override public Solution compute(){
+        Solution solution=addSolution(SOLUTION_NAME_PREFIX + module.getName(),roots);
+        solution.updateModelsSet();
+        myModulesToSolutions.put(module,solution);
+        return solution;
+      }
+    }
+);
+    for (    SModelDescriptor desc : SModelRepository.getInstance().getModelDescriptors(solution)) {
+      if (desc instanceof BaseStubModelDescriptor) {
+        BaseStubModelDescriptor modelDesc=(BaseStubModelDescriptor)desc;
+        FileBasedModelDataSource modelDataSource=(FileBasedModelDataSource)modelDesc.getSource();
+        Collection<String> files=modelDataSource.getFilesToListen();
+        System.out.println("Model: " + desc.getLongName());
+        for (        String f : files) {
+          System.out.println("path: " + f);
+          VirtualFile vfile=VirtualFileManager.getInstance().refreshAndFindFileByUrl("file://" + f);
+          myListenedFiles.add(vfile);
+          files2Models.put(vfile,modelDesc);
+        }
+      }
+    }
+    StartupManager.getInstance(myProject).runWhenProjectIsInitialized(new Runnable(){
+      @Override public void run(){
+        MPSFacet mpsFacet=getMpsFacet(module);
+        Solution facetSolution=mpsFacet.getSolution();
+        facetSolution.addDependency(solution.getModuleReference(),false);
+      }
+    }
+);
+    if (separate)     updatePsiListener();
+  }
+}
