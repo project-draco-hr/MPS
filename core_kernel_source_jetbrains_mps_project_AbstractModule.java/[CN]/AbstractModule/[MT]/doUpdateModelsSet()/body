@@ -1,13 +1,20 @@
 {
   List<org.jetbrains.mps.openapi.model.SModelReference> allLoadedModels=new ArrayList<org.jetbrains.mps.openapi.model.SModelReference>();
   ModuleDescriptor descriptor=getModuleDescriptor();
-  Set<SModelRoot> result=new jetbrains.mps.util.misc.hash.HashSet<SModelRoot>();
+  Set<ModelRoot> result=new HashSet<ModelRoot>();
   if (descriptor != null) {
     SModelRepository smRepo=SModelRepository.getInstance();
-    Collection<ModelRoot> roots=descriptor.getModelRoots();
-    for (    ModelRoot modelRoot : roots) {
+    Collection<ModelRootDescriptor> roots=descriptor.getModelRootDescriptors();
+    for (    ModelRootDescriptor modelRoot : roots) {
       try {
-        SModelRoot root=new SModelRoot(this,modelRoot);
+        ModelRootFactory modelRootFactory=PersistenceFacade.getInstance().getModelRootFactory(modelRoot.getType());
+        if (modelRootFactory == null) {
+          LOG.error("Unknown model root type: `" + modelRoot.getType() + "'. Requested by: "+ this);
+          continue;
+        }
+        ModelRoot root=modelRootFactory.create();
+        root.load(modelRoot.getMemento());
+        ((ModelRootBase)root).setModule(this);
         result.add(root);
         for (        SModel model : root.getModels()) {
           allLoadedModels.add(model.getModelReference());
@@ -16,10 +23,8 @@
           }
         }
       }
- catch (      ManagerNotFoundException e) {
-      }
-catch (      Exception e) {
-        LOG.error("Error loading models from root: " + "\" path: \"" + modelRoot.getPath() + "\". Requested by: "+ this,e);
+ catch (      Exception e) {
+        LOG.error("Error loading models from root with type: `" + modelRoot.getType() + "'. Requested by: "+ this,e);
       }
     }
     for (    SModelDescriptor md : smRepo.getModelDescriptors(this)) {
