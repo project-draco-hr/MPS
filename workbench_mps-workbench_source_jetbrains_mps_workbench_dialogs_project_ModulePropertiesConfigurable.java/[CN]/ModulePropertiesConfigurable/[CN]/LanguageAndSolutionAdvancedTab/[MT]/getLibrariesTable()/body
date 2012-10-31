@@ -1,0 +1,55 @@
+{
+  myLibraryTableModel=new LibraryTableModel(myConfigurableItem);
+  final JBTable librariesTable=new JBTable(myLibraryTableModel);
+  librariesTable.setTableHeader(null);
+  ToolbarDecorator decorator=ToolbarDecorator.createDecorator(librariesTable);
+  decorator.setAddAction(new AnActionButtonRunnable(){
+    @Override public void run(    AnActionButton anActionButton){
+      List<ModelRoot> modelRoots=new ArrayList<ModelRoot>(myConfigurableItem.getModuleDescriptor().getModelRoots());
+      StubRootChooser stubRootChooser=new StubRootChooser(new IBindedDialog(){
+        @Override public JComponent getMainComponent(){
+          return getTabComponent();
+        }
+        @Override public IOperationContext getOperationContext(){
+          return null;
+        }
+        @Override public IScope getModuleScope(){
+          return null;
+        }
+        @Override public IScope getProjectScope(){
+          return null;
+        }
+        @Override public void addBinding(        AutoBinding binding){
+        }
+      }
+,modelRoots,(myConfigurableItem instanceof Language ? true : false));
+      myLibraryTableModel.addAll(stubRootChooser.compute());
+    }
+  }
+).setRemoveAction(new AnActionButtonRunnable(){
+    @Override public void run(    AnActionButton anActionButton){
+      TableUtil.removeSelectedItems(librariesTable);
+      myLibraryTableModel.fireTableDataChanged();
+    }
+  }
+).setUpAction(new AnActionButtonRunnable(){
+    @Override public void run(    AnActionButton anActionButton){
+      if (librariesTable.isEditing())       librariesTable.getCellEditor().stopCellEditing();
+      final int min=librariesTable.getSelectionModel().getMinSelectionIndex();
+      final int max=librariesTable.getSelectionModel().getMaxSelectionIndex();
+      librariesTable.getSelectionModel().setSelectionInterval((min - 1 < 0 ? 0 : min - 1),(max - 1 < 0 ? 0 : max - 1));
+    }
+  }
+).setDownAction(new AnActionButtonRunnable(){
+    @Override public void run(    AnActionButton anActionButton){
+      if (librariesTable.isEditing())       librariesTable.getCellEditor().stopCellEditing();
+      final int min=librariesTable.getSelectionModel().getMinSelectionIndex();
+      final int max=librariesTable.getSelectionModel().getMaxSelectionIndex();
+      librariesTable.getSelectionModel().setSelectionInterval((min + 1 >= librariesTable.getRowCount() ? 0 : min + 1),(max + 1 >= librariesTable.getRowCount() ? 0 : max + 1));
+    }
+  }
+);
+  JPanel table=decorator.createPanel();
+  table.setBorder(IdeBorderFactory.createTitledBorder("Libraries",true));
+  return table;
+}
