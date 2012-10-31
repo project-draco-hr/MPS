@@ -29,9 +29,10 @@
     toRemovePaths.add(path);
   }
   descriptor.getAdditionalJavaStubPaths().removeAll(toRemovePaths);
-  List<ModelRoot> toRemove=new ArrayList<ModelRoot>();
-  for (  ModelRoot sme : descriptor.getModelRoots()) {
-    if (!LanguageID.JAVA_MANAGER.equals(sme.getManager()))     continue;
+  List<ModelRootDescriptor> toRemove=new ArrayList<ModelRootDescriptor>();
+  for (  ModelRootDescriptor mrd : descriptor.getModelRootDescriptors()) {
+    jetbrains.mps.project.structure.model.ModelRoot sme=mrd.getRoot();
+    if (sme == null || !LanguageID.JAVA_MANAGER.equals(sme.getManager()))     continue;
     String path=sme.getPath();
     String canonicalPath=FileUtil.getCanonicalPath(path).toLowerCase();
     String suffix=descriptor.getCompileInMPS() ? "classes_gen" : "classes";
@@ -53,16 +54,13 @@
     if (dd == null && canonicalPath.startsWith(libPath)) {
       continue;
     }
-    toRemove.add(sme);
+    toRemove.add(mrd);
   }
-  descriptor.getModelRoots().removeAll(toRemove);
+  descriptor.getModelRootDescriptors().removeAll(toRemove);
   if (addBundleAsModelRoot) {
-    ModelRoot mr=new ModelRoot();
+    SModelRoot mr=new SModelRoot(LanguageID.JAVA_MANAGER);
     mr.setPath(bundleHomeFile.getPath());
-    mr.setManager(LanguageID.JAVA_MANAGER);
-    if (!descriptor.getModelRoots().contains(mr)) {
-      descriptor.getModelRoots().add(mr);
-    }
+    descriptor.getModelRootDescriptors().add(mr.toDescriptor());
   }
   if (dd == null) {
     return;
@@ -70,11 +68,10 @@
   for (  String jarFile : dd.getLibraries()) {
     IFile jar=jarFile.startsWith("/") ? FileSystem.getInstance().getFileByPath(PathManager.getHomePath() + jarFile) : bundleParent.getDescendant(jarFile);
     if (jar.exists()) {
-      ModelRoot mr=new ModelRoot();
+      SModelRoot mr=new SModelRoot(LanguageID.JAVA_MANAGER);
       mr.setPath(jar.getPath());
-      mr.setManager(LanguageID.JAVA_MANAGER);
       descriptor.getAdditionalJavaStubPaths().add(mr.getPath());
-      descriptor.getModelRoots().add(mr);
+      descriptor.getModelRootDescriptors().add(mr.toDescriptor());
     }
   }
 }
