@@ -1,4 +1,7 @@
 {
+  final Set<SNode> conceptUsages=SetSequence.fromSet(new HashSet<SNode>());
+  final Set<SNode> accessUsages=SetSequence.fromSet(new HashSet<SNode>());
+  final Set<SNode> cellUsages=SetSequence.fromSet(new HashSet<SNode>());
   final Set<SearchResult<SNode>> allUsages=SetSequence.fromSet(new HashSet<SearchResult<SNode>>());
   final Set<SNode> searchedNodes=getSearchedNodes();
   Set<SReference> usages=FindUsagesManager.getInstance().findUsages(searchedNodes,SearchType.USAGES,scope,new EmptyProgressMonitor());
@@ -23,23 +26,14 @@
     }
   }
   final SearchResults searchResults=new SearchResults<SNode>(searchedNodes,SetSequence.fromSet(allUsages).toListSequence());
+  showRefactoringView(new _FunctionTypes._void_P0_E0(){
+    public void invoke(){
+      doMigrate(cellUsages,accessUsages,conceptUsages);
+    }
+  }
+,searchResults,"Migration step 1: migrate concept properties");
   final Set<SModelDescriptor> sourceModels=new HashSet<SModelDescriptor>();
   for (  SModel model : ((Set<SModel>)searchResults.getAffectedModels())) {
     sourceModels.add(model.getModelDescriptor());
   }
-  RefactoringAccess.getInstance().showRefactoringView(ideaProject,new RefactoringViewAction(){
-    public void performAction(    final RefactoringViewItem refactoringViewItem){
-      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-        public void run(){
-          doMigrate(cellUsages,accessUsages,conceptUsages);
-          refactoringViewItem.close();
-          makeAll(sourceModels);
-          step=2;
-          migrate();
-        }
-      }
-);
-    }
-  }
-,searchResults,false,"remove alias");
 }
