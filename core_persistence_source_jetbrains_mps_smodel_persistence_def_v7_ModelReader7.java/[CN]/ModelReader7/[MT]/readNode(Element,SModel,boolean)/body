@@ -1,0 +1,39 @@
+{
+  String conceptFqName=myHelper.readType(nodeElement.getAttributeValue(ModelPersistence.TYPE));
+  SNode node=new SNode(InternUtil.intern(conceptFqName));
+  String idValue=nodeElement.getAttributeValue(ModelPersistence.ID);
+  if (idValue != null) {
+    SNodeId id=SNodeId.fromString(idValue);
+    if (id == null) {
+      LOG.error("invalid id string");
+      return null;
+    }
+    node.setId(id);
+  }
+  myLinkMap.addTypeLocation(myHelper.readLinkId(nodeElement.getAttributeValue(ModelPersistence.TYPE_ID)),node);
+  for (  Element element : (List<Element>)nodeElement.getChildren(ModelPersistence.PROPERTY)) {
+    String propertyName=myHelper.readName(element.getAttributeValue(ModelPersistence.NAME));
+    String propertyValue=element.getAttributeValue(ModelPersistence.VALUE);
+    if (propertyValue != null) {
+      node.setProperty(propertyName,propertyValue,false);
+      myLinkMap.addNameLocation(myHelper.readLinkId(element.getAttributeValue(ModelPersistence.NAME_ID)),node,propertyName);
+    }
+  }
+  for (  Element link : (List<Element>)nodeElement.getChildren(ModelPersistence.LINK)) {
+    String target=link.getAttributeValue(ModelPersistence.TARGET_NODE_ID);
+    String resolveInfo=link.getAttributeValue(ModelPersistence.RESOLVE_INFO);
+    String role=myHelper.readRole(link.getAttributeValue(ModelPersistence.ROLE));
+    Pair<Boolean,SNodePointer> pptr=myHelper.readLink_internal(target);
+    SNodePointer ptr=pptr.o2;
+    if (ptr == null || ptr.getModelReference() == null) {
+      LOG.error("couldn't create reference '" + role + "' : from "+ target);
+      continue;
+    }
+    StaticReference ref=new StaticReference(role,node,ptr.getModelReference(),ptr.getNodeId(),resolveInfo);
+    myLinkMap.addTargetLocation(ptr,ref);
+    node.setReference(ref.getRole(),ref);
+    myLinkMap.addRoleLocation(myHelper.readLinkId(link.getAttributeValue(ModelPersistence.ROLE_ID)),ref);
+  }
+  if (!isRootStub)   readChildren(node,nodeElement);
+  return node;
+}
