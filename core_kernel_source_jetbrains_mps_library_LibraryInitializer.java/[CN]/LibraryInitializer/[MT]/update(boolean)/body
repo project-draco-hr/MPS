@@ -1,18 +1,33 @@
 {
+  ModelAccess.assertLegalWrite();
+  Set<SLibrary> toUnload=new HashSet<SLibrary>(myLibraries);
+  Set<SLibrary> toLoad=new HashSet<SLibrary>();
   myParentLoaders.clear();
-  Set<String> newLibs=new HashSet<String>();
   for (  LibraryContributor lc : myContributors) {
     for (    LibDescriptor s : lc.getLibraries()) {
       IFile path=FileSystem.getInstance().getFileByPath(s.path);
+      SLibrary lib=new SLibrary(path,s.parentLoader,lc.hiddenLanguages());
+      toUnload.remove(lib);
+      if (!myLibraries.contains(lib)) {
+        myLibraries.add(lib);
+        toLoad.add(lib);
+      }
       IFile bundlePath=FileSystem.getInstance().isPackaged(path) ? FileSystem.getInstance().getBundleHome(path) : null;
       myParentLoaders.put(bundlePath != null ? bundlePath.getPath() : s.path,s.parentLoader != null ? s.parentLoader : LibraryInitializer.class.getClassLoader());
-      newLibs.add(s.path);
-      Boolean oldValue=myHiddenPaths.get(s.path);
-      if (oldValue == null || !oldValue) {
-        myHiddenPaths.put(s.path,lc.hiddenLanguages());
-      }
     }
   }
-  reload(myLoadedLibs,newLibs,refreshFiles);
-  myLoadedLibs=newLibs;
+  for (  SLibrary unloadLib : toUnload) {
+    unloadLib.dispose();
+  }
+  for (  SLibrary loadLib : toLoad) {
+    loadLib.attach(refreshFiles);
+  }
+  if (toUnload.isEmpty() && toLoad.isEmpty())   return;
+  CleanupManager.getInstance().cleanup();
+  ClassLoaderManager.getInstance().updateClassPath();
+  LanguageRegistry.getInstance().loadLanguages();
+  ExtensionRegistry.getInstance().loadExtensionDescriptors();
+  for (  IModule m : MPSModuleRepository.getInstance().getAllModules()) {
+    m.invalidateDependencies();
+  }
 }
