@@ -1,4 +1,5 @@
 {
+  final Map<ITarget.Name,Long> timeStatistic=MapSequence.fromMap(new HashMap<ITarget.Name,Long>());
   ctl.runJobWithMonitor(new _FunctionTypes._void_P1_E0<IJobMonitor>(){
     public void invoke(    final IJobMonitor monit){
       monitor.start("",Sequence.fromIterable(toExecute).foldLeft(0,new ILeftCombinator<ITarget,Integer>(){
@@ -48,6 +49,7 @@
                   LOG.debug("No input. Stopping");
                   monit.reportFeedback(new IFeedback.ERROR("Error executing target " + trg.getName() + " : no input. Stopping"));
                   results.addResult(trg.getName(),new IResult.FAILURE(null));
+                  results.addResult(TIME_STATISTIC_RESULT_NAME,new IResult.SUCCESS(Sequence.<IResource>singleton(new TimeStatisticResource(timeStatistic))));
                   return;
                 }
               }
@@ -55,12 +57,19 @@
             ProgressMonitor subMonitor=monitor.subTask(workEstimate(trg));
             ctl.useMonitor(subMonitor);
             IJob job=trg.createJob();
-            IResult jr=job.execute(Sequence.fromIterable(input).where(new IWhereFilter<IResource>(){
-              public boolean accept(              IResource it){
-                return !(monit.stopRequested());
+            long startTime=System.currentTimeMillis();
+            IResult jr;
+            try {
+              jr=job.execute(Sequence.fromIterable(input).where(new IWhereFilter<IResource>(){
+                public boolean accept(                IResource it){
+                  return !(monit.stopRequested());
+                }
               }
-            }
 ),monit,new Script.PropertiesAccessor(pool),subMonitor);
+            }
+  finally {
+              MapSequence.fromMap(timeStatistic).put(trg.getName(),((MapSequence.fromMap(timeStatistic).containsKey(trg.getName()) ? MapSequence.fromMap(timeStatistic).get(trg.getName()) : 0)) + (System.currentTimeMillis() - startTime));
+            }
             if (!(trg.producesOutput())) {
               jr=new Script.SubsOutputResult(jr,(trg.requiresInput() ? Sequence.fromIterable(rawInput).subtract(Sequence.fromIterable(input)) : rawInput));
             }
@@ -77,12 +86,14 @@
             LOG.debug("Timeout executing target " + trg.getName(),to);
             monit.reportFeedback(new IFeedback.ERROR("Target execution aborted " + trg.getName(),to));
             results.addResult(trg.getName(),new IResult.FAILURE(null));
+            results.addResult(TIME_STATISTIC_RESULT_NAME,new IResult.SUCCESS(Sequence.<IResource>singleton(new TimeStatisticResource(timeStatistic))));
             return;
           }
 catch (          RuntimeException rex) {
             LOG.debug("Exception executing target " + trg.getName(),rex);
             monit.reportFeedback(new IFeedback.ERROR("Exception executing target " + trg.getName(),rex));
             results.addResult(trg.getName(),new IResult.FAILURE(null));
+            results.addResult(TIME_STATISTIC_RESULT_NAME,new IResult.SUCCESS(Sequence.<IResource>singleton(new TimeStatisticResource(timeStatistic))));
             return;
           }
         }
@@ -93,4 +104,5 @@ catch (          RuntimeException rex) {
     }
   }
 );
+  results.addResult(TIME_STATISTIC_RESULT_NAME,new IResult.SUCCESS(Sequence.<IResource>singleton(new TimeStatisticResource(timeStatistic))));
 }
