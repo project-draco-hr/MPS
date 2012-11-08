@@ -1,0 +1,26 @@
+{
+  SModelReference dsmRef=getModelReference();
+  IFile modelFile=getModelFile();
+  if (!modelFile.isReadOnly() && !modelFile.exists()) {
+    SModel model=new SModel(dsmRef,new RegularNodeIdMap());
+    return new ModelLoadResult(model,ModelLoadingState.FULLY_LOADED);
+  }
+  ModelLoadResult result;
+  try {
+    result=ModelPersistence.readModel(getDescriptorSModelHeader(),modelFile,state);
+  }
+ catch (  ModelReadException e) {
+    SuspiciousModelHandler.getHandler().handleSuspiciousModel(this,false);
+    SModel newModel=new StubModel(getSModelReference(),e);
+    return new ModelLoadResult(newModel,ModelLoadingState.NOT_LOADED);
+  }
+  SModel model=result.getModel();
+  if (result.getState() == ModelLoadingState.FULLY_LOADED) {
+    boolean needToSave=model.updateSModelReferences() || model.updateModuleReferences();
+    if (needToSave && !modelFile.isReadOnly()) {
+      SModelRepository.getInstance().markChanged(model);
+    }
+  }
+  LOG.assertLog(model.getSModelReference().equals(dsmRef),"\nError loading model from file: \"" + modelFile + "\"\n"+ "expected model UID     : \""+ dsmRef+ "\"\n"+ "but was UID            : \""+ model.getSModelReference()+ "\"\n"+ "the model will not be available.\n"+ "Make sure that all project's roots and/or the model namespace is correct");
+  return result;
+}

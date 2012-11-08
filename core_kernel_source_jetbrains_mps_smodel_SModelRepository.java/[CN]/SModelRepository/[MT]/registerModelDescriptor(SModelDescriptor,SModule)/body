@@ -1,0 +1,35 @@
+{
+synchronized (myModelsLock) {
+    SModule prevModule=myModelOwner.get(modelDescriptor);
+    if (prevModule != null) {
+      if (prevModule != container) {
+        LOG.error("Model \"" + modelDescriptor.getModelName() + "\" is already registered by another module: existing="+ prevModule+ ", new="+ container);
+      }
+      return;
+    }
+    SModelReference modelReference=modelDescriptor.getSModelReference();
+    SModelDescriptor registeredModel=getModelDescriptor(modelReference);
+    LOG.assertLog(registeredModel == null || registeredModel == modelDescriptor,"Another model \"" + modelReference + "\" is already registered");
+    Set<SModelDescriptor> ownerModels=myModelsByOwner.get(container);
+    if (ownerModels == null) {
+      ownerModels=new HashSet<SModelDescriptor>();
+      myModelsByOwner.put(container,ownerModels);
+    }
+    ownerModels.add(modelDescriptor);
+    myModelOwner.put(modelDescriptor,container);
+    if (modelReference.getModelId() != null) {
+      myIdToModelDescriptorMap.put(modelReference.getModelId(),modelDescriptor);
+      if (modelDescriptor instanceof BaseSModelDescriptor) {
+        ((BaseSModelDescriptor)modelDescriptor).setRegistered(true);
+      }
+    }
+    if (modelReference.getSModelFqName() != null) {
+      myFqNameToModelDescriptorMap.put(modelReference.getSModelFqName(),modelDescriptor);
+    }
+    if (modelDescriptor instanceof BaseSModelDescriptor) {
+      ((BaseSModelDescriptor)modelDescriptor).attach();
+    }
+    modelDescriptor.addModelListener(myModelsListener);
+  }
+  fireModelAdded(modelDescriptor);
+}
