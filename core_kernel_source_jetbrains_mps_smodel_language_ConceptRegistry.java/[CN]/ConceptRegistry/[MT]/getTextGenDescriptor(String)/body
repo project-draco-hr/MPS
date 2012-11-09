@@ -1,0 +1,37 @@
+{
+  TextGenDescriptor descriptor=textGenDescriptors.get(fqName);
+  if (descriptor != null) {
+    return descriptor;
+  }
+  if (fqName == null) {
+    return new DefaultTextGenDescriptor();
+  }
+  if (!startLoad(fqName,LanguageAspect.TEXT_GEN)) {
+    return new DefaultTextGenDescriptor();
+  }
+  try {
+    try {
+      LanguageRuntime languageRuntime=LanguageRegistry.getInstance().getLanguage(NameUtil.namespaceFromConceptFQName(fqName));
+      TextGenAspectDescriptor textGenAspectDescriptor;
+      if (languageRuntime == null) {
+        LOG.warning("No language for: " + fqName + ", while looking for constraints descriptor.",new Throwable());
+        textGenAspectDescriptor=TextGenAspectInterpreted.getInstance();
+      }
+ else {
+        textGenAspectDescriptor=languageRuntime.getTextGenAspectDescriptor();
+      }
+      descriptor=textGenAspectDescriptor.getDescriptor(fqName);
+    }
+ catch (    Throwable e) {
+      LOG.warning("Exception while constraints descriptor creating",e);
+    }
+    if (descriptor == null) {
+      descriptor=new DefaultTextGenDescriptor();
+    }
+    textGenDescriptors.put(fqName,descriptor);
+    return descriptor;
+  }
+  finally {
+    finishLoad(fqName,LanguageAspect.TEXT_GEN);
+  }
+}

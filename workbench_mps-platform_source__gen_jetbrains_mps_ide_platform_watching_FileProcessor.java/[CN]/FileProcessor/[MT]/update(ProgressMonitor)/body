@@ -1,0 +1,26 @@
+{
+  monitor.start("Reloading files... Please wait.",MapSequence.fromMap(dataMap).count() + 1);
+  try {
+    for (    FileSystemListener listener : Sequence.fromIterable(sortedListeners())) {
+      FileProcessor.ListenerData data=MapSequence.fromMap(dataMap).get(listener);
+      if (!(listenersContainer.contains(listener))) {
+        monitor.advance(1);
+        continue;
+      }
+      listener.update(monitor.subTask(1,SubProgressKind.AS_COMMENT),data);
+      data.isNotified=true;
+    }
+    FileSystemListener listener;
+    while ((listener=QueueSequence.fromQueue(postNotify).removeFirstElement()) != null) {
+      FileProcessor.ListenerData data=MapSequence.fromMap(dataMap).get(listener);
+      if (data.isNotified) {
+        continue;
+      }
+      listener.update(monitor.subTask(0,SubProgressKind.AS_COMMENT),data);
+      data.isNotified=true;
+    }
+  }
+  finally {
+    monitor.done();
+  }
+}

@@ -35,24 +35,24 @@
         }
       }
     }
+    if (unchangedDependencies.isEmpty() || !myGenerateDebugInfo) {
+      return;
+    }
     DebugInfo generatedDebugInfo=status.getDebugInfo();
-    if (!unchangedDependencies.isEmpty()) {
-      if (generatedDebugInfo == null) {
-        myStreamHandler.touch(TraceInfoCache.getInstance().getCacheFileName(),false);
+    if (generatedDebugInfo == null) {
+      generatedDebugInfo=new DebugInfoBuilder().getDebugInfo();
+      status.setDebugInfo(generatedDebugInfo);
+    }
+    DebugInfo cachedDebugInfo=TraceInfoCache.getInstance().getLastGeneratedDebugInfo(status.getOriginalInputModel());
+    if (cachedDebugInfo != null) {
+      List<SNodePointer> unchangedRoots=new ArrayList<SNodePointer>();
+      String inputModelUid=status.getOriginalInputModel().getSModelReference().toString();
+      for (      GenerationRootDependencies dependency : dependencies.getUnchangedDependencies()) {
+        String rootId=dependency.getRootId();
+        if (rootId == null)         continue;
+        unchangedRoots.add(new SNodePointer(inputModelUid,rootId));
       }
- else {
-        DebugInfo cachedDebugInfo=TraceInfoCache.getInstance().getLastGeneratedDebugInfo(status.getOriginalInputModel());
-        if (cachedDebugInfo != null) {
-          List<SNodePointer> unchangedRoots=new ArrayList<SNodePointer>();
-          String inputModelUid=status.getOriginalInputModel().getSModelReference().toString();
-          for (          GenerationRootDependencies dependency : dependencies.getUnchangedDependencies()) {
-            String rootId=dependency.getRootId();
-            if (rootId == null)             continue;
-            unchangedRoots.add(new SNodePointer(inputModelUid,rootId));
-          }
-          DebugInfoBuilder.completeDebugInfoFromCache(cachedDebugInfo,generatedDebugInfo,unchangedRoots);
-        }
-      }
+      DebugInfoBuilder.completeDebugInfoFromCache(cachedDebugInfo,generatedDebugInfo,unchangedRoots);
     }
   }
 }

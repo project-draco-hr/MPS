@@ -1,37 +1,29 @@
 {
-  List<org.jetbrains.mps.openapi.model.SModelReference> allLoadedModels=new ArrayList<org.jetbrains.mps.openapi.model.SModelReference>();
-  ModuleDescriptor descriptor=getModuleDescriptor();
-  Set<ModelRoot> result=new HashSet<ModelRoot>();
-  if (descriptor != null) {
-    SModelRepository smRepo=SModelRepository.getInstance();
-    Collection<ModelRootDescriptor> roots=descriptor.getModelRootDescriptors();
-    for (    ModelRootDescriptor modelRoot : roots) {
-      try {
-        ModelRootFactory modelRootFactory=PersistenceFacade.getInstance().getModelRootFactory(modelRoot.getType());
-        if (modelRootFactory == null) {
-          LOG.error("Unknown model root type: `" + modelRoot.getType() + "'. Requested by: "+ this);
-          continue;
-        }
-        ModelRoot root=modelRootFactory.create();
-        root.load(modelRoot.getMemento());
-        ((ModelRootBase)root).setModule(this);
-        result.add(root);
-        for (        SModel model : root.getModels()) {
-          allLoadedModels.add(model.getModelReference());
-          if (smRepo.getModelDescriptor(model.getModelReference()) == null) {
-            smRepo.registerModelDescriptor((SModelDescriptor)model,this);
-          }
-        }
+  ModelAccess.assertLegalWrite();
+  Set<ModelRoot> toRemove=new HashSet<ModelRoot>(mySModelRoots);
+  Set<ModelRoot> toUpdate=new HashSet<ModelRoot>(mySModelRoots);
+  for (  ModelRoot root : loadRoots()) {
+    try {
+      if (mySModelRoots.contains(root)) {
+        toRemove.remove(root);
       }
- catch (      Exception e) {
-        LOG.error("Error loading models from root with type: `" + modelRoot.getType() + "'. Requested by: "+ this,e);
+ else {
+        ModelRootBase rootBase=(ModelRootBase)root;
+        rootBase.setModule(this);
+        mySModelRoots.add(root);
+        rootBase.attach();
       }
     }
-    for (    SModelDescriptor md : smRepo.getModelDescriptors(this)) {
-      if (allLoadedModels.contains(md.getSModelReference()))       continue;
-      if (!(md instanceof BaseSModelDescriptorWithSource))       continue;
-      smRepo.unRegisterModelDescriptor(md,this);
+ catch (    Exception e) {
+      LOG.error("Error loading models from root `" + root.getPresentation() + "'. Requested by: "+ this,e);
     }
   }
-  return result;
+  toUpdate.removeAll(toRemove);
+  for (  ModelRoot modelRoot : toRemove) {
+    ((ModelRootBase)modelRoot).dispose();
+  }
+  mySModelRoots.removeAll(toRemove);
+  for (  ModelRoot modelRoot : toUpdate) {
+    ((ModelRootBase)modelRoot).update();
+  }
 }

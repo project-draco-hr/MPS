@@ -8,18 +8,22 @@
     public void run(){
       try {
         Thread.sleep(IntentionsSupport.INTENTION_SHOW_DELAY);
+        if (interrupted()) {
+          return;
+        }
         boolean show=ModelAccess.instance().runReadAction(new Computable<Boolean>(){
           public Boolean compute(){
             if (isInconsistentEditor() || myEditor.isReadOnly())             return false;
-            return !getEnabledIntentions(false).isEmpty();
+            return IntentionsManager.getInstance().hasAvailableBaseIntentions(myEditor.getSelectedNode());
           }
         }
 );
-        if (!show)         return;
-        if (interrupted())         return;
+        if (!show || interrupted()) {
+          return;
+        }
         ModelAccess.instance().runReadInEDT(new Runnable(){
           public void run(){
-            if (isInconsistentEditor() || myEditor.isReadOnly())             return;
+            if (isInconsistentEditor() || myEditor.isReadOnly() || interrupted())             return;
             if (myEditor.getSelectedCell() == null) {
               hideLightBulb();
             }
