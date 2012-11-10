@@ -4,38 +4,36 @@
       Iterable<IResource> _output_21gswx_a0a=null;
 switch (0) {
 case 0:
-        long startTime=System.currentTimeMillis();
-      final Wrappers._long textGenTime=new Wrappers._long(0);
-    long textGenTimePlusReadActionTime=0;
-  long currentTime=System.currentTimeMillis();
-final Wrappers._T<Iterable<GResource>> resources=new Wrappers._T<Iterable<GResource>>(Sequence.fromIterable(input).select(new ISelector<IResource,GResource>(){
-  public GResource select(  IResource it){
-    return (GResource)(IResource)it;
-  }
-}
+        long textGenStartTime=System.currentTimeMillis();
+      final Wrappers._T<Iterable<GResource>> resources=new Wrappers._T<Iterable<GResource>>(Sequence.fromIterable(input).select(new ISelector<IResource,GResource>(){
+        public GResource select(        IResource it){
+          return (GResource)(IResource)it;
+        }
+      }
 ));
-if (Sequence.fromIterable(resources.value).any(new IWhereFilter<GResource>(){
-public boolean accept(GResource it){
-  return !(it.status().isOk());
-}
-}
+    if (Sequence.fromIterable(resources.value).any(new IWhereFilter<GResource>(){
+      public boolean accept(      GResource it){
+        return !(it.status().isOk());
+      }
+    }
 )) {
-monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Generation was not OK")));
-return new IResult.FAILURE(_output_21gswx_a0a);
-}
-for (GResource resource : Sequence.fromIterable(resources.value)) {
-if (resource.module().getOutputFor(resource.model()) == null) {
-monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("no output location for " + resource.model().getLongName())));
-}
-}
+      monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Generation was not OK")));
+      return new IResult.FAILURE(_output_21gswx_a0a);
+    }
+  for (  GResource resource : Sequence.fromIterable(resources.value)) {
+    if (resource.module().getOutputFor(resource.model()) == null) {
+      monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("no output location for " + resource.model().getLongName())));
+    }
+  }
 resources.value=Sequence.fromIterable(resources.value).where(new IWhereFilter<GResource>(){
-public boolean accept(GResource it){
-return it.module().getOutputFor(it.model()) != null;
-}
+  public boolean accept(  GResource it){
+    return it.module().getOutputFor(it.model()) != null;
+  }
 }
 );
 boolean _generateDebugInfo=pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).generateDebugInfo() == null || pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).generateDebugInfo();
 boolean _failIfNoTextgen=pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).failIfNoTextgen() != null && pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).failIfNoTextgen();
+long prepareStartTime=System.currentTimeMillis();
 Map<IResource,Iterable<IDelta>> retainedFilesDelta=MapSequence.fromMap(new HashMap<IResource,Iterable<IDelta>>());
 Map<IResource,Iterable<IDelta>> retainedCachesDelta=MapSequence.fromMap(new HashMap<IResource,Iterable<IDelta>>());
 final Map<IResource,JavaStreamHandler> streamHandlers=MapSequence.fromMap(new HashMap<IResource,JavaStreamHandler>());
@@ -55,7 +53,8 @@ return GenerationFacade.canGenerate(smd);
 String output=resource.module().getOutputFor(resource.model());
 MapSequence.fromMap(streamHandlers).put(resource,new JavaStreamHandler(resource.model(),pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Make.make"),Make_Facet.Target_make.Parameters.class).pathToFile().invoke(output),pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Make.make"),Make_Facet.Target_make.Parameters.class).pathToFile().invoke(FileGenerationUtil.getCachesPath(output))));
 }
-long prepareTime=System.currentTimeMillis() - currentTime;
+long prepareTime=System.currentTimeMillis() - prepareStartTime;
+final Wrappers._long textGenTime=new Wrappers._long(0);
 monitor.currentProgress().beginWork("Writing",Sequence.fromIterable(input).count() * 100,monitor.currentProgress().workLeft());
 for (final GResource gres : Sequence.fromIterable(resources.value)) {
 monitor.currentProgress().advanceWork("Writing",100,gres.status().getInputModel().getSModelReference().getSModelFqName().getLongName());
@@ -64,7 +63,6 @@ final Wrappers._boolean ok=new Wrappers._boolean();
 final TextGenerator textgen=new TextGenerator(javaStreamHandler,BLDependenciesCache.getInstance().getGenerator(),(_generateDebugInfo ? TraceInfoCache.getInstance().getGenerator() : null),GenerationDependenciesCache.getInstance().getGenerator());
 textgen.setFailIfNoTextgen(_failIfNoTextgen);
 textgen.setGenerateDebugInfo(_generateDebugInfo);
-currentTime=System.currentTimeMillis();
 try {
 ModelAccess.instance().runReadAction(new Runnable(){
 public void run(){
@@ -78,7 +76,6 @@ textGenTime.value+=System.currentTimeMillis() - innerTime;
   finally {
 javaStreamHandler.dispose();
 }
-textGenTimePlusReadActionTime+=System.currentTimeMillis() - currentTime;
 if (!(ok.value)) {
 for (IMessage err : textgen.errors()) {
 monitor.reportFeedback(new IFeedback.MESSAGE(err));
@@ -87,29 +84,31 @@ monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Failed to generate te
 return new IResult.FAILURE(_output_21gswx_a0a);
 }
 }
-currentTime=System.currentTimeMillis();
+final Wrappers._long flushTime=new Wrappers._long();
 if (!(FileSystem.getInstance().runWriteTransaction(new Runnable(){
 public void run(){
+long startTime=System.currentTimeMillis();
 for (JavaStreamHandler javaStreamHandler : Sequence.fromIterable(MapSequence.fromMap(streamHandlers).values())) {
 javaStreamHandler.flush();
 }
+flushTime.value=System.currentTimeMillis() - startTime;
 }
 }
 ))) {
 monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Failed to save files")));
 return new IResult.FAILURE(_output_21gswx_a0a);
 }
-long flushTime=System.currentTimeMillis() - currentTime;
 for (GResource resource : Sequence.fromIterable(resources.value)) {
 Iterable<IDelta> delta=Sequence.fromIterable(MapSequence.fromMap(streamHandlers).get(resource).delta()).concat(Sequence.fromIterable(MapSequence.fromMap(retainedFilesDelta).get(resource))).concat(Sequence.fromIterable(MapSequence.fromMap(retainedCachesDelta).get(resource)));
 IResource result=new TResource(resource.module(),delta,resource.model());
 _output_21gswx_a0a=Sequence.fromIterable(_output_21gswx_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(result)));
 }
-currentTime=System.currentTimeMillis();
+final Wrappers._long cleanUpTime=new Wrappers._long();
 if (!(FileSystem.getInstance().runWriteTransaction(new Runnable(){
 public void run(){
 ModelAccess.instance().requireWrite(new Runnable(){
 public void run(){
+long startTime=System.currentTimeMillis();
 if (!(Boolean.TRUE.equals(pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.configure"),Generate_Facet.Target_configure.Variables.class).saveTransient()))) {
 for (GResource resource : Sequence.fromIterable(resources.value)) {
 SModelDescriptor outputMD=resource.status().getOutputModelDescriptor();
@@ -119,6 +118,7 @@ if (outputMD instanceof TransientModelsModule.TransientSModelDescriptor) {
 }
 }
 CleanupManager.getInstance().cleanup();
+cleanUpTime.value=System.currentTimeMillis() - startTime;
 }
 }
 );
@@ -128,16 +128,14 @@ CleanupManager.getInstance().cleanup();
 monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Failed to remove transient models")));
 return new IResult.FAILURE(_output_21gswx_a0a);
 }
-long cleanUpTime=System.currentTimeMillis() - currentTime;
 monitor.currentProgress().finishWork("Writing");
-long overallTime=System.currentTimeMillis() - startTime;
-if (true) {
-LOG.info("text gen overall time: " + overallTime);
+long overallTime=System.currentTimeMillis() - textGenStartTime;
+if (false) {
 LOG.info("text gen prepare time: " + prepareTime);
 LOG.info("text gen generate time: " + textGenTime.value);
-LOG.info("text gen generate time plus read action: " + textGenTimePlusReadActionTime);
-LOG.info("text gen clean up time: " + cleanUpTime);
-LOG.info("text gen flush time: " + flushTime);
+LOG.info("text gen flush time: " + flushTime.value);
+LOG.info("text gen clean up time: " + cleanUpTime.value);
+LOG.info("text gen overhead time: " + (overallTime - prepareTime - textGenTime.value- cleanUpTime.value- flushTime.value));
 }
 default :
 return new IResult.SUCCESS(_output_21gswx_a0a);
