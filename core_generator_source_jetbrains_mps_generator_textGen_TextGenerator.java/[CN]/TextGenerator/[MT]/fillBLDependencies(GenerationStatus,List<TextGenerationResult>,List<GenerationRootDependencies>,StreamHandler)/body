@@ -1,0 +1,28 @@
+{
+  ModelDependencies modelDependencies=new ModelDependencies();
+  for (  TextGenerationResult result : results) {
+    if (TextGen.NO_TEXTGEN != result.getResult()) {
+      if (result.hasDependencies()) {
+        modelDependencies.addDependencies(new RootDependencies(NameUtil.nodeFQName(result.getRoot()),getFileName(result.getRoot()),result.getDependencies(TextGen.DEPENDENCY),result.getDependencies(TextGen.EXTENDS)));
+      }
+    }
+  }
+  sourceStatus.setBLDependencies(modelDependencies);
+  ModelDependencies modelDep=null;
+  SModelDescriptor originalInputModel=sourceStatus.getOriginalInputModel();
+  for (  GenerationRootDependencies rdep : unchangedDependencies) {
+    for (    String filename : rdep.getFiles()) {
+      if (streamHandler.touch(filename,false)) {
+        if (modelDep == null) {
+          modelDep=BLDependenciesCache.getInstance().get(originalInputModel);
+        }
+        if (modelDep != null) {
+          RootDependencies root=modelDep.getDependency(filename);
+          if (root != null) {
+            sourceStatus.getBLDependencies().replaceRoot(root);
+          }
+        }
+      }
+    }
+  }
+}
