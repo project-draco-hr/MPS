@@ -1,0 +1,30 @@
+{
+  Language language=SModelUtil.getDeclaringLanguage(conceptNode);
+  SModel resultModel=null;
+  for (  SModelDescriptor modelDescriptor : ListSequence.fromList(language.getOwnModelDescriptors())) {
+    if (SModelStereotype.isStubModelStereotype(modelDescriptor.getStereotype())) {
+      continue;
+    }
+    SModel model=modelDescriptor.getSModel();
+    if (SModelOperations.getModelName(model).substring(SModelOperations.getModelName(model).lastIndexOf(".") + 1).equals("behavior")) {
+      resultModel=model;
+      break;
+    }
+  }
+  if (resultModel == null) {
+    return null;
+  }
+  SNode behavior=null;
+  for (  SNode root : ListSequence.fromList(SModelOperations.getRoots(resultModel,"jetbrains.mps.lang.behavior.structure.ConceptBehavior"))) {
+    if (SLinkOperations.getTarget(root,"concept",false) == conceptNode) {
+      behavior=root;
+      break;
+    }
+  }
+  if (behavior == null) {
+    behavior=SNodeFactoryOperations.createNewNode(NameUtil.nodeFQName(SConceptOperations.findConceptDeclaration("jetbrains.mps.lang.behavior.structure.ConceptBehavior")),null);
+    BehaviorReflection.invokeVirtual(Void.class,behavior,"virtual_setBaseConcept_6261424444345963020",new Object[]{conceptNode});
+    SModelOperations.addRootNode(resultModel,behavior);
+  }
+  return behavior;
+}

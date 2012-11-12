@@ -1,0 +1,61 @@
+{
+  SNode conceptNode=SNodeOperations.getAncestor(conceptPropertyDeclaration,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration",false,false);
+  if (SConceptOperations.isExactly(((SNode)conceptNode),"jetbrains.mps.lang.core.structure.BaseConcept") && (SPropertyOperations.getString(conceptPropertyDeclaration,"name").equals("abstract") || SPropertyOperations.getString(conceptPropertyDeclaration,"name").equals("final") || SPropertyOperations.getString(conceptPropertyDeclaration,"name").equals("shortDescription")|| SPropertyOperations.getString(conceptPropertyDeclaration,"name").equals("alias"))) {
+    return null;
+  }
+  boolean methodIsAbstract=true;
+  boolean defaultBooleanMethod=false;
+  if (SNodeOperations.isInstanceOf(conceptPropertyDeclaration,"jetbrains.mps.lang.structure.structure.BooleanConceptPropertyDeclaration")) {
+    methodIsAbstract=false;
+    defaultBooleanMethod=true;
+  }
+  SNode sameConceptProperty=null;
+  for (  SNode conceptProperty : ListSequence.fromList(SLinkOperations.getTargets(conceptNode,"conceptProperty",true))) {
+    if (SLinkOperations.getTarget(conceptProperty,"conceptPropertyDeclaration",false) == conceptPropertyDeclaration) {
+      methodIsAbstract=false;
+      defaultBooleanMethod=false;
+      sameConceptProperty=conceptProperty;
+      break;
+    }
+  }
+  String name;
+  SNode returnType;
+  SNode returnStatement;
+  if (SNodeOperations.isInstanceOf(conceptPropertyDeclaration,"jetbrains.mps.lang.structure.structure.IntegerConceptPropertyDeclaration")) {
+    returnType=new ConceptPropertiesHelper.QuotationClass_azpnkk_a0a0a11a8().createNode();
+    name="get" + NameUtil.capitalize(SPropertyOperations.getString(conceptPropertyDeclaration,"name"));
+    SNode result=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.IntegerConstant",null);
+    SPropertyOperations.set(result,"value","" + (SPropertyOperations.getInteger(SNodeOperations.cast(sameConceptProperty,"jetbrains.mps.lang.structure.structure.IntegerConceptProperty"),"value")));
+    returnStatement=new ConceptPropertiesHelper.QuotationClass_azpnkk_a0a4a11a8().createNode(result);
+  }
+ else   if (SNodeOperations.isInstanceOf(conceptPropertyDeclaration,"jetbrains.mps.lang.structure.structure.StringConceptPropertyDeclaration")) {
+    returnType=new ConceptPropertiesHelper.QuotationClass_azpnkk_a0a0a0l0i().createNode();
+    name="get" + NameUtil.capitalize(SPropertyOperations.getString(conceptPropertyDeclaration,"name"));
+    SNode result=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StringLiteral",null);
+    SPropertyOperations.set(result,"value",SPropertyOperations.getString(SNodeOperations.cast(sameConceptProperty,"jetbrains.mps.lang.structure.structure.StringConceptProperty"),"value"));
+    returnStatement=new ConceptPropertiesHelper.QuotationClass_azpnkk_a0a4a0l0i().createNode(result);
+  }
+ else   if (SNodeOperations.isInstanceOf(conceptPropertyDeclaration,"jetbrains.mps.lang.structure.structure.BooleanConceptPropertyDeclaration")) {
+    returnType=new ConceptPropertiesHelper.QuotationClass_azpnkk_a0a0a1l0i().createNode();
+    SNode result=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.BooleanConstant",null);
+    SPropertyOperations.set(result,"value","" + (defaultBooleanMethod));
+    returnStatement=new ConceptPropertiesHelper.QuotationClass_azpnkk_a0a3a1l0i().createNode(result);
+    name="get" + NameUtil.capitalize(SPropertyOperations.getString(conceptPropertyDeclaration,"name"));
+  }
+ else {
+    return null;
+  }
+  SNode method=createMethod(name,methodIsAbstract,null,returnType);
+  if (!(methodIsAbstract)) {
+    SetSequence.fromSet(conceptProperties).removeElement(sameConceptProperty);
+    ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(method,"body",true),"statement",true)).addElement(returnStatement);
+  }
+  SNode conceptBehavior=getConceptBehavior(conceptNode);
+  if (conceptBehavior == null) {
+    return null;
+  }
+ else {
+    ListSequence.fromList(SLinkOperations.getTargets(conceptBehavior,"method",true)).addElement(method);
+  }
+  return method;
+}
