@@ -1,6 +1,5 @@
 {
   String macroConceptFQName=macro.getConcept().getId();
-  IGenerationTracer generationTracer=myGenerator.getGenerationTracer();
   List<SNode> outputNodes=new ArrayList<SNode>();
   String mappingName=GeneratorUtilEx.getMappingName(macro,outerMappingName);
   if (macroConceptFQName.equals(RuleUtil.concept_LoopMacro)) {
@@ -8,15 +7,15 @@
     for (    SNode newInputNode : newInputNodes) {
       boolean inputChanged=(newInputNode != templateContext.getInput());
       if (inputChanged) {
-        generationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+        myTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
       }
       try {
-        List<SNode> _outputNodes=createOutputNodesForTemplateNode(mappingName,templateNode,templateContext.subContext(mappingName,newInputNode),nodeMacrosToSkip + 1);
+        List<SNode> _outputNodes=applyTemplate(mappingName,templateNode,templateContext.subContext(mappingName,newInputNode),nodeMacrosToSkip + 1);
         if (_outputNodes != null)         outputNodes.addAll(_outputNodes);
       }
   finally {
         if (inputChanged) {
-          generationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+          myTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
         }
       }
     }
@@ -60,15 +59,15 @@
     return outputNodes;
   }
  else   if (macroConceptFQName.equals(RuleUtil.concept_WeaveMacro)) {
-    List<SNode> _outputNodes=createOutputNodesForTemplateNode(mappingName,templateNode,templateContext.subContext(mappingName),nodeMacrosToSkip + 1);
+    List<SNode> _outputNodes=applyTemplate(mappingName,templateNode,templateContext.subContext(mappingName),nodeMacrosToSkip + 1);
     if (_outputNodes != null && _outputNodes.size() > 0) {
       if (_outputNodes.size() == 1) {
         SNode contextNode=_outputNodes.get(0);
         List<SNode> nodesToWeave=getNewInputNodes(macro,templateContext);
         for (        SNode node : nodesToWeave) {
           try {
-            generationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(node));
-            generationTracer.pushRuleConsequence(new SNodePointer(macro));
+            myTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(node));
+            myTracer.pushRuleConsequence(new SNodePointer(macro));
             SNode consequence=RuleUtil.getWeaveMacro_Consequence(macro);
             if (consequence == null) {
               myGenerator.showErrorMessage(templateContext.getInput(),macro,"couldn't evaluate weave macro: no consequence");
@@ -78,7 +77,7 @@
             weaveMacro(template,contextNode,templateContext.subContext(null,node),macro);
           }
   finally {
-            generationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(node));
+            myTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(node));
           }
         }
       }
@@ -90,7 +89,7 @@
     return outputNodes;
   }
  else   if (macroConceptFQName.equals(RuleUtil.concept_LabelMacro)) {
-    List<SNode> _outputNodes=createOutputNodesForTemplateNode(mappingName,templateNode,templateContext.subContext(mappingName),nodeMacrosToSkip + 1);
+    List<SNode> _outputNodes=applyTemplate(mappingName,templateNode,templateContext.subContext(mappingName),nodeMacrosToSkip + 1);
     if (_outputNodes != null)     outputNodes.addAll(_outputNodes);
     return outputNodes;
   }
@@ -98,14 +97,14 @@
     String varName=RuleUtil.getVarMacro_Name(macro);
     Object varValue=myReductionContext.getQueryExecutor().evaluateVariableQuery(templateContext.getInput(),RuleUtil.getVarMacro_Query(macro),templateContext);
     TemplateContext newContext=templateContext.subContext(Collections.singletonMap(varName,varValue));
-    List<SNode> _outputNodes=createOutputNodesForTemplateNode(mappingName,templateNode,newContext.subContext(mappingName),nodeMacrosToSkip + 1);
+    List<SNode> _outputNodes=applyTemplate(mappingName,templateNode,newContext.subContext(mappingName),nodeMacrosToSkip + 1);
     if (_outputNodes != null)     outputNodes.addAll(_outputNodes);
     return outputNodes;
   }
  else   if (macroConceptFQName.equals(RuleUtil.concept_IfMacro)) {
     List<SNode> _outputNodes=null;
     if (myReductionContext.getQueryExecutor().checkConditionForIfMacro(templateContext.getInput(),macro,templateContext)) {
-      _outputNodes=createOutputNodesForTemplateNode(mappingName,templateNode,templateContext.subContext(mappingName),nodeMacrosToSkip + 1);
+      _outputNodes=applyTemplate(mappingName,templateNode,templateContext.subContext(mappingName),nodeMacrosToSkip + 1);
     }
  else {
       SNode altConsequence=RuleUtil.getIfMacro_AlternativeConsequence(macro);
@@ -119,7 +118,7 @@
           for (          Pair<SNode,String> nodeAndMappingNamePair : nodeAndMappingNamePairs) {
             SNode altTemplateNode=nodeAndMappingNamePair.o1;
             String innerMappingName=nodeAndMappingNamePair.o2 != null ? nodeAndMappingNamePair.o2 : mappingName;
-            List<SNode> __outputNodes=createOutputNodesForExternalTemplateNode(innerMappingName,altTemplateNode,templateContext.subContext(innerMappingName));
+            List<SNode> __outputNodes=applyExternalTemplate(innerMappingName,altTemplateNode,templateContext.subContext(innerMappingName));
             if (__outputNodes != null) {
               if (_outputNodes == null)               _outputNodes=new ArrayList<SNode>();
               _outputNodes.addAll(__outputNodes);
@@ -139,18 +138,18 @@
     for (    SNode newInputNode : newInputNodes) {
       boolean inputChanged=(newInputNode != templateContext.getInput());
       if (inputChanged) {
-        generationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+        myTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
       }
       try {
         TemplateContext newcontext=templateContext.subContext(mappingName,newInputNode);
         if (macro_mapperFunction != null) {
           SNode childToReplaceLater=SModelUtil_new.instantiateConceptDeclaration(templateNode.getConcept().getId(),myOutputModel,myGenerator.getScope(),false);
-          generationTracer.pushOutputNodeToReplaceLater(childToReplaceLater);
+          myTracer.pushOutputNodeToReplaceLater(childToReplaceLater);
           outputNodes.add(childToReplaceLater);
           myGenerator.getDelayedChanges().addExecuteMapSrcNodeMacroChange(macro,childToReplaceLater,newcontext,myReductionContext);
         }
  else {
-          List<SNode> _outputNodes=createOutputNodesForTemplateNode(mappingName,templateNode,newcontext,nodeMacrosToSkip + 1);
+          List<SNode> _outputNodes=applyTemplate(mappingName,templateNode,newcontext,nodeMacrosToSkip + 1);
           if (_outputNodes != null) {
             outputNodes.addAll(_outputNodes);
             for (            SNode outputNode : _outputNodes) {
@@ -161,7 +160,7 @@
       }
   finally {
         if (inputChanged) {
-          generationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+          myTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
         }
       }
     }
@@ -178,22 +177,22 @@
     if (newInputNode == null) {
       TemplateSwitchMapping tswitch=myGenerator.getSwitch(switchPtr);
       if (tswitch != null) {
-        tswitch.processNull(new TemplateExecutionEnvironmentImpl(myGenerator,myReductionContext,myGenerator.getOperationContext(),myGenerator.getGenerationTracer()),switchPtr,templateContext);
+        tswitch.processNull(new TemplateExecutionEnvironmentImpl(myGenerator,myReductionContext,myGenerator.getOperationContext(),myTracer),switchPtr,templateContext);
       }
       return Collections.emptyList();
     }
     boolean inputChanged=(newInputNode != templateContext.getInput());
     if (inputChanged) {
-      generationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+      myTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
     }
-    generationTracer.pushSwitch(new SNodePointer(templateSwitch));
+    myTracer.pushSwitch(new SNodePointer(templateSwitch));
     try {
       final TemplateContext switchContext=templateContext.subContext(mappingName,newInputNode);
       Collection<SNode> collection=myGenerator.tryToReduce(switchContext,switchPtr,mappingName,myReductionContext);
       if (collection == null) {
         TemplateSwitchMapping tswitch=myGenerator.getSwitch(switchPtr);
         if (tswitch != null) {
-          TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(myGenerator,myReductionContext,myGenerator.getOperationContext(),myGenerator.getGenerationTracer());
+          TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(myGenerator,myReductionContext,myGenerator.getOperationContext(),myTracer);
           try {
             collection=tswitch.applyDefault(environment,switchPtr,mappingName,switchContext);
           }
@@ -205,7 +204,7 @@
           }
         }
         if (collection == null) {
-          collection=createOutputNodesForTemplateNode(mappingName,templateNode,templateContext.subContext(mappingName,newInputNode),nodeMacrosToSkip + 1);
+          collection=applyTemplate(mappingName,templateNode,templateContext.subContext(mappingName,newInputNode),nodeMacrosToSkip + 1);
         }
       }
       if (collection != null) {
@@ -214,7 +213,7 @@
     }
   finally {
       if (inputChanged) {
-        generationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+        myTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
       }
     }
     return outputNodes;
@@ -246,20 +245,20 @@
     }
     boolean inputChanged=(newInputNode != templateContext.getInput());
     if (inputChanged) {
-      generationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+      myTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
     }
-    generationTracer.pushTemplateNode(new SNodePointer(includeTemplate));
+    myTracer.pushTemplateNode(new SNodePointer(includeTemplate));
     try {
       for (      SNode fragment : fragments) {
         SNode templateForInclude=fragment.getParent();
         mappingName=GeneratorUtilEx.getMappingName(fragment,mappingName);
-        List<SNode> _outputNodes=createOutputNodesForExternalTemplateNode(mappingName,templateForInclude,templateContext.subContext(mappingName,newInputNode));
+        List<SNode> _outputNodes=applyExternalTemplate(mappingName,templateForInclude,templateContext.subContext(mappingName,newInputNode));
         if (_outputNodes != null)         outputNodes.addAll(_outputNodes);
       }
     }
   finally {
       if (inputChanged) {
-        generationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+        myTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
       }
     }
     return outputNodes;
@@ -282,27 +281,27 @@
     }
     boolean inputChanged=(newInputNode != templateContext.getInput());
     if (inputChanged) {
-      generationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+      myTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
     }
-    generationTracer.pushTemplateNode(new SNodePointer(template));
+    myTracer.pushTemplateNode(new SNodePointer(template));
     try {
       for (      SNode fragment : fragments) {
         SNode templateForInclude=fragment.getParent();
         mappingName=GeneratorUtilEx.getMappingName(fragment,mappingName);
-        List<SNode> _outputNodes=createOutputNodesForExternalTemplateNode(mappingName,templateForInclude,newcontext.subContext(mappingName));
+        List<SNode> _outputNodes=applyExternalTemplate(mappingName,templateForInclude,newcontext.subContext(mappingName));
         if (_outputNodes != null)         outputNodes.addAll(_outputNodes);
       }
     }
   finally {
       if (inputChanged) {
-        generationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+        myTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
       }
     }
     return outputNodes;
   }
  else   if (macroConceptFQName.equals(RuleUtil.concept_TraceMacro)) {
     SNode inputNode=getNewInputNode(macro,templateContext);
-    List<SNode> _outputNodes=createOutputNodesForTemplateNode(mappingName,templateNode,templateContext.subContext(mappingName),nodeMacrosToSkip + 1);
+    List<SNode> _outputNodes=applyTemplate(mappingName,templateNode,templateContext.subContext(mappingName),nodeMacrosToSkip + 1);
     if (_outputNodes != null) {
       outputNodes.addAll(_outputNodes);
       for (      SNode outputNode : _outputNodes) {
@@ -316,15 +315,15 @@
     for (    SNode newInputNode : newInputNodes) {
       boolean inputChanged=(newInputNode != templateContext.getInput());
       if (inputChanged) {
-        generationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+        myTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
       }
       try {
-        List<SNode> _outputNodes=createOutputNodesForTemplateNode(mappingName,templateNode,templateContext.subContext(mappingName,newInputNode),nodeMacrosToSkip + 1);
+        List<SNode> _outputNodes=applyTemplate(mappingName,templateNode,templateContext.subContext(mappingName,newInputNode),nodeMacrosToSkip + 1);
         if (_outputNodes != null)         outputNodes.addAll(_outputNodes);
       }
   finally {
         if (inputChanged) {
-          generationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+          myTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
         }
       }
     }
