@@ -1,0 +1,28 @@
+{
+  ModelRoot root=PersistenceFacade.getInstance().getModelRootFactory(myEntry.getType()).create();
+  root.load(myEntry.getMemento());
+  JPanel panel=new JPanel(new GridLayoutManager(2,1));
+  PersistenceFacade pReg=PersistenceRegistry.getInstance();
+  Iterable<String> ti=pReg.getTypeIds();
+  ComboBox comboBox=new ComboBox();
+  for (  String s : ti)   comboBox.addItem(s);
+  comboBox.setSelectedItem(root.getType());
+  panel.add(comboBox,new GridConstraints(0,0,1,1,GridConstraints.ANCHOR_NORTHWEST,GridConstraints.FILL_HORIZONTAL,GridConstraints.SIZEPOLICY_CAN_GROW,GridConstraints.SIZEPOLICY_FIXED,null,null,null));
+  FileSystemTreeImpl fileSystemTree=new FileSystemTreeImpl(null,FileChooserDescriptorFactory.createSingleFolderDescriptor());
+  AbstractTreeUi ui=fileSystemTree.getTreeBuilder().getUi();
+  VirtualFile virtualFile=VirtualFileManager.getInstance().findFileByUrl(VirtualFileManager.constructUrl("file",myEntry.getRoot().getPath()));
+  fileSystemTree.select(virtualFile,null);
+  fileSystemTree.addListener(new Listener(){
+    @Override public void selectionChanged(    List<VirtualFile> selection){
+      if (selection.size() > 0)       ((ModelRootCallBack)myCallBack).pathChanged(selection.get(0).getPath());
+    }
+  }
+,new Disposable(){
+    @Override public void dispose(){
+    }
+  }
+);
+  JScrollPane scrollPane=ScrollPaneFactory.createScrollPane(ui.getTree());
+  panel.add(ui.getTree(),new GridConstraints(1,0,1,1,GridConstraints.ANCHOR_CENTER,GridConstraints.FILL_BOTH,GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_CAN_SHRINK,GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_CAN_SHRINK,null,null,null));
+  myEditorComponent=panel;
+}
