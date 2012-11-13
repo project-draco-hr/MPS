@@ -1,8 +1,19 @@
 {
   if (!status.isOk())   return false;
-  Map<SNode,Object> outputNodeContents=new LinkedHashMap<SNode,Object>();
-  if (!generateText(status,outputNodeContents))   return false;
-  generateFiles(status,outputNodeContents);
-  generateCaches(status);
+  if (status.getOutputModel() == null)   return true;
+  final AtomicReference<List<TextGenerationResult>> result=new AtomicReference<List<TextGenerationResult>>();
+  TextGeneratorEngine engine=new TextGeneratorEngine(myGenerateDebugInfo,myFailIfNoTextgen);
+  try {
+    engine.generateModels(Collections.singletonList(status.getOutputModel()),new GenerateCallback(){
+      @Override public void modelGenerated(      SModel model,      List<TextGenerationResult> results){
+        result.set(results);
+      }
+    }
+);
+  }
+  finally {
+    engine.shutdown();
+  }
+  myTextGenProblems=jetbrains.mps.generator.textGen.TextGenerator.handleTextGenResults(status,result.get(),myGenerateDebugInfo,myStreamHandler,myCacheGenerators);
   return myTextGenProblems.isEmpty();
 }

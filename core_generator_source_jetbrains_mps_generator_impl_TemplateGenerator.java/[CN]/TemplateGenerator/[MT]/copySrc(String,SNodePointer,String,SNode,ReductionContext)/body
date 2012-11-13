@@ -1,0 +1,34 @@
+{
+  if (inputNode.getModel() != getInputModel() || inputNode.getModel() == null) {
+    if (inputNode.getModel() != null) {
+      inputNode=CopyUtil.copy(inputNode);
+    }
+synchronized (myAdditionalInputNodes) {
+      if (!myAdditionalInputNodes.containsKey(inputNode)) {
+        myAdditionalInputNodes.put(inputNode,Boolean.TRUE);
+        for (        SNode n : inputNode.getDescendants()) {
+          myAdditionalInputNodes.put(n,Boolean.TRUE);
+        }
+      }
+    }
+  }
+  myGenerationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(inputNode));
+  try {
+    Collection<SNode> outputNodes=tryToReduce(new DefaultTemplateContext(inputNode),null,mappingName,reductionContext);
+    if (outputNodes != null) {
+      return outputNodes;
+    }
+    SNode copiedNode=copyInputNode(inputNode,reductionContext,new boolean[]{false});
+    if (templateNodeId != null) {
+      myMappings.addOutputNodeByInputAndTemplateNode(inputNode,templateNodeId,copiedNode);
+    }
+ else     if (templateNode != null) {
+      myMappings.addOutputNodeByInputAndTemplateNode(inputNode,templateNode.getNode(),copiedNode);
+    }
+    myMappings.addOutputNodeByInputNodeAndMappingName(inputNode,mappingName,copiedNode);
+    return Collections.singletonList(copiedNode);
+  }
+  finally {
+    myGenerationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(inputNode));
+  }
+}
