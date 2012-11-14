@@ -16,7 +16,7 @@
     }
   }
   Collection<Library> projectLibs2Add=new HashSet<Library>();
-  Map<String,Collection<VirtualFile>> projectLibs2Create=new HashMap<String,Collection<VirtualFile>>();
+  Map<ModuleReference,Collection<VirtualFile>> projectLibs2Create=new HashMap<ModuleReference,Collection<VirtualFile>>();
   for (  IModule usedModule : collectRuntimeModules(myAddedModules)) {
     if (!(usedModule instanceof Solution) || !usedModule.isPackaged() || BootstrapLanguages.JDK.equals(usedModule.getModuleReference())) {
       continue;
@@ -31,10 +31,10 @@
         projectLibs2Add.add(projectLibrary);
       }
  else {
-        Collection<VirtualFile> virtualFiles=projectLibs2Create.get(usedModule.getModuleFqName());
+        Collection<VirtualFile> virtualFiles=projectLibs2Create.get(usedModule.getModuleReference());
         if (virtualFiles == null) {
           virtualFiles=new LinkedHashSet<VirtualFile>();
-          projectLibs2Create.put(usedModule.getModuleFqName(),virtualFiles);
+          projectLibs2Create.put(usedModule.getModuleReference(),virtualFiles);
         }
         virtualFiles.add(jarFile);
       }
@@ -43,8 +43,10 @@
   for (  Library projectLibrary : projectLibs2Add) {
     myModifiableRootModel.addLibraryEntry(projectLibrary);
   }
-  for (  String libraryName : projectLibs2Create.keySet()) {
-    Collection<VirtualFile> libraryFiles=projectLibs2Create.get(libraryName);
-    myModifiableRootModel.addLibraryEntry(createProjectLibrary(libraryName,libraryFiles));
+  for (  ModuleReference moduleReference : projectLibs2Create.keySet()) {
+    Collection<VirtualFile> libraryFiles=projectLibs2Create.get(moduleReference);
+    Library projectLibrary=createProjectLibrary(moduleReference.getModuleFqName(),libraryFiles);
+    ModuleRuntimeLibrariesManager.getInstance(myContext.getProject()).addLibrary(projectLibrary,moduleReference);
+    myModifiableRootModel.addLibraryEntry(projectLibrary);
   }
 }
