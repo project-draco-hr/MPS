@@ -1,0 +1,40 @@
+{
+  IGeneratorLogger logger=myGenerator.getLogger();
+  if (myGenerator.isIncremental()) {
+    NodeReadEventsCaster.setNodesReadListener(null);
+  }
+  try {
+    if (myGenerator.getProgressMonitor().isCanceled()) {
+      if (myTracer.isTracing() && logger.needsInfo()) {
+        logger.info("generation canceled when processing branch:");
+        GeneratorUtil.logCurrentGenerationBranch(logger,myTracer,false);
+      }
+      throw new GenerationCanceledException();
+    }
+    try {
+      List<SNode> outputNodes=applyTemplate(mappingName,templateNode,context.subContext(mappingName),null);
+      if (outputNodes == null) {
+        throw new TemplateProcessingFailureException();
+      }
+      return outputNodes;
+    }
+ catch (    StackOverflowError e) {
+      logger.error("generation thread run out of stack space :(");
+      if (myTracer.isTracing()) {
+        logger.error("failed branch was:");
+        GeneratorUtil.logCurrentGenerationBranch(logger,myTracer,true);
+      }
+ else {
+        logger.error("try to increase JVM stack size (-Xss option)");
+        logger.error("to get more diagnostic generate model with the 'save transient models' option");
+      }
+      myGenerator.showErrorMessage(context.getInput(),templateNode,"couldn't process template");
+      throw new GenerationFailureException(e);
+    }
+  }
+  finally {
+    if (myGenerator.isIncremental()) {
+      NodeReadEventsCaster.removeNodesReadListener();
+    }
+  }
+}

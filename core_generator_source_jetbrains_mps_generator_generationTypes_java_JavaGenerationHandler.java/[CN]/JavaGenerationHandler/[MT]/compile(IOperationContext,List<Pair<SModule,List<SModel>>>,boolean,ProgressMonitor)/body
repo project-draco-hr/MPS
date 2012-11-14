@@ -1,0 +1,30 @@
+{
+  boolean compiledSuccessfully=generationOK;
+  monitor.start("",3 + (generationOK ? input.size() * 4 : 0));
+  try {
+    writeFiles(monitor.subTask(1));
+    monitor.advance(0);
+    if (generationOK) {
+      long compilationStart=System.currentTimeMillis();
+      boolean needToReload=false;
+      for (      Pair<SModule,List<SModel>> moduleListPair : input) {
+        SModule module=moduleListPair.o1;
+        if (module instanceof ClassLoadingModule && ((ClassLoadingModule)module).reloadClassesAfterGeneration()) {
+          needToReload=true;
+        }
+        boolean compilationResult=compileModuleInMPS(module,monitor.subTask(4));
+        monitor.advance(0);
+        compiledSuccessfully=compiledSuccessfully && compilationResult;
+      }
+      if (compiledSuccessfully && needToReload) {
+        reloadClasses(monitor.subTask(2));
+        monitor.advance(0);
+      }
+      info("Compilation finished in " + (System.currentTimeMillis() - compilationStart) + " ms");
+    }
+    return compiledSuccessfully;
+  }
+  finally {
+    monitor.done();
+  }
+}

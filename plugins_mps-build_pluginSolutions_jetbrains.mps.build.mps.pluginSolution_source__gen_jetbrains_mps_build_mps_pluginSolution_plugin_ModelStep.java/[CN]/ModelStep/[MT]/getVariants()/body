@@ -1,33 +1,24 @@
 {
   final Solution solution=this.myGenerator.getSolution();
   if (solution == null) {
-    return new SModelDescriptor[0];
+    return new SModel[0];
   }
  else {
-    final List<SModelDescriptor> modelDescriptors=SModelRepository.getInstance().getModelDescriptors(solution);
-    List<SModelDescriptor> filteredDescriptors=ModelAccess.instance().runReadAction(new Computable<List<SModelDescriptor>>(){
-      public List<SModelDescriptor> compute(){
-        return CollectionUtil.filter(modelDescriptors,new Condition<SModelDescriptor>(){
-          public boolean met(          SModelDescriptor modelDescriptor){
-            if (!(modelDescriptor instanceof DefaultSModelDescriptor)) {
-              return false;
-            }
-            IFile modelFile=((DefaultSModelDescriptor)modelDescriptor).getModelFile();
-            if (modelFile == null) {
-              return false;
-            }
-            for (            SModelRoot root : CollectionSequence.fromCollection(solution.getSModelRoots())) {
-              if (modelFile.getPath().startsWith(root.getPath())) {
-                return true;
-              }
-            }
-            return false;
+    List<SModel> models=ModelAccess.instance().runReadAction(new Computable<List<SModel>>(){
+      public List<SModel> compute(){
+        Iterable<SModel> models=Sequence.fromIterable(Collections.<SModel>emptyList());
+        for (        ModelRoot mr : solution.getModelRoots()) {
+          models=Sequence.fromIterable(models).concat(Sequence.fromIterable(mr.getModels()));
+        }
+        return Sequence.fromIterable(models).where(new IWhereFilter<SModel>(){
+          public boolean accept(          SModel it){
+            return it instanceof EditableSModelDescriptor && !(((EditableSModelDescriptor)it).isReadOnly());
           }
         }
-);
+).toListSequence();
       }
     }
 );
-    return ListSequence.fromList(filteredDescriptors).toGenericArray(SModelDescriptor.class);
+    return ListSequence.fromList(models).toGenericArray(SModel.class);
   }
 }

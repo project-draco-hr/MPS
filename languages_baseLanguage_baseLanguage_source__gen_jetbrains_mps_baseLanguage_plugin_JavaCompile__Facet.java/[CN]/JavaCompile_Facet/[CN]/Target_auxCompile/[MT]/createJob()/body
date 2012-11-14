@@ -8,42 +8,48 @@ case 0:
           _output_wf1ya0_a0b=Sequence.fromIterable(_output_wf1ya0_a0b).concat(Sequence.fromIterable(input));
           return new IResult.SUCCESS(_output_wf1ya0_a0b);
         }
-      int work=Sequence.fromIterable(input).foldLeft(0,new ILeftCombinator<IResource,Integer>(){
-        public Integer combine(        Integer s,        IResource it){
-          return s + ((((TResource)it).module().isCompileInMPS() ? 0 : 100));
-        }
+      if (pa.global().properties(Target_auxCompile.this.getName(),JavaCompile_Facet.Target_auxCompile.Parameters.class).skipAuxCompile() != null && pa.global().properties(Target_auxCompile.this.getName(),JavaCompile_Facet.Target_auxCompile.Parameters.class).skipAuxCompile()) {
+        return new IResult.SUCCESS(_output_wf1ya0_a0b);
       }
-);
-    if (work == 0) {
-      return new IResult.SUCCESS(_output_wf1ya0_a0b);
+    Iterable<TResource> toCompile=Sequence.fromIterable(input).select(new ISelector<IResource,TResource>(){
+      public TResource select(      IResource it){
+        return (TResource)(((IResource)it));
+      }
     }
-  if (pa.global().properties(Target_auxCompile.this.getName(),JavaCompile_Facet.Target_auxCompile.Parameters.class).skipAuxCompile() != null && pa.global().properties(Target_auxCompile.this.getName(),JavaCompile_Facet.Target_auxCompile.Parameters.class).skipAuxCompile()) {
-    return new IResult.SUCCESS(_output_wf1ya0_a0b);
+);
+  if (Sequence.fromIterable(toCompile).any(new IWhereFilter<TResource>(){
+    public boolean accept(    TResource it){
+      return it.module() == null;
+    }
   }
-IAuxProjectPeer peer=pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.checkParameters"),Variables.class).project().getComponent(IAuxProjectPeer.class);
-if (peer == null || !(peer.isValid())) {
-monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("IntelliJ IDEA is required for compilation")));
-return new IResult.FAILURE(_output_wf1ya0_a0b);
+)) {
+    return new IResult.FAILURE(_output_wf1ya0_a0b);
+  }
+toCompile=Sequence.fromIterable(toCompile).where(new IWhereFilter<TResource>(){
+  public boolean accept(  TResource it){
+    return !(it.module().isCompileInMPS());
+  }
 }
-monitor.currentProgress().beginWork("Compiling in IntelliJ IDEA",work,monitor.currentProgress().workLeft());
-boolean refreshed=false;
-for (IResource resource : Sequence.fromIterable(input)) {
-TResource tres=(TResource)resource;
-if (tres.module() == null) {
-return new IResult.FAILURE(_output_wf1ya0_a0b);
-}
-if (tres.module().isCompileInMPS()) {
-continue;
+);
+if (Sequence.fromIterable(toCompile).isEmpty()) {
+return new IResult.SUCCESS(_output_wf1ya0_a0b);
 }
 if (MPSCore.getInstance().isTestMode()) {
 return new IResult.FAILURE(_output_wf1ya0_a0b);
 }
-monitor.currentProgress().advanceWork("Compiling in IntelliJ IDEA",50,tres.module().getModuleReference().getModuleFqName());
-if (!(refreshed)) {
-peer.getJavaCompiler().refreshFiles();
-refreshed=true;
+IdeaJavaCompiler compiler=pa.global().properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.checkParameters"),Variables.class).project().getComponent(IdeaJavaCompiler.class);
+if (compiler == null || !(compiler.isValid())) {
+monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("IntelliJ IDEA is required for compilation")));
+return new IResult.FAILURE(_output_wf1ya0_a0b);
 }
-MPSCompilationResult cr=peer.getJavaCompiler().compileModule(tres.module());
+monitor.currentProgress().beginWork("Compiling in IntelliJ IDEA",1,monitor.currentProgress().workLeft());
+monitor.currentProgress().advanceWork("Compiling in IntelliJ IDEA",1);
+MPSCompilationResult cr=compiler.compileModules(Sequence.fromIterable(toCompile).select(new ISelector<TResource,IModule>(){
+public IModule select(TResource it){
+return it.module();
+}
+}
+).toGenericArray(IModule.class));
 if (cr != null) {
 for (IMessage msg : cr.getMessages()) {
 monitor.reportFeedback(new IFeedback.MESSAGE(msg));
@@ -63,9 +69,7 @@ monitor.reportFeedback(new IFeedback.INFORMATION(String.valueOf(cr)));
 }
 return new IResult.FAILURE(_output_wf1ya0_a0b);
 }
-monitor.currentProgress().advanceWork("Compiling in IntelliJ IDEA",50);
-_output_wf1ya0_a0b=Sequence.fromIterable(_output_wf1ya0_a0b).concat(Sequence.fromIterable(Sequence.<IResource>singleton(tres)));
-}
+_output_wf1ya0_a0b=Sequence.fromIterable(_output_wf1ya0_a0b).concat(Sequence.fromIterable(toCompile));
 monitor.currentProgress().finishWork("Compiling in IntelliJ IDEA");
 default :
 return new IResult.SUCCESS(_output_wf1ya0_a0b);
