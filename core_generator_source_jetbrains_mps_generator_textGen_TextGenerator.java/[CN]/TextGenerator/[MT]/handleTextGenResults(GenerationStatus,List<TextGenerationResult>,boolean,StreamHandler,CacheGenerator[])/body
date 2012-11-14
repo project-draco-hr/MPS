@@ -1,0 +1,23 @@
+{
+  if (sourceStatus.getOutputModel() == null || !sourceStatus.isOk()) {
+    throw new IllegalArgumentException();
+  }
+  for (  TextGenerationResult result : results) {
+    if (result.hasErrors() && result.problems().isEmpty()) {
+      throw new IllegalStateException();
+    }
+  }
+  List<IMessage> errors=new ArrayList<IMessage>();
+  for (  TextGenerationResult result : results) {
+    errors.addAll(result.problems());
+  }
+  GenerationDependencies dependencies=sourceStatus.getDependencies();
+  List<GenerationRootDependencies> unchangedDependencies=(dependencies != null) ? dependencies.getUnchangedDependencies() : Collections.<GenerationRootDependencies>emptyList();
+  fillBLDependencies(sourceStatus,results,unchangedDependencies,streamHandler);
+  if (generateDebugInfo) {
+    fillDebugInfo(sourceStatus,results,unchangedDependencies);
+  }
+  saveGeneratedFiles(results,errors,streamHandler);
+  generateCaches(sourceStatus,streamHandler,cacheGenerators);
+  return errors;
+}
