@@ -40,24 +40,21 @@ final Wrappers._long cleanUpTime=new Wrappers._long(0);
 AtomicLong transactionOverheadTime=new AtomicLong(0);
 int MAX_ROOTS_COUNT=1000;
 final List<GResource> currentInput=ListSequence.fromList(new ArrayList<GResource>());
-int currentRootsCount=0;
+final Wrappers._int currentRootsCount=new Wrappers._int(0);
 monitor.currentProgress().beginWork("Writing",Sequence.fromIterable(input).count() * 100,monitor.currentProgress().workLeft());
 final TextGeneratorEngine engine=new TextGeneratorEngine(_generateDebugInfo,_failIfNoTextgen);
 try {
 IResource lastResource=Sequence.fromIterable(resources).last();
+final Map<SModel,GResource> currentModelsToInput=Collections.synchronizedMap(new HashMap<SModel,GResource>());
 for (final GResource currentResource : Sequence.fromIterable(resources)) {
-final Wrappers._int rootsCount=new Wrappers._int(0);
-final Wrappers._boolean ignoreResource=new Wrappers._boolean(false);
 prepareTime+=TextGenUtil.withTimeTracking(new Runnable(){
 public void run(){
 ModelAccess.instance().runReadAction(new Runnable(){
 public void run(){
 SModel outputModel=currentResource.status().getOutputModel();
-if (outputModel == null) {
-ignoreResource.value=true;
-}
- else {
-rootsCount.value=outputModel.rootsCount();
+if (outputModel != null) {
+currentRootsCount.value+=outputModel.rootsCount();
+currentModelsToInput.put(outputModel,currentResource);
 }
 }
 }
@@ -65,15 +62,8 @@ rootsCount.value=outputModel.rootsCount();
 }
 }
 );
-if (ignoreResource.value) {
-continue;
-}
-currentRootsCount+=rootsCount.value;
 ListSequence.fromList(currentInput).addElement(currentResource);
-if (currentRootsCount < MAX_ROOTS_COUNT && currentResource != lastResource) {
-continue;
-}
-if (ListSequence.fromList(currentInput).isEmpty()) {
+if (currentRootsCount.value < MAX_ROOTS_COUNT && currentResource != lastResource) {
 continue;
 }
 final Map<IResource,Iterable<IDelta>> retainedFilesDelta=MapSequence.fromMap(new HashMap<IResource,Iterable<IDelta>>());
@@ -107,13 +97,9 @@ ModelAccess.instance().runReadAction(new Runnable(){
 public void run(){
 generateTime.value+=TextGenUtil.withTimeTracking(new Runnable(){
 public void run(){
-final Map<SModel,GResource> modelToInput=Collections.synchronizedMap(new HashMap<SModel,GResource>());
-for (GResource resource : ListSequence.fromList(currentInput)) {
-modelToInput.put(resource.status().getOutputModel(),resource);
-}
-engine.generateModels(modelToInput.keySet(),new TextGeneratorEngine.GenerateCallback(){
+engine.generateModels(currentModelsToInput.keySet(),new TextGeneratorEngine.GenerateCallback(){
 public void modelGenerated(SModel model,List<TextGenerationResult> results){
-GResource generatedResource=modelToInput.get(model);
+GResource generatedResource=currentModelsToInput.get(model);
 try {
 CacheGenerator[] cacheGenerators=new CacheGenerator[]{BLDependenciesCache.getInstance().getGenerator(),(_generateDebugInfo ? TraceInfoCache.getInstance().getGenerator() : null),GenerationDependenciesCache.getInstance().getGenerator()};
 ListSequence.fromList(errors).addSequence(ListSequence.fromList(TextGenerator.handleTextGenResults(generatedResource.status(),results,_generateDebugInfo,MapSequence.fromMap(streamHandlers).get(generatedResource),cacheGenerators)));
@@ -130,6 +116,7 @@ MapSequence.fromMap(streamHandlers).get(generatedResource).dispose();
 }
 }
 );
+currentModelsToInput.clear();
 if (ListSequence.fromList(errors).isNotEmpty()) {
 {
 Iterator<IMessage> error_it=ListSequence.fromList(errors).iterator();
@@ -211,7 +198,7 @@ CleanupManager.getInstance().cleanup();
 monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Failed to remove transient models")));
 return new IResult.FAILURE(_output_21gswx_a0a);
 }
-currentRootsCount=0;
+currentRootsCount.value=0;
 ListSequence.fromList(currentInput).clear();
 }
 }
