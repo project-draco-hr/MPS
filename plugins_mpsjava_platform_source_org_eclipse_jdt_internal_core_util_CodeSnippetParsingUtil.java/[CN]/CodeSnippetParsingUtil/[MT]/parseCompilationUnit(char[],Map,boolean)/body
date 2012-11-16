@@ -1,0 +1,29 @@
+{
+  if (source == null) {
+    throw new IllegalArgumentException();
+  }
+  CompilerOptions compilerOptions=new CompilerOptions(settings);
+  compilerOptions.ignoreMethodBodies=this.ignoreMethodBodies;
+  CommentRecorderParser parser=new CommentRecorderParser(new ProblemReporter(DefaultErrorHandlingPolicies.proceedWithAllProblems(),compilerOptions,new DefaultProblemFactory(Locale.getDefault())),false);
+  ICompilationUnit sourceUnit=new CompilationUnit(source,"",compilerOptions.defaultEncoding);
+  final CompilationResult compilationResult=new CompilationResult(sourceUnit,0,0,compilerOptions.maxProblemsPerUnit);
+  CompilationUnitDeclaration compilationUnitDeclaration=parser.dietParse(sourceUnit,compilationResult);
+  if (recordParsingInformation) {
+    this.recordedParsingInformation=getRecordedParsingInformation(compilationResult,compilationUnitDeclaration.comments);
+  }
+  if (compilationUnitDeclaration.ignoreMethodBodies) {
+    compilationUnitDeclaration.ignoreFurtherInvestigation=true;
+    return compilationUnitDeclaration;
+  }
+  parser.scanner.setSource(compilationResult);
+  org.eclipse.jdt.internal.compiler.ast.TypeDeclaration[] types=compilationUnitDeclaration.types;
+  if (types != null) {
+    for (int i=0, length=types.length; i < length; i++) {
+      types[i].parseMethods(parser,compilationUnitDeclaration);
+    }
+  }
+  if (recordParsingInformation) {
+    this.recordedParsingInformation.updateRecordedParsingInformation(compilationResult);
+  }
+  return compilationUnitDeclaration;
+}
