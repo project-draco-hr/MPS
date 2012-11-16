@@ -1,0 +1,35 @@
+{
+  myLastDependencies=null;
+  IFile targetDir=FileSystem.getInstance().getFileByPath(((IModule)module).getOutputFor(inputModel));
+  Assert.assertTrue(status.isOk());
+  Assert.assertTrue("should be called once",timesCalled++ == 0);
+  if (myCheckIncremental) {
+    GenerationDependencies dep=status.getDependencies();
+    if (dep.getFromCacheCount() + dep.getSkippedCount() == 0) {
+      final StringBuilder sb=new StringBuilder("Not optimized:\n");
+      new IncrementalGenerationHandler(inputModel,invocationContext,myGenOptions,new GenerationPlan(((SModelDescriptor)inputModel).getSModel()).getSignature(),null,new IncrementalReporter(){
+        @Override public void report(        String message){
+          sb.append(message);
+          sb.append('\n');
+        }
+      }
+);
+      sb.append('\n');
+      Assert.fail(sb.toString());
+    }
+  }
+  if (status.isOk()) {
+    myLastDependencies=status.getDependencies();
+    myFilesDir=FileGenerationUtil.getDefaultOutputDir(inputModel,targetDir);
+    IFile cachesDir=FileGenerationUtil.getDefaultOutputDir(inputModel,FileGenerationUtil.getCachesDir(targetDir));
+    StreamHandler streamHandler=new CollectingStreamHandler(cachesDir);
+    try {
+      boolean result=new TextGenerator(streamHandler,BLDependenciesCache.getInstance().getGenerator(),GenerationDependenciesCache.getInstance().getGenerator()).handleOutput(invocationContext,status);
+      Assert.assertTrue(result);
+    }
+  finally {
+      streamHandler.dispose();
+    }
+  }
+  return true;
+}
