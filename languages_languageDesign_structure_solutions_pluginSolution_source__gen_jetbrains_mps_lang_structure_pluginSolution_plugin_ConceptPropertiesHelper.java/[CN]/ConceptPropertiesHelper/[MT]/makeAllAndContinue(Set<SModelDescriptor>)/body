@@ -1,17 +1,22 @@
 {
-  if (sourceModels.isEmpty()) {
+  if (SetSequence.fromSet(sourceModels).isEmpty()) {
     return;
   }
   final List<org.jetbrains.mps.openapi.model.SModel> descriptors=new ArrayList<org.jetbrains.mps.openapi.model.SModel>();
   SModelRepository.getInstance().saveAll();
-  for (  SModelDescriptor descriptor : sourceModels) {
-    if (descriptor == null) {
-      continue;
-    }
-    if (!(descriptor.getSModel().isDisposed()) && descriptor.isGeneratable()) {
-      descriptors.add(descriptor);
+  Iterable<SModelDescriptor> allModels=SModelRepository.getInstance().getModelDescriptors();
+  ListSequence.fromList(descriptors).addSequence(Sequence.fromIterable(allModels).where(new IWhereFilter<SModelDescriptor>(){
+    public boolean accept(    SModelDescriptor it){
+      return it.isGeneratable() && LanguageAspect.BEHAVIOR.is(it);
     }
   }
+));
+  ListSequence.fromList(descriptors).addSequence(SetSequence.fromSet(sourceModels).where(new IWhereFilter<SModelDescriptor>(){
+    public boolean accept(    SModelDescriptor it){
+      return it != null && !(it.getSModel().isDisposed()) && it.isGeneratable();
+    }
+  }
+));
   final IOperationContext operationContext=new ProjectOperationContext(project);
   new Thread(){
     public void run(){
