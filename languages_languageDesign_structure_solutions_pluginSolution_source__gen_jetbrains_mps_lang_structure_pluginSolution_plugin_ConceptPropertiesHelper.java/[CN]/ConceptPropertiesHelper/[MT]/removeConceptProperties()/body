@@ -1,2 +1,25 @@
 {
+  final Set<SNode> conceptProperties=SetSequence.fromSet(new HashSet<SNode>());
+  final Set<SNode> conceptPropertyDeclarations=SetSequence.fromSet(new HashSet<SNode>());
+  final Set<SNode> searchedNodes=getSearchedConceptProperties();
+  Set<SReference> usages=FindUsagesManager.getInstance().findUsages(((Set<SNode>)searchedNodes),SearchType.USAGES,scope,new EmptyProgressMonitor());
+  final Set<SearchResult<SNode>> allUsages=SetSequence.fromSet(new HashSet<SearchResult<SNode>>());
+  for (  SReference usage : SetSequence.fromSet(usages)) {
+    SNode source=usage.getSourceNode();
+    if (SNodeOperations.isInstanceOf(source,"jetbrains.mps.lang.structure.structure.ConceptProperty")) {
+      SetSequence.fromSet(conceptProperties).addElement(SNodeOperations.cast(source,"jetbrains.mps.lang.structure.structure.ConceptProperty"));
+      SetSequence.fromSet(conceptPropertyDeclarations).addElement(SLinkOperations.getTarget(SNodeOperations.cast(source,"jetbrains.mps.lang.structure.structure.ConceptProperty"),"conceptPropertyDeclaration",false));
+      SetSequence.fromSet(allUsages).addElement(new SearchResult<SNode>(source,""));
+      SetSequence.fromSet(allUsages).addElement(new SearchResult<SNode>(SLinkOperations.getTarget(SNodeOperations.cast(source,"jetbrains.mps.lang.structure.structure.ConceptProperty"),"conceptPropertyDeclaration",false),""));
+    }
+  }
+  final SearchResults searchResults=new SearchResults<SNode>(((Set<SNode>)searchedNodes),SetSequence.fromSet(allUsages).toListSequence());
+  showRefactoringView(new _FunctionTypes._void_P0_E0(){
+    public void invoke(){
+      for (      SNode conceptProperty : SetSequence.fromSet(conceptProperties)) {
+        SNodeOperations.deleteNode(conceptProperty);
+      }
+    }
+  }
+,searchResults);
 }
