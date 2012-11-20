@@ -3,8 +3,13 @@
   if (x.isConstructor()) {
     method=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ConstructorDeclaration",null);
   }
- else   if (SConceptOperations.isSubConceptOf(parentConcept,"jetbrains.mps.baseLanguage.structure.Annotation")) {
+ else   if (x instanceof PsiAnnotationMethod && SConceptOperations.isSubConceptOf(parentConcept,"jetbrains.mps.baseLanguage.structure.Annotation")) {
     method=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.AnnotationMethodDeclaration",null);
+    if (((PsiAnnotationMethod)x).getDefaultValue() != null) {
+      SNode str=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StringLiteral",null);
+      SPropertyOperations.set(str,"value","TODO: SUPPORT EXPRESSIONS IN PSI STUBS?");
+      SLinkOperations.setTarget(SNodeOperations.cast(method,"jetbrains.mps.baseLanguage.structure.AnnotationMethodDeclaration"),"defaultValue",str,true);
+    }
   }
  else   if (!(isStatic(x)) || SConceptOperations.isSubConceptOf(parentConcept,"jetbrains.mps.baseLanguage.structure.Interface")) {
     method=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration",null);
@@ -23,6 +28,7 @@
       SPropertyOperations.set(param,"name",it.getName());
       SLinkOperations.setTarget(param,"type",convertType(it.getType()),true);
       SPropertyOperations.set(param,"isFinal","" + (isFinal(it)));
+      addAnnotations(it,param);
       return param;
     }
   }
@@ -37,6 +43,9 @@
   addTypeParams(x,method);
   if (x.getBody() != null) {
     SLinkOperations.setTarget(method,"body",SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StubStatementList",null),true);
+  }
+ else {
+    SLinkOperations.setTarget(method,"body",SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StatementList",null),true);
   }
   return method;
 }
