@@ -1,43 +1,18 @@
 {
-  final Set<String> libFiles=new HashSet<String>();
-  myModifiableRootModel.orderEntries().forEachLibrary(new Processor<Library>(){
-    @Override public boolean process(    Library library){
-      for (      VirtualFile vFile : library.getFiles(OrderRootType.CLASSES)) {
-        libFiles.add(vFile.getName());
-      }
-      return true;
-    }
-  }
-);
-  Map<String,Library> projectLibFiles=new HashMap<String,Library>();
-  for (  Library library : myProjectLibraries) {
-    for (    VirtualFile file : library.getFiles(OrderRootType.CLASSES)) {
-      projectLibFiles.put(file.getName(),library);
-    }
-  }
+  Project project=getProject();
   Collection<Library> projectLibs2Add=new HashSet<Library>();
   Map<ModuleReference,Collection<VirtualFile>> projectLibs2Create=new HashMap<ModuleReference,Collection<VirtualFile>>();
   for (  IModule usedModule : collectRuntimeModules(myAddedModules)) {
     if (!(usedModule instanceof Solution) || !usedModule.isPackaged() || BootstrapLanguages.JDK.equals(usedModule.getModuleReference())) {
       continue;
     }
-    for (    String stubPath : ((Solution)usedModule).getAllStubPaths()) {
-      VirtualFile jarFile=getJarFile(stubPath);
-      if (jarFile == null || libFiles.contains(jarFile.getName())) {
-        continue;
-      }
-      Library projectLibrary=projectLibFiles.get(jarFile.getName());
-      if (projectLibrary != null) {
-        projectLibs2Add.add(projectLibrary);
-      }
+    Library library=SolutionLibrariesIndex.getInstance(project).getLibrary(usedModule.getModuleReference());
+    if (library != null) {
+      projectLibs2Add.add(library);
+    }
  else {
-        Collection<VirtualFile> virtualFiles=projectLibs2Create.get(usedModule.getModuleReference());
-        if (virtualFiles == null) {
-          virtualFiles=new LinkedHashSet<VirtualFile>();
-          projectLibs2Create.put(usedModule.getModuleReference(),virtualFiles);
-        }
-        virtualFiles.add(jarFile);
-      }
+      Set<VirtualFile> stubFiles=SolutionLibraryType.getSolutionJars((Solution)usedModule);
+      projectLibs2Create.put(usedModule.getModuleReference(),stubFiles);
     }
   }
   for (  Library projectLibrary : projectLibs2Add) {
@@ -46,14 +21,7 @@
   for (  ModuleReference moduleReference : projectLibs2Create.keySet()) {
     Collection<VirtualFile> libraryFiles=projectLibs2Create.get(moduleReference);
     Library projectLibrary=createProjectLibrary(moduleReference.getModuleFqName(),libraryFiles);
-    Project project;
-    if (myContext != null) {
-      project=myContext.getProject();
-    }
- else {
-      project=myLibrariesContainer.getProject();
-    }
-    ModuleRuntimeLibrariesManager.getInstance(project).addLibrary(projectLibrary,moduleReference);
+    SolutionLibrariesIndex.getInstance(project).addLibrary(projectLibrary,moduleReference);
     myModifiableRootModel.addLibraryEntry(projectLibrary);
   }
 }

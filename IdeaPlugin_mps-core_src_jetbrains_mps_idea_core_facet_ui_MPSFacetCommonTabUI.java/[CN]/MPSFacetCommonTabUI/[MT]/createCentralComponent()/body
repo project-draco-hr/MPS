@@ -3,24 +3,34 @@
   MPSFacetSourcesTab mpsFacetSourcesTab=new MPSFacetSourcesTab(myContext,myParentDisposable);
   MPSFacetPathsTab mpsFacetPathsTab=new MPSFacetPathsTab(myContext);
   UsedLanguagesTable usedLanguagesTable=new UsedLanguagesTable(){
-    @Override protected void doAddElements(    Set<ModuleReference> elementsToAdd){
+    @Override protected void doAddElements(    final Set<ModuleReference> elementsToAdd){
       super.doAddElements(elementsToAdd);
-      new ModuleRuntimeLibrariesImporter(myContext,elementsToAdd).addMissingLibraries();
+      ApplicationManager.getApplication().runWriteAction(new Runnable(){
+        @Override public void run(){
+          new ModuleRuntimeLibrariesImporter(myContext,elementsToAdd).addMissingLibraries();
+        }
+      }
+);
     }
   }
 ;
   ImportedSolutionsTable importedSolutionsTable=new ImportedSolutionsTable(){
     @Override protected void doAddElements(    Set<Dependency> elementsToAdd){
       super.doAddElements(elementsToAdd);
-      Collection<ModuleReference> referencesToAdd=new ArrayList<ModuleReference>();
+      final Collection<ModuleReference> referencesToAdd=new ArrayList<ModuleReference>();
       for (      Dependency dependency : elementsToAdd) {
         referencesToAdd.add(dependency.getModuleRef());
       }
-      new ModuleRuntimeLibrariesImporter(myContext,referencesToAdd).addMissingLibraries();
+      ApplicationManager.getApplication().runWriteAction(new Runnable(){
+        @Override public void run(){
+          new ModuleRuntimeLibrariesImporter(myContext,referencesToAdd).addMissingLibraries();
+        }
+      }
+);
     }
     @Override protected void check(    Dependency element,    boolean value){
       super.check(element,value);
-      Library moduleLibrary=ModuleRuntimeLibrariesManager.getInstance(myContext.getProject()).getLibrary(element.getModuleRef());
+      Library moduleLibrary=SolutionLibrariesIndex.getInstance(myContext.getProject()).getLibrary(element.getModuleRef());
       if (moduleLibrary != null) {
         LibraryOrderEntry libraryOrderEntry=myContext.getModifiableRootModel().findLibraryOrderEntry(moduleLibrary);
         if (libraryOrderEntry != null) {

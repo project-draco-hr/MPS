@@ -1,0 +1,44 @@
+{
+  final List<ModuleReference> availableSolutions=new ArrayList<ModuleReference>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    @Override public void run(){
+      for (      Solution solution : ModuleRepositoryFacade.getInstance().getAllModules(Solution.class)) {
+        if (solution instanceof SolutionIdea || solution instanceof StubSolution) {
+          continue;
+        }
+        availableSolutions.add(solution.getModuleReference());
+      }
+    }
+  }
+);
+  ChooseElementsDialog<ModuleReference> chooser=new ChooseElementsDialog<ModuleReference>(project,availableSolutions,MPSBundle.message("used.solutions.chooser.title"),null){
+    @Override protected String getItemText(    ModuleReference item){
+      return item.getModuleFqName();
+    }
+    @Override protected Icon getItemIcon(    ModuleReference item){
+      return MPSIcons.SOLUTION_ICON;
+    }
+  }
+;
+  chooser.show();
+  List<ModuleReference> chosenElements=chooser.getChosenElements();
+  if (chosenElements.isEmpty()) {
+    return null;
+  }
+  String name=chosenElements.get(0).getModuleFqName();
+  if (chosenElements.size() > 1) {
+    name+="...";
+  }
+  final Set<OrderRoot> roots=new LinkedHashSet<OrderRoot>();
+  for (  ModuleReference module : chosenElements) {
+    for (    VirtualFile virtualFile : getSolutionJars((Solution)ModuleRepositoryFacade.getInstance().getModule(module))) {
+      roots.add(new OrderRoot(virtualFile,OrderRootType.CLASSES,false));
+    }
+  }
+  return new NewLibraryConfiguration(name,this,createDefaultProperties()){
+    @Override public void addRoots(    @NotNull LibraryEditor editor){
+      editor.addRoots(roots);
+    }
+  }
+;
+}
