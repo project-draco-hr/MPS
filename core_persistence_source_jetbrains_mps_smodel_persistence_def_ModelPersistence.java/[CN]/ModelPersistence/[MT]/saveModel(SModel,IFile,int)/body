@@ -4,25 +4,31 @@
     LOG.error("Can't write to " + file.getPath());
     return null;
   }
-  int oldVersion=model.getPersistenceVersion();
-  if (oldVersion != persistenceVersion) {
-    model.setPersistenceVersion(persistenceVersion);
+  int oldVersion=persistenceVersion;
+  if (model instanceof DefaultSModel) {
+    DefaultSModel defaultSModel=(DefaultSModel)model;
+    oldVersion=defaultSModel.getPersistenceVersion();
+    if (oldVersion != persistenceVersion) {
+      defaultSModel.setPersistenceVersion(persistenceVersion);
+    }
   }
   SModelDescriptor modelDescriptor=model.getModelDescriptor();
   if (modelDescriptor instanceof DefaultSModelDescriptor) {
     DefaultSModelDescriptor md=(DefaultSModelDescriptor)modelDescriptor;
     Map<String,String> metadata=md.getMetaData();
-    SModelHeader header=model.getSModelHeader();
-    if (persistenceVersion < 7 && (header.getVersion() != -1 || header.isDoNotGenerate())) {
-      metadata=new HashMap<String,String>(metadata);
-      if (header.getVersion() != -1) {
-        metadata.put(SModelHeader.VERSION,Integer.toString(header.getVersion()));
+    if (model instanceof DefaultSModel) {
+      SModelHeader header=((DefaultSModel)model).getSModelHeader();
+      if (persistenceVersion < 7 && (header.getVersion() != -1 || header.isDoNotGenerate())) {
+        metadata=new HashMap<String,String>(metadata);
+        if (header.getVersion() != -1) {
+          metadata.put(SModelHeader.VERSION,Integer.toString(header.getVersion()));
+        }
+        if (header.isDoNotGenerate()) {
+          metadata.put(SModelHeader.DO_NOT_GENERATE,"true");
+        }
       }
-      if (header.isDoNotGenerate()) {
-        metadata.put(SModelHeader.DO_NOT_GENERATE,"true");
-      }
+      saveMetadata(md.getSource().getFile(),metadata);
     }
-    saveMetadata(md.getSource().getFile(),metadata);
   }
   Document document=saveModel(model);
   try {
@@ -33,7 +39,7 @@
   }
   if (oldVersion != persistenceVersion) {
     LOG.info("persistence upgraded: " + oldVersion + "->"+ persistenceVersion+ " "+ model.getSModelReference());
-    return model;
+    return (DefaultSModel)model;
   }
   return null;
 }
