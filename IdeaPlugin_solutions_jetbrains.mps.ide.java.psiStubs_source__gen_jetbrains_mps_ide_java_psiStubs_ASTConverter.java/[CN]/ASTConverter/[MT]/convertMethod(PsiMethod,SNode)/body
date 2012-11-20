@@ -3,6 +3,9 @@
   if (x.isConstructor()) {
     method=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ConstructorDeclaration",null);
   }
+ else   if (SConceptOperations.isSubConceptOf(parentConcept,"jetbrains.mps.baseLanguage.structure.Annotation")) {
+    method=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.AnnotationMethodDeclaration",null);
+  }
  else   if (!(isStatic(x)) || SConceptOperations.isSubConceptOf(parentConcept,"jetbrains.mps.baseLanguage.structure.Interface")) {
     method=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration",null);
   }
@@ -14,6 +17,26 @@
   SPropertyOperations.set(method,"isFinal","" + (isFinal(x)));
   SPropertyOperations.set(method,"isSynchronized","" + (x.hasModifierProperty(PsiModifier.SYNCHRONIZED)));
   SLinkOperations.setTarget(method,"returnType",convertType(x.getReturnType()),true);
-  SLinkOperations.setTarget(method,"body",SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StubStatementList",null),true);
+  ListSequence.fromList(SLinkOperations.getTargets(method,"parameter",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(x.getParameterList().getParameters())).select(new ISelector<PsiParameter,SNode>(){
+    public SNode select(    PsiParameter it){
+      SNode param=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ParameterDeclaration",null);
+      SPropertyOperations.set(param,"name",it.getName());
+      SLinkOperations.setTarget(param,"type",convertType(it.getType()),true);
+      SPropertyOperations.set(param,"isFinal","" + (isFinal(it)));
+      return param;
+    }
+  }
+));
+  ListSequence.fromList(SLinkOperations.getTargets(method,"throwsItem",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(x.getThrowsList().getReferencedTypes())).select(new ISelector<PsiClassType,SNode>(){
+    public SNode select(    PsiClassType it){
+      SNode typ=resolveClass(it);
+      return typ;
+    }
+  }
+));
+  addTypeParams(x,method);
+  if (x.getBody() != null) {
+    SLinkOperations.setTarget(method,"body",SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StubStatementList",null),true);
+  }
   return method;
 }
