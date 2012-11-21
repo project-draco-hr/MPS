@@ -1,28 +1,37 @@
 {
-  Map<String,Method> props=MapSequence.fromMap(new HashMap<String,Method>());
-  for (  Method mth : MPSFacetConfiguration.class.getMethods()) {
-    if (mth.getName().startsWith("set") && Modifier.isPublic(mth.getModifiers()) && mth.getParameterTypes().length == 1) {
-      MapSequence.fromMap(props).put(mth.getName().substring(3),mth);
-    }
-  }
+  List<ModelRootDescriptor> descriptors=new ArrayList<ModelRootDescriptor>();
   for (  Element ch : XmlUtil.children(config,"option")) {
-    Method pr=MapSequence.fromMap(props).get(NameUtil.capitalize(ch.getAttributeValue("name")));
-    if (pr != null) {
-      Object value;
-      if (Set.class.isAssignableFrom(pr.getParameterTypes()[0])) {
-        value=readModelRoots(XmlUtil.first(ch,"set"));
+    String optionName=ch.getAttributeValue("name");
+    if ("UUID".equals(optionName)) {
+      this.UUID=ch.getAttributeValue(OPT_VALUE);
+    }
+ else     if ("generatorOutputPath".equals(optionName)) {
+      this.generatorOutputPath=ch.getAttributeValue(OPT_VALUE);
+    }
+ else     if ("modelRoots".equals(optionName)) {
+      for (      ModelRoot root : SetSequence.fromSet(readModelRoots(XmlUtil.first(ch,"set")))) {
+        Memento m=new MementoImpl();
+        root.save(m);
+        descriptors.add(new ModelRootDescriptor(null,m));
       }
- else       if (pr.getParameterTypes()[0].isArray()) {
-        value=readArray(XmlUtil.first(ch,"array"));
-      }
- else       if (pr.getParameterTypes()[0].isPrimitive()) {
-        value=Boolean.valueOf(ch.getAttributeValue("value"));
-      }
- else {
-        value=ch.getAttributeValue("value");
-      }
-      setPropertyValue(pr,value);
+    }
+ else     if ("usedLanguages".equals(optionName)) {
+      this.usedLanguages=readArray(XmlUtil.first(ch,"array"));
+    }
+ else     if ("useModuleSourceFolder".equals(optionName)) {
+      this.useModuleSourceFolder="true".equals(ch.getAttributeValue(OPT_VALUE));
+    }
+ else     if ("useTransientOutputFolder".equals(optionName)) {
+      this.useTransientOutputFolder="true".equals(ch.getAttributeValue(OPT_VALUE));
     }
   }
-  MapSequence.fromMap(props).clear();
+  for (  Element modelRoot : XmlUtil.children(XmlUtil.first(config,"modelRoots"),"modelRoot")) {
+    Element settings=XmlUtil.first(modelRoot,"settings");
+    Memento m=new MementoImpl();
+    if (settings != null) {
+      MementoUtil.readMemento(m,settings);
+    }
+    descriptors.add(new ModelRootDescriptor(modelRoot.getAttributeValue("type"),m));
+  }
+  rootDescriptors=descriptors.toArray(new ModelRootDescriptor[descriptors.size()]);
 }
