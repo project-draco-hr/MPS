@@ -1,0 +1,64 @@
+{
+  System.out.println("MODEL ROOT RECEIVED EVENT");
+  for (  PsiFile f : Sequence.fromIterable(event.getRemoved())) {
+    System.out.println("Psi file removed:  file=" + f.getName());
+  }
+  for (  PsiFile f : Sequence.fromIterable(event.getCreated())) {
+    System.out.println("Psi file created:  file=" + f.getName());
+  }
+  for (  PsiFile f : SetSequence.fromSet(event.getChanged().keySet())) {
+    System.out.print("Psi change:  file=" + f.getName() + " elements=");
+    for (    PsiElement e : SetSequence.fromSet(event.getChanged().get(f))) {
+      System.out.print(" " + e.getClass().getName());
+    }
+    System.out.println();
+  }
+  System.out.flush();
+  ASTConverter converter=new ASTConverter();
+  for (  PsiFile file : Sequence.fromIterable(event.getRemoved())) {
+    SetSequence.fromSet(MapSequence.fromMap(myRootsPerFile).get((PsiJavaFile)file)).visitAll(new IVisitor<SNode>(){
+      public void visit(      SNode it){
+        SNodeOperations.deleteNode(it);
+      }
+    }
+);
+    MapSequence.fromMap(myRootsPerFile).removeKey((PsiJavaFile)file);
+    System.out.println("Removing " + file.getName());
+  }
+  for (  PsiFile file : Sequence.fromIterable(event.getCreated())) {
+    Set<SNode> roots=SetSequence.fromSet(new HashSet<SNode>());
+    for (    PsiClass cls : ((PsiJavaFile)file).getClasses()) {
+      SNode node=converter.convertClass(cls);
+      SModelOperations.addRootNode(myModel,node);
+      SetSequence.fromSet(roots).addElement(node);
+    }
+    if (SetSequence.fromSet(roots).isNotEmpty()) {
+      MapSequence.fromMap(myRootsPerFile).put((PsiJavaFile)file,roots);
+    }
+    System.err.println("Creating " + file.getName());
+  }
+  for (  PsiFile file : SetSequence.fromSet(event.getChanged().keySet())) {
+    for (    PsiElement elem : SetSequence.fromSet(event.getChanged().get(file))) {
+      if (elem instanceof PsiFile) {
+        continue;
+      }
+      PsiElement e=elem;
+      do {
+        e=e.getParent();
+      }
+ while (e != null && !(e instanceof PsiClass && e.getParent() instanceof PsiFile));
+      if (e != null) {
+        SNode node=converter.convertClass((PsiClass)e);
+        SNodeId id=node.getSNodeId();
+        SNode oldNode=myModel.getNodeById(id);
+        if ((oldNode != null)) {
+          SNodeOperations.replaceWithAnother(oldNode,node);
+        }
+ else {
+          SModelOperations.addRootNode(myModel,node);
+        }
+        System.out.println("Re-parsing class " + ((PsiClass)e).getName());
+      }
+    }
+  }
+}
