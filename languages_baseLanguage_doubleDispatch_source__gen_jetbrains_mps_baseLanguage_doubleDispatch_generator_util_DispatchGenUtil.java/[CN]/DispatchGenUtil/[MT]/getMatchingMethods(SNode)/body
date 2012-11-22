@@ -1,0 +1,77 @@
+{
+  int paramIndex=0;
+  SNode parentClass=SNodeOperations.getAncestor(dispatchMethod,"jetbrains.mps.baseLanguage.structure.Classifier",false,false);
+  SNode origParamClass=DispatchUtil.getParamClass(dispatchMethod);
+  final Map<SNode,SNode> classesToMethods=MapSequence.fromMap(new HashMap<SNode,SNode>());
+  Iterable<SNode> classesToConsider;
+  _FunctionTypes._return_P1_E0<? extends Iterable<SNode>,? super SNode> methods;
+  if (SNodeOperations.isInstanceOf(dispatchMethod,"jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration")) {
+    classesToConsider=Sequence.<SNode>singleton(parentClass);
+    methods=new _FunctionTypes._return_P1_E0<List<SNode>,SNode>(){
+      public List<SNode> invoke(      SNode cls){
+        return SLinkOperations.getTargets(SNodeOperations.cast(cls,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"staticMethod",true);
+      }
+    }
+;
+  }
+ else {
+    classesToConsider=DispatchUtil.ancestors(SNodeOperations.cast(parentClass,"jetbrains.mps.baseLanguage.structure.ClassConcept"),true);
+    methods=new _FunctionTypes._return_P1_E0<List<SNode>,SNode>(){
+      public List<SNode> invoke(      SNode cls){
+        return SLinkOperations.getTargets(SNodeOperations.cast(cls,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"method",true);
+      }
+    }
+;
+  }
+  final DispatchGroupDescriptor desc=new DispatchGroupDescriptor(dispatchMethod);
+  for (  SNode h : Sequence.fromIterable(classesToConsider)) {
+    Iterable<SNode> matchingLocalMethods=Sequence.fromIterable(methods.invoke(h)).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return DispatchUtil.isReadyMethod(it) && desc.equals(new DispatchGroupDescriptor(it));
+      }
+    }
+);
+    for (    SNode method : Sequence.fromIterable(matchingLocalMethods)) {
+      SNode paramClass=DispatchUtil.getParamClass(method);
+      if (method == dispatchMethod) {
+        continue;
+      }
+      if (MapSequence.fromMap(classesToMethods).containsKey(paramClass) || paramClass == origParamClass) {
+        continue;
+      }
+      if (!(DispatchUtil.isParent(SNodeOperations.cast(origParamClass,"jetbrains.mps.baseLanguage.structure.ClassConcept"),SNodeOperations.cast(paramClass,"jetbrains.mps.baseLanguage.structure.ClassConcept")))) {
+        continue;
+      }
+      MapSequence.fromMap(classesToMethods).put(paramClass,method);
+    }
+  }
+  Set<SNode> toRemove=SetSequence.fromSet(new HashSet<SNode>());
+  for (  SNode clas : SetSequence.fromSet(MapSequence.fromMap(classesToMethods).keySet())) {
+    SNode cls=clas;
+    SNode superCls=SLinkOperations.getTarget(SLinkOperations.getTarget(SNodeOperations.cast(cls,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"superclass",true),"classifier",false);
+    while (superCls != origParamClass && (superCls != null)) {
+      if (MapSequence.fromMap(classesToMethods).containsKey(superCls)) {
+        SetSequence.fromSet(toRemove).addElement(cls);
+        cls=superCls;
+      }
+      superCls=SLinkOperations.getTarget(SLinkOperations.getTarget(SNodeOperations.cast(superCls,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"superclass",true),"classifier",false);
+    }
+  }
+  SetSequence.fromSet(toRemove).visitAll(new IVisitor<SNode>(){
+    public void visit(    SNode it){
+      MapSequence.fromMap(classesToMethods).removeKey(it);
+    }
+  }
+);
+  return MapSequence.fromMap(classesToMethods).sort(new ISelector<IMapping<SNode,SNode>,String>(){
+    public String select(    IMapping<SNode,SNode> it){
+      return SPropertyOperations.getString(it.key(),"name");
+    }
+  }
+,true).select(new ISelector<IMapping<SNode,SNode>,SNode>(){
+    public SNode select(    IMapping<SNode,SNode> it){
+      return it.value();
+    }
+  }
+);
+}
