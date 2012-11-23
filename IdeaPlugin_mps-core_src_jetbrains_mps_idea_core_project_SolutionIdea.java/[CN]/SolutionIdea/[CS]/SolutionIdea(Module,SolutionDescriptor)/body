@@ -10,6 +10,7 @@
       if (myModule.getProject().equals(event.getSource())) {
         ModelAccess.instance().runWriteInEDT(new Runnable(){
           public void run(){
+            invalidateDependencies();
             if (myModule.isDisposed())             return;
             setModuleDescriptor(getModuleDescriptor(),false);
           }
@@ -25,6 +26,21 @@
     }
     @Override public void facetRemoved(    @NotNull Facet facet){
       handleFacetChanged(facet);
+    }
+  }
+);
+  myConnection.subscribe(SolutionLibraryListener.LIBRARY_LISTENER_TOPIC,new SolutionLibraryListener(){
+    @Override public void libraryChanged(    final Library library){
+      FindProcessor<OrderEntry> processor=new FindProcessor<OrderEntry>(){
+        @Override protected boolean accept(        OrderEntry orderEntry){
+          return orderEntry instanceof LibraryOrderEntry && ((LibraryOrderEntry)orderEntry).getLibrary() == library;
+        }
+      }
+;
+      ModuleRootManager.getInstance(myModule).orderEntries().forEach(processor);
+      if (processor.isFound()) {
+        invalidateDependencies();
+      }
     }
   }
 );
