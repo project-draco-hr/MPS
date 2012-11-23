@@ -1,0 +1,31 @@
+{
+  Map<SNode,SNode> cpToMethodMap=MapSequence.fromMap(new HashMap<SNode,SNode>());
+  Map<SNode,SNode> clToMethodMap=MapSequence.fromMap(new HashMap<SNode,SNode>());
+  Map<SNode,List<SNode>> completedConceptsbyDeclaration=MapSequence.fromMap(new HashMap<SNode,List<SNode>>());
+  for (  SNode conceptPropertyLinkDecl : SetSequence.fromSet(conceptPropertyLinkDeclarations)) {
+    if (SNodeOperations.isInstanceOf(conceptPropertyLinkDecl,"jetbrains.mps.lang.structure.structure.ConceptPropertyDeclaration")) {
+      SNode method=replaceConceptPropertyDeclarations(SNodeOperations.cast(conceptPropertyLinkDecl,"jetbrains.mps.lang.structure.structure.ConceptPropertyDeclaration"),conceptPropertyUsages);
+      MapSequence.fromMap(cpToMethodMap).put(SNodeOperations.cast(conceptPropertyLinkDecl,"jetbrains.mps.lang.structure.structure.ConceptPropertyDeclaration"),method);
+    }
+ else     if (SNodeOperations.isInstanceOf(conceptPropertyLinkDecl,"jetbrains.mps.lang.structure.structure.ConceptLinkDeclaration")) {
+      SNode method=replaceConceptLinkDeclaration(SNodeOperations.cast(conceptPropertyLinkDecl,"jetbrains.mps.lang.structure.structure.ConceptLinkDeclaration"),conceptLinkUsages);
+      MapSequence.fromMap(clToMethodMap).put(SNodeOperations.cast(conceptPropertyLinkDecl,"jetbrains.mps.lang.structure.structure.ConceptLinkDeclaration"),method);
+      MapSequence.fromMap(completedConceptsbyDeclaration).put(SNodeOperations.cast(conceptPropertyLinkDecl,"jetbrains.mps.lang.structure.structure.ConceptLinkDeclaration"),new ArrayList<SNode>());
+    }
+  }
+  for (  SNode conceptProperty : SetSequence.fromSet(conceptPropertyUsages)) {
+    replaceConceptPropertyUsages(conceptProperty,MapSequence.fromMap(cpToMethodMap).get(SLinkOperations.getTarget(conceptProperty,"conceptPropertyDeclaration",false)));
+  }
+  for (  SNode access : SetSequence.fromSet(accessUsages)) {
+    replaceAccessUsages(access,MapSequence.fromMap(cpToMethodMap).get(SLinkOperations.getTarget(access,"conceptProperty",false)));
+  }
+  for (  SNode cell : SetSequence.fromSet(cellUsages)) {
+    replaceCellUsages(cell,MapSequence.fromMap(cpToMethodMap).get(SLinkOperations.getTarget(cell,"relationDeclaration",false)));
+  }
+  for (  SNode conceptLink : SetSequence.fromSet(conceptLinkUsages)) {
+    replaceConceptLinkUsages(conceptLink,MapSequence.fromMap(clToMethodMap).get(SLinkOperations.getTarget(conceptLink,"conceptLinkDeclaration",false)),completedConceptsbyDeclaration);
+  }
+  for (  SNode access : SetSequence.fromSet(accessLinkUsages)) {
+    replaceAccessLinkUsages(access,MapSequence.fromMap(clToMethodMap).get(SLinkOperations.getTarget(access,"conceptLinkDeclaration",false)));
+  }
+}
