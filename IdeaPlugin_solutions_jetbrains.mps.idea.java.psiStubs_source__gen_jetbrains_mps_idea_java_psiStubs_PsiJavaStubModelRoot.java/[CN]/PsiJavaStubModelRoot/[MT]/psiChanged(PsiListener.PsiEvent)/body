@@ -1,0 +1,105 @@
+{
+  Set<PsiDirectory> newDirs=SetSequence.fromSet(new HashSet<PsiDirectory>());
+  Set<PsiDirectory> deletedDirs=SetSequence.fromSet(new HashSet<PsiDirectory>());
+  Map<PsiJavaStubDataSource,PsiJavaStubModelRoot.PsiChange> changes=MapSequence.fromMap(new HashMap<PsiJavaStubDataSource,PsiJavaStubModelRoot.PsiChange>());
+  boolean modelSetChanged=false;
+  for (  PsiFileSystemItem item : Sequence.fromIterable(event.getCreated())) {
+    if (item instanceof PsiDirectory) {
+      continue;
+    }
+    if (!(item instanceof PsiJavaFile)) {
+      continue;
+    }
+    PsiDirectory parent=((PsiFile)item).getParent();
+    PsiJavaStubDataSource dataSource=MapSequence.fromMap(myDataSources).get(parent);
+    if (dataSource == null) {
+      PsiDirectory ourSourceRoot=findOurSourceRoot(item);
+      if (ourSourceRoot != null) {
+        SetSequence.fromSet(newDirs).addElement(parent);
+      }
+      continue;
+    }
+    PsiJavaStubModelRoot.PsiChange change=MapSequence.fromMap(changes).get(dataSource);
+    if (change == null) {
+      change=new PsiJavaStubModelRoot.PsiChange();
+      MapSequence.fromMap(changes).put(dataSource,change);
+    }
+    SetSequence.fromSet(change.created).addElement(item);
+  }
+  for (  PsiFileSystemItem item : Sequence.fromIterable(event.getRemoved())) {
+    if (item instanceof PsiDirectory) {
+      if (MapSequence.fromMap(myDataSources).containsKey((PsiDirectory)item)) {
+        SetSequence.fromSet(deletedDirs).addElement((PsiDirectory)item);
+      }
+      continue;
+    }
+    if (!(item instanceof PsiJavaFile)) {
+      continue;
+    }
+    PsiDirectory parent=((PsiFile)item).getParent();
+    PsiJavaStubDataSource dataSource=MapSequence.fromMap(myDataSources).get(parent);
+    if (dataSource == null) {
+      continue;
+    }
+    if (Sequence.fromIterable(Sequence.fromArray(parent.getChildren())).ofType(PsiJavaFile.class).isEmpty()) {
+      SetSequence.fromSet(deletedDirs).addElement(parent);
+    }
+    PsiJavaStubModelRoot.PsiChange change=MapSequence.fromMap(changes).get(dataSource);
+    if (change == null) {
+      change=new PsiJavaStubModelRoot.PsiChange();
+      MapSequence.fromMap(changes).put(dataSource,change);
+    }
+    SetSequence.fromSet(change.removed).addElement(item);
+  }
+  for (  PsiFile file : SetSequence.fromSet(event.getChanged().keySet())) {
+    if (!(file instanceof PsiJavaFile)) {
+      continue;
+    }
+    PsiDirectory parent=file.getParent();
+    PsiJavaStubDataSource dataSource=MapSequence.fromMap(myDataSources).get(parent);
+    if (dataSource == null) {
+      continue;
+    }
+    Set<PsiElement> changeSet=SetSequence.fromSet(new HashSet<PsiElement>());
+    for (    PsiElement elem : SetSequence.fromSet(event.getChanged().get(file))) {
+      if (!(filter(elem))) {
+        continue;
+      }
+      SetSequence.fromSet(changeSet).addElement(elem);
+    }
+    PsiJavaStubModelRoot.PsiChange change=MapSequence.fromMap(changes).get(dataSource);
+    if (change == null) {
+      change=new PsiJavaStubModelRoot.PsiChange();
+      MapSequence.fromMap(changes).put(dataSource,change);
+    }
+    MapSequence.fromMap(change.changed).put(file,changeSet);
+  }
+  for (  PsiDirectory dir : SetSequence.fromSet(deletedDirs)) {
+    PsiJavaStubDataSource ds=MapSequence.fromMap(myDataSources).get(dir);
+    if (ds == null) {
+      continue;
+    }
+    MapSequence.fromMap(myDataSources).removeKey(dir);
+    MapSequence.fromMap(myModels).removeKey(ds);
+    modelSetChanged=true;
+  }
+  for (  PsiDirectory dir : SetSequence.fromSet(newDirs)) {
+    PsiDirectory ourSourceRoot=findOurSourceRoot(dir);
+    PsiJavaStubModelDescriptor model=makeModelDescriptor(ourSourceRoot,dir);
+    PsiJavaStubDataSource ds=model.getSource();
+    MapSequence.fromMap(myDataSources).put(dir,ds);
+    MapSequence.fromMap(myModels).put(ds,model);
+    System.out.println("Creating new model for dir " + dir.getName());
+    modelSetChanged=true;
+  }
+  for (  IMapping<PsiJavaStubDataSource,PsiJavaStubModelRoot.PsiChange> notification : SetSequence.fromSet(MapSequence.fromMap(changes).mappingsSet())) {
+    PsiJavaStubDataSource ds=notification.key();
+    PsiJavaStubModelRoot.PsiChange change=notification.value();
+    if (!(change.isEmpty())) {
+      ds.dispatchEvent(change);
+    }
+  }
+  if (modelSetChanged) {
+    update();
+  }
+}
