@@ -1,19 +1,26 @@
 {
-  if (rootId == null) {
-    MetadataUtil.showMetadataDifference(myChangeSet.getOldModel(),myChangeSet.getNewModel(),myProject,myContentTitles[0],myContentTitles[1],scrollTo);
-    return;
-  }
   if (myRootDifferenceDialog != null) {
     return;
   }
   myGoingToNeighbour=false;
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
-      myRootDifferenceDialog=new RootDifferenceDialog(myProject,myChangeSet,rootId,myTree.getNameForRoot(rootId),myContentTitles,(isVisible() ? getWindow() : WindowManager.getInstance().getFrame(myProject)),myEditable,new ModelDifferenceDialog.MyGoToNeighbourRootActions().getActions(),scrollTo);
+      ModelChangeSet changeSet=(rootId == null ? myMetadataChangeSet : myChangeSet);
+      SNodeId nodeId=(rootId == null ? ListSequence.fromList(SModelOperations.getRoots(myMetadataChangeSet.getOldModel(),null)).first().getSNodeId() : rootId);
+      String rootName=(rootId == null ? "Model Properties" : myTree.getNameForRoot(rootId));
+      myRootDifferenceDialog=new RootDifferenceDialog(myProject,changeSet,nodeId,rootName,myContentTitles,(isVisible() ? getWindow() : WindowManager.getInstance().getFrame(myProject)),myEditable,new ModelDifferenceDialog.MyGoToNeighbourRootActions().getActions(),scrollTo);
     }
   }
 );
   myRootDifferenceDialog.show();
+  if (rootId == null && myEditable) {
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        MetadataUtil.applyMetadataChanges(myChangeSet.getNewModel(),myMetadataChangeSet.getNewModel());
+      }
+    }
+);
+  }
   myRootDifferenceDialog=null;
   if (!(myGoingToNeighbour) && !(isVisible())) {
     close(NEXT_USER_EXIT_CODE);
@@ -21,7 +28,7 @@
   }
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
-      rebuildChangeSet();
+      rebuildChangeSets();
     }
   }
 );
