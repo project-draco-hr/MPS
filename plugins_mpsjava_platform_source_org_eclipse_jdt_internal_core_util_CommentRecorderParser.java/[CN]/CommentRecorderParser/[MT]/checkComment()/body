@@ -1,0 +1,35 @@
+{
+  if (!(this.diet && this.dietInt == 0) && this.scanner.commentPtr >= 0) {
+    flushCommentsDefinedPriorTo(this.endStatementPosition);
+  }
+  boolean deprecated=false;
+  boolean checkDeprecated=false;
+  int lastCommentIndex=-1;
+  nextComment:   for (lastCommentIndex=this.scanner.commentPtr; lastCommentIndex >= 0; lastCommentIndex--) {
+    int commentSourceStart=this.scanner.commentStarts[lastCommentIndex];
+    if ((commentSourceStart < 0) || (this.modifiersSourceStart != -1 && this.modifiersSourceStart < commentSourceStart) || (this.scanner.commentStops[lastCommentIndex] < 0)) {
+      continue nextComment;
+    }
+    checkDeprecated=true;
+    int commentSourceEnd=this.scanner.commentStops[lastCommentIndex] - 1;
+    if (this.javadocParser.shouldReportProblems) {
+      this.javadocParser.reportProblems=this.currentElement == null || commentSourceEnd > this.lastJavadocEnd;
+    }
+ else {
+      this.javadocParser.reportProblems=false;
+    }
+    deprecated=this.javadocParser.checkDeprecation(lastCommentIndex);
+    this.javadoc=this.javadocParser.docComment;
+    if (this.currentElement == null)     this.lastJavadocEnd=commentSourceEnd;
+    break nextComment;
+  }
+  if (deprecated) {
+    checkAndSetModifiers(ClassFileConstants.AccDeprecated);
+  }
+  if (lastCommentIndex >= 0 && checkDeprecated) {
+    this.modifiersSourceStart=this.scanner.commentStarts[lastCommentIndex];
+    if (this.modifiersSourceStart < 0) {
+      this.modifiersSourceStart=-this.modifiersSourceStart;
+    }
+  }
+}

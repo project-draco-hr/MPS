@@ -5,14 +5,29 @@ class Result {
     int warnings=-1;
   }
   final Result res=new Result();
-  cm.compile(myFacet.getModule(),new CompileStatusNotification(){
-    @Override public void finished(    boolean aborted,    int errors,    int warnings,    CompileContext compileContext){
-      res.aborted=aborted;
-      res.errors=errors;
-      res.warnings=warnings;
+  final boolean[] compilationFinished=new boolean[]{false};
+  SwingUtilities.invokeLater(new Runnable(){
+    @Override public void run(){
+      cm.compile(myFacet.getModule(),new CompileStatusNotification(){
+        @Override public void finished(        boolean aborted,        int errors,        int warnings,        CompileContext compileContext){
+          res.aborted=aborted;
+          res.errors=errors;
+          res.warnings=warnings;
+          compilationFinished[0]=true;
+        }
+      }
+);
     }
   }
 );
+  while (!compilationFinished[0]) {
+    try {
+      Thread.sleep(100);
+    }
+ catch (    InterruptedException e) {
+      e.printStackTrace();
+    }
+  }
   assertOnTeardown(new Asserter(){
     @Override public void doAssert() throws Exception {
       assertFalse(res.aborted);
