@@ -1,0 +1,48 @@
+{
+  try {
+    List<SModelDescriptor> m=((List<SModelDescriptor>)MapSequence.fromMap(_params).get("models"));
+    final Iterable<IFile> seq=ListSequence.fromList(m).where(new IWhereFilter<SModelDescriptor>(){
+      public boolean accept(      SModelDescriptor it){
+        return it instanceof DefaultSModelDescriptor && !(((DefaultSModelDescriptor)it).isReadOnly());
+      }
+    }
+).select(new ISelector<SModelDescriptor,IFile>(){
+      public IFile select(      SModelDescriptor it){
+        return ((DefaultSModelDescriptor)it).getSource().getFile();
+      }
+    }
+);
+    ModelAccess.instance().runWriteAction(new Runnable(){
+      public void run(){
+        for (        IFile oldFile : Sequence.fromIterable(seq)) {
+          if (!(oldFile.getName().endsWith(MPSExtentions.DOT_MODEL))) {
+            continue;
+          }
+          DefaultSModel rmodel;
+          try {
+            rmodel=ModelPersistence.readModel(oldFile,false);
+          }
+ catch (          ModelReadException ex) {
+            LOG.error("cannot read " + oldFile,ex);
+            continue;
+          }
+          DefaultSModelDescriptor modelDescriptor=(DefaultSModelDescriptor)SModelRepository.getInstance().getModelDescriptor(rmodel.getSModelReference());
+          if (modelDescriptor == null) {
+            continue;
+          }
+          IFile newFile=oldFile.getParent().getDescendant(FileUtil.getNameWithoutExtension(oldFile.getName()) + "." + MPSExtentions.MODEL_BINARY);
+          SModule module=modelDescriptor.getModule();
+          if (BinaryPersistence.writeModel(rmodel,newFile)) {
+            SModelRepository.getInstance().removeModelDescriptor(modelDescriptor);
+            oldFile.delete();
+            ((AbstractModule)module).updateModelsSet();
+          }
+        }
+      }
+    }
+);
+  }
+ catch (  Throwable t) {
+    LOG.error("User's action execute method failed. Action:" + "ConvertToBinaryPersistence",t);
+  }
+}

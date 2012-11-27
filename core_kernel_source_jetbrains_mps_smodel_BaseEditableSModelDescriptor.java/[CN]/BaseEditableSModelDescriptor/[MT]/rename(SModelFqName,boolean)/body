@@ -1,0 +1,25 @@
+{
+  ModelAccess.assertLegalWrite();
+  SModelFqName oldFqName=getModelReference().getSModelFqName();
+  SModel model=getSModel();
+  fireBeforeModelRenamed(new SModelRenamedEvent(model,oldFqName,newModelFqName));
+  SModelReference newModelReference=new SModelReference(newModelFqName,myModelReference.getSModelId());
+  model.changeModelReference(newModelReference);
+  if (!changeFile) {
+    save();
+  }
+ else {
+    IFile oldFile=getSource().getFile();
+    ModelRoot root=ModelRootUtil.getModelRoot(this);
+    if (root instanceof DefaultModelRoot) {
+      IFile newFile=((DefaultModelRoot)root).createSource(newModelFqName.toString(),FileUtil.getExtension(oldFile.getName())).getFile();
+      newFile.getParent().mkdirs();
+      newFile.createNewFile();
+      changeModelFile(newFile);
+      save();
+      oldFile.delete();
+    }
+  }
+  myModelReference=newModelReference;
+  fireModelRenamed(new SModelRenamedEvent(model,oldFqName,newModelFqName));
+}
