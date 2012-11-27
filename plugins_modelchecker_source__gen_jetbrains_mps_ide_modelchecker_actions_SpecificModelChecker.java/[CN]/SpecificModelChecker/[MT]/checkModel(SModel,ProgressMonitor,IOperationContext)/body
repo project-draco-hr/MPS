@@ -10,24 +10,28 @@
       break;
     }
     for (    SNode rootNode : ListSequence.fromList(SModelOperations.getRoots(model,null))) {
-      TypeContextManager.getInstance().getOrCreateContext(rootNode,this,true);
-      Set<IErrorReporter> iErrorReporters=checker.getErrors(rootNode,operationContext);
-      for (      IErrorReporter errorReporter : SetSequence.fromSet(iErrorReporters)) {
-        final IErrorReporter reporter=errorReporter;
-        final QuickFix_Runtime quickFix=check_7763bz_a0b0c0d0d0a(check_7763bz_a0a1a2a3a3a0(errorReporter));
-        IModelCheckerFix fix=null;
-        if (quickFix != null) {
-          fix=new IModelCheckerFix(){
-            public boolean doFix(){
-              quickFix.execute(reporter.getSNode());
-              return true;
+      TypeContextManager.getInstance().acquireTypecheckingContext(rootNode,this);
+      try {
+        Set<IErrorReporter> iErrorReporters=checker.getErrors(rootNode,operationContext);
+        for (        IErrorReporter errorReporter : SetSequence.fromSet(iErrorReporters)) {
+          final IErrorReporter reporter=errorReporter;
+          final QuickFix_Runtime quickFix=check_7763bz_a0b0b0b0d0d0a(check_7763bz_a0a1a1a1a3a3a0(errorReporter));
+          IModelCheckerFix fix=null;
+          if (quickFix != null) {
+            fix=new IModelCheckerFix(){
+              public boolean doFix(){
+                quickFix.execute(reporter.getSNode());
+                return true;
+              }
             }
-          }
 ;
+          }
+          addIssue(results,errorReporter.getSNode(),errorReporter.reportError(),SpecificChecker.getResultCategory(errorReporter.getMessageStatus()),checker.getCategory(),fix);
         }
-        addIssue(results,errorReporter.getSNode(),errorReporter.reportError(),SpecificChecker.getResultCategory(errorReporter.getMessageStatus()),checker.getCategory(),fix);
       }
-      TypeContextManager.getInstance().removeOwnerForRootNodeContext(rootNode,this);
+  finally {
+        TypeContextManager.getInstance().releaseTypecheckingContext(rootNode,this);
+      }
     }
     monitor.advance(1);
   }
