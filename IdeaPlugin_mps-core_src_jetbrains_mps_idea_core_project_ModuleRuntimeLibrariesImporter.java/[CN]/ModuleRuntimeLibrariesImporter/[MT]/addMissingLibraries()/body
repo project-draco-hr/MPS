@@ -1,14 +1,23 @@
 {
   Project project=getProject();
+  Set<ModuleReference> alreadyImported=new HashSet<ModuleReference>();
+  for (  OrderEntry entry : myModifiableRootModel.getOrderEntries()) {
+    if (entry instanceof LibraryOrderEntry) {
+      alreadyImported.addAll(SolutionLibrariesIndex.getInstance(getProject()).getModules(((LibraryOrderEntry)entry).getLibrary()));
+    }
+  }
   Collection<Library> projectLibs2Add=new HashSet<Library>();
   Map<ModuleReference,Collection<VirtualFile>> projectLibs2Create=new HashMap<ModuleReference,Collection<VirtualFile>>();
   for (  IModule usedModule : collectRuntimeModules(myAddedModules)) {
     if (!(usedModule instanceof Solution) || !usedModule.isPackaged() || BootstrapLanguages.JDK.equals(usedModule.getModuleReference())) {
       continue;
     }
-    Collection<Library> library=SolutionLibrariesIndex.getInstance(project).getLibraries(usedModule.getModuleReference());
-    if (!library.isEmpty()) {
-      projectLibs2Add.add(library.iterator().next());
+    if (alreadyImported.contains(usedModule.getModuleReference())) {
+      continue;
+    }
+    Library library=getAutoLibrary(usedModule.getModuleReference());
+    if (library != null) {
+      projectLibs2Add.add(library);
     }
  else {
       Set<VirtualFile> stubFiles=SolutionLibraryType.getSolutionJars((Solution)usedModule);
