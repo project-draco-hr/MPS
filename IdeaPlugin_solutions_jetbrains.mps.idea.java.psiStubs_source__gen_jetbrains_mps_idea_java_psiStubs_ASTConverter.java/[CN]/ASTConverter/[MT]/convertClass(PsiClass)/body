@@ -1,0 +1,87 @@
+{
+  final Wrappers._T<SNode> classifier=new Wrappers._T<SNode>();
+  if (x.isAnnotationType()) {
+    classifier.value=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.Annotation",null);
+  }
+ else   if (x.isEnum()) {
+    classifier.value=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.EnumClass",null);
+  }
+ else   if (x.isInterface()) {
+    classifier.value=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.Interface",null);
+  }
+ else {
+    classifier.value=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ClassConcept",null);
+  }
+  final SNode ourConcept=SNodeOperations.getConceptDeclaration(classifier.value);
+  SPropertyOperations.set(classifier.value,"name",x.getName());
+  SLinkOperations.setTarget(classifier.value,"visibility",getVisibility(x),true);
+  addTypeParams(x,classifier.value);
+  addAnnotations(x,classifier.value);
+  final Wrappers._T<ASTConverter> childConverter=new Wrappers._T<ASTConverter>(this);
+  if (isNotEmpty_rbndtb_a0s0b(SPropertyOperations.getString(classifier.value,"name"))) {
+    String id=getIdPrefix() + SPropertyOperations.getString(classifier.value,"name");
+    classifier.value.setId(new SNodeId.Foreign(id));
+    childConverter.value=new ASTConverter.WithState(id + ".");
+  }
+{
+    SNode reallyClass=classifier.value;
+    if (SNodeOperations.isInstanceOf(reallyClass,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
+      if (x.getSuperTypes().length > 0) {
+        SLinkOperations.setTarget(reallyClass,"superclass",resolveClass(x.getSuperTypes()[0]),true);
+      }
+      ListSequence.fromList(SLinkOperations.getTargets(reallyClass,"implementedInterface",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(x.getImplementsListTypes())).select(new ISelector<PsiClassType,SNode>(){
+        public SNode select(        PsiClassType it){
+          return resolveClass(it);
+        }
+      }
+));
+      SPropertyOperations.set(reallyClass,"isFinal","" + (isFinal(x)));
+      SPropertyOperations.set(reallyClass,"isStatic","" + (isStatic(x)));
+    }
+  }
+{
+    SNode iface=classifier.value;
+    if (SNodeOperations.isInstanceOf(iface,"jetbrains.mps.baseLanguage.structure.Interface")) {
+      ListSequence.fromList(SLinkOperations.getTargets(iface,"extendedInterface",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(x.getSuperTypes())).select(new ISelector<PsiClassType,SNode>(){
+        public SNode select(        PsiClassType it){
+          return resolveClass(it);
+        }
+      }
+));
+    }
+  }
+  Sequence.fromIterable(Sequence.fromArray(x.getFields())).visitAll(new IVisitor<PsiField>(){
+    public void visit(    PsiField it){
+      SNode node=childConverter.value.convertField(it,ourConcept);
+      if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.StaticFieldDeclaration")) {
+        ListSequence.fromList(SLinkOperations.getTargets(classifier.value,"staticField",true)).addElement(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.StaticFieldDeclaration"));
+      }
+ else       if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.FieldDeclaration")) {
+        ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(classifier.value,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"field",true)).addElement(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.FieldDeclaration"));
+      }
+    }
+  }
+);
+  Sequence.fromIterable(Sequence.fromArray(x.getMethods())).visitAll(new IVisitor<PsiMethod>(){
+    public void visit(    PsiMethod it){
+      SNode node=childConverter.value.convertMethod(it,ourConcept);
+      if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration")) {
+        ListSequence.fromList(SLinkOperations.getTargets(classifier.value,"method",true)).addElement(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration"));
+      }
+ else       if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration")) {
+        ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(classifier.value,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"staticMethod",true)).addElement(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration"));
+      }
+ else       if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.ConstructorDeclaration")) {
+        ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(classifier.value,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"constructor",true)).addElement(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.ConstructorDeclaration"));
+      }
+    }
+  }
+);
+  ListSequence.fromList(SLinkOperations.getTargets(classifier.value,"staticInnerClassifiers",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(x.getInnerClasses())).select(new ISelector<PsiClass,SNode>(){
+    public SNode select(    PsiClass it){
+      return childConverter.value.convertClass(it);
+    }
+  }
+));
+  return classifier.value;
+}

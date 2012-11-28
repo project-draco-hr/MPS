@@ -1,0 +1,33 @@
+{
+  PsiClass cls=t.resolve();
+  if (cls == null) {
+    return null;
+  }
+  PsiElement e=cls;
+  StringBuilder sb=new StringBuilder();
+  do {
+    sb.insert(0,'.' + ((PsiClass)e).getName());
+    e=e.getParent();
+    if (!(e instanceof PsiClass) && !(e instanceof PsiFile)) {
+      return null;
+    }
+  }
+ while (!(e instanceof PsiFile));
+  sb.deleteCharAt(0);
+  if (!(e instanceof PsiJavaFile)) {
+    return null;
+  }
+  PsiJavaFile file=(PsiJavaFile)e;
+  String qualClassName=sb.toString();
+  String packageName=file.getPackageName();
+  SModelReference modelRef=SModelReference.fromString(packageName);
+  SNode clsType=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ClassifierType",null);
+  clsType.setReference("classifier",new DynamicReference("classifier",clsType,modelRef,qualClassName));
+  ListSequence.fromList(SLinkOperations.getTargets(clsType,"parameter",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(t.getParameters())).select(new ISelector<PsiType,SNode>(){
+    public SNode select(    PsiType it){
+      return convertType(it);
+    }
+  }
+));
+  return clsType;
+}
