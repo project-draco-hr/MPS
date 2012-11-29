@@ -1,0 +1,46 @@
+{
+  if (isInvalidationWasPerformed()) {
+    return isInvalidationResult();
+  }
+  Set<Pair<SNode,NonTypesystemRule_Runtime>> invalidatedNodesAndRules=new THashSet<Pair<SNode,NonTypesystemRule_Runtime>>(1);
+  for (  SNode node : getCurrentNodesToInvalidate()) {
+    doInvalidate(myNodesToDependentNodesWithNTRules.get(node),invalidatedNodesAndRules);
+  }
+  for (  Pair<SNode,String> pair : myCurrentPropertiesToInvalidate) {
+    doInvalidate(myPropertiesToDependentNodesWithNTRules.get(pair),invalidatedNodesAndRules);
+  }
+  for (  SNode node : myCurrentTypedTermsToInvalidate) {
+    doInvalidate(myTypedTermsToDependentNodesWithNTRules.get(node),invalidatedNodesAndRules);
+    doInvalidate(myNodesToDependentNodesWithNTRules.get(node),invalidatedNodesAndRules);
+  }
+  if (isCacheWasRebuilt()) {
+    for (    SNode nodeOfRule : myNodesDependentOnCachesWithNTRules.keySet()) {
+      Set<NonTypesystemRule_Runtime> rules=myNodesDependentOnCachesWithNTRules.get(nodeOfRule);
+      if (rules != null) {
+        for (        NonTypesystemRule_Runtime rule : rules) {
+          invalidatedNodesAndRules.add(new Pair<SNode,NonTypesystemRule_Runtime>(nodeOfRule,rule));
+        }
+      }
+    }
+  }
+  boolean result=!invalidatedNodesAndRules.isEmpty();
+  for (  Pair<SNode,NonTypesystemRule_Runtime> nodeAndRule : invalidatedNodesAndRules) {
+    myCheckedNodes.remove(nodeAndRule);
+    Map<NonTypesystemRule_Runtime,Set<IErrorReporter>> rulesAndErrors=myNodesAndNTRulesToErrors.get(nodeAndRule.o1);
+    if (rulesAndErrors != null) {
+      Set<IErrorReporter> errors=rulesAndErrors.get(nodeAndRule.o2);
+      if (errors != null) {
+        for (        IErrorReporter errorReporter : new HashSet<IErrorReporter>(errors)) {
+          List<IErrorReporter> iErrorReporters=myNodesToErrorsMap.get(errorReporter.getSNode());
+          if (iErrorReporters != null) {
+            iErrorReporters.remove(errorReporter);
+            errors.remove(errorReporter);
+          }
+        }
+      }
+    }
+  }
+  clearAllExceptErrors();
+  setInvalidationResult(result);
+  return result;
+}
