@@ -1,5 +1,7 @@
 {
   SNode cls;
+  final Map<SNode,Integer> memberStartPositions=MapSequence.fromMap(new HashMap<SNode,Integer>());
+  SNode defaultConstructor=null;
   boolean isAnonymous=x.allocation != null;
   if (isAnonymous) {
     cls=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.AnonymousClass",null);
@@ -44,6 +46,7 @@ myTypeResolver.enterType(new String(innerTyp.name));
 try {
 SNode nested=convertTypeDecl(innerTyp);
 SLinkOperations.getTargets(cls,"member",true).add(nested);
+MapSequence.fromMap(memberStartPositions).put(nested,innerTyp.sourceStart);
 }
   finally {
 myTypeResolver.leaveType();
@@ -92,12 +95,17 @@ SLinkOperations.getTargets(enm,"enumConstant",true).add(item);
 }
 if (x.fields != null) {
 for (FieldDeclaration f : x.fields) {
-convertField(cls,f,true);
+SNode mem=convertField(cls,f,true);
+MapSequence.fromMap(memberStartPositions).put(SNodeOperations.cast(mem,"jetbrains.mps.baseLanguage.structure.ClassifierMember"),f.sourceStart);
 }
 }
 if (x.methods != null) {
 for (AbstractMethodDeclaration method : x.methods) {
-convertMethod(cls,method,true);
+SNode mem=convertMethod(cls,method,true);
+MapSequence.fromMap(memberStartPositions).put(SNodeOperations.cast(mem,"jetbrains.mps.baseLanguage.structure.ClassifierMember"),method.sourceStart);
+if (method instanceof ConstructorDeclaration && method.isDefaultConstructor()) {
+defaultConstructor=SNodeOperations.cast(mem,"jetbrains.mps.baseLanguage.structure.ClassifierMember");
+}
 }
 }
 myTypeResolver.leaveTypeVarFrame();
@@ -105,5 +113,29 @@ if (x.javadoc != null) {
 AttributeOperations.createAndSetAttrbiute(cls,new IAttributeDescriptor.NodeAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.javadoc.structure.ClassifierDocComment")),"jetbrains.mps.baseLanguage.javadoc.structure.ClassifierDocComment");
 MapSequence.fromMap(myJavadocs).put(x.javadoc.sourceStart,AttributeOperations.getAttribute(cls,new IAttributeDescriptor.NodeAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.javadoc.structure.ClassifierDocComment"))));
 }
+List<SNode> sortedMembers=ListSequence.fromList(SLinkOperations.getTargets(cls,"member",true)).sort(new ISelector<SNode,Integer>(){
+public Integer select(SNode it){
+return MapSequence.fromMap(memberStartPositions).get(it);
+}
+}
+,true).toListSequence();
+if ((defaultConstructor != null)) {
+ListSequence.fromList(sortedMembers).removeElement(defaultConstructor);
+int firstNonField=0;
+{
+Iterator<SNode> m_it=ListSequence.fromList(sortedMembers).iterator();
+SNode m_var;
+while (m_it.hasNext()) {
+m_var=m_it.next();
+if (!(SNodeOperations.isInstanceOf(m_var,"jetbrains.mps.baseLanguage.structure.VariableDeclaration"))) {
+break;
+}
+firstNonField++;
+}
+}
+ListSequence.fromList(sortedMembers).insertElement(firstNonField,defaultConstructor);
+}
+ListSequence.fromList(SLinkOperations.getTargets(cls,"member",true)).clear();
+ListSequence.fromList(SLinkOperations.getTargets(cls,"member",true)).addSequence(ListSequence.fromList(sortedMembers));
 return cls;
 }

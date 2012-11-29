@@ -5,7 +5,7 @@
   settings.put(CompilerOptions.OPTION_Source,CompilerOptions.VERSION_1_6);
   settings.put(CompilerOptions.OPTION_DocCommentSupport,"enabled");
   TypeNameResolver typeResolver=new TypeNameResolver(pkg);
-  ASTConverter converter=new ASTConverter(null,typeResolver,stubsMode);
+  ASTConverter converter=(FeatureKind.CLASS_STUB.equals(what) ? new ASTConverter(null,typeResolver,stubsMode) : new FullASTConverter(null,typeResolver));
   List<SNode> resultNodes=new ArrayList<SNode>();
   String resultPackageName=null;
   char[] source=code.toCharArray();
@@ -53,10 +53,9 @@ if (absMethod == null) {
 return JavaParser.JavaParseResult.UNKNOWN_ERROR;
 }
 Statement[] stmts=absMethod.statements;
-List<SNode> nodes=new ArrayList<SNode>();
 if (stmts != null && stmts.length > 0) {
 try {
-resultNodes=converter.convertStatements(stmts);
+resultNodes=((FullASTConverter)converter).convertStatements(stmts);
 }
  catch (ReflectException e) {
 throw new RuntimeException(e);
@@ -66,6 +65,8 @@ break;
 default :
 throw new IllegalArgumentException("Parsing other than class and statements is not supported yet ");
 }
-attachComments(source,converter,util.recordedParsingInformation,converter.getCodeBlocks());
+if (converter instanceof FullASTConverter) {
+attachComments(source,((FullASTConverter)converter),util.recordedParsingInformation,((FullASTConverter)converter).getCodeBlocks());
+}
 return new JavaParser.JavaParseResult(resultNodes,resultPackageName,problemDescription(util.recordedParsingInformation));
 }
