@@ -1,42 +1,51 @@
 {
   final Set<SNode> conceptPropertyUsages=SetSequence.fromSet(new HashSet<SNode>());
+  final Set<SNode> conceptPropertyDeclarationUsages=SetSequence.fromSet(new HashSet<SNode>());
   final Set<SNode> accessUsages=SetSequence.fromSet(new HashSet<SNode>());
   final Set<SNode> cellUsages=SetSequence.fromSet(new HashSet<SNode>());
   final Set<SNode> conceptLinkUsages=SetSequence.fromSet(new HashSet<SNode>());
+  final Set<SNode> conceptLinkDeclarationUsages=SetSequence.fromSet(new HashSet<SNode>());
   final Set<SNode> linkAccessUsages=SetSequence.fromSet(new HashSet<SNode>());
   final Set<SearchResult<SNode>> allUsages=SetSequence.fromSet(new HashSet<SearchResult<SNode>>());
-  final Set<SNode> searchedConceptProperties=getSearchedConceptPropertiesAndLinks();
-  Set<SReference> usages=FindUsagesManager.getInstance().findUsages((searchedConceptProperties),SearchType.USAGES,scope,new EmptyProgressMonitor());
+  Set<SNode> usages=FindUsagesManager.getInstance().findUsages(nodesToFind(),SearchType.INSTANCES,scope,new EmptyProgressMonitor());
   boolean usageIsFound;
-  for (  SReference usage : SetSequence.fromSet(usages)) {
+  for (  SNode usage : SetSequence.fromSet(usages)) {
     usageIsFound=true;
-    SNode source=usage.getSourceNode();
-    if (SNodeOperations.isInstanceOf(source,"jetbrains.mps.lang.structure.structure.ConceptProperty")) {
-      SetSequence.fromSet(conceptPropertyUsages).addElement(SNodeOperations.cast(source,"jetbrains.mps.lang.structure.structure.ConceptProperty"));
+    if (SNodeOperations.isInstanceOf(usage,"jetbrains.mps.lang.structure.structure.ConceptProperty")) {
+      SetSequence.fromSet(conceptPropertyUsages).addElement(SNodeOperations.cast(usage,"jetbrains.mps.lang.structure.structure.ConceptProperty"));
     }
- else     if (SNodeOperations.isInstanceOf(source,"jetbrains.mps.lang.smodel.structure.SConceptPropertyAccess") && needToMigrate(source)) {
-      SetSequence.fromSet(accessUsages).addElement(SNodeOperations.cast(source,"jetbrains.mps.lang.smodel.structure.SConceptPropertyAccess"));
+ else     if (SNodeOperations.isInstanceOf(usage,"jetbrains.mps.lang.smodel.structure.SConceptPropertyAccess") && needToMigrate(usage)) {
+      SetSequence.fromSet(accessUsages).addElement(SNodeOperations.cast(usage,"jetbrains.mps.lang.smodel.structure.SConceptPropertyAccess"));
     }
- else     if (SNodeOperations.isInstanceOf(source,"jetbrains.mps.lang.editor.structure.CellModel_ConceptProperty")) {
-      SetSequence.fromSet(cellUsages).addElement(SNodeOperations.cast(source,"jetbrains.mps.lang.editor.structure.CellModel_ConceptProperty"));
+ else     if (SNodeOperations.isInstanceOf(usage,"jetbrains.mps.lang.editor.structure.CellModel_ConceptProperty")) {
+      SetSequence.fromSet(cellUsages).addElement(SNodeOperations.cast(usage,"jetbrains.mps.lang.editor.structure.CellModel_ConceptProperty"));
     }
- else     if (SNodeOperations.isInstanceOf(source,"jetbrains.mps.lang.structure.structure.ReferenceConceptLink")) {
-      SetSequence.fromSet(conceptLinkUsages).addElement(SNodeOperations.cast(source,"jetbrains.mps.lang.structure.structure.ReferenceConceptLink"));
+ else     if (SNodeOperations.isInstanceOf(usage,"jetbrains.mps.lang.structure.structure.ReferenceConceptLink")) {
+      SetSequence.fromSet(conceptLinkUsages).addElement(SNodeOperations.cast(usage,"jetbrains.mps.lang.structure.structure.ReferenceConceptLink"));
     }
- else     if (SNodeOperations.isInstanceOf(source,"jetbrains.mps.lang.smodel.structure.SConceptLinkAccess")) {
-      SetSequence.fromSet(linkAccessUsages).addElement(SNodeOperations.cast(source,"jetbrains.mps.lang.smodel.structure.SConceptLinkAccess"));
+ else     if (SNodeOperations.isInstanceOf(usage,"jetbrains.mps.lang.smodel.structure.SConceptLinkAccess") && SNodeOperations.isInstanceOf(SLinkOperations.getTarget(SNodeOperations.cast(usage,"jetbrains.mps.lang.smodel.structure.SConceptLinkAccess"),"conceptLinkDeclaration",false),"jetbrains.mps.lang.structure.structure.ReferenceConceptLinkDeclaration")) {
+      SetSequence.fromSet(linkAccessUsages).addElement(SNodeOperations.cast(usage,"jetbrains.mps.lang.smodel.structure.SConceptLinkAccess"));
+    }
+ else     if (SNodeOperations.isInstanceOf(usage,"jetbrains.mps.lang.structure.structure.ConceptPropertyDeclaration") && (AttributeOperations.getAttribute(SNodeOperations.cast(usage,"jetbrains.mps.lang.structure.structure.ConceptPropertyDeclaration"),new IAttributeDescriptor.NodeAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.lang.structure.structure.MigratedToMethodAnnotation"))) == null)) {
+      SetSequence.fromSet(conceptPropertyDeclarationUsages).addElement(SNodeOperations.cast(usage,"jetbrains.mps.lang.structure.structure.ConceptPropertyDeclaration"));
+    }
+ else     if (SNodeOperations.isInstanceOf(usage,"jetbrains.mps.lang.structure.structure.ReferenceConceptLinkDeclaration") && (AttributeOperations.getAttribute(SNodeOperations.cast(usage,"jetbrains.mps.lang.structure.structure.ReferenceConceptLinkDeclaration"),new IAttributeDescriptor.NodeAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.lang.structure.structure.MigratedToMethodAnnotation"))) == null)) {
+      SetSequence.fromSet(conceptLinkDeclarationUsages).addElement(SNodeOperations.cast(usage,"jetbrains.mps.lang.structure.structure.ReferenceConceptLinkDeclaration"));
     }
  else {
       usageIsFound=false;
     }
     if (usageIsFound) {
-      SetSequence.fromSet(allUsages).addElement(new SearchResult<SNode>(source,""));
+      SetSequence.fromSet(allUsages).addElement(new SearchResult<SNode>(usage,""));
     }
   }
-  final SearchResults searchResults=new SearchResults<SNode>((searchedConceptProperties),SetSequence.fromSet(allUsages).toListSequence());
+  Set<SNode> searchedNodes=SetSequence.fromSet(new HashSet<SNode>());
+  SetSequence.fromSet(searchedNodes).addSequence(SetSequence.fromSet(conceptPropertyDeclarationUsages));
+  SetSequence.fromSet(searchedNodes).addSequence(SetSequence.fromSet(conceptLinkDeclarationUsages));
+  final SearchResults searchResults=new SearchResults<SNode>(searchedNodes,SetSequence.fromSet(allUsages).toListSequence());
   showRefactoringView(new _FunctionTypes._void_P0_E0(){
     public void invoke(){
-      doMigrate(searchedConceptProperties,cellUsages,accessUsages,conceptPropertyUsages,linkAccessUsages,conceptLinkUsages);
+      doMigrate(conceptPropertyDeclarationUsages,conceptLinkDeclarationUsages,cellUsages,accessUsages,conceptPropertyUsages,linkAccessUsages,conceptLinkUsages);
     }
   }
 ,searchResults);
