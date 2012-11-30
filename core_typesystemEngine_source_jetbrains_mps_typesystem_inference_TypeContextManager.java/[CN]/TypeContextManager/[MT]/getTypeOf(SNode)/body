@@ -1,9 +1,6 @@
 {
   ModelAccess.assertLegalRead();
   if (node == null)   return null;
-  ITypeContextOwner owner=new ITypeContextOwner(){
-  }
-;
   SNode root=node.getTopmostAncestor();
   boolean isResolveMode=myResolveMode.get();
   Set<SNode> resolveNodes=getMyResolveNodes();
@@ -19,7 +16,7 @@
   }
   try {
     if (myTypeChecker.isGenerationMode()) {
-      TypeCheckingContext context=myTypeChecker.hasPerformanceTracer() ? createTracingTypeCheckingContext(node) : createTypeCheckingContext(node);
+      TypeCheckingContext context=myTypeChecker.hasPerformanceTracer() ? new IncrementalTypecheckingContext_Tracer(node,myTypeChecker) : new SimpleTypecheckingContext(node,myTypeChecker);
       if (context == null)       return null;
       try {
         return context.getTypeOf_generationMode(node);
@@ -28,12 +25,13 @@
         context.dispose();
       }
     }
-    TypeCheckingContext context=getOrCreateContext(root,owner,true);
+    final ITypeContextOwner contextOwner=myTypecheckingContextOwner.get();
+    TypeCheckingContext context=acquireTypecheckingContext(root,contextOwner);
     try {
-      if (myComputeInNormalMode && context != null && context.isCheckedRoot(false)) {
-        myComputeInNormalMode=false;
+      if (myComputeInNormalMode_resolverVooDoo && context != null && context.isCheckedRoot(false)) {
+        myComputeInNormalMode_resolverVooDoo=false;
         SNode type=context.getTypeOf_normalMode(node);
-        myComputeInNormalMode=true;
+        myComputeInNormalMode_resolverVooDoo=true;
         return type;
       }
       if (isResolveMode) {
@@ -48,7 +46,7 @@
       return context.getTypeOf(node,myTypeChecker);
     }
   finally {
-      removeOwnerForRootNodeContext(root,owner);
+      releaseTypecheckingContext(root,contextOwner);
     }
   }
   finally {
