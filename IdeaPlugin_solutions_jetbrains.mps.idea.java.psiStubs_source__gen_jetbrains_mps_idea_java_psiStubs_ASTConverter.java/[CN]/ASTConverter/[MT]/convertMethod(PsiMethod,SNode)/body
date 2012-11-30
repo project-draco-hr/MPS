@@ -1,0 +1,68 @@
+{
+  SNode method;
+  if (x.isConstructor()) {
+    method=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ConstructorDeclaration",null);
+  }
+ else   if (x instanceof PsiAnnotationMethod && SConceptOperations.isSubConceptOf(parentConcept,"jetbrains.mps.baseLanguage.structure.Annotation")) {
+    method=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.AnnotationMethodDeclaration",null);
+    if (((PsiAnnotationMethod)x).getDefaultValue() != null) {
+      SNode str=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StringLiteral",null);
+      SPropertyOperations.set(str,"value","TODO: SUPPORT EXPRESSIONS IN PSI STUBS?");
+      SLinkOperations.setTarget(SNodeOperations.cast(method,"jetbrains.mps.baseLanguage.structure.AnnotationMethodDeclaration"),"defaultValue",str,true);
+    }
+  }
+ else   if (!(isStatic(x)) || SConceptOperations.isSubConceptOf(parentConcept,"jetbrains.mps.baseLanguage.structure.Interface")) {
+    method=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.InstanceMethodDeclaration",null);
+  }
+ else {
+    method=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration",null);
+  }
+  SPropertyOperations.set(method,"name",x.getName());
+  SLinkOperations.setTarget(SNodeOperations.cast(method,"jetbrains.mps.baseLanguage.structure.ClassifierMember"),"visibility",getVisibility(x),true);
+  SPropertyOperations.set(method,"isFinal","" + (isFinal(x)));
+  SPropertyOperations.set(method,"isSynchronized","" + (x.hasModifierProperty(PsiModifier.SYNCHRONIZED)));
+  SLinkOperations.setTarget(method,"returnType",convertType(x.getReturnType()),true);
+  ListSequence.fromList(SLinkOperations.getTargets(method,"parameter",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(x.getParameterList().getParameters())).select(new ISelector<PsiParameter,SNode>(){
+    public SNode select(    PsiParameter it){
+      SNode param=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ParameterDeclaration",null);
+      SPropertyOperations.set(param,"name",it.getName());
+      SLinkOperations.setTarget(param,"type",convertType(it.getType()),true);
+      SPropertyOperations.set(param,"isFinal","" + (isFinal(it)));
+      addAnnotations(it,param);
+      return param;
+    }
+  }
+));
+  ListSequence.fromList(SLinkOperations.getTargets(method,"throwsItem",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(x.getThrowsList().getReferencedTypes())).select(new ISelector<PsiClassType,SNode>(){
+    public SNode select(    PsiClassType it){
+      SNode typ=resolveClass(it);
+      return typ;
+    }
+  }
+));
+  addTypeParams(x,method);
+  if (1 > 0) {
+    SLinkOperations.setTarget(method,"body",SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StubStatementList",null),true);
+  }
+ else {
+    SLinkOperations.setTarget(method,"body",SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StatementList",null),true);
+  }
+  if (x.getName() != null) {
+    StringBuilder sb=new StringBuilder(getIdPrefix() + x.getName() + '(');
+    for (    PsiParameter param : x.getParameterList().getParameters()) {
+      PsiType psiType=param.getType();
+      if (psiType != null) {
+        sb.append(psiType.getCanonicalText());
+        sb.append(',');
+      }
+    }
+    int last=sb.length() - 1;
+    if (sb.charAt(last) == ',') {
+      sb.deleteCharAt(last);
+    }
+    sb.append(')');
+    String id=sb.toString();
+    method.setId(new SNodeId.Foreign(id));
+  }
+  return method;
+}
