@@ -1,82 +1,8 @@
 {
-  if (DISABLED) {
-    return new HashSet<EditorMessage>();
-  }
-  SModel model=SNodeOperations.getModel(rootNode);
-  if (model.getModelDescriptor() == null || model.isTransient() || model.isDisposed()) {
-    return new HashSet<EditorMessage>(0);
-  }
-  final Map<SNode,SNode> reResolvedTargets=new HashMap<SNode,SNode>();
-  if (!(wasCheckedOnce)) {
-    for (    SNode methodCall : SNodeOperations.getDescendants(rootNode,"jetbrains.mps.baseLanguage.structure.IMethodCall",false,new String[]{})) {
-      testAndFixMethodCall(methodCall,reResolvedTargets);
-    }
-  }
- else {
-    Set<SNodePointer> expressionsWithChangedTypes;
-synchronized (myRecalculatedTypesLock) {
-      expressionsWithChangedTypes=new HashSet<SNodePointer>(myCurrentExpressionsWithChangedTypes);
-      myCurrentExpressionsWithChangedTypes.clear();
-    }
-    SModelEventVisitor visitor=new SModelEventVisitorAdapter(){
-      public void visitChildEvent(      SModelChildEvent event){
-        SNode child=event.getChild();
-        if (event.isAdded()) {
-          nodeAdded(child,reResolvedTargets);
-        }
- else {
-          nodeRemoved(child,event.getParent(),event.getModel(),reResolvedTargets);
-        }
-      }
-      public void visitReferenceEvent(      SModelReferenceEvent event){
-        SReference reference=event.getReference();
-        SNode sourceNode=reference.getSourceNode();
-        if (SNodeOperations.isInstanceOf(sourceNode,"jetbrains.mps.baseLanguage.structure.IMethodCall") && "baseMethodDeclaration".equals(reference.getRole())) {
-          methodCallDeclarationChanged(SNodeOperations.cast(sourceNode,"jetbrains.mps.baseLanguage.structure.IMethodCall"),reResolvedTargets);
-        }
-      }
-      public void visitPropertyEvent(      SModelPropertyEvent event){
-        SNode node=event.getNode();
-        SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration");
-        if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration") && "name".equals(event.getPropertyName())) {
-          methodDeclarationNameChanged(node,reResolvedTargets);
-          methodDeclarationSignatureChanged(node,reResolvedTargets);
-        }
-      }
-    }
-;
-    for (    SModelEvent event : events) {
-      if (event.getAffectedRoot() != rootNode) {
-        continue;
-      }
-      event.accept(visitor);
-    }
-    for (    SNodePointer expressionWithChangedType : expressionsWithChangedTypes) {
-      expressionTypeChanged(expressionWithChangedType.getNode(),reResolvedTargets);
-    }
-  }
-  ThreadUtils.runInUIThreadNoWait(new Runnable(){
-    public void run(){
-      if (reResolvedTargets.isEmpty()) {
-        return;
-      }
-      Project p=(editorContext != null && editorContext.getOperationContext() != null ? editorContext.getOperationContext().getProject() : null);
-      if (p == null) {
-        return;
-      }
-      ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
-        public void run(){
-          for (          SNode methodCall : reResolvedTargets.keySet()) {
-            SNode referent=reResolvedTargets.get(methodCall);
-            if (referent != null && !(jetbrains.mps.util.SNodeOperations.isDisposed(referent))) {
-              SLinkOperations.setTarget(methodCall,"baseMethodDeclaration",referent,false);
-            }
-          }
-        }
-      }
-,p);
+  return TypeContextManager.getInstance().runTypeCheckingComputation((ITypeContextOwner)editorContext.getEditorComponent(),rootNode,new ITypechecking.Computation(){
+    public Object compute(    TypeCheckingContext p0){
+      return doCreateMessages(rootNode,events,wasCheckedOnce,editorContext);
     }
   }
 );
-  return new HashSet<EditorMessage>();
 }
