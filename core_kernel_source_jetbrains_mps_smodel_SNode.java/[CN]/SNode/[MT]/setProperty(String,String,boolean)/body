@@ -1,57 +1,8 @@
 {
-  propertyName=InternUtil.intern(propertyName);
-  ModelChange.assertLegalNodeChange(myModel,this);
-  propertyValue=InternUtil.intern(propertyValue);
   if (usePropertySetter) {
-    Set<Pair<SNode,String>> threadSet=ourPropertySettersInProgress.get();
-    Pair<SNode,String> pair=new Pair<SNode,String>(this,propertyName);
-    if (!threadSet.contains(pair) && myModel != null && myModel.canFireEvent()) {
-      PropertyConstraintsDescriptor descriptor=ConceptRegistry.getInstance().getConstraintsDescriptor(this.getConcept().getId()).getProperty(propertyName);
-      threadSet.add(pair);
-      try {
-        descriptor.setValue(this,propertyValue,GlobalScope.getInstance());
-        return;
-      }
- catch (      Exception t) {
-        LOG.error(t);
-      }
- finally {
-        threadSet.remove(pair);
-      }
-    }
-  }
-  if (ourMemberAccessModifier != null) {
-    propertyName=ourMemberAccessModifier.getNewPropertyName(myModel,myConceptFqName,propertyName);
-  }
-  int index=getPropertyIndex(propertyName);
-  final String oldValue=index == -1 ? null : myProperties[index + 1];
-  if (propertyValue == null && oldValue == null)   return;
-  if (propertyValue == null) {
-    String[] oldProperties=myProperties;
-    int newLength=oldProperties.length - 2;
-    if (newLength == 0) {
-      myProperties=null;
-    }
- else {
-      myProperties=new String[newLength];
-      System.arraycopy(oldProperties,0,myProperties,0,index);
-      System.arraycopy(oldProperties,index + 2,myProperties,index,newLength - index);
-    }
-  }
- else   if (oldValue == null) {
-    String[] oldProperties=myProperties == null ? EMPTY_ARRAY : myProperties;
-    myProperties=new String[oldProperties.length + 2];
-    System.arraycopy(oldProperties,0,myProperties,0,oldProperties.length);
-    myProperties[myProperties.length - 2]=propertyName;
-    myProperties[myProperties.length - 1]=propertyValue;
+    SNodeAccessUtil.setProperty(this,propertyName,propertyValue);
   }
  else {
-    myProperties[index + 1]=propertyValue;
-  }
-  SModel model=getModel();
-  if (model == null)   return;
-  model.performUndoableAction(new PropertyChangeUndoableAction(this,propertyName,oldValue,propertyValue));
-  if (ModelChange.needFireEvents(model,this)) {
-    model.firePropertyChangedEvent(this,propertyName,oldValue,propertyValue);
+    setProperty(propertyName,propertyValue);
   }
 }
