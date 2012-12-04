@@ -1,0 +1,41 @@
+{
+  if (stream.readInt() != getHeaderMarker())   throw new IOException("bad stream: no module descriptor start marker");
+  myId=stream.readModuleID();
+  myNamespace=stream.readString();
+  myTimestamp=stream.readString();
+  myModelRoots.clear();
+  for (int size=stream.readInt(); size > 0; size--) {
+    myModelRoots.add(ModelRootDescriptor.load(stream));
+  }
+  myDependencies.clear();
+  for (int size=stream.readInt(); size > 0; size--) {
+    Dependency dep=new Dependency();
+    dep.load(stream);
+    myDependencies.add(dep);
+  }
+  myUsedLanguages.clear();
+  for (int size=stream.readInt(); size > 0; size--) {
+    myUsedLanguages.add(stream.readModuleReference());
+  }
+  myUsedDevkits.clear();
+  for (int size=stream.readInt(); size > 0; size--) {
+    myUsedDevkits.add(stream.readModuleReference());
+  }
+  myAdditionalJavaStubPaths.clear();
+  myAdditionalJavaStubPaths.addAll(stream.readStrings());
+  mySourcePaths.clear();
+  mySourcePaths.addAll(stream.readStrings());
+  byte b=stream.readByte();
+  if (b == 0x1) {
+    myDeploymentDescriptor=new DeploymentDescriptor();
+    myDeploymentDescriptor.load(stream);
+  }
+ else   if (b == 0x70) {
+    myDeploymentDescriptor=null;
+  }
+ else {
+    throw new IOException("broken stream");
+  }
+  myUseTransientOutput=stream.readBoolean();
+  if (stream.readByte() != 0xfa)   throw new IOException("bad stream: no module descriptor end marker");
+}
