@@ -1,0 +1,26 @@
+{
+  Set<SModel> models=SetSequence.fromSet(new HashSet<SModel>());
+  JavaSrcDataSource dataSource=new JavaSrcDataSource(dir,this);
+  boolean thereAreJavaFiles=dataSource.getAvailableStreams().iterator().hasNext();
+  if (thereAreJavaFiles) {
+    SModelFqName fqName=new SModelFqName(pkg,"java_stub");
+    jetbrains.mps.smodel.SModelId modelId=jetbrains.mps.smodel.SModelId.foreign(fqName.getStereotype(),getModule().getModuleId().toString(),fqName.getLongName());
+    SModelReference modelRef=new SModelReference(fqName,modelId);
+    JavaSourceStubModelDescriptor model=new JavaSourceStubModelDescriptor(modelRef,dataSource,pkg);
+    SetSequence.fromSet(models).addElement(model);
+    SetSequence.fromSet(myDataSources).addElement(dataSource);
+  }
+  Iterable<IFile> children=dir.getChildren();
+  Iterable<IFile> subDirs=Sequence.fromIterable(children).where(new IWhereFilter<IFile>(){
+    public boolean accept(    IFile it){
+      return it.isDirectory();
+    }
+  }
+);
+  for (  IFile subDir : Sequence.fromIterable(subDirs)) {
+    String subPkg=(pkg.equals("") ? subDir.getName() : pkg + "." + subDir.getName());
+    Set<SModel> set=getModels(subDir,subPkg);
+    SetSequence.fromSet(models).addSequence(SetSequence.fromSet(set));
+  }
+  return models;
+}
