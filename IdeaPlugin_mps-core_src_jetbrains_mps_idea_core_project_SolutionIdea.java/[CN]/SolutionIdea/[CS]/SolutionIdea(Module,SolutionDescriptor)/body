@@ -3,44 +3,18 @@
   myModule=module;
   setSolutionDescriptor(descriptor,false);
   myConnection=myModule.getProject().getMessageBus().connect();
-  myConnection.subscribe(ProjectTopics.PROJECT_ROOTS,new ModuleRootListener(){
-    @Override public void beforeRootsChange(    ModuleRootEvent event){
-    }
-    @Override public void rootsChanged(    ModuleRootEvent event){
-      if (myModule.getProject().equals(event.getSource())) {
-        ModelAccess.instance().runWriteInEDT(new Runnable(){
-          public void run(){
-            if (myModule.isDisposed())             return;
-            setModuleDescriptor(getModuleDescriptor(),false);
-          }
-        }
-);
-      }
-    }
-  }
-);
-  myConnection.subscribe(FacetManager.FACETS_TOPIC,new FacetManagerAdapter(){
-    @Override public void facetAdded(    @NotNull Facet facet){
-      handleFacetChanged(facet);
-    }
-    @Override public void facetRemoved(    @NotNull Facet facet){
-      handleFacetChanged(facet);
-    }
-  }
-);
-  myConnection.subscribe(SolutionLibraryListener.LIBRARY_LISTENER_TOPIC,new SolutionLibraryListener(){
-    @Override public void libraryChanged(    final Library library){
-      FindProcessor<OrderEntry> processor=new FindProcessor<OrderEntry>(){
-        @Override protected boolean accept(        OrderEntry orderEntry){
-          return orderEntry instanceof LibraryOrderEntry && ((LibraryOrderEntry)orderEntry).getLibrary() == library;
+  myConnection.subscribe(ProjectTopics.PROJECT_ROOTS,new MyModuleRootListener());
+  myConnection.subscribe(FacetManager.FACETS_TOPIC,new MyFacetManagerAdapter());
+  final ProjectLibraryTable projectLibraryTable=(ProjectLibraryTable)ProjectLibraryTable.getInstance(myModule.getProject());
+  ModelAccess.instance().runReadAction(new Runnable(){
+    @Override public void run(){
+      for (      final Library library : projectLibraryTable.getLibraries()) {
+        if (SolutionLibraryType.isSolutionLibrary(library)) {
+          library.getRootProvider().addRootSetChangedListener(myRootSetListener);
         }
       }
-;
-      ModuleRootManager.getInstance(myModule).orderEntries().forEach(processor);
-      if (processor.isFound()) {
-        invalidateDependencies();
-      }
     }
   }
 );
+  projectLibraryTable.addListener(myLibrariesListener);
 }
