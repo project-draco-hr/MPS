@@ -1,53 +1,8 @@
 {
-  myMessagesChanged=false;
-  EditorComponent editorComponent=(EditorComponent)editorContext.getEditorComponent();
-  SNode sNode=editorComponent.getEditedNode();
-  SNodePointer sNodePointer=editorComponent.getEditedNodePointer();
-  Set<EditorMessage> result=SetSequence.fromSet(new HashSet<EditorMessage>());
-  if (sNode == null) {
-    LOG.error("edited node is null");
-    return result;
-  }
-  if (sNodePointer == null) {
-    LOG.error("edited NodePointer is null");
-    return result;
-  }
-  SModelDescriptor descriptor=SNodeOperations.getModel(sNode).getModelDescriptor();
-  if (descriptor == null) {
-    return result;
-  }
-  LanguageErrorsComponent errorsComponent=MapSequence.fromMap(myNodePointersToComponents).get(new SNodePointer(SNodeOperations.getContainingRoot(sNode)));
-  if (errorsComponent == null) {
-    errorsComponent=new LanguageErrorsComponent(sNode);
-    MapSequence.fromMap(myNodePointersToComponents).put(sNodePointer,errorsComponent);
-  }
-  if (!(editorComponent instanceof InspectorEditorComponent) && !(SetSequence.fromSet(myEditorComponents).contains(editorComponent))) {
-    SetSequence.fromSet(myEditorComponents).addElement(editorComponent);
-    editorComponent.addDisposeListener(myDisposeListener);
-  }
-  addModelListener(descriptor);
-  if (!(wasCheckedOnce)) {
-    errorsComponent.clear();
-  }
-  boolean changed=false;
-  TypeCheckingContext typecheckingContext=editorComponent.getTypeCheckingContext();
-  try {
-    if (typecheckingContext != null) {
-      typecheckingContext.setIsNonTypesystemComputation();
-    }
-    changed=errorsComponent.check(node,myRules,editorContext.getOperationContext());
-  }
-  finally {
-    if (typecheckingContext != null) {
-      typecheckingContext.resetIsNonTypesystemComputation();
+  return TypeContextManager.getInstance().runTypeCheckingComputation((ITypeContextOwner)editorContext.getEditorComponent(),node,new ITypechecking.Computation<Set<EditorMessage>>(){
+    public Set<EditorMessage> compute(    TypeCheckingContext p0){
+      return doCreateMessages(node,list,wasCheckedOnce,editorContext);
     }
   }
-  myMessagesChanged=changed;
-  for (  IErrorReporter errorReporter : errorsComponent.getErrors()) {
-    MessageStatus status=errorReporter.getMessageStatus();
-    String errorString=errorReporter.reportError();
-    HighlighterMessage message=HighlightUtil.createHighlighterMessage(errorReporter.getSNode(),NameUtil.capitalize(status.getPresentation()) + ": " + errorString,errorReporter,LanguageEditorChecker.this,editorContext);
-    SetSequence.fromSet(result).addElement(message);
-  }
-  return result;
+);
 }
