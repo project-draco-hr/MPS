@@ -1,0 +1,23 @@
+{
+  if (repoFile != null) {
+    File f=new File(repoFile);
+    ModelInputStream mos=null;
+    try {
+      mos=new ModelInputStream(new FileInputStream(f));
+      Collection<ModuleHandle> moduleHandles=ModulesMiner.getInstance().loadModules(mos);
+      context.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO,"loaded " + moduleHandles.size() + " modules"));
+      for (      ModuleHandle h : moduleHandles) {
+        ModuleRepositoryFacade.createModule(h,this);
+      }
+      return;
+    }
+ catch (    IOException e) {
+      context.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,e));
+      context.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.WARNING,"cannot load cache, generation may be slow"));
+    }
+ finally {
+      jetbrains.mps.util.FileUtil.closeFileSafe(mos);
+    }
+  }
+  context.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.WARNING,"cannot start MPS, no repository provided"));
+}
