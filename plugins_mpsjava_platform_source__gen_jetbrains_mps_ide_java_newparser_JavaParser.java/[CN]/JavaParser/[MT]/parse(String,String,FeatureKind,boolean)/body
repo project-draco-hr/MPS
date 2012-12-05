@@ -5,7 +5,7 @@
   settings.put(CompilerOptions.OPTION_Source,CompilerOptions.VERSION_1_6);
   settings.put(CompilerOptions.OPTION_DocCommentSupport,"enabled");
   TypeNameResolver typeResolver=new TypeNameResolver(pkg);
-  ASTConverter converter=new ASTConverter(null,typeResolver,stubsMode);
+  ASTConverter converter=(FeatureKind.CLASS_STUB.equals(what) ? new ASTConverter(null,typeResolver,stubsMode) : new FullASTConverter(null,typeResolver));
   List<SNode> resultNodes=new ArrayList<SNode>();
   String resultPackageName=null;
   char[] source=code.toCharArray();
@@ -21,12 +21,7 @@ if (astTypes != null && astTypes.length > 0) {
 typeResolver.addImports(extractImports(compRes));
 List<SNode> roots=new ArrayList<SNode>();
 for (ASTNode astNode : astTypes) {
-  try {
-    ListSequence.fromList(roots).addElement(converter.convertRoot(astNode));
-  }
- catch (  ReflectException e) {
-    throw new RuntimeException(e);
-  }
+  ListSequence.fromList(roots).addElement(converter.convertRoot(astNode));
 }
 resultNodes=roots;
 }
@@ -39,12 +34,7 @@ break;
 case CLASS_CONTENT:
 ASTNode[] astNodes=util.parseClassBodyDeclarations(source,0,source.length,settings,true,recovery);
 if (astNodes != null && astNodes.length > 0) {
-try {
 resultNodes=converter.convertClassContents(astNodes,SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ClassConcept",null));
-}
- catch (ReflectException e) {
-throw new RuntimeException(e);
-}
 }
 break;
 case STATEMENTS:
@@ -53,19 +43,16 @@ if (absMethod == null) {
 return JavaParser.JavaParseResult.UNKNOWN_ERROR;
 }
 Statement[] stmts=absMethod.statements;
-List<SNode> nodes=new ArrayList<SNode>();
 if (stmts != null && stmts.length > 0) {
-try {
-resultNodes=converter.convertStatements(stmts);
-}
- catch (ReflectException e) {
-throw new RuntimeException(e);
-}
+SNode stmtList=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StatementList",null);
+resultNodes=((FullASTConverter)converter).convertStatementsOf(absMethod,stmtList);
 }
 break;
 default :
 throw new IllegalArgumentException("Parsing other than class and statements is not supported yet ");
 }
-attachComments(source,converter,util.recordedParsingInformation,converter.getCodeBlocks());
+if (converter instanceof FullASTConverter) {
+attachComments(source,((FullASTConverter)converter),util.recordedParsingInformation,((FullASTConverter)converter).getCodeBlocks());
+}
 return new JavaParser.JavaParseResult(resultNodes,resultPackageName,problemDescription(util.recordedParsingInformation));
 }
