@@ -1,6 +1,6 @@
 {
   String path=getFolder().getPath();
-  Set<String> changedItems=SetSequence.fromSet(new HashSet<String>());
+  final Set<String> changedItems=SetSequence.fromSet(new HashSet<String>());
   SetSequence.fromSet(changedItems).addSequence(SetSequence.fromSet(handleFsItems(path,event.getCreated())));
   SetSequence.fromSet(changedItems).addSequence(SetSequence.fromSet(handleFsItems(path,event.getRemoved())));
   Set<PsiFileSystemItem> files=SetSequence.fromSet(new HashSet<PsiFileSystemItem>());
@@ -8,4 +8,14 @@
     SetSequence.fromSet(files).addElement(f);
   }
   SetSequence.fromSet(changedItems).addSequence(SetSequence.fromSet(handleFsItems(path,files)));
+synchronized (LOCK) {
+    ModelAccess.instance().runCommandInEDT(new Runnable(){
+      public void run(){
+        for (        MultiStreamDataSourceListener listener : SetSequence.fromSet(myListeners)) {
+          listener.changed(_this,changedItems);
+        }
+      }
+    }
+,myFakeMpsProject);
+  }
 }
