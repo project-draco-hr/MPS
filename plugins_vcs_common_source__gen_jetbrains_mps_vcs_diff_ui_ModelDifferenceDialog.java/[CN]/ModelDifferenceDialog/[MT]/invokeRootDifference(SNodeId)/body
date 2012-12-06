@@ -1,3 +1,31 @@
 {
-  invokeRootDifference(rootId,null);
+  if (myRootDifferenceDialog != null) {
+    return;
+  }
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      ModelChangeSet changeSet=(rootId == null ? myMetadataChangeSet : myChangeSet);
+      SNodeId nodeId=(rootId == null ? ListSequence.fromList(SModelOperations.getRoots(myMetadataChangeSet.getOldModel(),null)).first().getSNodeId() : rootId);
+      String rootName=(rootId == null ? "Model Properties" : myTree.getNameForRoot(rootId));
+      myRootId=rootId;
+      myRootDifferenceDialog=new RootDifferenceDialog(myProject,changeSet,nodeId,rootName,myContentTitles,(isVisible() ? getWindow() : WindowManager.getInstance().getFrame(myProject)),myEditable,new ModelDifferenceDialog.MyGoToNeighbourRootActions().getActions(),null);
+    }
+  }
+);
+  myRootDifferenceDialog.show();
+  if (myMetadataChangeSet != null && myEditable) {
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        MetadataUtil.applyMetadataChanges(myChangeSet.getNewModel(),myMetadataChangeSet.getNewModel());
+      }
+    }
+);
+  }
+  myRootDifferenceDialog=null;
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      rebuildChangeSets();
+    }
+  }
+);
 }
