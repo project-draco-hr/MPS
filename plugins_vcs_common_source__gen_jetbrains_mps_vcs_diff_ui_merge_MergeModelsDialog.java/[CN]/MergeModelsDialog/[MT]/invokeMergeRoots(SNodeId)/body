@@ -3,22 +3,33 @@
     invokeMergeMetadata();
     return;
   }
-  if (myRootsDialogInvoked) {
+  if (myMergeRootsDialog != null) {
     return;
   }
-  myRootsDialogInvoked=true;
-  final Wrappers._T<MergeRootsDialog> mergeRootsDialog=new Wrappers._T<MergeRootsDialog>();
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
-      mergeRootsDialog.value=new MergeRootsDialog(MergeModelsDialog.this,myMergeSession,rootId,myMergeTree.getNameForRoot(rootId));
+      myRootId=rootId;
+      myMergeRootsDialog=new MergeRootsDialog(myProject,myMergeSession,rootId,myMergeTree.getNameForRoot(rootId),getContentTitles(),getWindow(),new MergeModelsDialog.MyGoToNeighbourRootActions().getActions());
     }
   }
 );
   SwingUtilities.invokeLater(new Runnable(){
     public void run(){
-      mergeRootsDialog.value.toFront();
+      myMergeRootsDialog.toFront();
     }
   }
 );
-  mergeRootsDialog.value.show();
+  boolean isOk=myMergeRootsDialog.showAndGet();
+  if (!(isOk)) {
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        restoreState(myMergeRootsDialog.getStateToRestore());
+      }
+    }
+);
+  }
+  if (myMetadataMergeSession != null && isOk) {
+  }
+  myMergeRootsDialog=null;
+  rebuildLater();
 }
