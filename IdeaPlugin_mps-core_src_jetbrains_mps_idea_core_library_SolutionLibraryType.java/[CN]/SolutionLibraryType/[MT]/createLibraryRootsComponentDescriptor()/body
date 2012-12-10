@@ -15,18 +15,24 @@
     @NotNull @Override public List<? extends RootDetector> getRootDetectors(){
       return Arrays.asList(ModuleXmlRootDetector.getInstance());
     }
+    @NotNull @Override public FileChooserDescriptor createAttachFilesChooserDescriptor(    @Nullable String libraryName){
+      FileChooserDescriptor descriptor=new FileChooserDescriptor(false,false,true,false,true,true);
+      descriptor.setTitle(StringUtil.isEmpty(libraryName) ? ProjectBundle.message("library.attach.files.action") : ProjectBundle.message("library.attach.files.to.library.action",libraryName));
+      descriptor.setDescription(ProjectBundle.message("library.attach.files.description"));
+      return descriptor;
+    }
     @NotNull @Override public List<? extends AttachRootButtonDescriptor> createAttachButtons(){
-      return Arrays.asList(new AttachRootButtonDescriptor(OrderRootType.CLASSES,MPSBundle.message("library.attach.mps.solution")){
+      return Arrays.asList(new AttachRootButtonDescriptor(ModuleXmlRootDetector.SOLUTION_MODULE_XML,MPSBundle.message("library.attach.mps.solution")){
         @Override public VirtualFile[] selectFiles(        @NotNull JComponent parent,        @Nullable VirtualFile initialSelection,        @Nullable final Module contextModule,        @NotNull final LibraryEditor libraryEditor){
           final List<ModuleReference> availableSolutions=new ArrayList<ModuleReference>();
-          final Set<VirtualFile> libraryFiles=new HashSet<VirtualFile>(Arrays.asList(libraryEditor.getFiles(OrderRootType.CLASSES)));
+          final Set<VirtualFile> descriptors=new HashSet<VirtualFile>(Arrays.asList(libraryEditor.getFiles(ModuleXmlRootDetector.SOLUTION_MODULE_XML)));
           ModelAccess.instance().runReadAction(new Runnable(){
             @Override public void run(){
               for (              Solution solution : ModuleRepositoryFacade.getInstance().getAllModules(Solution.class)) {
                 if (solution instanceof SolutionIdea || solution instanceof StubSolution) {
                   continue;
                 }
-                if (libraryFiles.contains(getJarFile(solution.getBundleHome().getPath()))) {
+                if (descriptors.contains(VirtualFileUtils.getVirtualFile(solution.getDescriptorFile()))) {
                   continue;
                 }
                 availableSolutions.add(solution.getModuleReference());
@@ -36,14 +42,24 @@
 );
           ChooseElementsDialog<ModuleReference> chooser=new ModuleReferenceChooserDialog(parent,availableSolutions);
           chooser.show();
-          List<ModuleReference> chosenElements=chooser.getChosenElements();
-          final Set<VirtualFile> roots=new LinkedHashSet<VirtualFile>();
-          for (          ModuleReference module : chosenElements) {
-            for (            VirtualFile virtualFile : getSolutionJars((Solution)ModuleRepositoryFacade.getInstance().getModule(module))) {
-              roots.add(virtualFile);
+          final List<ModuleReference> chosenElements=chooser.getChosenElements();
+          final Set<VirtualFile> addedDescriptors=new LinkedHashSet<VirtualFile>();
+          final Set<VirtualFile> addedJars=new LinkedHashSet<VirtualFile>();
+          ModelAccess.instance().runReadAction(new Runnable(){
+            @Override public void run(){
+              for (              ModuleReference module : chosenElements) {
+                addedDescriptors.add(VirtualFileUtils.getVirtualFile(ModuleRepositoryFacade.getInstance().getModule(module).getDescriptorFile()));
+                for (                VirtualFile virtualFile : getSolutionJars((Solution)ModuleRepositoryFacade.getInstance().getModule(module))) {
+                  addedJars.add(virtualFile);
+                }
+              }
             }
           }
-          return roots.toArray(new VirtualFile[roots.size()]);
+);
+          for (          VirtualFile classesJar : addedJars) {
+            libraryEditor.addRoot(classesJar,OrderRootType.CLASSES);
+          }
+          return addedDescriptors.toArray(new VirtualFile[addedDescriptors.size()]);
         }
       }
 );
