@@ -1,2 +1,32 @@
 {
+  if (FileSystem.getInstance().isFileIgnored(dir.getName()))   return;
+  if (!dir.isDirectory())   return;
+  List<IFile> files=dir.getChildren();
+  for (  IFile file : files) {
+    String fileName=file.getName();
+    boolean isMPSModel=fileName.endsWith(MPSExtentions.DOT_MODEL);
+    if (!(isMPSModel))     continue;
+    DescriptorLoadResult dr;
+    try {
+      dr=ModelPersistence.loadDescriptor(file);
+    }
+ catch (    ModelReadException ignored) {
+      dr=new DescriptorLoadResult();
+    }
+    SModelReference modelReference;
+    if (dr.getUID() == null) {
+      LOG.error("wrong model: " + file.getPath(),new Throwable());
+      continue;
+    }
+    modelReference=SModelReference.fromString(dr.getUID());
+    if (modelReference.getSModelId() == null) {
+      modelReference=new SModelReference(modelReference.getSModelFqName(),SModelId.generate());
+    }
+    models.add(new ModelHandle(file,modelReference,dr));
+  }
+  for (  IFile childDir : files) {
+    if (childDir.isDirectory()) {
+      collectModelDescriptors(childDir,models);
+    }
+  }
 }
