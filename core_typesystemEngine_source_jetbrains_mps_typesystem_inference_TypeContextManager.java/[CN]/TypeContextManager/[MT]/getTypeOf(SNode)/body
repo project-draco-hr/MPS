@@ -1,54 +1,24 @@
 {
   ModelAccess.assertLegalRead();
   if (node == null)   return null;
-  SNode root=node.getTopmostAncestor();
-  boolean isResolveMode=myResolveMode.get();
-  Set<SNode> resolveNodes=getMyResolveNodes();
-  if (isResolveMode) {
-    if (resolveNodes.contains(node)) {
-      return TypesUtil.createRuntimeErrorType();
+  if (myTypeChecker.isGenerationMode()) {
+    TypeCheckingContext context=myTypeChecker.hasPerformanceTracer() ? new TargetTypecheckingContext_Tracer(node,myTypeChecker) : new TargetTypecheckingContext(node,myTypeChecker);
+    try {
+      return context.getTypeOf_generationMode(node);
     }
-    resolveNodes.add(node);
-    if (resolveNodes.size() > 10) {
-      LOG.warning("There are too many nodes in resolve");
-      return TypesUtil.createRuntimeErrorType();
+  finally {
+      context.dispose();
     }
+  }
+  final ITypeContextOwner contextOwner=myTypecheckingContextOwner.get();
+  TypeCheckingContext context=acquireTypecheckingContext(node,contextOwner);
+  if (context == null) {
+    return TypesUtil.createRuntimeErrorType();
   }
   try {
-    if (myTypeChecker.isGenerationMode()) {
-      TypeCheckingContext context=myTypeChecker.hasPerformanceTracer() ? new TargetTypecheckingContext_Tracer(node,myTypeChecker) : new TargetTypecheckingContext(node,myTypeChecker);
-      try {
-        return context.getTypeOf_generationMode(node);
-      }
-  finally {
-        context.dispose();
-      }
-    }
-    final ITypeContextOwner contextOwner=myTypecheckingContextOwner.get();
-    TypeCheckingContext context=acquireTypecheckingContext(root,contextOwner);
-    try {
-      if (myComputeInNormalMode_resolverVooDoo && context != null && context.isCheckedRoot(false)) {
-        myComputeInNormalMode_resolverVooDoo=false;
-        SNode type=context.getTypeOf_normalMode(node);
-        myComputeInNormalMode_resolverVooDoo=true;
-        return type;
-      }
-      if (isResolveMode) {
-        if (context == null || !context.isNonTypesystemComputation()) {
-          TypeCheckingContext resolveContext=createTypeCheckingContextForResolve(node);
-          SNode type=resolveContext.getTypeOf(node,myTypeChecker);
-          resolveContext.dispose();
-          return type;
-        }
-      }
-      if (context == null)       return null;
-      return context.getTypeOf(node,myTypeChecker);
-    }
-  finally {
-      releaseTypecheckingContext(root,contextOwner);
-    }
+    return context.getTypeOf(node,myTypeChecker);
   }
   finally {
-    resolveNodes.remove(node);
+    releaseTypecheckingContext(node,contextOwner);
   }
 }
