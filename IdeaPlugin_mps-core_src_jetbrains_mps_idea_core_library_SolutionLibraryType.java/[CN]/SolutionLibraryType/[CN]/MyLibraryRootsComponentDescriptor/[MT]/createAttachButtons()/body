@@ -1,0 +1,43 @@
+{
+  return Arrays.asList(new AttachRootButtonDescriptor(ModuleXmlRootDetector.SOLUTION_MODULE_XML,MPSBundle.message("library.attach.mps.solution")){
+    @Override public VirtualFile[] selectFiles(    @NotNull JComponent parent,    @Nullable VirtualFile initialSelection,    @Nullable final Module contextModule,    @NotNull final LibraryEditor libraryEditor){
+      final List<ModuleReference> availableSolutions=new ArrayList<ModuleReference>();
+      final Set<VirtualFile> descriptors=new HashSet<VirtualFile>(Arrays.asList(libraryEditor.getFiles(ModuleXmlRootDetector.SOLUTION_MODULE_XML)));
+      ModelAccess.instance().runReadAction(new Runnable(){
+        @Override public void run(){
+          for (          Solution solution : ModuleRepositoryFacade.getInstance().getAllModules(Solution.class)) {
+            if (solution instanceof SolutionIdea || solution instanceof StubSolution) {
+              continue;
+            }
+            if (descriptors.contains(VirtualFileUtils.getVirtualFile(solution.getDescriptorFile()))) {
+              continue;
+            }
+            availableSolutions.add(solution.getModuleReference());
+          }
+        }
+      }
+);
+      ChooseElementsDialog<ModuleReference> chooser=new ModuleReferenceChooserDialog(parent,availableSolutions);
+      chooser.show();
+      final List<ModuleReference> chosenElements=chooser.getChosenElements();
+      final Set<VirtualFile> addedDescriptors=new LinkedHashSet<VirtualFile>();
+      final Set<VirtualFile> addedJars=new LinkedHashSet<VirtualFile>();
+      ModelAccess.instance().runReadAction(new Runnable(){
+        @Override public void run(){
+          for (          ModuleReference module : chosenElements) {
+            addedDescriptors.add(VirtualFileUtils.getVirtualFile(ModuleRepositoryFacade.getInstance().getModule(module).getDescriptorFile()));
+            for (            VirtualFile virtualFile : getSolutionJars((Solution)ModuleRepositoryFacade.getInstance().getModule(module))) {
+              addedJars.add(virtualFile);
+            }
+          }
+        }
+      }
+);
+      for (      VirtualFile classesJar : addedJars) {
+        libraryEditor.addRoot(classesJar,OrderRootType.CLASSES);
+      }
+      return addedDescriptors.toArray(new VirtualFile[addedDescriptors.size()]);
+    }
+  }
+);
+}
