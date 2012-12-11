@@ -1,15 +1,13 @@
 {
-  if (rootId == null) {
-    invokeMergeMetadata();
-    return;
-  }
   if (myMergeRootsDialog != null) {
     return;
   }
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
+      MergeSession mergeSession=(rootId == null ? myMetadataMergeSession : myMergeSession);
+      SNodeId nodeId=(rootId == null ? ListSequence.fromList(SModelOperations.getRoots(myMetadataMergeSession.getBaseModel(),null)).first().getSNodeId() : rootId);
       myRootId=rootId;
-      myMergeRootsDialog=new MergeRootsDialog(myProject,myMergeSession,rootId,myMergeTree.getNameForRoot(rootId),getContentTitles(),getWindow(),new MergeModelsDialog.MyGoToNeighbourRootActions().getActions());
+      myMergeRootsDialog=new MergeRootsDialog(myProject,mergeSession,nodeId,myMergeTree.getNameForRoot(rootId),getContentTitles(),getWindow(),new MergeModelsDialog.MyGoToNeighbourRootActions().getActions());
     }
   }
 );
@@ -23,13 +21,12 @@
   if (!(isOk)) {
     ModelAccess.instance().runWriteActionInCommand(new Runnable(){
       public void run(){
-        restoreState(myMergeRootsDialog.getStateToRestore());
+        myMergeRootsDialog.restoreState();
       }
     }
 );
   }
-  if (myMetadataMergeSession != null && isOk) {
-  }
+  applyMetadataChanges();
   myMergeRootsDialog=null;
   rebuildLater();
 }

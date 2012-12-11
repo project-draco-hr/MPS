@@ -1,19 +1,14 @@
 {
-  List<ModelChange> changes=(rootTreeNode.getRootId() == null ? ListSequence.fromList(myMergeSession.getMetadataChanges()).select(new ISelector<ModelChange,ModelChange>(){
-    public ModelChange select(    ModelChange ch){
-      return (ModelChange)ch;
-    }
-  }
-).toListSequence() : myMergeSession.getChangesForRoot(rootTreeNode.getRootId()));
-  changes=ListSequence.fromList(changes).where(new IWhereFilter<ModelChange>(){
+  final MergeSession session=(rootTreeNode.getRootId() == null ? myMetadataMergeSession : myMergeSession);
+  List<ModelChange> changes=Sequence.fromIterable(((rootTreeNode.getRootId() == null ? myMetadataMergeSession.getAllChanges() : myMergeSession.getChangesForRoot(rootTreeNode.getRootId())))).where(new IWhereFilter<ModelChange>(){
     public boolean accept(    ModelChange ch){
-      return !(myMergeSession.isChangeResolved(ch));
+      return !(session.isChangeResolved(ch));
     }
   }
 ).toListSequence();
   int conflictedCount=ListSequence.fromList(changes).where(new IWhereFilter<ModelChange>(){
     public boolean accept(    ModelChange ch){
-      return Sequence.fromIterable(myMergeSession.getConflictedWith(ch)).isNotEmpty();
+      return Sequence.fromIterable(session.getConflictedWith(ch)).isNotEmpty();
     }
   }
 ).count();
@@ -42,7 +37,7 @@
       }
       int myChangesCount=ListSequence.fromList(changes).where(new IWhereFilter<ModelChange>(){
         public boolean accept(        ModelChange ch){
-          return myMergeSession.isMyChange(ch);
+          return session.isMyChange(ch);
         }
       }
 ).count();
