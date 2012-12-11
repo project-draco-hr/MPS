@@ -2,6 +2,7 @@
   ExitCode status=ExitCode.NOTHING_DONE;
   try {
     for (    JpsModule jpsModule : moduleChunk.getModules()) {
+      final JpsMPSProject project=new JpsMPSProject(jpsModule.getProject());
       JpsMPSModuleExtension extension=JpsMPSExtensionService.getInstance().getExtension(jpsModule);
       if (extension == null) {
         compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO,"Ignoring (no facet) " + jpsModule.getName()));
@@ -9,6 +10,18 @@
       }
       JpsMPSRepositoryFacade.getInstance().init(compileContext);
       compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO,"Processing " + jpsModule.getName() + ": "+ extension.getConfiguration().getUUID()));
+      SolutionDescriptor descriptor=extension.getConfiguration().getSolutionDescriptor();
+      final JpsSolutionIdea solution=new JpsSolutionIdea(jpsModule,descriptor);
+      ModelAccess.instance().runWriteAction(new Runnable(){
+        @Override public void run(){
+          MPSModuleRepository.getInstance().registerModule(solution,project);
+          solution.updateModelsSet();
+        }
+      }
+);
+      for (      SModelDescriptor d : SModelRepository.getInstance().getModelDescriptors(solution)) {
+        compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO," ++ " + d.getLongName()));
+      }
       for (      ModelRoot root : extension.getConfiguration().getModelRoots()) {
         compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO," -- " + root.getPresentation()));
       }
