@@ -1,0 +1,63 @@
+{
+  super(parent,true);
+  setTitle("Merging " + rootName);
+  myConflictChecker=new ChangeEditorMessage.ConflictChecker(){
+    public boolean isChangeConflicted(    ModelChange ch){
+      return Sequence.fromIterable(myMergeSession.getConflictedWith(ch)).isNotEmpty();
+    }
+  }
+;
+  myProject=project;
+  myTitles=titles;
+  myMergeSession=mergeSession;
+  myRootId=rootId;
+  myStateToRestore=myMergeSession.getCurrentState();
+  myMineEditor=addEditor(0,myMergeSession.getMyModel());
+  myResultEditor=addEditor(1,myMergeSession.getResultModel());
+  myRepositoryEditor=addEditor(2,myMergeSession.getRepositoryModel());
+  linkEditors(true,false);
+  linkEditors(false,false);
+  linkEditors(true,true);
+  linkEditors(false,true);
+  myMergeSession.setChangesInvalidateHandler(new MergeSession.ChangesInvalidateHandler(){
+    public void someChangesInvalidated(){
+      ModelAccess.instance().runWriteInEDT(new Runnable(){
+        public void run(){
+          rehighlight();
+        }
+      }
+);
+    }
+  }
+);
+  JSplitPane splitPane=new JSplitPane(JSplitPane.VERTICAL_SPLIT,myTopPanel,myBottomPanel);
+  splitPane.setResizeWeight(0.7);
+  myTraverser=new NextPreviousTraverser(myChangeGroupLayouts,myResultEditor.getMainEditor());
+  myActionGroup=new DefaultActionGroup();
+  myActionGroup.add(new ApplyNonConflictsForRoot(this));
+  myActionGroup.addSeparator();
+  myActionGroup.addAll(myTraverser.previousAction(),myTraverser.nextAction());
+  if (actions != null) {
+    myActionGroup.addSeparator();
+    myActionGroup.addAll(actions);
+  }
+  ActionToolbar toolbar=ActionManager.getInstance().createActionToolbar(ActionPlaces.UNKNOWN,myActionGroup,true);
+  myTraverser.setActionToolbar(toolbar);
+  myContainer.add(toolbar.getComponent(),BorderLayout.NORTH);
+  myContainer.add(splitPane,BorderLayout.CENTER);
+  myContainer.add(this.myStatusBar,BorderLayout.SOUTH);
+  highlightAllChanges();
+  myTraverser.goToFirstChangeLater();
+  DisplayMode displayMode=check_3816sg_a0mb0u(check_3816sg_a0a83a02(GraphicsEnvironment.getLocalGraphicsEnvironment()));
+  int width=(displayMode == null ? 800 : displayMode.getWidth() - 100);
+  int height=(displayMode == null ? 600 : displayMode.getHeight() - 100);
+  final Dimension size=DimensionService.getInstance().getSize(getDimensionServiceKey());
+  if (size == null) {
+    myContainer.setPreferredSize(new Dimension(width,height));
+  }
+  final Point location=DimensionService.getInstance().getLocation(getDimensionServiceKey());
+  if (location == null) {
+    setLocation(50,50);
+  }
+  init();
+}
