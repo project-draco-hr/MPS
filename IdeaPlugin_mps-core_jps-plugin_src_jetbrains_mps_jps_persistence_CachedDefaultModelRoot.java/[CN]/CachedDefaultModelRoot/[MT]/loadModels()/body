@@ -1,0 +1,40 @@
+{
+  SModule module=getModule();
+  if (module == null || !(module.getModuleReference() instanceof ModuleReference)) {
+    return super.loadModels();
+  }
+  CachedModuleData moduleData=myCachedRepository.getModuleData((ModuleReference)module.getModuleReference());
+  if (moduleData == null) {
+    return super.loadModels();
+  }
+  String path=getPath();
+  List<CachedModelData> models=moduleData.getModels(path);
+  if (models == null) {
+    return super.loadModels();
+  }
+  List<SModel> result=new ArrayList<SModel>();
+  for (  CachedModelData mdata : models) {
+    IFile file=FileSystem.getInstance().getFileByPath(mdata.getFile());
+    FileDataSource source=new FileDataSource(file,this);
+    Object header=mdata.getHeader();
+    if (header instanceof SModelHeader) {
+      SModelHeader smheader=(SModelHeader)header;
+      result.add(new DefaultSModelDescriptor(source,smheader.getModelReference(),smheader));
+    }
+ else     if (header instanceof BinaryModelHeader) {
+      result.add(new BinarySModelDescriptor(source,((BinaryModelHeader)header).createCopy()));
+    }
+ else {
+      String fileName=file.getName();
+      String extension=FileUtil.getExtension(fileName);
+      if (extension == null)       continue;
+      ModelFactory modelFactory=PersistenceFacade.getInstance().getModelFactory(extension);
+      if (modelFactory == null)       continue;
+      SModel model=modelFactory.load(source);
+      if (model != null) {
+        result.add(model);
+      }
+    }
+  }
+  return result;
+}

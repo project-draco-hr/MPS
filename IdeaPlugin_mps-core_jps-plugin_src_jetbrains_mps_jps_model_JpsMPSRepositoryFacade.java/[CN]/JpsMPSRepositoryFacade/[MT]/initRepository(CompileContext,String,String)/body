@@ -3,12 +3,21 @@
     File f=new File(repoFile);
     ModelInputStream mos=null;
     try {
+      long start=System.nanoTime();
       mos=new ModelInputStream(new FileInputStream(f));
-      Collection<ModuleHandle> moduleHandles=ModulesMiner.getInstance().loadModules(mos);
-      context.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO,"loaded " + moduleHandles.size() + " modules"));
-      for (      ModuleHandle h : moduleHandles) {
-        ModuleRepositoryFacade.createModule(h,this);
+      myRepo=CachedRepositoryData.load(mos);
+      context.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO,"loaded " + myRepo.getModules().size() + " modules in "+ (System.nanoTime() - start) / 1000000 + " ms"));
+      PersistenceRegistry.getInstance().setModelRootFactory(PersistenceRegistry.DEFAULT_MODEL_ROOT,new ModelRootFactory(){
+        @Override public ModelRoot create(){
+          return new CachedDefaultModelRoot(myRepo);
+        }
       }
+);
+      start=System.nanoTime();
+      for (      CachedModuleData data : myRepo.getModules()) {
+        ModuleRepositoryFacade.createModule(data.getHandle(),this);
+      }
+      context.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO,"created " + myRepo.getModules().size() + " modules in "+ (System.nanoTime() - start) / 1000000 + " ms"));
       return;
     }
  catch (    IOException e) {
