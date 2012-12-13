@@ -1,8 +1,10 @@
 {
   ExitCode status=ExitCode.NOTHING_DONE;
+  if (moduleChunk.getModules().isEmpty())   return status;
   try {
+    final JpsMPSProject project=new JpsMPSProject(moduleChunk.getModules().iterator().next().getProject());
+    JpsGeneratorWorker worker=new JpsGeneratorWorker(project,compileContext);
     for (    JpsModule jpsModule : moduleChunk.getModules()) {
-      final JpsMPSProject project=new JpsMPSProject(jpsModule.getProject());
       JpsMPSModuleExtension extension=JpsMPSExtensionService.getInstance().getExtension(jpsModule);
       if (extension == null) {
         compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO,"Ignoring (no facet) " + jpsModule.getName()));
@@ -20,28 +22,26 @@
         }
       }
 );
-      for (      final SModelDescriptor d : SModelRepository.getInstance().getModelDescriptors(solution)) {
-        compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO," ++ " + d.getLongName()));
+      for (      final SModelDescriptor desc : SModelRepository.getInstance().getModelDescriptors(solution)) {
+        compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO," ++ " + desc.getLongName()));
         ModelAccess.instance().runReadAction(new Runnable(){
           @Override public void run(){
-            for (            SNode n : d.getRootNodes()) {
+            for (            SNode n : desc.getRootNodes()) {
               compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO," root: " + n.getName()));
             }
           }
         }
 );
       }
-      compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO,"Persist. Facade: " + PersistenceFacade.getInstance()));
-      JpsGeneratorWorker worker=new JpsGeneratorWorker(project,compileContext);
-      dirtyFilesHolder.processDirtyFiles(worker);
-      for (      SModel m : worker.getModels()) {
-        compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO," generated model: " + m.getModelName()));
-      }
-      worker.generate();
       for (      ModelRoot root : extension.getConfiguration().getModelRoots()) {
         compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO," -- " + root.getPresentation()));
       }
     }
+    dirtyFilesHolder.processDirtyFiles(worker);
+    for (    SModel m : worker.getModels()) {
+      compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO," model to generate: " + m.getModelName()));
+    }
+    worker.generate();
   }
  catch (  Exception ex) {
     throw new ProjectBuildException(ex);
