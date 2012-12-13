@@ -3,6 +3,8 @@
   try {
     for (    JpsModule jpsModule : moduleChunk.getModules()) {
       final JpsMPSProject project=new JpsMPSProject(jpsModule.getProject());
+      JpsGeneratorWorker worker=new JpsGeneratorWorker(project);
+      dirtyFilesHolder.processDirtyFiles(worker);
       JpsMPSModuleExtension extension=JpsMPSExtensionService.getInstance().getExtension(jpsModule);
       if (extension == null) {
         compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO,"Ignoring (no facet) " + jpsModule.getName()));
@@ -16,11 +18,13 @@
         @Override public void run(){
           MPSModuleRepository.getInstance().registerModule(solution,project);
           solution.updateModelsSet();
+          compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO,"FQ name: " + solution.getModuleReference().getModuleFqName()));
         }
       }
 );
       for (      final SModelDescriptor d : SModelRepository.getInstance().getModelDescriptors(solution)) {
         compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO," ++ " + d.getLongName()));
+        worker.addModel(d);
         ModelAccess.instance().runReadAction(new Runnable(){
           @Override public void run(){
             for (            SNode n : d.getRootNodes()) {
@@ -29,10 +33,8 @@
           }
         }
 );
-        JpsGeneratorWorker worker=new JpsGeneratorWorker(project);
-        dirtyFilesHolder.processDirtyFiles(worker);
-        worker.generate();
       }
+      worker.generate();
       for (      ModelRoot root : extension.getConfiguration().getModelRoots()) {
         compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO," -- " + root.getPresentation()));
       }
