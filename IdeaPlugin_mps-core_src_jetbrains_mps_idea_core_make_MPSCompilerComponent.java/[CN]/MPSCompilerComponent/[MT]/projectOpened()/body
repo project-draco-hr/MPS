@@ -7,6 +7,7 @@
   compilerManager.addCompiler(new MPSCompiler2(project));
   compilerManager.addBeforeTask(new CompileTask(){
     @Override public boolean execute(    final CompileContext context){
+      if (!CompilerWorkspaceConfiguration.getInstance(project).USE_COMPILE_SERVER)       return true;
       StringBuilder sb=new StringBuilder();
       PluginLibrariesContributor pluginLibContributor=ApplicationManager.getApplication().getComponent(PluginLibrariesContributor.class);
       for (      LibDescriptor library : pluginLibContributor.getLibraries()) {
@@ -21,11 +22,11 @@
       final long start=System.nanoTime();
       ModelAccess.instance().runReadAction(new Runnable(){
         @Override public void run(){
-          Collection<ModuleHandle> libraryModules=LibraryInitializer.getInstance().getModuleHandles();
+          CachedRepositoryData cachedRepositoryData=MPSRepositoryUtil.buildData(LibraryInitializer.getInstance().getModuleHandles());
           ModelOutputStream mos=null;
           try {
             mos=new ModelOutputStream(new FileOutputStream(repositoryCache));
-            ModulesMiner.getInstance().saveModules(libraryModules,mos);
+            cachedRepositoryData.save(mos);
             context.getCompileScope().putUserData(MPSCompilerUtil.MPS_REPOSITORY,repositoryCache.getPath());
           }
  catch (          IOException e) {
