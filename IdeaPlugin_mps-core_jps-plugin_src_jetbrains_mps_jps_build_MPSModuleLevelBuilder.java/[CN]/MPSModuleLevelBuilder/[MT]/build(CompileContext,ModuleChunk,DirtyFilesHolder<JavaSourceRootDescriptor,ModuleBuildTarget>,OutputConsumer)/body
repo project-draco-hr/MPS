@@ -3,8 +3,6 @@
   try {
     for (    JpsModule jpsModule : moduleChunk.getModules()) {
       final JpsMPSProject project=new JpsMPSProject(jpsModule.getProject());
-      JpsGeneratorWorker worker=new JpsGeneratorWorker(project);
-      dirtyFilesHolder.processDirtyFiles(worker);
       JpsMPSModuleExtension extension=JpsMPSExtensionService.getInstance().getExtension(jpsModule);
       if (extension == null) {
         compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO,"Ignoring (no facet) " + jpsModule.getName()));
@@ -24,7 +22,6 @@
 );
       for (      final SModelDescriptor d : SModelRepository.getInstance().getModelDescriptors(solution)) {
         compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO," ++ " + d.getLongName()));
-        worker.addModel(d);
         ModelAccess.instance().runReadAction(new Runnable(){
           @Override public void run(){
             for (            SNode n : d.getRootNodes()) {
@@ -33,6 +30,12 @@
           }
         }
 );
+      }
+      compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO,"Persist. Facade: " + PersistenceFacade.getInstance()));
+      JpsGeneratorWorker worker=new JpsGeneratorWorker(project,compileContext);
+      dirtyFilesHolder.processDirtyFiles(worker);
+      for (      SModel m : worker.getModels()) {
+        compileContext.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO," generated model: " + m.getModelName()));
       }
       worker.generate();
       for (      ModelRoot root : extension.getConfiguration().getModelRoots()) {
