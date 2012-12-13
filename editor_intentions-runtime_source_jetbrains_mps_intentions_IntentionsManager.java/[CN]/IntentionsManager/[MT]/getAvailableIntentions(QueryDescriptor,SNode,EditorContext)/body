@@ -1,36 +1,35 @@
 {
   ModelAccess.assertLegalRead();
   checkLoaded();
-  try {
-    TypeChecker.getInstance().enableGlobalSubtypingCache();
-    final Set<IntentionDescriptor> processedIntentionDescriptors=new HashSet<IntentionDescriptor>();
-    Filter filter=new Filter(query.myIntentionClass,query.myEnabledOnly ? getDisabledIntentions() : null,query.mySurroundWith){
-      @Override boolean accept(      Intention intention){
-        return super.accept(intention) && !processedIntentionDescriptors.contains(intention.getDescriptor());
-      }
-      @Override boolean accept(      IntentionFactory intentionFactory){
-        return super.accept(intentionFactory) && !processedIntentionDescriptors.contains(intentionFactory);
-      }
-    }
-;
-    Set<Pair<IntentionExecutable,SNode>> result=new HashSet<Pair<IntentionExecutable,SNode>>();
-    for (    IntentionExecutable intentionExecutable : getAvailableIntentionsForExactNode(node,context,false,filter)) {
-      result.add(new Pair<IntentionExecutable,SNode>(intentionExecutable,node));
-      processedIntentionDescriptors.add(intentionExecutable.getDescriptor());
-    }
-    if (!query.isCurrentNodeOnly()) {
-      SNode parent=node.getParent();
-      while (parent != null) {
-        for (        IntentionExecutable intentionExecutable : getAvailableIntentionsForExactNode(parent,context,true,filter)) {
-          result.add(new Pair<IntentionExecutable,SNode>(intentionExecutable,parent));
-          processedIntentionDescriptors.add(intentionExecutable.getDescriptor());
+  return TypeContextManager.getInstance().runTypecheckingAction((ITypeContextOwner)context.getEditorComponent(),new Computable<Set<Pair<IntentionExecutable,SNode>>>(){
+    @Override public Set<Pair<IntentionExecutable,SNode>> compute(){
+      final Set<IntentionDescriptor> processedIntentionDescriptors=new HashSet<IntentionDescriptor>();
+      Filter filter=new Filter(query.myIntentionClass,query.myEnabledOnly ? getDisabledIntentions() : null,query.mySurroundWith){
+        @Override boolean accept(        Intention intention){
+          return super.accept(intention) && !processedIntentionDescriptors.contains(intention.getDescriptor());
         }
-        parent=parent.getParent();
+        @Override boolean accept(        IntentionFactory intentionFactory){
+          return super.accept(intentionFactory) && !processedIntentionDescriptors.contains(intentionFactory);
+        }
       }
+;
+      Set<Pair<IntentionExecutable,SNode>> result=new HashSet<Pair<IntentionExecutable,SNode>>();
+      for (      IntentionExecutable intentionExecutable : getAvailableIntentionsForExactNode(node,context,false,filter)) {
+        result.add(new Pair<IntentionExecutable,SNode>(intentionExecutable,node));
+        processedIntentionDescriptors.add(intentionExecutable.getDescriptor());
+      }
+      if (!query.isCurrentNodeOnly()) {
+        SNode parent=node.getParent();
+        while (parent != null) {
+          for (          IntentionExecutable intentionExecutable : getAvailableIntentionsForExactNode(parent,context,true,filter)) {
+            result.add(new Pair<IntentionExecutable,SNode>(intentionExecutable,parent));
+            processedIntentionDescriptors.add(intentionExecutable.getDescriptor());
+          }
+          parent=parent.getParent();
+        }
+      }
+      return result;
     }
-    return result;
   }
-  finally {
-    TypeChecker.getInstance().clearGlobalSubtypingCache();
-  }
+);
 }

@@ -5,13 +5,13 @@
   if (IMakeService.INSTANCE.isSessionActive()) {
     return;
   }
-  List<SModelEvent> events=new ArrayList<SModelEvent>();
+  final List<SModelEvent> events=new ArrayList<SModelEvent>();
 synchronized (EVENTS_LOCK) {
     events.addAll(myLastEvents);
     myLastEvents.clear();
   }
-  Set<BaseEditorChecker> checkers=new LinkedHashSet<BaseEditorChecker>();
-  Set<BaseEditorChecker> checkersToRemove=new LinkedHashSet<BaseEditorChecker>();
+  final Set<BaseEditorChecker> checkers=new LinkedHashSet<BaseEditorChecker>();
+  final Set<BaseEditorChecker> checkersToRemove=new LinkedHashSet<BaseEditorChecker>();
 synchronized (CHECKERS_LOCK) {
     if (!EditorSettings.getInstance().isPowerSaveMode() || myForceUpdateInPowerSaveModeFlag) {
       checkers.addAll(myCheckers);
@@ -36,42 +36,47 @@ synchronized (CHECKERS_LOCK) {
   if (checkers.isEmpty() && checkersToRemove.isEmpty()) {
     return;
   }
-  boolean isUpdated=false;
-  boolean inspectorIsUpdated=false;
+  final boolean[] isUpdated={false};
+  final boolean[] inspectorIsUpdated={false};
   EditorComponent inspector=null;
-  try {
-    TypeChecker.getInstance().enableGlobalSubtypingCache();
-    for (    EditorComponent editorComponent : allEditorComponents) {
-      if (myStopThread) {
-        return;
-      }
-      if (updateEditorComponent(editorComponent,events,checkers,checkersToRemove,false)) {
-        isUpdated=true;
-      }
-    }
+  for (  final EditorComponent editorComponent : allEditorComponents) {
     if (myStopThread) {
       return;
     }
-    if (myInspectorTool != null && myInspectorTool.getInspector() != null) {
-      inspector=myInspectorTool.getInspector();
-      if (updateEditorComponent(inspector,events,checkers,checkersToRemove,isUpdated)) {
-        inspectorIsUpdated=true;
+    TypeContextManager.getInstance().runTypecheckingAction(editorComponent,new Runnable(){
+      @Override public void run(){
+        if (updateEditorComponent(editorComponent,events,checkers,checkersToRemove,false)) {
+          isUpdated[0]=true;
+        }
       }
     }
-  }
-  finally {
-    TypeChecker.getInstance().clearGlobalSubtypingCache();
+);
   }
   if (myStopThread) {
     return;
   }
-  if (isUpdated) {
+  if (myInspectorTool != null && myInspectorTool.getInspector() != null) {
+    inspector=myInspectorTool.getInspector();
+    final EditorComponent finalInspector=inspector;
+    TypeContextManager.getInstance().runTypecheckingAction(inspector,new Runnable(){
+      @Override public void run(){
+        if (updateEditorComponent(finalInspector,events,checkers,checkersToRemove,isUpdated[0])) {
+          inspectorIsUpdated[0]=true;
+        }
+      }
+    }
+);
+  }
+  if (myStopThread) {
+    return;
+  }
+  if (isUpdated[0]) {
     for (    EditorComponent editorComponent : allEditorComponents) {
       editorComponent.repaint();
       editorComponent.getVerticalScrollBar().repaint();
     }
   }
-  if (inspectorIsUpdated) {
+  if (inspectorIsUpdated[0]) {
     inspector.repaint();
     inspector.getVerticalScrollBar().repaint();
   }
