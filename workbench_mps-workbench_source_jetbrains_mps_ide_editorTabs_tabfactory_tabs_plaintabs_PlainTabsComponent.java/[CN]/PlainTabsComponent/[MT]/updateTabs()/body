@@ -1,24 +1,61 @@
 {
   if (myDisposed)   return;
-  myRealTabs.clear();
-  myJbTabs.removeAll();
-  ArrayList<RelationDescriptor> tabs=new ArrayList<RelationDescriptor>(myPossibleTabs);
-  Collections.sort(tabs,new RelationComparator());
-  Map<RelationDescriptor,List<SNode>> newContent=updateDocumentsAndNodes();
-  JLabel fill=new JLabel("");
-  for (  RelationDescriptor tab : tabs) {
-    List<SNode> nodes=newContent.get(tab);
-    if (nodes != null) {
-      for (      SNode node : nodes) {
-        myRealTabs.add(new PlainEditorTab(new SNodePointer(node),tab));
-        myJbTabs.addTab(node.getPresentation(),IconManager.getIconFor(node),fill,"");
-      }
-    }
- else     if (myShowGrayed) {
-      myRealTabs.add(new PlainEditorTab(null,tab));
-      myJbTabs.addTab(tab.getTitle(),fill);
-      myJbTabs.setForegroundAt(myJbTabs.getTabCount() - 1,Color.GRAY);
+  SNodePointer selNode=null;
+  RelationDescriptor selRel=null;
+  int selected=myJbTabs.getTabCount() > 0 ? myJbTabs.getSelectedIndex() : -1;
+  if (selected != -1) {
+    selNode=myRealTabs.get(selected).getNode();
+    if (selNode == null) {
+      selRel=myRealTabs.get(selected).getTab();
     }
   }
-  updateTabColors();
+  boolean oldRebuilding=myRebuilding;
+  myRebuilding=true;
+  try {
+    myJbTabs.removeAll();
+    myRealTabs.clear();
+    ArrayList<RelationDescriptor> tabs=new ArrayList<RelationDescriptor>(myPossibleTabs);
+    Collections.sort(tabs,new RelationComparator());
+    Map<RelationDescriptor,List<SNode>> newContent=updateDocumentsAndNodes();
+    JLabel fill=new JLabel("");
+    for (    RelationDescriptor tab : tabs) {
+      List<SNode> nodes=newContent.get(tab);
+      if (nodes != null) {
+        for (        SNode node : nodes) {
+          myRealTabs.add(new PlainEditorTab(new SNodePointer(node),tab));
+          myJbTabs.addTab(node.getPresentation(),IconManager.getIconFor(node),fill,"");
+        }
+      }
+ else       if (myShowGrayed) {
+        myRealTabs.add(new PlainEditorTab(null,tab));
+        myJbTabs.addTab(tab.getTitle(),fill);
+        myJbTabs.setForegroundAt(myJbTabs.getTabCount() - 1,Color.GRAY);
+      }
+    }
+    updateTabColors();
+  }
+  finally {
+    myRebuilding=oldRebuilding;
+  }
+  if (selNode != null) {
+    for (    PlainEditorTab tab : myRealTabs) {
+      if (tab.getNode().equals(selNode)) {
+        myJbTabs.setSelectedIndex(myRealTabs.indexOf(tab));
+        break;
+      }
+    }
+  }
+ else   if (selRel != null) {
+    for (    PlainEditorTab tab : myRealTabs) {
+      if (tab.getTab() == selRel) {
+        myJbTabs.setSelectedIndex(myRealTabs.indexOf(tab));
+        break;
+      }
+    }
+  }
+ else {
+    if (myJbTabs.getTabCount() > 0) {
+      myJbTabs.setSelectedIndex(0);
+    }
+  }
 }
