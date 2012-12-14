@@ -1,0 +1,23 @@
+{
+  JpsMPSProject project=new JpsMPSProject(context.getProjectDescriptor().getProject());
+  for (  JpsModule mod : context.getProjectDescriptor().getProject().getModules()) {
+    JpsMPSModuleExtension extension=JpsMPSExtensionService.getInstance().getExtension(mod);
+    if (extension == null) {
+      context.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO,"Ignoring (no facet) " + mod.getName()));
+      continue;
+    }
+    SolutionDescriptor descriptor=extension.getConfiguration().getSolutionDescriptor();
+    descriptor.setNamespace(mod.getName());
+    descriptor.setId(ModuleId.foreign(mod.getName()));
+    JpsSolutionIdea solution=new JpsSolutionIdea(mod,descriptor,context);
+    MPSModuleRepository.getInstance().registerModule(solution,project);
+    solution.updateModelsSet();
+    context.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO,"FQ name: " + solution.getModuleReference().getModuleFqName()));
+    for (    SModelDescriptor desc : SModelRepository.getInstance().getModelDescriptors(solution)) {
+      context.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO," ++ " + desc.getLongName()));
+      for (      SNode n : desc.getRootNodes()) {
+        context.processMessage(new CompilerMessage(MPSCompilerUtil.BUILDER_ID,Kind.INFO," root: " + n.getName()));
+      }
+    }
+  }
+}
