@@ -2,25 +2,24 @@
   ModelAccess.assertLegalRead();
   final GetHighestAvailableIntentionTypeVisitor visitor=new GetHighestAvailableIntentionTypeVisitor();
   checkLoaded();
-  try {
-    TypeChecker.getInstance().enableGlobalSubtypingCache();
-    Filter filter=new Filter(BaseIntention.class,getDisabledIntentions()){
-      @Override boolean accept(      Intention intention){
-        return super.accept(intention) && visitor.hasHigherPriority(intention.getType());
+  TypeContextManager.getInstance().runTypecheckingAction((ITypeContextOwner)editorContext.getEditorComponent(),new Runnable(){
+    @Override public void run(){
+      Filter filter=new Filter(BaseIntention.class,getDisabledIntentions()){
+        @Override boolean accept(        Intention intention){
+          return super.accept(intention) && visitor.hasHigherPriority(intention.getType());
+        }
+        @Override boolean accept(        IntentionFactory intentionFactory){
+          return super.accept(intentionFactory) && visitor.hasHigherPriority(intentionFactory.getType());
+        }
       }
-      @Override boolean accept(      IntentionFactory intentionFactory){
-        return super.accept(intentionFactory) && visitor.hasHigherPriority(intentionFactory.getType());
-      }
-    }
 ;
-    for (SNode currentNode=node; currentNode != null; currentNode=currentNode.getParent()) {
-      if (!visitIntentions(currentNode,visitor,filter,currentNode != node,editorContext)) {
-        break;
+      for (SNode currentNode=node; currentNode != null; currentNode=currentNode.getParent()) {
+        if (!visitIntentions(currentNode,visitor,filter,currentNode != node,editorContext)) {
+          break;
+        }
       }
     }
   }
-  finally {
-    TypeChecker.getInstance().clearGlobalSubtypingCache();
-  }
+);
   return visitor.getIntentionType();
 }
