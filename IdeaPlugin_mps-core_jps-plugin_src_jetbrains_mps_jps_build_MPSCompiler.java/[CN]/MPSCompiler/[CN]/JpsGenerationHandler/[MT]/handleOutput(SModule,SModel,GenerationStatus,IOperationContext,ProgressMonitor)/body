@@ -1,0 +1,33 @@
+{
+  monitor.start("generating files",1);
+  try {
+    info("handling output...");
+    JpsSolutionIdea solution=(JpsSolutionIdea)module;
+    JpsModule jpsModule=solution.getModule();
+    IFile targetDir=FileSystem.getInstance().getFileByPath(solution.getOutputFor(inputModel));
+    IFile cachesDir=FileGenerationUtil.getCachesDir(targetDir);
+    long startJobTime=System.currentTimeMillis();
+    boolean result=false;
+    if (status.isOk()) {
+      JavaStreamHandler javaStreamHandler=new JavaStreamHandler(inputModel,targetDir,cachesDir,myProcessor);
+      try {
+        result=new TextGenerator(javaStreamHandler,BLDependenciesCache.getInstance().getGenerator(),TraceInfoCache.getInstance().getGenerator(),GenerationDependenciesCache.getInstance().getGenerator()).handleOutput(invocationContext,status);
+      }
+  finally {
+        javaStreamHandler.dispose();
+      }
+      myContext.getCompileContext().processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,BuildMessage.Kind.INFO,"saving " + inputModel.getModelName() + " into "+ targetDir.getPath()));
+    }
+    if (!result) {
+      info("there were errors.");
+      return false;
+    }
+    if (myLogger.needsInfo()) {
+      myLogger.info("output generated in " + (System.currentTimeMillis() - startJobTime) + " ms");
+    }
+    return true;
+  }
+  finally {
+    monitor.done();
+  }
+}
