@@ -1,10 +1,10 @@
 {
   JavaStubs bin=new JavaStubs();
-  JavaSourceStubs src=new JavaSourceStubs();
+  JavaSourceStubModelRoot src2=new JavaSourceStubModelRoot();
   IModule mod1=MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("c3786d2b-aba2-45e5-8de0-1124fd14259b"));
   IModule mod2=MPSModuleRepository.getInstance().getModuleById(ModuleId.fromString("49166c31-952a-46f6-8970-ea45964379d0"));
   List<SModel> binModels=ListSequence.fromList(new ArrayList<SModel>());
-  SModelRoot binSRoot=new SModelRoot(null);
+  SModelRoot binSRoot=new SModelRoot();
   binSRoot.setModule(mod1);
   binSRoot.setPath(binPath);
   Collection<SModelDescriptor> binStubModels=bin.load(binSRoot);
@@ -20,20 +20,19 @@
       NodePatcher.removeStatements(binRoot);
     }
   }
-  List<SModel> srcModels=ListSequence.fromList(new ArrayList<SModel>());
-  Collection<SModelDescriptor> srcStubModels;
-  SModelRoot srcSRoot=new SModelRoot(null);
-  srcSRoot.setModule(mod2);
-  srcSRoot.setPath(sourcePath);
-  srcStubModels=src.load(srcSRoot);
-  for (  SModelDescriptor md : CollectionSequence.fromCollection(srcStubModels)) {
-    SModel m=md.getSModel();
-    ListSequence.fromList(srcModels).addElement(m);
-    for (    SNode srcRoot : ListSequence.fromList(SModelOperations.getRoots(m,null))) {
+  Iterable<org.jetbrains.mps.openapi.model.SModel> srcModels;
+  List<SModel> srcModelsX=ListSequence.fromList(new ArrayList<SModel>());
+  src2.setModule(mod2);
+  src2.setPath(sourcePath);
+  srcModels=src2.loadModels();
+  for (  org.jetbrains.mps.openapi.model.SModel m : Sequence.fromIterable(srcModels)) {
+    SModel zzz=((SModelDescriptor)m).getSModel();
+    srcModelsX.add(zzz);
+    for (    SNode srcRoot : ListSequence.fromList(SModelOperations.getRoots(zzz,null))) {
       NodePatcher.fixNonStatic(srcRoot);
       NodePatcher.removeSourceLevelAnnotations(srcRoot);
       NodePatcher.sortNestedClass(SNodeOperations.cast(srcRoot,"jetbrains.mps.baseLanguage.structure.Classifier"));
     }
   }
-  compare(binModels,srcModels);
+  compare(binModels,srcModelsX);
 }

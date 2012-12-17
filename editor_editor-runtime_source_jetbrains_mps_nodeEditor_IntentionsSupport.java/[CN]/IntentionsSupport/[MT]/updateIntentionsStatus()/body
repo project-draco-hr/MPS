@@ -11,14 +11,19 @@
         if (interrupted()) {
           return;
         }
-        boolean show=ModelAccess.instance().runReadAction(new Computable<Boolean>(){
-          public Boolean compute(){
-            if (isInconsistentEditor() || myEditor.isReadOnly())             return false;
-            return IntentionsManager.getInstance().hasAvailableBaseIntentions(myEditor.getSelectedNode(),myEditor.getEditorContext());
+        final IntentionType intentionType=ModelAccess.instance().runReadAction(new Computable<IntentionType>(){
+          public IntentionType compute(){
+            if (isInconsistentEditor() || myEditor.isReadOnly())             return null;
+            return TypeContextManager.getInstance().runTypeCheckingComputation(myEditor,myEditor.getEditedNode(),new Computation<IntentionType>(){
+              @Override public IntentionType compute(              TypeCheckingContext context){
+                return IntentionsManager.getInstance().getHighestAvailableBaseIntentionType(myEditor.getSelectedNode(),myEditor.getEditorContext());
+              }
+            }
+);
           }
         }
 );
-        if (!show || interrupted()) {
+        if (intentionType == null || interrupted()) {
           return;
         }
         ModelAccess.instance().runReadInEDT(new Runnable(){
@@ -29,12 +34,7 @@
             }
  else {
               adjustLightBulbLocation();
-              showLightBulb(new Computable<Boolean>(){
-                public Boolean compute(){
-                  return interrupted();
-                }
-              }
-);
+              showLightBulbComponent(intentionType == IntentionType.NORMAL ? Icons.INTENTION : intentionType.getIcon());
             }
           }
         }
