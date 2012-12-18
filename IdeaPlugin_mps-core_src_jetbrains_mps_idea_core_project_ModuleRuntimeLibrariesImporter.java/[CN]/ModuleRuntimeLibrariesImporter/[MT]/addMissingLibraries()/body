@@ -1,36 +1,16 @@
 {
-  Set<ModuleReference> alreadyImported=new HashSet<ModuleReference>();
-  for (  OrderEntry entry : myModifiableRootModel.getOrderEntries()) {
-    if (entry instanceof LibraryOrderEntry) {
-      alreadyImported.addAll(ModuleLibrariesUtil.getModules(((LibraryOrderEntry)entry).getLibrary()));
-    }
-  }
+  Set<ModuleReference> alreadyImported=ModuleLibrariesUtil.getModules(myModifiableRootModel.getOrderEntries());
   Collection<Library> projectLibs2Add=new HashSet<Library>();
-  Map<ModuleReference,Collection<VirtualFile>> projectLibs2Create_Classpath=new HashMap<ModuleReference,Collection<VirtualFile>>();
-  Map<ModuleReference,VirtualFile> projectLibs2Create_ModuleXml=new HashMap<ModuleReference,VirtualFile>();
   for (  IModule usedModule : collectRuntimeModules(myAddedModules)) {
-    if (!(usedModule instanceof Solution) || !usedModule.isPackaged() || BootstrapLanguages.JDK.equals(usedModule.getModuleReference())) {
+    if (BootstrapLanguages.JDK.equals(usedModule.getModuleReference())) {
       continue;
     }
     if (alreadyImported.contains(usedModule.getModuleReference())) {
       continue;
     }
-    Library library=getAutoLibrary(usedModule.getModuleReference());
-    if (library != null) {
-      projectLibs2Add.add(library);
-    }
- else {
-      Set<VirtualFile> stubFiles=ModuleLibraryType.getModuleJars((Solution)usedModule);
-      projectLibs2Create_Classpath.put(usedModule.getModuleReference(),stubFiles);
-      projectLibs2Create_ModuleXml.put(usedModule.getModuleReference(),VirtualFileUtils.getVirtualFile(usedModule.getDescriptorFile()));
-    }
+    projectLibs2Add.add(ModuleLibrariesUtil.getOrCreateAutoLibrary(usedModule,getProject(),myLibrariesContainer));
   }
   for (  Library projectLibrary : projectLibs2Add) {
-    myModifiableRootModel.addLibraryEntry(projectLibrary);
-  }
-  for (  ModuleReference moduleReference : projectLibs2Create_Classpath.keySet()) {
-    Collection<VirtualFile> libraryFiles=projectLibs2Create_Classpath.get(moduleReference);
-    Library projectLibrary=createProjectLibrary(moduleReference.getModuleFqName(),libraryFiles,projectLibs2Create_ModuleXml.get(moduleReference));
     myModifiableRootModel.addLibraryEntry(projectLibrary);
   }
 }
