@@ -25,30 +25,32 @@
   }
   String path=VirtualFileManager.extractPath(url);
   for (  ModelRoot root : mpsFacet.getSolution().getModelRoots()) {
-    if (!(root instanceof FolderModelRootBase))     continue;
-    FolderModelRootBase modelRoot=(FolderModelRootBase)root;
-    if (path.startsWith(modelRoot.getPath())) {
-      Solution solution=mpsFacet.getSolution();
-      myOperationContext=new ModuleContext(solution,mpsProject);
-      myModelDescriptor=(EditableSModelDescriptor)SModelFileTracker.getInstance().findModel(FileSystem.getInstance().getFileByPath(vFiles[0].getPath()));
-      if (myModelDescriptor != null) {
-        ModelAccess.instance().runReadAction(new Runnable(){
-          @Override public void run(){
-            SModel model=myModelDescriptor.getSModel();
-            List<Language> modelLanguages=SModelOperations.getLanguages(model,myOperationContext.getScope());
-            for (            Language language : modelLanguages) {
-              for (              SNode concept : language.getConceptDeclarations()) {
-                String conceptFqName=NameUtil.nodeFQName(concept);
-                if (ModelConstraints.canBeRoot(conceptFqName,model,null)) {
-                  myConceptFqNameToNodePointerMap.put(conceptFqName,new SNodePointer(concept));
+    if (!(root instanceof DefaultModelRoot))     continue;
+    DefaultModelRoot modelRoot=(DefaultModelRoot)root;
+    for (    String sourceRoot : modelRoot.getFiles(DefaultModelRoot.SOURCE_ROOTS)) {
+      if (path.startsWith(sourceRoot)) {
+        Solution solution=mpsFacet.getSolution();
+        myOperationContext=new ModuleContext(solution,mpsProject);
+        myModelDescriptor=(EditableSModelDescriptor)SModelFileTracker.getInstance().findModel(FileSystem.getInstance().getFileByPath(vFiles[0].getPath()));
+        if (myModelDescriptor != null) {
+          ModelAccess.instance().runReadAction(new Runnable(){
+            @Override public void run(){
+              SModel model=myModelDescriptor.getSModel();
+              List<Language> modelLanguages=SModelOperations.getLanguages(model,myOperationContext.getScope());
+              for (              Language language : modelLanguages) {
+                for (                SNode concept : language.getConceptDeclarations()) {
+                  String conceptFqName=NameUtil.nodeFQName(concept);
+                  if (ModelConstraints.canBeRoot(conceptFqName,model,null)) {
+                    myConceptFqNameToNodePointerMap.put(conceptFqName,new SNodePointer(concept));
+                  }
                 }
               }
             }
           }
-        }
 );
+        }
+        return;
       }
-      return;
     }
   }
 }
