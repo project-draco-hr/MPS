@@ -1,59 +1,6 @@
 {
-  SModelReference targetModelReference=null;
   if (refText.startsWith("[")) {
-    String[] modelNameAndTheRest=refText.split("]");
-    if (modelNameAndTheRest.length > 1 || (modelNameAndTheRest.length == 1 && refText.endsWith("]"))) {
-      refText=refText.substring(refText.indexOf("]") + 1).trim();
-      String modelName=modelNameAndTheRest[0].substring(1).trim();
-      if (modelName.length() > 0) {
-        if (!(modelName.equals(model.getLongName()))) {
-          String stereo=SModelStereotype.getStubStereotypeForId(LanguageID.JAVA);
-          Iterable<IModule> modules=model.getModelDescriptor().getModule().getScope().getVisibleModules();
-          SModelId id=StubMigrationHelper.convertModelUIDInScope(stereo + "#" + modelName,Sequence.fromIterable(modules).translate(new ITranslator2<IModule,SModelDescriptor>(){
-            public Iterable<SModelDescriptor> translate(            IModule it){
-              return it.getOwnModelDescriptors();
-            }
-          }
-));
-          targetModelReference=new SModelReference(new SModelFqName(modelName,stereo),id);
-        }
-      }
-    }
+    return ClassifierResolveUtils.resolveSpecialSyntax(refText,contextNode);
   }
-  SModel targetModel=null;
-  if (targetModelReference != null && targetModelReference.getSModelId() != null) {
-    targetModel=check_npo0wh_a0a0g0c(scope.getModelDescriptor(targetModelReference));
-  }
-  String classname=refText;
-  int dotIndex=classname.lastIndexOf(".");
-  if (dotIndex >= 0) {
-    List<SNode> localClassifiers=getClassifiersByRefName((targetModel != null ? targetModel : model),classname);
-    if (ListSequence.fromList(localClassifiers).count() >= 1) {
-      return ListSequence.fromList(localClassifiers).first();
-    }
-    if (classname.contains("$")) {
-      String package_=classname.substring(0,dotIndex);
-      classname=classname.substring(dotIndex + 1).replace('$','.');
-      return resolveClass(package_,null,classname);
-    }
- else {
-      String[] parts=classname.split("\\.");
-      for (int sizeOfClassifier=1; sizeOfClassifier <= parts.length; sizeOfClassifier++) {
-        String packageName=IterableUtils.join(Sequence.fromIterable(Sequence.fromArray(parts)).take(parts.length - sizeOfClassifier),".");
-        String className=IterableUtils.join(Sequence.fromIterable(Sequence.fromArray(parts)).skip(parts.length - sizeOfClassifier),".");
-        SNode resolved=resolveClass(packageName,null,className);
-        if (resolved != null) {
-          return resolved;
-        }
-      }
-    }
-    String package_=classname.substring(0,dotIndex);
-    classname=classname.substring(dotIndex + 1).replace('$','.');
-    return resolveClass(package_,null,classname);
-  }
-  if (targetModel != null) {
-    return ListSequence.fromList(getClassifiersByRefName(targetModel,classname)).first();
-  }
-  SModelFqName modelname=(targetModelReference == null ? model.getSModelFqName() : targetModelReference.getSModelFqName());
-  return resolveClass(modelname.getLongName(),modelname.getStereotype(),classname);
+  return ClassifierResolveUtils.resolveNonSpecialSyntax(refText,contextNode);
 }
