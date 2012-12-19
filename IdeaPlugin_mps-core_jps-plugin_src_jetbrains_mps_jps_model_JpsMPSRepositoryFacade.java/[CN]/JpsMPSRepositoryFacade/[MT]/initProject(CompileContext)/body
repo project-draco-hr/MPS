@@ -1,7 +1,9 @@
 {
   long start=System.nanoTime();
-  myProject=new JpsMPSProject(context.getProjectDescriptor().getProject());
-  for (  JpsModule mod : context.getProjectDescriptor().getProject().getModules()) {
+  JpsProject jpsProject=context.getProjectDescriptor().getProject();
+  myProject=new JpsMPSProject(jpsProject);
+  Set<JpsSdk> processedSdks=new HashSet<JpsSdk>();
+  for (  JpsModule mod : jpsProject.getModules()) {
     JpsMPSModuleExtension extension=JpsMPSExtensionService.getInstance().getExtension(mod);
     if (extension == null) {
       continue;
@@ -11,7 +13,9 @@
     }
     SolutionDescriptor descriptor=extension.getConfiguration().getSolutionDescriptor();
     descriptor.setNamespace(mod.getName());
-    descriptor.setId(ModuleId.foreign(mod.getName()));
+    if (MPSCompilerUtil.isTracingMode()) {
+      context.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"UUID " + descriptor.getUUID()));
+    }
     JpsSolutionIdea module=new JpsSolutionIdea(mod,descriptor,context);
     JpsSolutionIdea solutionIdea=MPSModuleRepository.getInstance().registerModule(module,myProject);
     if (module == solutionIdea) {
@@ -19,8 +23,35 @@
     }
     myProject.addModule(solutionIdea.getModuleReference());
     jpsToMpsModules.put(mod,solutionIdea);
+    JpsSdk sdk=mod.getSdk(JpsJavaSdkType.INSTANCE);
+    if (sdk != null && !processedSdks.contains(sdk)) {
+      JpsLibSolution sdkSolution=createLibSolution(sdk.getParent());
+      JpsLibSolution regSolution=MPSModuleRepository.getInstance().registerModule(sdkSolution,myProject);
+      context.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"SDK " + regSolution.getModuleReference().toString()));
+      if (sdkSolution == regSolution) {
+        sdkSolution.updateModelsSet();
+      }
+      processedSdks.add(sdk);
+    }
+  }
+  for (  JpsLibrary jpsLib : jpsProject.getLibraryCollection().getLibraries()) {
+    JpsLibSolution libSolution=createLibSolution(jpsLib);
+    JpsLibSolution regSolution=MPSModuleRepository.getInstance().registerModule(libSolution,myProject);
+    context.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"LIB " + regSolution.getModuleReference().toString()));
+    if (libSolution == regSolution) {
+      libSolution.updateModelsSet();
+    }
   }
   if (MPSCompilerUtil.isTracingMode()) {
     context.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"Project modules loaded in " + (System.nanoTime() - start) / 1000000 + " ms"));
+    for (    SModule m : myProject.getModules()) {
+      context.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"Debug output: module " + m.getModuleName()));
+      for (      SModelDescriptor d : SModelRepository.getInstance().getModelDescriptors(m)) {
+        context.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"Debug output: model " + d.getLongName() + " / "+ d.getModelReference().toString()));
+        for (        SNode n : d.getRootNodes()) {
+          context.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"node: " + n.getName()));
+        }
+      }
+    }
   }
 }
