@@ -1,0 +1,56 @@
+{
+  boolean stubsMode=FeatureKind.CLASS_STUB.equals(what);
+  CodeSnippetParsingUtil util=new CodeSnippetParsingUtil(stubsMode);
+  Map<String,String> settings=new HashMap<String,String>();
+  settings.put(CompilerOptions.OPTION_Source,CompilerOptions.VERSION_1_6);
+  settings.put(CompilerOptions.OPTION_DocCommentSupport,"enabled");
+  TypeNameResolver typeResolver=new TypeNameResolver(pkg);
+  ASTConverter converter=(FeatureKind.CLASS_STUB.equals(what) ? new ASTConverter(null,typeResolver,stubsMode) : new FullASTConverter(null,typeResolver));
+  List<SNode> resultNodes=new ArrayList<SNode>();
+  String resultPackageName=null;
+  char[] source=code.toCharArray();
+switch (what) {
+case CLASS:
+case CLASS_STUB:
+    CompilationUnitDeclaration compRes=util.parseCompilationUnit(source,settings,true);
+  if (compRes == null) {
+    return JavaParser.JavaParseResult.UNKNOWN_ERROR;
+  }
+ASTNode[] astTypes=compRes.types;
+if (astTypes != null && astTypes.length > 0) {
+typeResolver.addImports(extractImports(compRes));
+List<SNode> roots=new ArrayList<SNode>();
+for (ASTNode astNode : astTypes) {
+  ListSequence.fromList(roots).addElement(converter.convertRoot(astNode));
+}
+resultNodes=roots;
+}
+if (compRes.currentPackage != null) {
+StringBuffer sb=new StringBuffer();
+compRes.currentPackage.print(0,sb,false);
+resultPackageName=sb.toString();
+}
+break;
+case CLASS_CONTENT:
+ASTNode[] astNodes=util.parseClassBodyDeclarations(source,0,source.length,settings,true,recovery);
+if (astNodes != null && astNodes.length > 0) {
+resultNodes=converter.convertClassContents(astNodes,SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ClassConcept",null));
+}
+break;
+case STATEMENTS:
+AbstractMethodDeclaration absMethod=util.parseStatements(source,settings,true,recovery);
+if (absMethod == null) {
+return JavaParser.JavaParseResult.UNKNOWN_ERROR;
+}
+Statement[] stmts=absMethod.statements;
+if (stmts != null && stmts.length > 0) {
+SNode stmtList=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StatementList",null);
+resultNodes=((FullASTConverter)converter).convertStatementsOf(absMethod,stmtList);
+}
+break;
+default :
+throw new IllegalArgumentException("Parsing other than class and statements is not supported yet ");
+}
+attachComments(source,converter,util.recordedParsingInformation);
+return new JavaParser.JavaParseResult(resultNodes,resultPackageName,problemDescription(util.recordedParsingInformation));
+}

@@ -1,0 +1,30 @@
+{
+  List<Dependency> dependencies=new ArrayList<Dependency>();
+  myCompileContext.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"^^^^ getDependencies for " + myModule.getName()));
+  for (  JpsDependencyElement jpsDep : myModule.getDependenciesList().getDependencies()) {
+    Solution solution=null;
+    if (jpsDep instanceof JpsModuleDependency) {
+      JpsModule jpsModule=((JpsModuleDependency)jpsDep).getModule();
+      solution=JpsMPSRepositoryFacade.getInstance().getSolution(jpsModule);
+    }
+ else     if (jpsDep instanceof JpsLibraryDependency) {
+      myCompileContext.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"**** lib dep: " + ((JpsLibraryDependency)jpsDep).getLibraryReference().getLibraryName()));
+      JpsLibrary lib=((JpsLibraryDependency)jpsDep).getLibrary();
+      String name=lib.getName();
+      solution=(Solution)MPSModuleRepository.getInstance().getModuleById(ModuleId.foreign(name));
+    }
+ else     if (jpsDep instanceof JpsSdkDependency) {
+      myCompileContext.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"**** jdk dep: " + ((JpsSdkDependency)jpsDep).getSdkReference().getSdkName()));
+      JpsLibrary lib=((JpsSdkDependency)jpsDep).resolveSdk();
+      String name=lib.getName();
+      solution=(Solution)MPSModuleRepository.getInstance().getModuleById(ModuleId.foreign(name));
+    }
+    if (solution != null) {
+      Dependency dep=new Dependency();
+      dep.setModuleRef(solution.getModuleReference());
+      dep.setReexport(false);
+      dependencies.add(dep);
+    }
+  }
+  return dependencies;
+}

@@ -1,5 +1,6 @@
 {
   CompilerManager compilerManager=CompilerManager.getInstance(project);
+  project.getMessageBus().connect().subscribe(CustomBuilderMessageHandler.TOPIC,new RefreshFilesCompilationStatusListener());
   compilerManager.addCompilableFileType(MPSFileTypeFactory.MODEL_FILE_TYPE);
   for (  MPSCompiler2 compiler : compilerManager.getCompilers(MPSCompiler2.class)) {
     compilerManager.removeCompiler(compiler);
@@ -7,6 +8,7 @@
   compilerManager.addCompiler(new MPSCompiler2(project));
   compilerManager.addBeforeTask(new CompileTask(){
     @Override public boolean execute(    final CompileContext context){
+      if (!CompilerWorkspaceConfiguration.getInstance(project).USE_COMPILE_SERVER)       return true;
       StringBuilder sb=new StringBuilder();
       PluginLibrariesContributor pluginLibContributor=ApplicationManager.getApplication().getComponent(PluginLibrariesContributor.class);
       for (      LibDescriptor library : pluginLibContributor.getLibraries()) {
@@ -16,17 +18,17 @@
         }
         sb.append(path);
       }
-      context.getCompileScope().putUserData(MPSCompilerUtil.MPS_LANGUAGES,sb.toString());
+      context.getCompileScope().putUserData(MPSMakeConstants.MPS_LANGUAGES,sb.toString());
       final File repositoryCache=new File(CompilerPaths.getCompilerSystemDirectory(project),"mps_repository.dat");
       final long start=System.nanoTime();
       ModelAccess.instance().runReadAction(new Runnable(){
         @Override public void run(){
-          Collection<ModuleHandle> libraryModules=LibraryInitializer.getInstance().getModuleHandles();
+          CachedRepositoryData cachedRepositoryData=MPSRepositoryUtil.buildData(LibraryInitializer.getInstance().getModuleHandles());
           ModelOutputStream mos=null;
           try {
             mos=new ModelOutputStream(new FileOutputStream(repositoryCache));
-            ModulesMiner.getInstance().saveModules(libraryModules,mos);
-            context.getCompileScope().putUserData(MPSCompilerUtil.MPS_REPOSITORY,repositoryCache.getPath());
+            cachedRepositoryData.save(mos);
+            context.getCompileScope().putUserData(MPSMakeConstants.MPS_REPOSITORY,repositoryCache.getPath());
           }
  catch (          IOException e) {
             context.addMessage(CompilerMessageCategory.INFORMATION,"cannot save cache for MPS, generation may be slow",null,0,0);
@@ -38,7 +40,9 @@
       }
 );
       long result=(System.nanoTime() - start) / 1000000;
-      context.addMessage(CompilerMessageCategory.INFORMATION,"repository cache saved in " + result + " ms",null,0,0);
+      if (CompilerWorkspaceConfiguration.getInstance(project).COMPILER_PROCESS_ADDITIONAL_VM_OPTIONS.contains("-Dmps.jps.debug=true")) {
+        context.addMessage(CompilerMessageCategory.INFORMATION,"repository cache saved in " + result + " ms",null,0,0);
+      }
       return true;
     }
   }

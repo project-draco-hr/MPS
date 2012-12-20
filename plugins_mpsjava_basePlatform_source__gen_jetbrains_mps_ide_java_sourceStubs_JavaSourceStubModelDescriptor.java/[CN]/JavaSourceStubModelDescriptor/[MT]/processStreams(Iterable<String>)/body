@@ -1,0 +1,53 @@
+{
+  JavaParser parser=new JavaParser();
+  for (  String fileName : Sequence.fromIterable(names)) {
+    try {
+      Set<SNode> oldNodes=SetSequence.fromSetWithValues(new HashSet<SNode>(),MapSequence.fromMap(myRootsPerFile).get(fileName));
+      InputStream is=myDataSource.openInputStream(fileName);
+      if (is == null) {
+        SetSequence.fromSet(oldNodes).visitAll(new IVisitor<SNode>(){
+          public void visit(          SNode it){
+            SNodeOperations.deleteNode(it);
+          }
+        }
+);
+        MapSequence.fromMap(myRootsPerFile).removeKey(fileName);
+        continue;
+      }
+      String code=readInputStream(is);
+      JavaParser.JavaParseResult parseResult=parser.parse(code,myJavaPackage,FeatureKind.CLASS_STUB,true);
+      if (ListSequence.fromList(parseResult.getNodes()).isNotEmpty()) {
+        for (        SNode newNode : ListSequence.fromList(parseResult.getNodes())) {
+          final org.jetbrains.mps.openapi.model.SNodeId newNodeId=newNode.getSNodeId();
+          SNode oldNode=SetSequence.fromSet(oldNodes).where(new IWhereFilter<SNode>(){
+            public boolean accept(            SNode it){
+              return it.getSNodeId().equals(newNodeId);
+            }
+          }
+).first();
+          if (oldNode == null) {
+            SModelOperations.addRootNode(myModel,newNode);
+            SetSequence.fromSet(oldNodes).removeElement(oldNode);
+          }
+ else {
+            SNodeOperations.replaceWithAnother(oldNode,newNode);
+          }
+          MapSequence.fromMap(myRootsById).put(newNode.getSNodeId(),newNode);
+        }
+      }
+      SetSequence.fromSet(oldNodes).visitAll(new IVisitor<SNode>(){
+        public void visit(        SNode it){
+          SNodeOperations.deleteNode(it);
+        }
+      }
+);
+      MapSequence.fromMap(myRootsPerFile).put(fileName,SetSequence.fromSetWithValues(new HashSet<SNode>(),parseResult.getNodes()));
+    }
+ catch (    IOException e) {
+      LOG.error("Failed to read java file. " + e.getMessage(),e);
+    }
+catch (    JavaParseException e) {
+      LOG.error("Failed to parse java file. " + e.getMessage());
+    }
+  }
+}

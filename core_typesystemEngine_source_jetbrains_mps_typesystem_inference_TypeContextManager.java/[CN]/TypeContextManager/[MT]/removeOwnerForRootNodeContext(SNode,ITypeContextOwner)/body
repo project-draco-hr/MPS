@@ -1,27 +1,32 @@
 {
   ModelAccess.assertLegalRead();
   if (node == null || node.getModel() == null)   return;
+  final SNode rootNode=node.getTopmostAncestor();
 synchronized (myLock) {
-    SNodePointer nodePointer=new SNodePointer(node);
-    List<Triplet<TypeCheckingContext,ITypeContextOwner,Integer>> contextWithOwners=myTypeCheckingContexts.get(nodePointer);
+    SNodePointer rootNodePointer=new SNodePointer(rootNode);
+    List<TypecheckingContextHolder> contextWithOwners=myTypeCheckingContexts.get(rootNodePointer);
     if (contextWithOwners != null) {
-      for (ListIterator<Triplet<TypeCheckingContext,ITypeContextOwner,Integer>> it=contextWithOwners.listIterator(); it.hasNext(); ) {
-        Triplet<TypeCheckingContext,ITypeContextOwner,Integer> p=it.next();
-        ITypeContextOwner o=p.second();
+      for (ListIterator<TypecheckingContextHolder> it=contextWithOwners.listIterator(); it.hasNext(); ) {
+        TypecheckingContextHolder contextHolder=it.next();
+        ITypeContextOwner o=contextHolder.getOwner();
         if (o == owner) {
-          int count=p.third() - 1;
-          if (count <= 0) {
-            it.remove();
-            p.first().dispose();
+          if (!owner.reuseTypecheckingContext()) {
+            contextHolder.release();
+            if (!contextHolder.isActive()) {
+              it.remove();
+            }
           }
  else {
-            it.set(new Triplet<TypeCheckingContext,ITypeContextOwner,Integer>(p.first(),p.second(),count));
+            contextHolder.release();
+            if (!contextHolder.isActive()) {
+              it.remove();
+            }
           }
           break;
         }
       }
       if (contextWithOwners.isEmpty()) {
-        myTypeCheckingContexts.remove(nodePointer);
+        myTypeCheckingContexts.remove(rootNodePointer);
       }
     }
   }

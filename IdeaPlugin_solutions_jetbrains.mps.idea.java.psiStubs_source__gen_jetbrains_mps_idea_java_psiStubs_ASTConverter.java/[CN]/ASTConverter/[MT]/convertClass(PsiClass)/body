@@ -18,7 +18,7 @@
   addTypeParams(x,classifier.value);
   addAnnotations(x,classifier.value);
   final Wrappers._T<ASTConverter> childConverter=new Wrappers._T<ASTConverter>(this);
-  if (isNotEmpty_rbndtb_a0s0b(SPropertyOperations.getString(classifier.value,"name"))) {
+  if (needToSetId() && isNotEmpty_rbndtb_a0a41a2(SPropertyOperations.getString(classifier.value,"name"))) {
     String id=getIdPrefix() + SPropertyOperations.getString(classifier.value,"name");
     classifier.value.setId(new SNodeId.Foreign(id));
     childConverter.value=new ASTConverter.WithState(id + ".");
@@ -52,6 +52,18 @@
   }
   Sequence.fromIterable(Sequence.fromArray(x.getFields())).visitAll(new IVisitor<PsiField>(){
     public void visit(    PsiField it){
+      if (it instanceof PsiEnumConstant) {
+        if (!(SNodeOperations.isInstanceOf(classifier.value,"jetbrains.mps.baseLanguage.structure.EnumClass"))) {
+          return;
+        }
+        SNode cnst=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.EnumConstantDeclaration",null);
+        SPropertyOperations.set(cnst,"name",it.getName());
+        if (needToSetId() && SPropertyOperations.getString(cnst,"name") != null) {
+          cnst.setId(new SNodeId.Foreign(childConverter.value.getIdPrefix() + "." + SPropertyOperations.getString(cnst,"name")));
+        }
+        ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(classifier.value,"jetbrains.mps.baseLanguage.structure.EnumClass"),"enumConstant",true)).addElement(cnst);
+        return;
+      }
       SNode node=childConverter.value.convertField(it,ourConcept);
       if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.StaticFieldDeclaration")) {
         ListSequence.fromList(SLinkOperations.getTargets(classifier.value,"staticField",true)).addElement(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.StaticFieldDeclaration"));
