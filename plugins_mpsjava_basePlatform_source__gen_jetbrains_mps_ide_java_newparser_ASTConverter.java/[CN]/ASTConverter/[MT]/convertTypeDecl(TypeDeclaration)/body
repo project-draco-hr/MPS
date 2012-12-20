@@ -24,6 +24,7 @@ default :
 throw new JavaParseException("Unknown type declaration type");
 }
 }
+ASTConverter childConverter=this;
 if (!(isAnonymous)) {
 SPropertyOperations.set(cls,"name",new String(x.name));
 SLinkOperations.setTarget(cls,"visibility",convertVisibility(x.modifiers),true);
@@ -31,8 +32,9 @@ if (!(SNodeOperations.isInstanceOf(cls,"jetbrains.mps.baseLanguage.structure.Int
 SPropertyOperations.set(cls,"nonStatic","" + (false));
 }
 if (myOnlyStubs) {
-String clsStringId=SNodeId.Foreign.ID_PREFIX + SPropertyOperations.getString(cls,"name");
-cls.setId(new SNodeId.Foreign(clsStringId));
+String nodeId=getState().getIdPrefix() + SPropertyOperations.getString(cls,"name");
+cls.setId(new SNodeId.Foreign(nodeId));
+childConverter=withNewState(new ASTConverter.State(nodeId + "."));
 }
 }
 myTypeResolver.newTypeVarFrame();
@@ -44,7 +46,7 @@ myTypeResolver.addTypeName(new String(innerTyp.name));
 for (TypeDeclaration innerTyp : x.memberTypes) {
 myTypeResolver.enterType(new String(innerTyp.name));
 try {
-SNode nested=convertTypeDecl(innerTyp);
+SNode nested=childConverter.convertTypeDecl(innerTyp);
 SLinkOperations.getTargets(cls,"member",true).add(nested);
 MapSequence.fromMap(memberStartPositions).put(nested,innerTyp.sourceStart);
 }
