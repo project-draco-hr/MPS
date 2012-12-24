@@ -1,16 +1,35 @@
 {
-  BufferedReader br=null;
-  try {
-    br=new BufferedReader(new InputStreamReader(is));
-    StringBuilder sb=new StringBuilder();
-    while (br.ready()) {
-      sb.append(br.readLine());
-    }
-    return sb.toString();
+  List<byte[]> blocks=ListSequence.fromList(new LinkedList<byte[]>());
+  byte[] buffer=new byte[BUFSIZE];
+  int lastRead=-1;
+  int read=is.read(buffer);
+  while (read > 0) {
+    lastRead=read;
+    ListSequence.fromList(blocks).addElement(buffer);
+    buffer=new byte[BUFSIZE];
+    read=is.read(buffer);
   }
-  finally {
-    if (br != null) {
-      br.close();
+  if (lastRead > 0) {
+    int blks=ListSequence.fromList(blocks).count();
+    byte[] wholeBuffer;
+    if (blks == 1) {
+      wholeBuffer=ListSequence.fromList(blocks).getElement(0);
     }
+ else {
+      int size=(blks - 1) * BUFSIZE + lastRead;
+      wholeBuffer=new byte[size];
+      int c=0;
+      int p=0;
+      for (      byte[] buf : ListSequence.fromList(blocks)) {
+        int n=(c == blks - 1 ? lastRead : BUFSIZE);
+        System.arraycopy(buf,0,wholeBuffer,p,n);
+        p=p + BUFSIZE;
+        c++;
+      }
+    }
+    return new String(wholeBuffer);
+  }
+ else {
+    return "";
   }
 }
