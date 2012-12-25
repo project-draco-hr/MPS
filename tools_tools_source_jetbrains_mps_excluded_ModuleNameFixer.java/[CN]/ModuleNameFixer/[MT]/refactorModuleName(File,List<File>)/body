@@ -1,0 +1,34 @@
+{
+  String extension=moduleFile.getName().substring(moduleFile.getName().length() - 3);
+  File oldFile=moduleFile.getCanonicalFile();
+  File newFile=new File(moduleFile.getParentFile(),moduleFqName(moduleFile) + "." + extension).getCanonicalFile();
+  System.out.println("Rename " + oldFile.getAbsolutePath() + " to "+ newFile.getAbsolutePath());
+  if (DO_RENAMING) {
+    oldFile.renameTo(newFile);
+  }
+  int okProjectsCount=0;
+  for (  File project : mprFiles) {
+    String projectDir=project.getParentFile().getCanonicalPath();
+    if (oldFile.getAbsolutePath().startsWith(projectDir)) {
+      String oldFilePath="${project}" + oldFile.getAbsolutePath().substring(projectDir.length());
+      String content=FileUtil.read(project);
+      if (content.contains(oldFilePath)) {
+        System.out.println("Rename project in " + project.getName());
+        okProjectsCount++;
+        if (DO_RENAMING) {
+          content=content.replace(oldFilePath,"${project}" + newFile.getAbsolutePath().substring(projectDir.length()));
+          FileUtil.writeFile(project,content);
+        }
+      }
+ else {
+        if (!project.getName().equals("mpsdevkit.mpr")) {
+          System.out.println("!warn: " + project.getName() + " doesn't contains "+ oldFile.getAbsolutePath()+ " module");
+        }
+      }
+    }
+  }
+  if (okProjectsCount == 0) {
+    System.out.println("!warn: " + oldFile.getAbsolutePath() + " doesn't contains in any project");
+  }
+  System.out.println();
+}
