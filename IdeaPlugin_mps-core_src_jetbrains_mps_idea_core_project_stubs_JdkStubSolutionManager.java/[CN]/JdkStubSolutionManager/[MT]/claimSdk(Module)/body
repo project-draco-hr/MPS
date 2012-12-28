@@ -4,16 +4,30 @@
   if (!(sdk instanceof SdkModificator)) {
     return;
   }
+  String sdkType=sdk.getSdkType().getName();
 synchronized (LOCK) {
-    if (myOnlySdk != null && !myModules.isEmpty()) {
-      if (myOnlySdk.equals(sdk))       return;
-      throw new DifferentSdkException(myOnlySdk,sdk);
+    if (JAVA_SDK_TYPE.equals(sdkType)) {
+      if (sdk.equals(myJavaSdk))       return;
+      dropSdksIfUnused();
+      if (myJavaSdk == null && myIdeaSdk == null) {
+        setUpJdk(sdk);
+        myModules.add(module);
+        return;
+      }
+      throw new DifferentSdkException(myJavaSdk,sdk);
     }
-    if (myModules.isEmpty() && mySdkSolution != null) {
-      MPSModuleRepository.getInstance().unregisterModule(mySdkSolution,JdkStubSolutionManager.this);
+ else     if (IDEA_SDK_TYPE.equals(sdkType)) {
+      if (sdk.equals(myIdeaSdk))       return;
+      dropSdksIfUnused();
+      if (myIdeaSdk == null) {
+        setUpIdeaSdk(sdk);
+        myModules.add(module);
+        return;
+      }
+      throw new DifferentSdkException(myIdeaSdk,sdk);
     }
-    myOnlySdk=sdk;
-    mySdkSolution=replaceJdkSolution(myOnlySdk);
-    myModules.add(module);
+ else {
+      addSolution(sdk);
+    }
   }
 }
