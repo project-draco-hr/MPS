@@ -1,0 +1,39 @@
+{
+  String contentRoot="";
+  if (myModuleDescriptor instanceof GeneratorDescriptor) {
+    contentRoot=((Generator)MPSModuleRepository.getInstance().getModuleById(myModuleDescriptor.getId())).getSourceLanguage().getBundleHome().getPath();
+  }
+ else {
+    contentRoot=MPSModuleRepository.getInstance().getModuleByFqName(myModuleDescriptor.getModuleReference().getModuleFqName()).getBundleHome().getPath();
+  }
+  Set<String> strings=new HashSet<String>();
+  for (  ModelRootEntryContainer entryContainer : myModelRootEntries) {
+    if (entry.getClass().equals(entryContainer.getModelRootEntry().getClass())) {
+      strings.add(((FileBasedModelRoot)entryContainer.getModelRootEntry().getModelRoot()).getContentRoot());
+    }
+  }
+  if (!strings.isEmpty()) {
+    FileChooserDescriptor fileChooserDescriptor=new FileChooserDescriptor(false,true,true,false,true,false);
+    fileChooserDescriptor.setTitle("Choose root folder for new model root");
+    VirtualFile[] files=null;
+    while (files == null) {
+      files=FileChooser.chooseFiles(fileChooserDescriptor,null,null,VirtualFileManager.getInstance().findFileByUrl(VirtualFileManager.constructUrl("file",contentRoot)));
+      if (files.length != 0) {
+        for (        String s : strings) {
+          if (files[0].getPath().contains(s) || s.contains(files[0].getPath())) {
+            StringBuilder builder=new StringBuilder("Can't create new model root ");
+            builder.append(files[0].getPath().contains(s) ? "under" : "over");
+            builder.append(" existing model root!\nChoose another folder");
+            JOptionPane.showMessageDialog(myMainPanel,builder.toString());
+            files=null;
+            break;
+          }
+        }
+      }
+    }
+    if (files.length != 1)     return false;
+    contentRoot=files[0].getPath();
+  }
+  ((FileBasedModelRoot)entry.getModelRoot()).setContentRoot(contentRoot);
+  return true;
+}
