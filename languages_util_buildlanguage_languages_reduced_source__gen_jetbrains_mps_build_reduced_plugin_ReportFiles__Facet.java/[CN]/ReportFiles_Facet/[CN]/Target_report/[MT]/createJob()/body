@@ -6,27 +6,28 @@ switch (0) {
 case 0:
         ModelAccess.instance().requireWrite(new Runnable(){
           public void run(){
-            new DeltaReconciler(Sequence.fromIterable(input).translate(new ITranslator2<IResource,IDelta>(){
-              public Iterable<IDelta> translate(              IResource res){
-                return ((IDeltaResource)res).delta();
+            for (            Object resource : input) {
+              ITResource itr=(ITResource)resource;
+              final SModelDescriptor md=itr.modelDescriptor();
+              new DeltaReconciler(itr.delta()).visitAll(new FilesDelta.Visitor(){
+                @Override public boolean acceptWritten(                IFile file){
+                  ListSequence.fromList(pa.global().properties(Target_report.this.getName(),ReportFiles_Facet.Target_report.Parameters.class).writtenFiles()).addElement(file.getPath());
+                  MapSequence.fromMap(pa.global().properties(Target_report.this.getName(),ReportFiles_Facet.Target_report.Parameters.class).sourceModels()).put(file.getPath(),md);
+                  return true;
+                }
+                @Override public boolean acceptKept(                IFile file){
+                  ListSequence.fromList(pa.global().properties(Target_report.this.getName(),ReportFiles_Facet.Target_report.Parameters.class).keptFiles()).addElement(file.getPath());
+                  MapSequence.fromMap(pa.global().properties(Target_report.this.getName(),ReportFiles_Facet.Target_report.Parameters.class).sourceModels()).put(file.getPath(),md);
+                  return true;
+                }
+                @Override public boolean acceptDeleted(                IFile file){
+                  ListSequence.fromList(pa.global().properties(Target_report.this.getName(),ReportFiles_Facet.Target_report.Parameters.class).deletedFiles()).addElement(file.getPath());
+                  MapSequence.fromMap(pa.global().properties(Target_report.this.getName(),ReportFiles_Facet.Target_report.Parameters.class).sourceModels()).put(file.getPath(),md);
+                  return true;
+                }
               }
-            }
-).where(new IWhereFilter<IDelta>(){
-              public boolean accept(              IDelta d){
-                return !(d instanceof IInternalDelta);
-              }
-            }
-)).visitAll(new FilesDelta.Visitor(){
-              @Override public boolean acceptWritten(              IFile file){
-                ListSequence.fromList(pa.global().properties(Target_report.this.getName(),ReportFiles_Facet.Target_report.Parameters.class).writtenFiles()).addElement(file.getPath());
-                return true;
-              }
-              @Override public boolean acceptDeleted(              IFile file){
-                ListSequence.fromList(pa.global().properties(Target_report.this.getName(),ReportFiles_Facet.Target_report.Parameters.class).deletedFiles()).addElement(file.getPath());
-                return true;
-              }
-            }
 );
+            }
           }
         }
 );
