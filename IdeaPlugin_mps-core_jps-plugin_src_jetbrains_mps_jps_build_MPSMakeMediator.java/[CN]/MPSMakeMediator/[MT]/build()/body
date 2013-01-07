@@ -42,22 +42,22 @@
     }
   }
 ;
-  ReducedMakeFacetConfiguration makeFacetConfiguration=new ReducedMakeFacetConfiguration(myRedirects);
+  ReducedMakeFacetConfiguration makeFacetConfiguration=new ReducedMakeFacetConfiguration(myRedirects,!myContext.getCompileContext().isMake(),new Stub(),new IJobMonitor.Stub());
   IScriptController scriptCtl=makeFacetConfiguration.configureFacets();
+  boolean success;
   try {
     res=bms.make(ms,resources,null,scriptCtl);
-    if (!(res.get().isSucessful())) {
-      myContext.getCompileContext().processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.ERROR,"Make was not successful"));
-    }
-    final List<String> writtenFiles=makeFacetConfiguration.getWrittenFiles();
-    final List<String> deletedFiles=makeFacetConfiguration.getDeletedFiles();
+    success=res.get().isSucessful();
+    success=processFiles(success,makeFacetConfiguration);
     final Map<String,String> fileHashes=makeFacetConfiguration.getFileHashes();
   }
  catch (  InterruptedException e) {
-    myErrors.add(e.toString());
+    reportError(e);
+    success=false;
   }
 catch (  ExecutionException e) {
-    myErrors.add(e.toString());
+    reportError(e);
+    success=false;
   }
-  return myErrors.isEmpty();
+  return success;
 }
