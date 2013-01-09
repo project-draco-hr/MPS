@@ -3,6 +3,7 @@ class Result {
     boolean aborted=true;
     int errors=-1;
     int warnings=-1;
+    String messages="";
   }
   final Result res=new Result();
   final boolean[] compilationFinished=new boolean[]{false};
@@ -14,6 +15,14 @@ class Result {
           res.errors=errors;
           res.warnings=warnings;
           compilationFinished[0]=true;
+          StringBuilder sb=new StringBuilder();
+          for (          CompilerMessage compilerMessage : compileContext.getMessages(CompilerMessageCategory.ERROR)) {
+            sb.append("ERR:  " + compilerMessage.getMessage() + "\n");
+          }
+          for (          CompilerMessage compilerMessage : compileContext.getMessages(CompilerMessageCategory.WARNING)) {
+            sb.append("WARN:  " + compilerMessage.getMessage() + "\n");
+          }
+          res.messages=sb.toString();
         }
       }
 );
@@ -30,6 +39,9 @@ class Result {
   }
   assertOnTeardown(new Asserter(){
     @Override public void doAssert() throws Exception {
+      if (res.aborted || errors != res.errors || warns != res.warnings) {
+        System.out.print(res.messages);
+      }
       assertFalse(res.aborted);
       assertSame(errors,res.errors);
       assertSame(warns,res.warnings);

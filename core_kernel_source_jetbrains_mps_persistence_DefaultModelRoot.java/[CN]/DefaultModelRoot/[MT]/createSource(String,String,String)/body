@@ -1,0 +1,33 @@
+{
+  Set<String> sourceRoots=new LinkedHashSet<String>(getFiles(SOURCE_ROOTS));
+  if (sourceRoots.isEmpty()) {
+    throw new IllegalStateException("empty list of source roots");
+  }
+  if (sourceRoot == null || !sourceRoots.contains(sourceRoot)) {
+    sourceRoot=null;
+    for (    String sr : sourceRoots) {
+      if (isLanguageAspectsSourceRoot(sr)) {
+        String prefix=getModule().getModuleName() + ".";
+        if (modelName.startsWith(prefix)) {
+          String aspectName=modelName.substring(prefix.length());
+          if (getAspect(aspectName) != null) {
+            sourceRoot=sr;
+            break;
+          }
+        }
+        continue;
+      }
+      sourceRoot=sr;
+      break;
+    }
+    if (sourceRoot == null) {
+      throw new IllegalStateException("no suitable source root found");
+    }
+  }
+  String filenameSuffix=modelName;
+  if (isLanguageAspect(modelName,sourceRoot)) {
+    filenameSuffix=NameUtil.shortNameFromLongName(filenameSuffix);
+  }
+  IFile file=FileSystem.getInstance().getFileByPath(sourceRoot + File.separator + NameUtil.pathFromNamespace(filenameSuffix)+ "."+ extension);
+  return new FileDataSource(file,this);
+}

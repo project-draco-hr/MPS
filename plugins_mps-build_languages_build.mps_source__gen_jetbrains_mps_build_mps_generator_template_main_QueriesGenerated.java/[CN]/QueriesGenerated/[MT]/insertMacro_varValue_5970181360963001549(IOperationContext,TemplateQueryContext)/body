@@ -1,0 +1,28 @@
+{
+  MPSModulesPartitioner partitioner=new MPSModulesPartitioner(_context,_context.getNode());
+  partitioner.buildChunks();
+  partitioner.buildExternalDependencies();
+  if (ListSequence.fromList(partitioner.getChunks()).any(new IWhereFilter<MPSModulesPartitioner.Chunk>(){
+    public boolean accept(    MPSModulesPartitioner.Chunk it){
+      return it.isBootstrap();
+    }
+  }
+) && !(ListSequence.fromList(SLinkOperations.getTargets(_context.getNode(),"aspects",true)).any(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMpsAspect") && SPropertyOperations.getBoolean(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMpsAspect"),"bootstrap");
+    }
+  }
+))) {
+    SNode sample=SetSequence.fromSet(ListSequence.fromList(partitioner.getChunks()).where(new IWhereFilter<MPSModulesPartitioner.Chunk>(){
+      public boolean accept(      MPSModulesPartitioner.Chunk it){
+        return it.isBootstrap();
+      }
+    }
+).first().getConflicting()).first();
+    if ((sample != null)) {
+      sample=SNodeOperations.as(DependenciesHelper.getOriginalNode(sample,_context),"jetbrains.mps.build.mps.structure.BuildMps_Module");
+    }
+    _context.showErrorMessage(sample,"cannot create `generate' task, there is a dependency cycle between a language and modules using it; add `mps settings' aspect with bootstrap = true to turn off the check");
+  }
+  return partitioner;
+}

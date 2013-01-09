@@ -1,0 +1,42 @@
+{
+  BreakpointFactory breakpointFactory=findFactory(myBreakpoint);
+  if (breakpointFactory == null) {
+    return;
+  }
+  final BreakpointPropertiesPanel propertiesPanel=breakpointFactory.createBreakpointPropertiesPanel(myBreakpoint.getProject(),true);
+  propertiesPanel.initFrom(myBreakpoint,false);
+  final JComponent mainPanel=propertiesPanel.getPanel();
+  int y=getComponent().getLeftEditorHighlighter().getIconCoordinate(BreakpointIconRenderrer.this);
+  int x=getComponent().getLeftEditorHighlighter().getIconRenderersOffset();
+  Point whereToShow=new Point(x + getIcon().getIconWidth() / 2,y + getIcon().getIconHeight() / 2);
+  Balloon balloon=DebuggerUIUtil.showBreakpointEditor(myBreakpoint.getProject(),mainPanel,myBreakpoint.getDisplayName(),whereToShow,getComponent().getLeftEditorHighlighter(),new Runnable(){
+    @Override public void run(){
+      UIUtil.invokeLaterIfNeeded(new Runnable(){
+        @Override public void run(){
+          final JBPopup popup=BreakpointsMasterDetailPopupFactory.getInstance(myBreakpoint.getProject()).createPopup(myBreakpoint);
+          if (popup != null) {
+            popup.showCenteredInCurrentWindow(myBreakpoint.getProject());
+          }
+        }
+      }
+);
+    }
+  }
+,myBreakpoint);
+  balloon.addListener(new JBPopupAdapter(){
+    @Override public void onClosed(    LightweightWindowEvent event){
+      propertiesPanel.saveTo(myBreakpoint,new Runnable(){
+        @Override public void run(){
+        }
+      }
+);
+    }
+  }
+);
+  ApplicationManager.getApplication().invokeLater(new Runnable(){
+    @Override public void run(){
+      IdeFocusManager.findInstance().requestFocus(mainPanel,true);
+    }
+  }
+);
+}
