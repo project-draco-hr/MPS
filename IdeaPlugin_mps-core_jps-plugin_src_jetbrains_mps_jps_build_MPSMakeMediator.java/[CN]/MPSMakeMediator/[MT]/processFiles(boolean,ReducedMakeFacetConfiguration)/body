@@ -1,0 +1,40 @@
+{
+  for (  String writtenFile : makeFacetConfiguration.getWrittenFiles()) {
+    myContext.getCompileContext().processMessage(new FileGeneratedEvent());
+    try {
+      FSOperations.markDirty(myContext.getCompileContext(),new File(writtenFile));
+      myRefreshComponent.refresh(writtenFile);
+      SModelDescriptor source=makeFacetConfiguration.getSource(writtenFile);
+      if (source != null && source.getSource() instanceof FileDataSource) {
+        myOutputConsumer.registerOutputFile(myToMake.get(source),new File(writtenFile),Collections.singletonList(((FileDataSource)source.getSource()).getLocation()));
+      }
+    }
+ catch (    IOException e) {
+      reportError(e);
+      success=false;
+    }
+  }
+  for (  String keptFile : makeFacetConfiguration.getKeptFiles()) {
+    SModelDescriptor source=makeFacetConfiguration.getSource(keptFile);
+    if (source != null && source.getSource() instanceof FileDataSource) {
+      try {
+        myOutputConsumer.registerOutputFile(myToMake.get(source),new File(keptFile),Collections.singletonList(((FileDataSource)source.getSource()).getLocation()));
+      }
+ catch (      IOException e) {
+        reportError(e);
+        success=false;
+      }
+    }
+  }
+  for (  String deletedFile : makeFacetConfiguration.getDeletedFiles()) {
+    try {
+      FSOperations.markDeleted(myContext.getCompileContext(),new File(deletedFile));
+    }
+ catch (    IOException e) {
+      reportError(e);
+      success=false;
+    }
+  }
+  myRefreshComponent.removed(makeFacetConfiguration.getDeletedFiles());
+  return success;
+}

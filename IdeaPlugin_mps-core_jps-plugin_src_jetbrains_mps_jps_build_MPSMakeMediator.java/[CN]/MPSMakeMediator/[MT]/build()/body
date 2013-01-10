@@ -1,0 +1,63 @@
+{
+  ProjectOperationContext context=new ProjectOperationContext(myProject);
+  GenerationSettingsProvider.getInstance().setGenerationSettings(new DefaultModifiableGenerationSettings());
+  final Iterable<IMResource> resources=Sequence.fromIterable(collectResources(context,myToMake.keySet())).toListSequence();
+  ISequence<IModule> mpsModules=Sequence.fromIterable(resources).select(new ISelector<IMResource,IModule>(){
+    public IModule select(    IMResource r){
+      return r.module();
+    }
+  }
+);
+  ModuleOutputPaths outputPaths=new ModuleOutputPaths(mpsModules);
+  myForeignRootPaths=new MyForeignRootPaths(outputPaths.getOutputPaths());
+  myRedirects=new MyRedirects();
+  Set<ModuleBuildTarget> processed=new HashSet<ModuleBuildTarget>();
+  for (  ModuleBuildTarget target : myToMake.values()) {
+    if (processed.contains(target))     continue;
+    processed.add(target);
+    JpsMPSModuleExtension mpsModule=JpsMPSExtensionService.getInstance().getExtension(target.getModule());
+    if (mpsModule == null)     continue;
+    File outputRoot=getOutputRoot(mpsModule.getModule(),myContext.getCompileContext().getProjectDescriptor().dataManager);
+    File cachesOutputRoot=getCachesOutputRoot(mpsModule.getModule(),myContext.getCompileContext().getProjectDescriptor().dataManager);
+    myRedirects.addRedirects(outputPaths,outputRoot.getAbsolutePath(),cachesOutputRoot.getAbsolutePath(),mpsModule.getConfiguration().isUseTransientOutputFolder());
+  }
+  GenerationDependenciesCache.getInstance().registerCachePathRedirect(new GenerationDependenciesCache.CachePathRedirect(){
+    public IFile redirectTo(    IFile outputPath){
+      return myRedirects.getRedirect(outputPath.getPath());
+    }
+  }
+);
+  GeneratorPathsComponent.getInstance().registerForeignPathsProvider(new ForeignPathsProvider(){
+    public String belongsToForeignPath(    IFile path){
+      return (myForeignRootPaths != null ? myForeignRootPaths.findForeignPrefix(path.getPath()) : null);
+    }
+  }
+);
+  Future<IResult> res;
+  BuildMakeService bms=new BuildMakeService();
+  MakeSession ms=new MakeSession(context,myMessageHandler,true){
+    @Override public IScript toScript(    ScriptBuilder scriptBuilder){
+      scriptBuilder.withFacetNames(new IFacet.Name("jetbrains.mps.build.reduced.ReportFiles"),new IFacet.Name("jetbrains.mps.build.reduced.CollectHashes"));
+      return scriptBuilder.toScript();
+    }
+  }
+;
+  ReducedMakeFacetConfiguration makeFacetConfiguration=new ReducedMakeFacetConfiguration(myRedirects,!myContext.getCompileContext().isMake(),new Stub(),new IJobMonitor.Stub());
+  IScriptController scriptCtl=makeFacetConfiguration.configureFacets();
+  boolean success;
+  try {
+    res=bms.make(ms,resources,null,scriptCtl);
+    success=res.get().isSucessful();
+    success=processFiles(success,makeFacetConfiguration);
+    final Map<String,String> fileHashes=makeFacetConfiguration.getFileHashes();
+  }
+ catch (  InterruptedException e) {
+    reportError(e);
+    success=false;
+  }
+catch (  ExecutionException e) {
+    reportError(e);
+    success=false;
+  }
+  return success;
+}
