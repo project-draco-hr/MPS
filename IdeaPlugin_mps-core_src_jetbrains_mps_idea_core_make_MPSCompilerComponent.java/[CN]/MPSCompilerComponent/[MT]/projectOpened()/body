@@ -1,6 +1,8 @@
 {
   CompilerManager compilerManager=CompilerManager.getInstance(project);
+  final List<String> errorMessages=new ArrayList<String>();
   project.getMessageBus().connect().subscribe(CustomBuilderMessageHandler.TOPIC,new RefreshFilesCompilationStatusListener());
+  project.getMessageBus().connect().subscribe(CustomBuilderMessageHandler.TOPIC,new NavigateToNodesWithErrors(errorMessages));
   compilerManager.addCompilableFileType(MPSFileTypeFactory.MODEL_FILE_TYPE);
   for (  MPSCompiler2 compiler : compilerManager.getCompilers(MPSCompiler2.class)) {
     compilerManager.removeCompiler(compiler);
@@ -44,6 +46,18 @@
         context.addMessage(CompilerMessageCategory.INFORMATION,"repository cache saved in " + result + " ms",null,0,0);
       }
       return true;
+    }
+  }
+);
+  compilerManager.addAfterTask(new CompileTask(){
+    @Override public boolean execute(    CompileContext context){
+      for (      String errmsg : errorMessages) {
+        ModelNodeNavigatable navigatable=ModelNodeNavigatable.extractNavigatable(errmsg,context.getProject(),null);
+        context.addMessage(CompilerMessageCategory.ERROR,errmsg,null,-1,-1,navigatable);
+      }
+      boolean noErrors=errorMessages.isEmpty();
+      errorMessages.clear();
+      return noErrors;
     }
   }
 );
