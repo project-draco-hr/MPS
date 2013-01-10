@@ -12,7 +12,7 @@
   }
 ;
   final Iterable<IMResource> resources=Sequence.fromIterable(collectResources(ctx,go)).toListSequence();
-  this.myOutputPaths=new ReducedGenerationWorker.ModuleOutputPaths(Sequence.fromIterable(resources).select(new ISelector<IMResource,IModule>(){
+  this.myOutputPaths=new ModuleOutputPaths(Sequence.fromIterable(resources).select(new ISelector<IMResource,IModule>(){
     public IModule select(    IMResource r){
       return r.module();
     }
@@ -26,12 +26,13 @@
     }
   }
 );
-  this.myOutputRedirects=new ReducedGenerationWorker.MyOutputRedirects(outputRoot,cachesOutputRoot,useTransientOutput);
+  this.myOutputRedirects=new OutputPathRedirects(myOutputPaths,outputRoot,cachesOutputRoot,useTransientOutput);
   this.myForeignRootPaths=new ReducedGenerationWorker.MyForeignRootPaths(myOutputPaths.getOutputPaths());
-  final List<String> writtenFiles=ListSequence.fromList(new ArrayList<String>());
-  final List<String> deletedFiles=ListSequence.fromList(new ArrayList<String>());
-  final Map<String,String> fileHashes=MapSequence.fromMap(new HashMap<String,String>());
-  IScriptController scriptCtl=configureFacets(fileHashes,writtenFiles,deletedFiles);
+  ReducedMakeFacetConfiguration facetConf=new ReducedMakeFacetConfiguration(myOutputRedirects);
+  final List<String> writtenFiles=facetConf.getWrittenFiles();
+  final List<String> deletedFiles=facetConf.getDeletedFiles();
+  final Map<String,String> fileHashes=facetConf.getFileHashes();
+  IScriptController scriptCtl=facetConf.configureFacets();
   try {
     res=bms.make(ms,resources,null,scriptCtl);
     if (!(res.get().isSucessful())) {
