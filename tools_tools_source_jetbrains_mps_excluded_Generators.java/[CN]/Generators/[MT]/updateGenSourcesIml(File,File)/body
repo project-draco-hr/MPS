@@ -1,4 +1,16 @@
 {
+  Set<String> sourcesIncluded=new HashSet<String>();
+  for (  File imlFile : Utils.withExtension(".iml",Utils.files(new File(".")))) {
+    if (imlFile.getCanonicalPath().equals(genSourcesIml.getCanonicalPath()))     continue;
+    Document doc=JDOMUtil.loadDocument(imlFile);
+    Element rootManager=Utils.getComponentWithName(doc,MODULE_ROOT_MANAGER);
+    for (    Element cRoot : (List<Element>)rootManager.getChildren(CONTENT)) {
+      for (      Element sFolder : (List<Element>)cRoot.getChildren(SOURCE_FOLDER)) {
+        String imlFormattedRoot=sFolder.getAttributeValue(URL);
+        sourcesIncluded.add(new File(imlFormattedRoot.replace("file://$MODULE_DIR$",imlFile.getParent())).getCanonicalPath());
+      }
+    }
+  }
   Document doc=JDOMUtil.loadDocument(genSourcesIml);
   Element rootManager=Utils.getComponentWithName(doc,MODULE_ROOT_MANAGER);
   Set<String> contentRootUrls=new HashSet<String>();
@@ -14,7 +26,7 @@
     List<String> sourceGenFolders=new ArrayList<String>();
     List<String> classesGenFolders=new ArrayList<String>();
     for (    Pair<String,String> module : Utils.collectMPSCompiledModulesInfo(dir)) {
-      if (new File(module.o2).exists()) {
+      if (!sourcesIncluded.contains(new File(module.o2).getCanonicalPath())) {
         String sFolder=PATH_START_MODULE + Utils.getRelativeProjectPath(module.o2);
         sourceGenFolders.add(sFolder);
       }
