@@ -1,0 +1,34 @@
+{
+  Graph<MPSModulesPartitioner.Node> graph=new Graph<MPSModulesPartitioner.Node>();
+  Map<SNode,MPSModulesPartitioner.Node> map=new LinkedHashMap<SNode,MPSModulesPartitioner.Node>();
+  for (  SNode module : modules) {
+    MPSModulesPartitioner.Node decorator=new MPSModulesPartitioner.Node(module);
+    map.put(module,decorator);
+    graph.add(decorator);
+  }
+  for (  MPSModulesPartitioner.Node node : graph.getData()) {
+    node.fill(map);
+  }
+  IVertex[] vertices=graph.getData().toArray(new IVertex[graph.getNVertexes()]);
+  useMeta=false;
+  int[][] greater_or_eq=Graphs.graphToIntInt(vertices,false,true);
+  useMeta=true;
+  int[][] strictly_greater=Graphs.graphToIntInt(vertices,true,true);
+  int[] partition=GraphUtil.partition(greater_or_eq,strictly_greater);
+  this.chunks=ListSequence.fromList(new ArrayList<MPSModulesPartitioner.Chunk>());
+  for (int i=0; i < vertices.length; i++) {
+    SNode m=((MPSModulesPartitioner.Node)vertices[i]).module;
+    int pindex=partition[i];
+    boolean conflicting=pindex < 0;
+    if (conflicting) {
+      pindex=-1 - pindex;
+    }
+    while (ListSequence.fromList(chunks).count() <= pindex) {
+      ListSequence.fromList(chunks).addElement(new MPSModulesPartitioner.Chunk());
+    }
+    SetSequence.fromSet(ListSequence.fromList(chunks).getElement(pindex).getModules()).addElement(m);
+    if (conflicting) {
+      ListSequence.fromList(chunks).getElement(pindex).setBootstrapFor(m);
+    }
+  }
+}
