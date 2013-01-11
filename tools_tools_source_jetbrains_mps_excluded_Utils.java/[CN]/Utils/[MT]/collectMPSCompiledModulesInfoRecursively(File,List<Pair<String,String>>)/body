@@ -1,0 +1,25 @@
+{
+  for (  File child : dir.listFiles()) {
+    if (child.isDirectory()) {
+      collectMPSCompiledModulesInfoRecursively(child,result);
+      continue;
+    }
+    boolean solution=child.getName().endsWith(MPSExtentions.DOT_SOLUTION);
+    boolean language=child.getName().endsWith(MPSExtentions.DOT_LANGUAGE);
+    if (!(solution || language))     continue;
+    IFile moduleIFile=new IoFileSystemProvider().getFile(child.getAbsolutePath());
+    IFile moduleDir=moduleIFile.getParent();
+    MacroHelper expander=MacrosFactory.forModuleFile(moduleIFile);
+    if (solution) {
+      SolutionDescriptor sd=SolutionDescriptorPersistence.loadSolutionDescriptor(moduleIFile,expander);
+      if (!sd.getCompileInMPS())       continue;
+      String srcPath=ProjectPathUtil.getGeneratorOutputPath(moduleIFile,sd).getPath();
+      result.add(new Pair<String,String>(moduleDir.getPath(),srcPath));
+    }
+ else {
+      LanguageDescriptor ld=LanguageDescriptorPersistence.loadLanguageDescriptor(moduleIFile,expander);
+      String srcPath=ProjectPathUtil.getGeneratorOutputPath(moduleIFile,ld).getPath();
+      result.add(new Pair<String,String>(moduleDir.getPath(),srcPath));
+    }
+  }
+}
