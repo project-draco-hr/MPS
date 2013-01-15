@@ -39,6 +39,26 @@
     }
   }
  else   if (languages != null) {
+    long start=System.nanoTime();
+    List<ModuleHandle> loadedModules=new ArrayList<ModuleHandle>();
+    BaseMPSModuleOwner owner=new BaseMPSModuleOwner(){
+    }
+;
+    for (    String path : languages.split(";")) {
+      IFile ipath=FileSystem.getInstance().getFileByPath(path);
+      loadedModules.addAll(ModulesMiner.getInstance().collectModules(ipath,true));
+    }
+    if (MPSCompilerUtil.isTracingMode()) {
+      context.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"loaded " + loadedModules.size() + " modules in "+ (System.nanoTime() - start) / 1000000 + " ms"));
+    }
+    start=System.nanoTime();
+    for (    ModuleHandle moduleHandle : loadedModules) {
+      IModule module=ModuleRepositoryFacade.createModule(moduleHandle,owner);
+    }
+    if (MPSCompilerUtil.isTracingMode()) {
+      context.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"instantiated " + loadedModules.size() + " modules in "+ (System.nanoTime() - start) / 1000000 + " ms"));
+    }
+    return;
   }
   context.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.WARNING,"cannot start MPS, no repository provided"));
 }
