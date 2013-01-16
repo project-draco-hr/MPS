@@ -24,7 +24,7 @@ default :
 throw new JavaParseException("Unknown type declaration type");
 }
 }
-ASTConverter childConverter=this;
+ASTConverter prefixedConverter=this;
 if (!(isAnonymous)) {
 SPropertyOperations.set(cls,"name",new String(x.name));
 SLinkOperations.setTarget(cls,"visibility",convertVisibility(x.modifiers),true);
@@ -33,12 +33,12 @@ SPropertyOperations.set(cls,"nonStatic","" + (false));
 }
 if (myOnlyStubs) {
 String nodeId=getState().getIdPrefix() + SPropertyOperations.getString(cls,"name");
-cls.setId(new SNodeId.Foreign(nodeId));
-childConverter=withNewState(new ASTConverter.State(nodeId + "."));
+((jetbrains.mps.smodel.SNode)cls).setId(new SNodeId.Foreign(nodeId));
+prefixedConverter=this.withIdPrefix(SPropertyOperations.getString(cls,"name") + ".");
 }
 }
-myTypeResolver.newTypeVarFrame();
-convertTypeVars(x.typeParameters,cls);
+ASTConverter childConverter=prefixedConverter;
+childConverter=childConverter.convertTypeVars(x.typeParameters,cls);
 if (x.memberTypes != null) {
 for (TypeDeclaration innerTyp : x.memberTypes) {
 myTypeResolver.addTypeName(new String(innerTyp.name));
@@ -55,14 +55,14 @@ myTypeResolver.leaveType();
 }
 }
 }
-convertAnnotations(x.annotations,cls);
+childConverter.convertAnnotations(x.annotations,cls);
 {
 SNode claz=cls;
 if (SNodeOperations.isInstanceOf(claz,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
-SLinkOperations.setTarget(claz,"superclass",SNodeOperations.cast(convertTypeRef(x.superclass),"jetbrains.mps.baseLanguage.structure.ClassifierType"),true);
+SLinkOperations.setTarget(claz,"superclass",SNodeOperations.cast(convertTypeReference(x.superclass),"jetbrains.mps.baseLanguage.structure.ClassifierType"),true);
 if (x.superInterfaces != null) {
 for (TypeReference i : x.superInterfaces) {
-ListSequence.fromList(SLinkOperations.getTargets(claz,"implementedInterface",true)).addElement(SNodeOperations.cast(convertTypeRef(i),"jetbrains.mps.baseLanguage.structure.ClassifierType"));
+ListSequence.fromList(SLinkOperations.getTargets(claz,"implementedInterface",true)).addElement(SNodeOperations.cast(convertTypeReference(i),"jetbrains.mps.baseLanguage.structure.ClassifierType"));
 }
 }
 SPropertyOperations.set(claz,"abstractClass","" + (flagSet(x.modifiers,ClassFileConstants.AccAbstract)));
@@ -74,7 +74,7 @@ SNode iface=cls;
 if (SNodeOperations.isInstanceOf(iface,"jetbrains.mps.baseLanguage.structure.Interface")) {
 if (x.superInterfaces != null) {
 for (TypeReference i : x.superInterfaces) {
-ListSequence.fromList(SLinkOperations.getTargets(iface,"extendedInterface",true)).addElement(SNodeOperations.cast(convertTypeRef(i),"jetbrains.mps.baseLanguage.structure.ClassifierType"));
+ListSequence.fromList(SLinkOperations.getTargets(iface,"extendedInterface",true)).addElement(SNodeOperations.cast(convertTypeReference(i),"jetbrains.mps.baseLanguage.structure.ClassifierType"));
 }
 }
 }
@@ -87,30 +87,31 @@ for (FieldDeclaration f : x.fields) {
 if (!(isEnumConstant(f))) {
 continue;
 }
-SNode constr=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ConstructorDeclaration",null);
-SNode item=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.EnumConstantDeclaration",null);
-SPropertyOperations.set(item,"name",enumConstantName(f));
-SLinkOperations.getTargets(enm,"enumConstant",true).add(item);
+SNode enumConst=convertEnumConst(f);
+SLinkOperations.getTargets(enm,"enumConstant",true).add(enumConst);
+MapSequence.fromMap(memberStartPositions).put(SNodeOperations.cast(enumConst,"jetbrains.mps.baseLanguage.structure.ClassifierMember"),f.sourceStart);
 }
 }
 }
 }
 if (x.fields != null) {
 for (FieldDeclaration f : x.fields) {
-SNode mem=convertField(cls,f,true);
+if (isEnumConstant(f)) {
+continue;
+}
+SNode mem=childConverter.convertField(cls,f,true);
 MapSequence.fromMap(memberStartPositions).put(SNodeOperations.cast(mem,"jetbrains.mps.baseLanguage.structure.ClassifierMember"),f.sourceStart);
 }
 }
 if (x.methods != null) {
 for (AbstractMethodDeclaration method : x.methods) {
-SNode mem=convertMethod(cls,method,true);
+SNode mem=childConverter.convertMethod(cls,method,true);
 MapSequence.fromMap(memberStartPositions).put(SNodeOperations.cast(mem,"jetbrains.mps.baseLanguage.structure.ClassifierMember"),method.sourceStart);
 if (method instanceof ConstructorDeclaration && method.isDefaultConstructor()) {
 defaultConstructor=SNodeOperations.cast(mem,"jetbrains.mps.baseLanguage.structure.ClassifierMember");
 }
 }
 }
-myTypeResolver.leaveTypeVarFrame();
 if (x.javadoc != null) {
 AttributeOperations.createAndSetAttrbiute(cls,new IAttributeDescriptor.NodeAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.javadoc.structure.ClassifierDocComment")),"jetbrains.mps.baseLanguage.javadoc.structure.ClassifierDocComment");
 MapSequence.fromMap(myJavadocs).put(x.javadoc.sourceStart,AttributeOperations.getAttribute(cls,new IAttributeDescriptor.NodeAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.javadoc.structure.ClassifierDocComment"))));
