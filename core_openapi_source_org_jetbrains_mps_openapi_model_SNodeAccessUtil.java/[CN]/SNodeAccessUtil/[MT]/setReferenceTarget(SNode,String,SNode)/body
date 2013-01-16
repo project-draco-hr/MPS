@@ -1,0 +1,29 @@
+{
+  SModel model=node.getModel();
+  if (model == null || !model.canFireEvent()) {
+    node.setReferenceTarget(role,target);
+    return;
+  }
+  Set<Pair<SNode,String>> threadSet=ourSetReferentEventHandlersInProgress.get();
+  Pair<SNode,String> pair=new Pair<SNode,String>(node,role);
+  if (threadSet.contains(pair)) {
+    node.setReferenceTarget(role,target);
+    return;
+  }
+  ReferenceConstraintsDescriptor descriptor=ConceptRegistry.getInstance().getConstraintsDescriptor(node.getConcept().getId()).getReference(role);
+  if (descriptor instanceof IllegalReferenceConstraintsDescriptor) {
+    node.setReferenceTarget(role,target);
+    return;
+  }
+  threadSet.add(pair);
+  try {
+    SNode oldReferent=node.getReferenceTarget(role);
+    if (descriptor.validate(node,oldReferent,target,GlobalScope.getInstance())) {
+      node.setReferenceTarget(role,target);
+      descriptor.onReferenceSet(node,oldReferent,target,GlobalScope.getInstance());
+    }
+  }
+  finally {
+    threadSet.remove(pair);
+  }
+}
