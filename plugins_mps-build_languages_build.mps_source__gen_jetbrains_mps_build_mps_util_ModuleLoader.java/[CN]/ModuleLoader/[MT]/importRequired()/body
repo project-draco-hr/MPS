@@ -4,26 +4,24 @@
     SPropertyOperations.set(myModule,"uuid",myModuleDescriptor.getModuleReference().getModuleId().toString());
     SPropertyOperations.set(myModule,"name",myModuleDescriptor.getModuleReference().getModuleFqName());
     if (SNodeOperations.isInstanceOf(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Module")) {
-      Iterable<SNode> toRemove=ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Module"),"dependencies",true)).where(new IWhereFilter<SNode>(){
+      List<SNode> previous=ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Module"),"dependencies",true)).where(new IWhereFilter<SNode>(){
         public boolean accept(        SNode it){
           return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_ExtractedModuleDependency");
         }
       }
-);
-      Iterable<SNode> removed=Sequence.fromIterable(toRemove).select(new ISelector<SNode,SNode>(){
+).select(new ISelector<SNode,SNode>(){
         public SNode select(        SNode it){
-          return SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ExtractedModuleDependency"),"dependency",true);
+          return SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ExtractedModuleDependency");
         }
       }
-);
-      ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Module"),"dependencies",true)).removeSequence(Sequence.fromIterable(toRemove));
-      importDependencies(removed);
-      collectSources(true,true);
+).toListSequence();
+      importDependencies(previous);
       if (SNodeOperations.isInstanceOf(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Language") && myModuleDescriptor instanceof LanguageDescriptor) {
-        ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Language"),"runtime",true)).clear();
         importRuntime();
-        importLanguageDeps();
+        importLanguageDeps(previous);
       }
+      collectSources(true,true);
+      ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Module"),"dependencies",true)).removeSequence(ListSequence.fromList(previous));
     }
     if (SNodeOperations.isInstanceOf(myModule,"jetbrains.mps.build.mps.structure.BuildMps_DevKit")) {
       importDevkit();
