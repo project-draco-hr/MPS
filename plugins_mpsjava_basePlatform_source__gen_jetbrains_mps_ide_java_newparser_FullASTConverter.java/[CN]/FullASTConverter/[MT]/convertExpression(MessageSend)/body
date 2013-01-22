@@ -3,10 +3,11 @@
   SNode result=null;
   SNode call=null;
   if (x.receiver instanceof ThisReference && ((ThisReference)x.receiver).isImplicitThis()) {
-    SNode unkCall=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.UnknownLocalCall",null);
-    SPropertyOperations.set(unkCall,"callee",methodName);
-    result=unkCall;
-    call=unkCall;
+    SNode lmc=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.LocalMethodCall",null);
+    org.jetbrains.mps.openapi.model.SReference ref=new DynamicReference("baseMethodDeclaration",lmc,null,methodName);
+    lmc.setReference("baseMethodDeclaration",ref);
+    result=lmc;
+    call=lmc;
   }
  else {
     Expression receiver=x.receiver;
@@ -36,12 +37,19 @@
       result=unkDotCall;
       call=unkDotCall;
     }
+ else     if (x.receiver instanceof SuperReference) {
+      SNode smc=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.SuperMethodCall",null);
+      org.jetbrains.mps.openapi.model.SReference ref=new DynamicReference("baseMethodDeclaration",smc,null,methodName);
+      smc.setReference(ref.getRole(),ref);
+      result=smc;
+      call=smc;
+    }
  else {
       SNode dotExpr=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.DotExpression",null);
       SLinkOperations.setTarget(dotExpr,"operand",convertExpressionWrap(x.receiver),true);
       SNode instCall=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation",null);
       SLinkOperations.setTarget(dotExpr,"operation",instCall,true);
-      SReference sref=new DynamicReference("baseMethodDeclaration",instCall,null,methodName);
+      org.jetbrains.mps.openapi.model.SReference sref=new DynamicReference("baseMethodDeclaration",instCall,null,methodName);
       instCall.setReference(sref.getRole(),sref);
       result=dotExpr;
       call=instCall;
