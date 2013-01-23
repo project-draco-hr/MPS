@@ -1,0 +1,26 @@
+{
+  LanguageDescriptor descriptor=((LanguageDescriptor)myModuleDescriptor);
+  for (  ModuleReference lang : descriptor.getExtendedLanguages()) {
+    final SNode resolved=SNodeOperations.as(visible.resolve(lang.getModuleFqName(),lang.getModuleId().toString()),"jetbrains.mps.build.mps.structure.BuildMps_Language");
+    if (resolved == null) {
+      report("cannot find extended language in dependencies: " + lang.getModuleFqName(),myModule);
+      continue;
+    }
+    SNode res=ListSequence.fromList(previous).findFirst(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return SNodeOperations.isInstanceOf(SLinkOperations.getTarget(it,"dependency",true),"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyExtendLanguage") && SLinkOperations.getTarget(SNodeOperations.cast(SLinkOperations.getTarget(it,"dependency",true),"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyExtendLanguage"),"language",false) == resolved;
+      }
+    }
+);
+    if (res == null) {
+      res=SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_ExtractedModuleDependency",null);
+      SNode ul=SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyExtendLanguage",null);
+      SLinkOperations.setTarget(ul,"language",resolved,false);
+      SLinkOperations.setTarget(res,"dependency",ul,true);
+      ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Module"),"dependencies",true)).addElement(res);
+    }
+ else {
+      ListSequence.fromList(previous).removeElement(res);
+    }
+  }
+}
