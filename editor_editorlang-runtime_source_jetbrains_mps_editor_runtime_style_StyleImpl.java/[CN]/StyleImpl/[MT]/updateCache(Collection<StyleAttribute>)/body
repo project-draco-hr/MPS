@@ -1,0 +1,29 @@
+{
+  if (attributes.isEmpty()) {
+    return;
+  }
+  Set<StyleAttribute> changedAttributes=new StyleAttributeSet();
+  for (  StyleAttribute attribute : attributes) {
+    Object parentValue=getParentStyle() == null ? null : getParentStyle().get(attribute);
+    Object currentValue=myAttributeValues[attribute.getIndex()];
+    Object oldValue=myCachedAttributeValues[attribute.getIndex()];
+    if (parentValue != null || currentValue != null || oldValue != null) {
+      if (currentValue instanceof AttributeCalculator) {
+        currentValue=((AttributeCalculator)currentValue).calculate(myEditorCell);
+      }
+      Object newValue=attribute.combine(parentValue,currentValue);
+      if (!EqualUtil.equals(newValue,oldValue)) {
+        changedAttributes.add(attribute);
+      }
+      myCachedAttributeValues[attribute.getIndex()]=newValue;
+    }
+  }
+  if (!changedAttributes.isEmpty()) {
+    if (myChildren != null) {
+      for (      Style style : myChildren) {
+        style.setParent(this,changedAttributes);
+      }
+    }
+    fireStyleChanged(new StyleChangeEvent(this,changedAttributes));
+  }
+}
