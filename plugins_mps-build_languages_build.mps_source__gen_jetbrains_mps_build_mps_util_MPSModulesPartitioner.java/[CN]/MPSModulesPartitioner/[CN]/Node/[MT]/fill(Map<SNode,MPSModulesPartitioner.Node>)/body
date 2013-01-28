@@ -1,17 +1,37 @@
 {
-  MPSModulesClosure closure=new MPSModulesClosure(genContext,module).skipExternalModules().generationDependenciesClosure();
-  for (  SNode q : Sequence.fromIterable(closure.getModulesIncludingLanguagesWithRuntime())) {
-    MPSModulesPartitioner.Node node=map.get(q);
-    if (node != null) {
-      SetSequence.fromSet(metaDependencies).addElement(node);
+  if (SNodeOperations.isInstanceOf(module,"jetbrains.mps.build.mps.structure.BuildMps_Module")) {
+    MPSModulesClosure closure=new MPSModulesClosure(genContext,SNodeOperations.cast(module,"jetbrains.mps.build.mps.structure.BuildMps_Module")).skipExternalModules().generationDependenciesClosure();
+    for (    SNode q : Sequence.fromIterable(closure.getAllModules())) {
+      MPSModulesPartitioner.Node node=map.get(q);
+      if (node != null) {
+        SetSequence.fromSet(metaDependencies).addElement(node);
+      }
+    }
+    closure.reset().trackDevkits().closure();
+    for (    SNode q : Sequence.fromIterable(closure.getAllModules())) {
+      MPSModulesPartitioner.Node node=map.get(q);
+      if (node != null) {
+        SetSequence.fromSet(dependencyNodes).addElement(node);
+      }
     }
   }
-  closure.reset();
-  closure.closure();
-  for (  SNode q : Sequence.fromIterable(closure.getModulesIncludingLanguagesWithRuntime())) {
-    MPSModulesPartitioner.Node node=map.get(q);
-    if (node != null) {
-      SetSequence.fromSet(dependencyNodes).addElement(node);
+ else   if (SNodeOperations.isInstanceOf(module,"jetbrains.mps.build.mps.structure.BuildMps_DevKit")) {
+    SNode devkit=SNodeOperations.cast(module,"jetbrains.mps.build.mps.structure.BuildMps_DevKit");
+    for (    SNode q : Sequence.fromIterable(BuildMps_DevKit_Behavior.call_getExportedModules_7391870795496918763(devkit)).concat(ListSequence.fromList(SLinkOperations.getTargets(devkit,"extends",true)).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return (SLinkOperations.getTarget(it,"devkit",false) != null);
+      }
+    }
+).select(new ISelector<SNode,SNode>(){
+      public SNode select(      SNode it){
+        return SLinkOperations.getTarget(it,"devkit",false);
+      }
+    }
+))) {
+      MPSModulesPartitioner.Node node=map.get(q);
+      if (node != null) {
+        SetSequence.fromSet(dependencyNodes).addElement(node);
+      }
     }
   }
 }
