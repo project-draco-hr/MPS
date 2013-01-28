@@ -26,14 +26,20 @@
   }
   if (tree.isShowUsedLanguage()) {
     MPSTreeNode usedlanguages=new TextMPSTreeNode("Used Languages",getOperationContext());
+    boolean hasBootstrapDep=false;
     for (    IModule l : SetSequence.fromSet(usedLanguages).sort(new ISelector<IModule,Comparable<?>>(){
       public Comparable<?> select(      IModule it){
         return it.getModuleFqName();
       }
     }
 ,true)) {
-      Iterable<IModule> langModules=new GlobalModuleDependenciesManager(l).getModules((tree.isShowRuntime() ? GlobalModuleDependenciesManager.Deptype.EXECUTE : GlobalModuleDependenciesManager.Deptype.VISIBLE));
-      usedlanguages.add(new ModuleDependencyNode.ULangDependencyNode(l,Sequence.fromIterable(langModules).intersect(ListSequence.fromList(myModules)).isNotEmpty(),getOperationContext()));
+      Iterable<IModule> langModules=new GlobalModuleDependenciesManager(l).getModules(GlobalModuleDependenciesManager.Deptype.VISIBLE);
+      boolean isBootstrapDep=Sequence.fromIterable(langModules).intersect(ListSequence.fromList(myModules)).isNotEmpty();
+      hasBootstrapDep|=isBootstrapDep;
+      usedlanguages.add(new ModuleDependencyNode.ULangDependencyNode(l,isBootstrapDep,getOperationContext()));
+    }
+    if (hasBootstrapDep) {
+      usedlanguages.addTreeMessage(new TreeMessage(Color.RED,"bootstrap dependencies",null));
     }
     add(usedlanguages);
   }
