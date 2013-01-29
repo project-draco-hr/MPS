@@ -1,6 +1,6 @@
 {
   Graph<MPSModulesPartitioner.Node> graph=new Graph<MPSModulesPartitioner.Node>();
-  Map<SNode,MPSModulesPartitioner.Node> map=new LinkedHashMap<SNode,MPSModulesPartitioner.Node>();
+  final Map<SNode,MPSModulesPartitioner.Node> map=new LinkedHashMap<SNode,MPSModulesPartitioner.Node>();
   for (  SNode module : modules) {
     MPSModulesPartitioner.Node decorator=new MPSModulesPartitioner.Node(module);
     map.put(module,decorator);
@@ -28,7 +28,20 @@
     }
     SetSequence.fromSet(ListSequence.fromList(chunks).getElement(pindex).getModules()).addElement(m);
     if (conflicting) {
-      ListSequence.fromList(chunks).getElement(pindex).setBootstrapFor(m);
+      ListSequence.fromList(chunks).getElement(pindex).setBootstrap(m,true);
+    }
+  }
+  for (  MPSModulesPartitioner.Chunk c : chunks) {
+    Set<MPSModulesPartitioner.Node> chunkNodes=SetSequence.fromSetWithValues(new HashSet<MPSModulesPartitioner.Node>(),SetSequence.fromSet(c.getModules()).select(new ISelector<SNode,MPSModulesPartitioner.Node>(){
+      public MPSModulesPartitioner.Node select(      SNode it){
+        return map.get(it);
+      }
+    }
+));
+    for (    SNode confl : ListSequence.fromListWithValues(new ArrayList<SNode>(),c.getConflicting())) {
+      if (SetSequence.fromSet(map.get(confl).metaDependencies).intersect(SetSequence.fromSet(chunkNodes)).isEmpty()) {
+        c.setBootstrap(confl,false);
+      }
     }
   }
 }

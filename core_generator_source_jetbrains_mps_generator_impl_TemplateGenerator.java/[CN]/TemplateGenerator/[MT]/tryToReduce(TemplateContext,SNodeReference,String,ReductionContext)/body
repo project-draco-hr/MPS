@@ -1,0 +1,58 @@
+{
+  SNode inputNode=context.getInput();
+  TemplateReductionRule reductionRule=null;
+  checkGenerationCanceledFast();
+  try {
+    TemplateReductionRule[] conceptRules=templateSwitch != null ? myRuleManager.getRuleFinder(templateSwitch).findReductionRules(inputNode) : myRuleManager.getRuleFinder().findReductionRules(inputNode);
+    if (conceptRules == null) {
+      return null;
+    }
+    TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(this,reductionContext,getOperationContext(),getGenerationTracer());
+    for (    TemplateReductionRule rule : conceptRules) {
+      reductionRule=rule;
+      if (!getBlockedReductionsData().isReductionBlocked(inputNode,rule,reductionContext)) {
+        Collection<SNode> outputNodes=reductionContext.getQueryExecutor().tryToApply(rule,environment,context);
+        if (outputNodes != null) {
+          if (outputNodes.size() == 1) {
+            SNode reducedNode=outputNodes.iterator().next();
+            getMappings().addOutputNodeByInputNodeAndMappingName(inputNode,mappingName,reducedNode);
+            if (templateSwitch == null) {
+              getMappings().addCopiedOutputNodeForInputNode(inputNode,reducedNode);
+              if (TracingUtil.getInput(reducedNode) == null) {
+                jetbrains.mps.util.SNodeOperations.copyUserObjects(inputNode,reducedNode);
+              }
+              if (inputNode.getModel() == getGeneratorSessionContext().getOriginalInputModel()) {
+                TracingUtil.putInputNode(reducedNode,inputNode);
+              }
+            }
+          }
+          return outputNodes;
+        }
+      }
+    }
+  }
+ catch (  DismissTopMappingRuleException ex) {
+    if (ex.isLoggingNeeded() && reductionRule != null) {
+      SNode ruleNode=reductionRule.getRuleNode().resolve(MPSModuleRepository.getInstance());
+      String messageText="-- dismissed reduction rule: " + (ruleNode != null ? org.jetbrains.mps.openapi.model.SNodeUtil.getDebugText(ruleNode) : "unknown");
+      if (ex.isInfo()) {
+        myLogger.info(ruleNode,messageText);
+      }
+ else       if (ex.isWarning()) {
+        myLogger.warning(ruleNode,messageText);
+      }
+ else {
+        myLogger.error(ruleNode,messageText);
+      }
+    }
+  }
+catch (  GenerationException ex) {
+    if (ex instanceof GenerationFailureException) {
+      throw (GenerationFailureException)ex;
+    }
+ else     if (ex instanceof GenerationCanceledException) {
+      throw (GenerationCanceledException)ex;
+    }
+  }
+  return null;
+}
