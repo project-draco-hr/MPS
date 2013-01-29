@@ -1,5 +1,18 @@
 {
-  SNode project=artifacts.getProject();
+  final SNode project=artifacts.getProject();
+  RequiredPlugins plugins=new RequiredPlugins(project,artifacts.getGenContext());
+  plugins.collectDependencies();
+  for (  SNode plugin : Sequence.fromIterable(plugins.getDependency()).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.getContainingRoot(it) != project;
+    }
+  }
+)) {
+    SNode pluginArtifact=SNodeOperations.as(artifacts.findArtifact(plugin),"jetbrains.mps.build.structure.BuildLayout_Node");
+    if (pluginArtifact != null) {
+      builder.add(pluginArtifact,plugin);
+    }
+  }
   DependenciesHelper helper=new DependenciesHelper(artifacts.getGenContext(),artifacts.getProject());
   VisibleModules visibleModules=new VisibleModules(project,artifacts.getGenContext());
   visibleModules.collect();
