@@ -1,0 +1,49 @@
+{
+  List<SNode> result=ListSequence.fromList(new ArrayList<SNode>());
+  IScope moduleScope=SNodeOperations.getModel(imports).getModelDescriptor().getModule().getScope();
+  for (  SNode imp : ListSequence.fromList(SLinkOperations.getTargets(imports,"entries",true)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SPropertyOperations.getBoolean(it,"static");
+    }
+  }
+)) {
+    if (SPropertyOperations.getBoolean(imp,"onDemand")) {
+      String className=Tokens_Behavior.call_stringRep_6148840541591415725(imp);
+      SNode containingClas=resolveFqName(className,moduleScope,null);
+      if ((containingClas == null)) {
+        continue;
+      }
+      Iterable<SNode> neededMembers=ListSequence.fromList(BehaviorReflection.invokeVirtual((Class<List<SNode>>)((Class)Object.class),containingClas,"virtual_getMembers_1213877531970",new Object[]{})).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return SNodeOperations.getConceptDeclaration(it) == neededConcept;
+        }
+      }
+);
+      ListSequence.fromList(result).addSequence(Sequence.fromIterable(neededMembers));
+    }
+ else {
+      final String memberName=SPropertyOperations.getString(ListSequence.fromList(SLinkOperations.getTargets(imp,"token",true)).last(),"value");
+      String className=Tokens_Behavior.call_stringRep_6148840541591441572(imp,1);
+      SNode containingClas=resolveFqName(className,moduleScope,null);
+      if ((containingClas == null)) {
+        continue;
+      }
+      SNode neededMember=ListSequence.fromList(BehaviorReflection.invokeVirtual((Class<List<SNode>>)((Class)Object.class),containingClas,"virtual_getMembers_1213877531970",new Object[]{})).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return SNodeOperations.getConceptDeclaration(it) == neededConcept;
+        }
+      }
+).findFirst(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return memberName.equals(it.getName());
+        }
+      }
+);
+      if ((neededMember == null)) {
+        continue;
+      }
+      ListSequence.fromList(result).addElement(neededMember);
+    }
+  }
+  return result;
+}
