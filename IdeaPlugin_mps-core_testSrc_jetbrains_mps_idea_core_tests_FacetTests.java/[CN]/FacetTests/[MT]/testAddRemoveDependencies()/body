@@ -1,7 +1,12 @@
 {
   final Module module2=addModuleAndSetupFixture(myProjectBuilder);
-  MPSFacet mpsFacet2=addMPSFacet(module2);
-  int originalDependCount=mpsFacet2.getSolution().getDependencies().size();
+  final MPSFacet mpsFacet2=addMPSFacet(module2);
+  int originalDependCount=ModelAccess.instance().runReadAction(new Computable<Integer>(){
+    @Override public Integer compute(){
+      return mpsFacet2.getSolution().getDependencies().size();
+    }
+  }
+);
   ApplicationManager.getApplication().runWriteAction(new Runnable(){
     @Override public void run(){
       ModifiableRootModel rootModel=ModuleRootManager.getInstance(module2).getModifiableModel();
@@ -11,7 +16,12 @@
   }
 );
   flushEDT();
-  List<Dependency> solution2Dependencies=mpsFacet2.getSolution().getDependencies();
+  List<Dependency> solution2Dependencies=ModelAccess.instance().runReadAction(new Computable<List<Dependency>>(){
+    @Override public List<Dependency> compute(){
+      return mpsFacet2.getSolution().getDependencies();
+    }
+  }
+);
   assertEquals(originalDependCount + 1,solution2Dependencies.size());
   boolean found=false;
   for (  Dependency dependency : solution2Dependencies) {
@@ -35,5 +45,11 @@
   }
 );
   flushEDT();
-  assertEquals(originalDependCount,mpsFacet2.getSolution().getDependencies().size());
+  int finalDependenciesCount=ModelAccess.instance().runReadAction(new Computable<Integer>(){
+    @Override public Integer compute(){
+      return mpsFacet2.getSolution().getDependencies().size();
+    }
+  }
+);
+  assertEquals(originalDependCount,finalDependenciesCount);
 }
