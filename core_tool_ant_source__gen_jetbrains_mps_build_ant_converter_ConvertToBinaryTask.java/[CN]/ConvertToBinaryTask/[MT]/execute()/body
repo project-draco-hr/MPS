@@ -1,0 +1,32 @@
+{
+  super.execute();
+  if (!(toConvert.isEmpty())) {
+    File homeFolder=getHomeLocation();
+    if (!(homeFolder.isDirectory())) {
+      throw new BuildException("cannot detect home folder: got `" + homeFolder.getPath() + "'");
+    }
+    List<File> classPaths=Arrays.asList(new File(homeFolder,"mps-openapi.jar"),new File(homeFolder,"mps-core.jar"),new File(homeFolder,"mps-collections.jar"),new File(homeFolder,"mps-closures.jar"),new File(homeFolder,"mps-tuples.jar"),new File(homeFolder,"mps-tool.jar"),new File(homeFolder,"trove4j.jar"));
+    List<URL> classPathUrls=new ArrayList<URL>();
+    for (    File path : classPaths) {
+      try {
+        classPathUrls.add(new URL("file:///" + path));
+      }
+ catch (      MalformedURLException e) {
+        throw new BuildException(e);
+      }
+    }
+    URLClassLoader classLoader=new URLClassLoader(classPathUrls.toArray(new URL[classPathUrls.size()]),this.getClass().getClassLoader());
+    try {
+      Class<?> converterClass=classLoader.loadClass("jetbrains.mps.tool.builder.converter.ConvertToBinaryWorker");
+      Object converter=converterClass.newInstance();
+      Method method=converterClass.getMethod("convert",Map.class);
+      method.invoke(converter,toConvert);
+    }
+ catch (    Throwable t) {
+      if (t instanceof RuntimeException && t.getCause() instanceof IOException) {
+        t=t.getCause();
+      }
+      throw new BuildException("Cannot convert .mps into .mpb: " + t.getMessage() + "\n"+ "Used class path: "+ classPathUrls.toString(),t);
+    }
+  }
+}
