@@ -6,23 +6,28 @@
   tableDepend.setShowVerticalLines(false);
   tableDepend.setAutoCreateRowSorter(false);
   tableDepend.setAutoscrolls(true);
+  tableDepend.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
   myDependTableModel=getDependTableModel();
   tableDepend.setModel(myDependTableModel);
-  tableDepend.setDefaultRenderer(DependenciesTableItem.class,new DependencyTableCellRender(getScope()));
+  tableDepend.setDefaultRenderer(DependenciesTableItem.class,getTableCellRender());
   tableDepend.setDefaultRenderer(Boolean.class,new BooleanTableCellRenderer());
   tableDepend.getSelectionModel().setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
   TableColumn column=null;
   if (myDependTableModel.getExportColumnIndex() >= 0) {
     column=tableDepend.getTableHeader().getColumnModel().getColumn(myDependTableModel.getExportColumnIndex());
-    column.setPreferredWidth(5);
+    column.setMinWidth(20);
+    column.setPreferredWidth(50);
+    column.setMaxWidth(50);
   }
   if (myDependTableModel.getRoleColumnIndex() >= 0) {
     column=tableDepend.getTableHeader().getColumnModel().getColumn(myDependTableModel.getRoleColumnIndex());
-    column.setPreferredWidth(10);
+    column.setMinWidth(80);
+    column.setPreferredWidth(100);
+    column.setMaxWidth(120);
   }
   if (myDependTableModel.getItemColumnIndex() >= 0) {
     column=tableDepend.getTableHeader().getColumnModel().getColumn(myDependTableModel.getItemColumnIndex());
-    column.setPreferredWidth(300);
+    column.setPreferredWidth(200);
   }
   tableDepend.addMouseListener(new MouseAdapter(){
     public void mouseClicked(    MouseEvent e){
@@ -67,8 +72,18 @@
   }
 ).setRemoveAction(new AnActionButtonRunnable(){
     @Override public void run(    AnActionButton anActionButton){
+      int first=tableDepend.getSelectionModel().getMinSelectionIndex();
+      if (!confirmRemove(myDependTableModel.getValueAt(first,myDependTableModel.getItemColumnIndex()))) {
+        return;
+      }
+      int last=tableDepend.getSelectionModel().getMaxSelectionIndex();
       TableUtil.removeSelectedItems(tableDepend);
-      myDependTableModel.fireTableDataChanged();
+      myDependTableModel.fireTableRowsDeleted(first,last);
+    }
+  }
+).addExtraAction(new FindAnActionButton(tableDepend){
+    @Override public void actionPerformed(    AnActionEvent e){
+      findUsages(myDependTableModel.getValueAt(tableDepend.getSelectionModel().getMinSelectionIndex(),myDependTableModel.getItemColumnIndex()));
     }
   }
 );

@@ -1,0 +1,63 @@
+{
+  if ((AttributeOperations.getAttribute(clas,new IAttributeDescriptor.NodeAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.JavaImports"))) == null)) {
+    return;
+  }
+  final Map<String,SNode> importsByName=MapSequence.fromMap(new HashMap<String,SNode>());
+  ListSequence.fromList(SLinkOperations.getTargets(AttributeOperations.getAttribute(clas,new IAttributeDescriptor.NodeAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.JavaImports"))),"entries",true)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return !(SPropertyOperations.getBoolean(it,"onDemand"));
+    }
+  }
+).visitAll(new IVisitor<SNode>(){
+    public void visit(    SNode it){
+      MapSequence.fromMap(importsByName).put(SPropertyOperations.getString(ListSequence.fromList(SLinkOperations.getTargets(it,"token",true)).last(),"value"),it);
+    }
+  }
+);
+  boolean unknownPresent=false;
+  boolean dynRefsPresent=false;
+  Set<SNode> retain=SetSequence.fromSet(new HashSet<SNode>());
+  Deque<SNode> stack=DequeSequence.fromDeque(new LinkedList<SNode>());
+  DequeSequence.fromDeque(stack).pushElement(clas);
+  while (DequeSequence.fromDeque(stack).isNotEmpty()) {
+    SNode node=DequeSequence.fromDeque(stack).popElement();
+    DequeSequence.fromDeque(stack).addSequence(ListSequence.fromList(SNodeOperations.getChildren(node)));
+    if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.IYetUnresolved")) {
+      unknownPresent=true;
+      break;
+    }
+    Iterable<? extends SReference> refs=node.getReferences();
+    for (    SReference ref : Sequence.fromIterable(refs)) {
+      if (!(ref instanceof DynamicReference)) {
+        continue;
+      }
+      dynRefsPresent=true;
+      String resolveInfo=((DynamicReference)ref).getResolveInfo();
+      SetSequence.fromSet(retain).addElement(MapSequence.fromMap(importsByName).get(resolveInfo));
+    }
+  }
+  if (unknownPresent) {
+    return;
+  }
+  if (dynRefsPresent == false) {
+{
+      MessageTarget errorTarget=new NodeMessageTarget();
+      IErrorReporter _reporter_2309309498=typeCheckingContext.reportTypeError(clas,"Removing all java imports annotations","r:00000000-0000-4000-0000-011c895902c5(jetbrains.mps.baseLanguage.typesystem)","2235632002330933633",null,errorTarget);
+{
+        BaseQuickFixProvider intentionProvider=new BaseQuickFixProvider("jetbrains.mps.baseLanguage.typesystem.RemoveAllJavaImports_QuickFix",true);
+        _reporter_2309309498.addIntentionProvider(intentionProvider);
+      }
+    }
+    return;
+  }
+  Iterable<SNode> unneeded=Sequence.fromIterable(MapSequence.fromMap(importsByName).values()).subtract(SetSequence.fromSet(retain));
+{
+    MessageTarget errorTarget=new NodeMessageTarget();
+    IErrorReporter _reporter_2309309498=typeCheckingContext.reportTypeError(clas,"Removing unneeded java imports","r:00000000-0000-4000-0000-011c895902c5(jetbrains.mps.baseLanguage.typesystem)","2235632002330933240",null,errorTarget);
+{
+      BaseQuickFixProvider intentionProvider=new BaseQuickFixProvider("jetbrains.mps.baseLanguage.typesystem.RemoveGivenJavaImports_QuickFix",true);
+      intentionProvider.putArgument("toRemove",unneeded);
+      _reporter_2309309498.addIntentionProvider(intentionProvider);
+    }
+  }
+}
