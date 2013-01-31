@@ -4,8 +4,22 @@
   myEventsListener=new MyEventsListener(getModelDescriptor());
   mySNodeModelListener=new SimpleModelListener(this){
     public boolean isValid(){
-      if (!super.isValid())       return false;
-      return !jetbrains.mps.util.SNodeOperations.isDisposed(getSNode());
+      return super.isValid() && !jetbrains.mps.util.SNodeOperations.isDisposed(getSNode());
+    }
+  }
+;
+  myModelRepositoryListener=new SModelRepositoryAdapter(){
+    @Override public void modelsReplaced(    Set<SModelDescriptor> replacedModels){
+      if (replacedModels.contains(getModelDescriptor())) {
+        ModelAccess.instance().runReadInEDT(new Runnable(){
+          public void run(){
+            if (mySNodeModelListener.isValid()) {
+              UpdatableSNodeTreeNode.this.updatePresentation(true,true);
+            }
+          }
+        }
+);
+      }
     }
   }
 ;
