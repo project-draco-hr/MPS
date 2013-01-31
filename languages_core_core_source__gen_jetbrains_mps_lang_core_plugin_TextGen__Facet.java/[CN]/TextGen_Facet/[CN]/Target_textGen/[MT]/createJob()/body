@@ -1,35 +1,30 @@
 {
   return new IJob.Stub(){
-    public IResult execute(    final Iterable<IResource> input,    final IJobMonitor monitor,    final IPropertiesAccessor pa,    @NotNull final ProgressMonitor progressMonitor){
+    @Override public IResult execute(    final Iterable<IResource> rawInput,    final IJobMonitor monitor,    final IPropertiesAccessor pa,    @NotNull final ProgressMonitor progressMonitor){
       Iterable<IResource> _output_21gswx_a0a=null;
+      final Iterable<GResource> input=(Iterable<GResource>)(Iterable)rawInput;
 switch (0) {
 case 0:
         long textGenStartTime=System.currentTimeMillis();
-      Iterable<GResource> resources=Sequence.fromIterable(input).select(new ISelector<IResource,GResource>(){
-        public GResource select(        IResource it){
-          return (GResource)(IResource)it;
+      if (Sequence.fromIterable(input).any(new IWhereFilter<GResource>(){
+        public boolean accept(        GResource it){
+          return !(it.status().isOk());
         }
       }
-);
-    if (Sequence.fromIterable(resources).any(new IWhereFilter<GResource>(){
-      public boolean accept(      GResource it){
-        return !(it.status().isOk());
+)) {
+        monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Generation was not OK")));
+        return new IResult.FAILURE(_output_21gswx_a0a);
+      }
+    for (    GResource resource : Sequence.fromIterable(input)) {
+      if (resource.module().getOutputFor(resource.model()) == null) {
+        monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("no output location for " + resource.model().getLongName())));
       }
     }
-)) {
-      monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Generation was not OK")));
-      return new IResult.FAILURE(_output_21gswx_a0a);
-    }
-  for (  GResource resource : Sequence.fromIterable(resources)) {
-    if (resource.module().getOutputFor(resource.model()) == null) {
-      monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("no output location for " + resource.model().getLongName())));
+  Iterable<GResource> resourcesWithOutput=Sequence.fromIterable(input).where(new IWhereFilter<GResource>(){
+    public boolean accept(    GResource it){
+      return it.module().getOutputFor(it.model()) != null;
     }
   }
-resources=Sequence.fromIterable(resources).where(new IWhereFilter<GResource>(){
-  public boolean accept(  GResource it){
-    return it.module().getOutputFor(it.model()) != null;
-  }
-}
 );
 final boolean _generateDebugInfo=pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).generateDebugInfo() == null || pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).generateDebugInfo();
 final boolean _failIfNoTextgen=pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).failIfNoTextgen() != null && pa.global().properties(Target_textGen.this.getName(),TextGen_Facet.Target_textGen.Parameters.class).failIfNoTextgen();
@@ -44,8 +39,8 @@ final Wrappers._int currentRootsCount=new Wrappers._int(0);
 monitor.currentProgress().beginWork("Writing",Sequence.fromIterable(input).count() * 100,monitor.currentProgress().workLeft());
 final TextGeneratorEngine engine=new TextGeneratorEngine(_generateDebugInfo,_failIfNoTextgen);
 try {
-IResource lastResource=Sequence.fromIterable(resources).last();
-for (final GResource currentResource : Sequence.fromIterable(resources)) {
+IResource lastResource=Sequence.fromIterable(resourcesWithOutput).last();
+for (final GResource currentResource : Sequence.fromIterable(resourcesWithOutput)) {
 prepareTime+=TextGenUtil.withTimeTracking(new Runnable(){
 public void run(){
 ModelAccess.instance().runReadAction(new Runnable(){
@@ -165,7 +160,7 @@ return new IResult.FAILURE(_output_21gswx_a0a);
 }
 for (GResource resource : ListSequence.fromList(currentInput)) {
 Iterable<IDelta> delta=Sequence.fromIterable(MapSequence.fromMap(streamHandlers).get(resource).delta()).concat(Sequence.fromIterable(MapSequence.fromMap(retainedFilesDelta).get(resource))).concat(Sequence.fromIterable(MapSequence.fromMap(retainedCachesDelta).get(resource)));
-IResource result=new TResource(resource.module(),delta,resource.model());
+IResource result=new TResource(delta,resource.module(),resource.model());
 _output_21gswx_a0a=Sequence.fromIterable(_output_21gswx_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(result)));
 }
 if (!(TextGenUtil.runWriteTransaction(new Runnable(){
