@@ -1,0 +1,36 @@
+{
+  SModule contextModule=contextNode.getModel().getModelDescriptor().getModule();
+  Set<Language> contextLanguages=SetSequence.fromSet(new HashSet<Language>());
+  for (  SModule module : Sequence.fromIterable(contextModule.getModuleScope().getModules())) {
+    if (module instanceof Language) {
+      SetSequence.fromSet(contextLanguages).addElement((Language)module);
+    }
+  }
+  Iterable<SNode> facets=SetSequence.fromSet(contextLanguages).select(new ISelector<Language,EditableSModelDescriptor>(){
+    public EditableSModelDescriptor select(    Language it){
+      return LanguageAspect.PLUGIN.get(it);
+    }
+  }
+).where(new IWhereFilter<EditableSModelDescriptor>(){
+    public boolean accept(    EditableSModelDescriptor it){
+      return it != null;
+    }
+  }
+).translate(new ITranslator2<EditableSModelDescriptor,SNode>(){
+    public Iterable<SNode> translate(    EditableSModelDescriptor it){
+      return (Iterable<SNode>)it.getRootNodes();
+    }
+  }
+).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.make.facet.structure.FacetDeclaration");
+    }
+  }
+).select(new ISelector<SNode,SNode>(){
+    public SNode select(    SNode it){
+      return SNodeOperations.cast(it,"jetbrains.mps.make.facet.structure.FacetDeclaration");
+    }
+  }
+);
+  return facets;
+}
