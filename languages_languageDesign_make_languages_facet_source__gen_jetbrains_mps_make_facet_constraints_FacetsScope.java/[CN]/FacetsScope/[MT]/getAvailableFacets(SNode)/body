@@ -1,0 +1,43 @@
+{
+  SModule contextModule=contextNode.getModel().getModelDescriptor().getModule();
+  Set<SModule> contextModules=SetSequence.fromSet(new HashSet<SModule>());
+  for (  SModule module : Sequence.fromIterable(contextModule.getModuleScope().getModules())) {
+    if (module instanceof IClassLoadingModule && ((IClassLoadingModule)module).canLoad()) {
+      SetSequence.fromSet(contextModules).addElement(module);
+    }
+  }
+  SetSequence.fromSet(contextModules).addElement(contextModule);
+  Iterable<SModel> models=SetSequence.fromSet(contextModules).translate(new ITranslator2<SModule,SModel>(){
+    public Iterable<SModel> translate(    SModule it){
+      if (it instanceof Language) {
+        return Sequence.<SModel>singleton(LanguageAspect.PLUGIN.get((Language)it));
+      }
+ else {
+        return it.getModels();
+      }
+    }
+  }
+);
+  Iterable<SNode> facets=Sequence.fromIterable(models).where(new IWhereFilter<SModel>(){
+    public boolean accept(    SModel it){
+      return it != null;
+    }
+  }
+).translate(new ITranslator2<SModel,SNode>(){
+    public Iterable<SNode> translate(    SModel it){
+      return (Iterable<SNode>)it.getRootNodes();
+    }
+  }
+).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.make.facet.structure.FacetDeclaration");
+    }
+  }
+).select(new ISelector<SNode,SNode>(){
+    public SNode select(    SNode it){
+      return SNodeOperations.cast(it,"jetbrains.mps.make.facet.structure.FacetDeclaration");
+    }
+  }
+);
+  return facets;
+}
