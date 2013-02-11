@@ -17,7 +17,17 @@
       return resolved.getName();
     }
     @NotNull @Override public PsiType[] getParameters(){
-      return new PsiType[0];
+      MPSPsiNode[] typeParamNodes=MPSPsiClassifierType.this.getChildrenOfType("parameter",MPSPsiNode.class);
+      if (typeParamNodes == null || typeParamNodes.length == 0) {
+        return PsiType.EMPTY_ARRAY;
+      }
+      List<PsiType> paramTypes=new ArrayList<PsiType>(typeParamNodes.length);
+      for (      MPSPsiNode tn : typeParamNodes) {
+        if (!(tn instanceof ComputesPsiType))         continue;
+        PsiType psiType=((ComputesPsiType)tn).getPsiType();
+        paramTypes.add(psiType);
+      }
+      return ArrayUtil.toObjectArray(paramTypes,PsiType.class);
     }
     @NotNull @Override public ClassResolveResult resolveGenerics(){
       final PsiClass clas=resolve();
@@ -26,7 +36,10 @@
           return clas;
         }
         @Override public PsiSubstitutor getSubstitutor(){
-          return PsiSubstitutor.EMPTY;
+          if (clas == null)           return null;
+          PsiType[] params=getParameters();
+          PsiSubstitutor subst=PsiSubstitutor.EMPTY;
+          return subst.putAll(clas,params);
         }
         @Override public boolean isPackagePrefixPackageReference(){
           return false;
