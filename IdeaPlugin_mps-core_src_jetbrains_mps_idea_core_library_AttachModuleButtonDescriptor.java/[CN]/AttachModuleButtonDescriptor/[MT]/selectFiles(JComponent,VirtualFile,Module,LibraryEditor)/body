@@ -1,0 +1,24 @@
+{
+  List<ModuleReference> visibleModules=ModuleLibrariesUtil.calculateVisibleModules(new HashSet<VirtualFile>(Arrays.asList(libraryEditor.getFiles(ModuleXmlRootDetector.MPS_MODULE_XML))));
+  ChooseElementsDialog<ModuleReference> chooser=new ModuleReferenceChooserDialog(parent,visibleModules);
+  chooser.show();
+  final List<ModuleReference> chosenElements=chooser.getChosenElements();
+  final Set<VirtualFile> addedDescriptors=new LinkedHashSet<VirtualFile>();
+  final Set<VirtualFile> addedJars=new LinkedHashSet<VirtualFile>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    @Override public void run(){
+      for (      ModuleReference module : chosenElements) {
+        AbstractModule chosenModule=(AbstractModule)ModuleRepositoryFacade.getInstance().getModule(module);
+        addedDescriptors.add(VirtualFileUtils.getVirtualFile(chosenModule.getDescriptorFile()));
+        for (        VirtualFile virtualFile : ModuleLibrariesUtil.getModuleJars(chosenModule)) {
+          addedJars.add(virtualFile);
+        }
+      }
+    }
+  }
+);
+  for (  VirtualFile classesJar : addedJars) {
+    libraryEditor.addRoot(classesJar,OrderRootType.CLASSES);
+  }
+  return addedDescriptors.toArray(new VirtualFile[addedDescriptors.size()]);
+}
