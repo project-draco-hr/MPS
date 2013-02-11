@@ -1,0 +1,93 @@
+{
+  return new PsiClassType(LanguageLevel.JDK_1_6){
+    private PsiClass resolved;
+    private void resolveRef(){
+      if (resolved == null) {
+        MPSPsiClassifier clas=getReferenceTarget("classifier",MPSPsiClassifier.class);
+        resolved=clas == null ? null : clas.getRealPsiNode();
+      }
+    }
+    @Nullable @Override public PsiClass resolve(){
+      resolveRef();
+      return resolved;
+    }
+    @Override public String getClassName(){
+      resolveRef();
+      if (resolved == null)       return null;
+      return resolved.getName();
+    }
+    @NotNull @Override public PsiType[] getParameters(){
+      MPSPsiNode[] typeParamNodes=MPSPsiClassifierType.this.getChildrenOfType("parameter",MPSPsiNode.class);
+      if (typeParamNodes == null || typeParamNodes.length == 0) {
+        return PsiType.EMPTY_ARRAY;
+      }
+      List<PsiType> paramTypes=new ArrayList<PsiType>(typeParamNodes.length);
+      for (      MPSPsiNode tn : typeParamNodes) {
+        if (!(tn instanceof ComputesPsiType))         continue;
+        PsiType psiType=((ComputesPsiType)tn).getPsiType();
+        paramTypes.add(psiType);
+      }
+      return ArrayUtil.toObjectArray(paramTypes,PsiType.class);
+    }
+    @NotNull @Override public ClassResolveResult resolveGenerics(){
+      final PsiClass clas=resolve();
+      return new ClassResolveResult(){
+        @Override public PsiClass getElement(){
+          return clas;
+        }
+        @Override public PsiSubstitutor getSubstitutor(){
+          if (clas == null)           return null;
+          PsiType[] params=getParameters();
+          PsiSubstitutor subst=PsiSubstitutor.EMPTY;
+          return subst.putAll(clas,params);
+        }
+        @Override public boolean isPackagePrefixPackageReference(){
+          return false;
+        }
+        @Override public boolean isAccessible(){
+          return true;
+        }
+        @Override public boolean isStaticsScopeCorrect(){
+          return true;
+        }
+        @Override public PsiElement getCurrentFileResolveScope(){
+          return null;
+        }
+        @Override public boolean isValidResult(){
+          return true;
+        }
+      }
+;
+    }
+    @NotNull @Override public PsiClassType rawType(){
+      return this;
+    }
+    @NotNull @Override public GlobalSearchScope getResolveScope(){
+      return GlobalSearchScope.allScope(getProject());
+    }
+    @NotNull @Override public LanguageLevel getLanguageLevel(){
+      return myLanguageLevel;
+    }
+    @NotNull @Override public PsiClassType setLanguageLevel(    @NotNull LanguageLevel languageLevel){
+      return this;
+    }
+    @Override public String getPresentableText(){
+      return getClassName();
+    }
+    @Override public String getCanonicalText(){
+      return null;
+    }
+    @Override public String getInternalCanonicalText(){
+      return null;
+    }
+    @Override public boolean isValid(){
+      resolveRef();
+      return resolved != null;
+    }
+    @Override public boolean equalsToText(    @NonNls String text){
+      if (text == null)       return false;
+      return text.equals(getClassName());
+    }
+  }
+;
+}
