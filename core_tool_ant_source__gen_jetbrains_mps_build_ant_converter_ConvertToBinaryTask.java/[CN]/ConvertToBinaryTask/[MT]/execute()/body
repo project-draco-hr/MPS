@@ -1,0 +1,28 @@
+{
+  super.execute();
+  if (!(toConvert.isEmpty())) {
+    Iterable<File> classPaths=MPSClasspathUtil.buildClasspath(getProject(),mpsHome,false);
+    List<URL> classPathUrls=new ArrayList<URL>();
+    for (    File path : classPaths) {
+      try {
+        classPathUrls.add(new URL("file:///" + path));
+      }
+ catch (      MalformedURLException e) {
+        throw new BuildException(e);
+      }
+    }
+    URLClassLoader classLoader=new URLClassLoader(classPathUrls.toArray(new URL[classPathUrls.size()]),this.getClass().getClassLoader());
+    try {
+      Class<?> converterClass=classLoader.loadClass("jetbrains.mps.tool.builder.converter.ConvertToBinaryWorker");
+      Object converter=converterClass.newInstance();
+      Method method=converterClass.getMethod("convert",Map.class);
+      method.invoke(converter,toConvert);
+    }
+ catch (    Throwable t) {
+      if (t instanceof RuntimeException && t.getCause() instanceof IOException) {
+        t=t.getCause();
+      }
+      throw new BuildException("Cannot convert .mps into .mpb: " + t.getMessage() + "\n"+ "Used class path: "+ classPathUrls.toString(),t);
+    }
+  }
+}
