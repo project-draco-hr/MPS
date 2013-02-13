@@ -1,0 +1,25 @@
+{
+  Set<SModule> dependentModules=new HashSet<SModule>(new GlobalModuleDependenciesManager(modules).getModules(Deptype.COMPILE));
+  Set<SModule> fromGenerators=new HashSet<SModule>();
+  for (  SModule m : dependentModules) {
+    if (!(m instanceof Language))     continue;
+    for (    Generator generator : ((Language)m).getGenerators()) {
+      if (dependentModules.contains(generator))       continue;
+      fromGenerators.addAll(new GlobalModuleDependenciesManager(generator).getModules(Deptype.COMPILE));
+    }
+  }
+  dependentModules.addAll(fromGenerators);
+  Set<String> result=new HashSet<String>();
+  for (  SModule module : dependentModules) {
+    JavaModuleFacet facet=module.getFacet(JavaModuleFacet.class);
+    if (facet != null) {
+      if (modules.contains(module)) {
+        result.addAll(facet.getLibraryClassPath());
+      }
+ else {
+        result.addAll(facet.getClassPath());
+      }
+    }
+  }
+  return result;
+}
