@@ -1,15 +1,14 @@
 {
-  final ClasspathStringCollector visitor=new ClasspathStringCollector();
-  module.getClassPathItem().accept(visitor);
+  Set<String> classpath=SetSequence.fromSet(new HashSet<String>());
   if (withDependencies) {
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        AbstractModule.getDependenciesClasspath(CollectionUtil.set(module),false).accept(visitor);
-      }
-    }
-);
+    SetSequence.fromSet(classpath).addSequence(SetSequence.fromSet(JavaModuleOperations.collectExecuteClasspath(Collections.singleton(module))));
   }
-  Set<String> visited=visitor.getClasspath();
-  visited.removeAll(CommonPaths.getJDKPath());
-  return SetSequence.fromSetWithValues(new HashSet<String>(),visited);
+ else {
+    JavaModuleFacet facet=module.getFacet(JavaModuleFacet.class);
+    if (facet != null) {
+      SetSequence.fromSet(classpath).addSequence(CollectionSequence.fromCollection(facet.getClassPath()));
+    }
+  }
+  SetSequence.fromSet(classpath).removeSequence(ListSequence.fromList(CommonPaths.getJDKPath()));
+  return classpath;
 }
