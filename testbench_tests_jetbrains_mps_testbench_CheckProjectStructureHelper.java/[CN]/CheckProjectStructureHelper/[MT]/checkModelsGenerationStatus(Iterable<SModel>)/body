@@ -1,0 +1,32 @@
+{
+  final List<String> errors=new ArrayList<String>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      SModel md : models) {
+        if (!(md instanceof GeneratableSModel))         continue;
+        GeneratableSModel sm=(GeneratableSModel)md;
+        if (!sm.isGeneratable())         continue;
+        SModule module=sm.getModule();
+        if (module == null) {
+          errors.add("Model without a module: " + sm.getModelReference().toString());
+          continue;
+        }
+        String genHash=ModelGenerationStatusManager.getLastGenerationHash(sm);
+        if (genHash == null) {
+          errors.add("No generated hash for " + sm.getModelReference().toString());
+          continue;
+        }
+        String realHash=sm.getModelHash();
+        if (realHash == null) {
+          errors.add("cannot gen cache for " + sm.getModelReference().toString());
+          continue;
+        }
+        if (!realHash.equals(genHash)) {
+          errors.add("model requires generation: " + sm.getModelReference().toString() + " last genHash:"+ genHash+ " modelHash:"+ realHash);
+        }
+      }
+    }
+  }
+);
+  return errors;
+}
