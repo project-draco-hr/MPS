@@ -3,11 +3,16 @@
     final Wrappers._T<List<SModel>> models=new Wrappers._T<List<SModel>>();
     ModelAccess.instance().runReadAction(new Runnable(){
       public void run(){
-        Iterable<SModelDescriptor> allModels=SModelRepository.getInstance().getModelDescriptors();
+        Iterable<SModel> allModels=Sequence.fromIterable(((Iterable<SModelDescriptor>)SModelRepository.getInstance().getModelDescriptors())).select(new ISelector<SModelDescriptor,SModel>(){
+          public SModel select(          SModelDescriptor it){
+            return (SModel)it;
+          }
+        }
+);
         final ModelGenerationStatusManager mgsm=ModelGenerationStatusManager.getInstance();
-        models.value=ListSequence.fromListWithValues(new ArrayList<SModel>(),Sequence.fromIterable(allModels).where(new IWhereFilter<SModelDescriptor>(){
-          public boolean accept(          SModelDescriptor it){
-            return it.isGeneratable() && mgsm.generationRequired(it);
+        models.value=ListSequence.fromListWithValues(new ArrayList<SModel>(),Sequence.fromIterable(allModels).where(new IWhereFilter<SModel>(){
+          public boolean accept(          SModel it){
+            return mgsm.generationRequired(it);
           }
         }
 ));
