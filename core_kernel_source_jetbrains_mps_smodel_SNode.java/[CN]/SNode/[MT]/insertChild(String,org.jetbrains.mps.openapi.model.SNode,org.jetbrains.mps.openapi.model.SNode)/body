@@ -3,7 +3,7 @@
   if (ourMemberAccessModifier != null) {
     role=ourMemberAccessModifier.getNewChildRole(myModel,myConceptFqName,role);
   }
-  SNode schild=(SNode)child;
+  final SNode schild=(SNode)child;
   SNode parentOfChild=schild.getParent();
   if (parentOfChild != null) {
     throw new RuntimeException(org.jetbrains.mps.openapi.model.SNodeUtil.getDebugText(schild) + " already has parent: " + org.jetbrains.mps.openapi.model.SNodeUtil.getDebugText(parentOfChild)+ "\n"+ "Couldn't add it to: "+ org.jetbrains.mps.openapi.model.SNodeUtil.getDebugText(this));
@@ -22,7 +22,13 @@
     schild.clearModel();
   }
   if (model == null)   return;
-  model.performUndoableAction(new InsertChildAtUndoableAction(this,((SNode)anchor),role,schild));
+  final String finalRole=role;
+  model.performUndoableAction(new Computable<SNodeUndoableAction>(){
+    public SNodeUndoableAction compute(){
+      return new InsertChildAtUndoableAction(SNode.this,anchor,finalRole,schild);
+    }
+  }
+);
   if (ModelChange.needFireEvents(model,this)) {
     model.fireChildAddedEvent(this,role,schild,((SNode)anchor));
   }
