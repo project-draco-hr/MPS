@@ -1,37 +1,37 @@
 {
+  JavaModuleFacet facet=module.getFacet(JavaModuleFacet.class);
+  if (facet == null) {
+    return true;
+  }
+  if (!facet.isCompileInMps()) {
+    error("Module is compiled in IntelliJ IDEA, can't compile it.");
+    return false;
+  }
   boolean compiledSuccessfully=true;
-  if (module instanceof AbstractModule) {
-    if (!((AbstractModule)module).isCompileInMPS()) {
-      error("Module is compiled in IntelliJ IDEA, can't compile it.");
+  checkMonitorCanceled(monitor);
+  String info="compiling in JetBrains MPS...";
+  try {
+    monitor.start(info,10);
+    info(info);
+    MPSCompilationResult compilationResult=new ModuleMaker().make(CollectionUtil.set(module),new EmptyProgressMonitor());
+    if (compilationResult == null || compilationResult.getErrors() > 0) {
       compiledSuccessfully=false;
     }
- else {
-      checkMonitorCanceled(monitor);
-      String info="compiling in JetBrains MPS...";
-      try {
-        monitor.start(info,10);
-        info(info);
-        MPSCompilationResult compilationResult=new ModuleMaker().make(CollectionUtil.set(module),new EmptyProgressMonitor());
-        if (compilationResult == null || compilationResult.getErrors() > 0) {
-          compiledSuccessfully=false;
-        }
-        if (compilationResult != null) {
-          if (compilationResult.getErrors() > 0) {
-            error("" + compilationResult);
-          }
- else           if (compilationResult.getWarnings() > 0) {
-            warning("" + compilationResult);
-          }
- else {
-            info("" + compilationResult);
-          }
-        }
+    if (compilationResult != null) {
+      if (compilationResult.getErrors() > 0) {
+        error("" + compilationResult);
       }
-  finally {
-        monitor.done();
+ else       if (compilationResult.getWarnings() > 0) {
+        warning("" + compilationResult);
+      }
+ else {
+        info("" + compilationResult);
       }
     }
-    checkMonitorCanceled(monitor);
   }
+  finally {
+    monitor.done();
+  }
+  checkMonitorCanceled(monitor);
   return compiledSuccessfully;
 }
