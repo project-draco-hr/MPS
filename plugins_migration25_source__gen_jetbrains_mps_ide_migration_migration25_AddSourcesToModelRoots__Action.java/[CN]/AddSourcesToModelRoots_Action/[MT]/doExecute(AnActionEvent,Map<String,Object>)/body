@@ -2,9 +2,17 @@
   try {
     MPSProject mpsProject=((Project)MapSequence.fromMap(_params).get("project")).getComponent(MPSProject.class);
     List<IModule> allModules=ListSequence.fromListWithValues(new ArrayList<IModule>(),mpsProject.getModules());
-    for (    final IModule module : ListSequence.fromList(allModules)) {
+    for (    IModule module : ListSequence.fromList(allModules)) {
       ModuleDescriptor descriptor=module.getModuleDescriptor();
       if (descriptor == null) {
+        continue;
+      }
+      JavaModuleFacet facet=module.getFacet(JavaModuleFacet.class);
+      if (facet == null) {
+        continue;
+      }
+      final IFile classesGen=facet.getClassesGen();
+      if (classesGen == null) {
         continue;
       }
       Collection<String> sp=descriptor.getSourcePaths();
@@ -19,14 +27,14 @@
       }
 ).where(new IWhereFilter<ModelRoot>(){
         public boolean accept(        ModelRoot it){
-          return it != null && LanguageID.JAVA_MANAGER.equals(it.getManager()) && EqualUtil.equals(it.getPath(),module.getClassesGen().getPath());
+          return it != null && LanguageID.JAVA_MANAGER.equals(it.getManager()) && EqualUtil.equals(it.getPath(),classesGen.getPath());
         }
       }
 ).isNotEmpty();
       if (exist) {
         continue;
       }
-      CollectionSequence.fromCollection(mrs).addElement(ModelRootDescriptor.getJavaStubsModelRoot(module.getClassesGen().getPath()));
+      CollectionSequence.fromCollection(mrs).addElement(ModelRootDescriptor.getJavaStubsModelRoot(classesGen.getPath()));
       module.setModuleDescriptor(descriptor,false);
       module.save();
     }
