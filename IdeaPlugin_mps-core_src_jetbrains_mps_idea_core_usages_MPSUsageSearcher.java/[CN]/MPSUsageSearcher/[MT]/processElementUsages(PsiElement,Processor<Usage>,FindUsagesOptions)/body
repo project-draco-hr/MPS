@@ -1,11 +1,10 @@
 {
-  if (!(queryParameters.getScope() instanceof GlobalSearchScope)) {
+  if (!(options.searchScope instanceof GlobalSearchScope)) {
     return;
   }
-  GlobalSearchScope scope=(GlobalSearchScope)queryParameters.getScope();
-  Project project=scope.getProject();
+  GlobalSearchScope scope=(GlobalSearchScope)options.searchScope;
+  final Project project=scope.getProject();
   final MPSPsiProvider psiProvider=MPSPsiProvider.getInstance(project);
-  final PsiMethod targetMethod=queryParameters.getMethod();
   for (  Module module : ModuleManager.getInstance(project).getModules()) {
     if (!scope.isSearchInModuleContent(module))     continue;
     MPSFacet facet=FacetManager.getInstance(module).getFacetByType(MPSFacetType.ID);
@@ -25,16 +24,18 @@
             }
             for (            SReference ref : node.getReferences()) {
               SNode targetNode=ref.getTargetNode();
-              PsiElement targetPsiElement=JavaMPSPsiNodeFactory.getPsiSourceOf(targetNode);
-              if (targetPsiElement == targetMethod) {
-                PsiElement mpsPsiElem=psiProvider.getPsi(node);
-                if (!(mpsPsiElem instanceof MPSPsiNode))                 continue;
-                MPSPsiNode mpsPsiNode=(MPSPsiNode)mpsPsiElem;
-                MPSPsiRef[] refs=mpsPsiNode.getReferences("baseMethodDeclaration");
-                if (refs.length == 0) {
-                  continue;
+              PsiElement targetPsiElement=null;
+              for (              MPSNodePsiSourceFinder finder : MPSNodePsiSourceFinder.EP_NAME.getExtensions()) {
+                PsiElement psiElement=finder.getPsiSource(targetNode,project);
+                if (psiElement != null) {
+                  targetPsiElement=psiElement;
                 }
-                boolean proceed=consumer.process(refs[0].getReference());
+              }
+              if (targetPsiElement == null) {
+                continue;
+              }
+              if (targetPsiElement == element) {
+                boolean proceed=processor.process(new NodeUsage(node.getReference(),project,"Bla-bla"));
                 if (!proceed)                 return;
               }
             }
