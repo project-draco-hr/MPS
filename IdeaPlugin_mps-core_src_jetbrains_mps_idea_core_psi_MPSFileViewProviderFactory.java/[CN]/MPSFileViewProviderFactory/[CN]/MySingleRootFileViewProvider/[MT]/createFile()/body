@@ -3,13 +3,19 @@
   if (virtualFile instanceof LightVirtualFile) {
     virtualFile=((LightVirtualFile)virtualFile).getOriginalFile();
   }
-  SModelReference smref=virtualFile.getUserData(MPSKeys.MODEL_REFERENCE);
-  if (smref != null) {
-    MPSPsiProvider mpsPsiProvider=MPSPsiProvider.getInstance(getManager().getProject());
-    MPSPsiModel psiModel=mpsPsiProvider.getPsi(smref);
-    FileSourcePsiFile psiFile=new FileSourcePsiFile(this,smref.getModelName());
-    psiFile.update(psiModel.getChildren());
-    return psiFile;
+  if (virtualFile == null || virtualFile.getFileType() != MPSFileTypeFactory.MODEL_FILE_TYPE) {
+    return null;
   }
-  return null;
+  final IFile modelFile=FileSystem.getInstance().getFileByPath(virtualFile.getPath());
+  FileSourcePsiFile psiFile=ModelAccess.instance().runReadAction(new Computable<FileSourcePsiFile>(){
+    @Override public FileSourcePsiFile compute(){
+      SModelDescriptor descr=SModelFileTracker.getInstance().findModel(modelFile);
+      if (descr != null) {
+        return createAndUpdatePsiFile(descr);
+      }
+      return null;
+    }
+  }
+);
+  return psiFile;
 }

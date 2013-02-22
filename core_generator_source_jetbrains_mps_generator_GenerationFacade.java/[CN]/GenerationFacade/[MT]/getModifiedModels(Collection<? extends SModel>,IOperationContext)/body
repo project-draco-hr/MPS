@@ -1,0 +1,36 @@
+{
+  Set<SModel> result=new LinkedHashSet<SModel>();
+  ModelGenerationStatusManager statusManager=ModelGenerationStatusManager.getInstance();
+  for (  SModel sm : models) {
+    if (statusManager.generationRequired(sm)) {
+      result.add(sm);
+      continue;
+    }
+    if (!(SModelStereotype.DESCRIPTOR.equals(SModelStereotype.getStereotype(sm)) || LanguageAspect.BEHAVIOR.is(sm) || LanguageAspect.CONSTRAINTS.is(sm))) {
+      continue;
+    }
+    GenerationDependencies oldDependencies=GenerationDependenciesCache.getInstance().get(sm);
+    if (oldDependencies == null) {
+      continue;
+    }
+    Map<String,String> externalHashes=oldDependencies.getExternalHashes();
+    for (    Entry<String,String> entry : externalHashes.entrySet()) {
+      String modelReference=entry.getKey();
+      SModelDescriptor rmd=SModelRepository.getInstance().getModelDescriptor(SModelReference.fromString(modelReference));
+      if (rmd == null) {
+        result.add(sm);
+        break;
+      }
+      String oldHash=entry.getValue();
+      if (oldHash == null) {
+        continue;
+      }
+      String newHash=statusManager.currentHash(rmd);
+      if (newHash == null || !oldHash.equals(newHash)) {
+        result.add(sm);
+        break;
+      }
+    }
+  }
+  return result;
+}
