@@ -1,27 +1,16 @@
 {
   return ModelAccess.instance().runReadAction(new Computable<List<INodeSubstituteAction>>(){
     public List<INodeSubstituteAction> compute(){
-      Pair<String,List<INodeSubstituteAction>> pair=getPatternAndActions(pattern,strictMatching);
-      List<INodeSubstituteAction> result=new ArrayList<INodeSubstituteAction>();
-      for (      INodeSubstituteAction item : pair.o2) {
-        if (strictMatching) {
-          if (item.canSubstituteStrictly(pattern)) {
-            result.add(item);
-          }
-        }
- else {
-          if (item.canSubstitute(pattern)) {
-            result.add(item);
-          }
+      List<INodeSubstituteAction> actionsFromCache=getActionsFromCache(pattern,strictMatching);
+      ArrayList<INodeSubstituteAction> result=new ArrayList<INodeSubstituteAction>(actionsFromCache.size());
+      for (      INodeSubstituteAction item : actionsFromCache) {
+        if (strictMatching ? item.canSubstituteStrictly(pattern) : item.canSubstitute(pattern)) {
+          result.add(item);
         }
       }
-      if (strictMatching) {
-        myStrictPatternsToActionListsCache.put(pattern,new ArrayList<INodeSubstituteAction>(result));
-      }
- else {
-        myPatternsToActionListsCache.put(pattern,new ArrayList<INodeSubstituteAction>(result));
-      }
-      return (List)result;
+      putActionsToCache(pattern,strictMatching,result);
+      result.trimToSize();
+      return result;
     }
   }
 );
