@@ -1,0 +1,60 @@
+{
+  final List<SearchResult<ModelCheckerIssue>> results=ListSequence.fromList(new ArrayList<SearchResult<ModelCheckerIssue>>());
+  if (model == null || model.getModelDescriptor() == null || model.getModelDescriptor().getModule() == null) {
+    return results;
+  }
+  String title="Checking " + SModelOperations.getModelName(model) + " for bad references...";
+  if (monitor.isCanceled()) {
+    return results;
+  }
+  monitor.start(title,1);
+  if (LanguageAspect.STRUCTURE.is(model.getModelDescriptor())) {
+    for (    SNode concept : ListSequence.fromList(SModelOperations.getRoots(model,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration"))) {
+      for (      SNode ref : ListSequence.fromList(SLinkOperations.getTargets(concept,"linkDeclaration",true)).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return SPropertyOperations.hasValue(it,"metaClass","reference","reference");
+        }
+      }
+)) {
+        SNode target=SLinkOperations.getTarget(ref,"target",false);
+        if (SNodeOperations.isInstanceOf(target,"jetbrains.mps.lang.structure.structure.ConceptDeclaration")) {
+          SNode decl=SNodeOperations.cast(target,"jetbrains.mps.lang.structure.structure.ConceptDeclaration");
+          if (SPropertyOperations.hasValue(decl,"staticScope","none",null)) {
+            addIssue(results,ref,"Reference to a non-referenceable concept found: " + SPropertyOperations.getString(target,"name"),ModelChecker.SEVERITY_ERROR,"reference to a non-referenceable concept",null);
+          }
+        }
+      }
+      if (SNodeOperations.isInstanceOf(concept,"jetbrains.mps.lang.structure.structure.ConceptDeclaration") && SPropertyOperations.hasValue(SNodeOperations.cast(concept,"jetbrains.mps.lang.structure.structure.ConceptDeclaration"),"staticScope","none",null)) {
+        SNode c=concept;
+        if (SConceptOperations.isSubConceptOf(c,"jetbrains.mps.lang.core.structure.INamedConcept")) {
+          addIssue(results,c,"INamedConcept inheritors are usually referenceable",ModelChecker.SEVERITY_WARNING,"non-referenceable named concept",null);
+        }
+      }
+    }
+  }
+  for (  SNode node : ListSequence.fromList(SModelOperations.getNodes(model,null))) {
+    if (monitor.isCanceled()) {
+      break;
+    }
+    for (    SReference ref : Sequence.fromIterable(SNodeOperations.getReferences(node))) {
+      if ((AttributeOperations.getAttribute(node,new IAttributeDescriptor.LinkAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.lang.generator.structure.ReferenceMacro"),SLinkOperations.getRole(ref))) != null)) {
+        continue;
+      }
+      SNode target=jetbrains.mps.util.SNodeOperations.getTargetNodeSilently(ref);
+      if (target == null) {
+        addIssue(results,node,"Unresolved reference: " + SLinkOperations.getResolveInfo(ref),ModelChecker.SEVERITY_ERROR,"unresolved reference",null);
+        continue;
+      }
+      checkNode(results,target,node,false,target);
+      SNode curr=target;
+      while (!(SNodeOperations.isAttribute(curr))) {
+        curr=SNodeOperations.getParent(curr);
+        if (curr == null) {
+          break;
+        }
+        checkNode(results,curr,node,true,target);
+      }
+    }
+  }
+  return results;
+}
