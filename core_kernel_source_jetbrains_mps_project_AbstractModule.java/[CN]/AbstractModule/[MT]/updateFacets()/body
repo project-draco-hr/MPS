@@ -1,0 +1,33 @@
+{
+  ModelAccess.assertLegalWrite();
+  ModuleDescriptor descriptor=getModuleDescriptor();
+  if (descriptor == null) {
+    return;
+  }
+  for (  ModuleFacetBase facet : myFacets) {
+    facet.dispose();
+  }
+  myFacets.clear();
+  Map<String,Memento> config=new HashMap<String,Memento>();
+  for (  ModuleFacetDescriptor facetDescriptors : descriptor.getModuleFacetDescriptors()) {
+    config.put(facetDescriptors.getType(),facetDescriptors.getMemento());
+  }
+  Set<String> types=new HashSet<String>();
+  collectFacetTypes(types);
+  for (  String facetType : types) {
+    FacetFactory factory=FacetsFacade.getInstance().getFacetFactory(facetType);
+    if (factory == null) {
+      LOG.error("no registered factory for a facet with type=`" + facetType + "'");
+      continue;
+    }
+    SModuleFacet newFacet=factory.create();
+    if (!(newFacet instanceof ModuleFacetBase)) {
+      LOG.error("broken facet factory: " + factory.getClass().getName());
+      continue;
+    }
+    ModuleFacetBase facet=(ModuleFacetBase)newFacet;
+    Memento m=config.get(facetType);
+    setupFacet(facet,m);
+    myFacets.add(facet);
+  }
+}
