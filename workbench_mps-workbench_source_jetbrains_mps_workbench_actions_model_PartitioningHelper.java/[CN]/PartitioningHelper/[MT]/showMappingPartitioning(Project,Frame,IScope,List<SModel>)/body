@@ -1,0 +1,68 @@
+{
+  SModel inputModel=models.get(0).getSModel();
+  GenerationPlan plan=new GenerationPlan(inputModel);
+  Map<MappingPriorityRule,TemplateModule> myRule2Generator=new HashMap<MappingPriorityRule,TemplateModule>();
+  for (  TemplateModule generator : plan.getGenerators()) {
+    Collection<TemplateMappingPriorityRule> priorities=generator.getPriorities();
+    if (priorities == null) {
+      continue;
+    }
+    for (    TemplateMappingPriorityRule rule : priorities) {
+      myRule2Generator.put((MappingPriorityRule)rule,generator);
+    }
+  }
+  MessagesViewTool messagesView=project.getComponent(MessagesViewTool.class);
+  messagesView.resetAutoscrollOption();
+  messagesView.add(new Message(MessageKind.INFORMATION,"================================="));
+  for (  TemplateModule generator : plan.getGenerators()) {
+    Collection<TemplateMappingPriorityRule> rules=generator.getPriorities();
+    if (rules == null) {
+      continue;
+    }
+    List<Pair<MappingPriorityRule,String>> strings=GenerationPartitioningUtil.toStrings(rules,true);
+    for (    Pair<MappingPriorityRule,String> string : strings) {
+      Message msg=new Message(MessageKind.INFORMATION," " + string.o2);
+      msg.setHintObject(generator.getReference());
+      messagesView.add(msg);
+    }
+  }
+  messagesView.add(new Message(MessageKind.INFORMATION,"================================="));
+  if (plan.hasConflictingPriorityRules()) {
+    messagesView.openToolLater(true);
+    messagesView.add(new Message(MessageKind.ERROR,PartitioningHelper.class,"Conflicting mapping priority rules encountered:"));
+    List<Pair<MappingPriorityRule,String>> messagesFull=plan.getConflictingPriorityRulesAsStrings();
+    for (    Pair<MappingPriorityRule,String> message : messagesFull) {
+      Message msg=new Message(MessageKind.ERROR,PartitioningHelper.class,message.o2);
+      TemplateModule templateModule=myRule2Generator.get(message.o1);
+      msg.setHintObject(templateModule.getReference());
+      messagesView.add(msg);
+    }
+    messagesView.add(new Message(MessageKind.INFORMATION,"================================="));
+    JOptionPane.showMessageDialog(frame,"Conflicting mapping priority rules encountered","Generation plan error",JOptionPane.WARNING_MESSAGE);
+  }
+  String text="";
+  for (int step=0; step < plan.getStepCount(); step++) {
+    List<TemplateMappingConfiguration> mappingSet=plan.getMappingConfigurations(step);
+    text=text + " [ " + (step + 1)+ " ]\n";
+    List<String> strings=GenerationPartitioningUtil.toStrings(mappingSet);
+    for (    String string : strings) {
+      text=text + " " + string+ "\n";
+    }
+    text+="\n";
+  }
+  OutputViewTool viewTool=OutputViewTool.getOutputViewTool(project);
+  viewTool.clear();
+  viewTool.append("---------------------  mappings partitioning  -----------------------------------\n\n");
+  viewTool.append(text);
+  viewTool.append("---------------------------------------------------------------------------------\n");
+  List<SNode> roots=new ArrayList<SNode>();
+  for (  SModel md : models) {
+    SModel model=md.getSModel();
+    for (    SNode root : model.getRootNodes()) {
+      roots.add(root);
+    }
+  }
+  ConnectedComponentPartitioner ccp=new ConnectedComponentPartitioner(roots);
+  viewTool.append(ccp.toString());
+  viewTool.openToolLater(true);
+}
