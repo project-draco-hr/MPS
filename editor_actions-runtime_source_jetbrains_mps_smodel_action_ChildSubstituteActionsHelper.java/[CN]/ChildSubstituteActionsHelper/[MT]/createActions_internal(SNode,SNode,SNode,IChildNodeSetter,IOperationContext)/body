@@ -1,13 +1,9 @@
 {
-  List<INodeSubstituteAction> resultActions=new ArrayList<INodeSubstituteAction>();
-  if (childConcept == null) {
-    return resultActions;
-  }
   if (childConcept == SModelUtil.getBaseConcept()) {
     if ((currentChild == null || currentChild.getConcept().getId().equals(SNodeUtil.concept_BaseConcept))) {
-      resultActions=new ArrayList<INodeSubstituteAction>();
       ISearchScope conceptsSearchScope=SModelSearchUtil.createConceptsFromModelLanguagesScope(parentNode.getModel(),true,context.getScope());
       List<SNode> allVisibleConcepts=conceptsSearchScope.getNodes();
+      List<SubstituteAction> resultActions=new ArrayList<SubstituteAction>(allVisibleConcepts.size());
       for (      final SNode visibleConcept : allVisibleConcepts) {
         resultActions.add(new DefaultChildNodeSubstituteAction(visibleConcept,parentNode,currentChild,childSetter,context.getScope()){
           public String getMatchingText(          String pattern){
@@ -33,15 +29,15 @@
   Language primaryLanguage=SModelUtil.getDeclaringLanguage(childConcept);
   if (primaryLanguage == null) {
     LOG.error("Couldn't build actions : couldn't get declaring language for concept " + org.jetbrains.mps.openapi.model.SNodeUtil.getDebugText(childConcept));
-    return resultActions;
+    return Collections.emptyList();
   }
+  List<SubstituteAction> resultActions=new ArrayList<SubstituteAction>();
   List<SNode> allBuilders=ChildSubstituteActionsUtil.getActionsBuilders(parentNode,currentChild,childConcept,childSetter,context);
   if (!ChildSubstituteActionsUtil.containsRemoveDefaults(allBuilders)) {
     resultActions.addAll(createPrimaryChildSubstituteActions(parentNode,currentChild,childConcept,childSetter,context));
   }
   for (  SNode builder : allBuilders) {
-    List<INodeSubstituteAction> addActions=ChildSubstituteActionsUtil.invokeActionFactory(builder,parentNode,currentChild,childConcept,childSetter,context);
-    resultActions.addAll(addActions);
+    resultActions.addAll(ChildSubstituteActionsUtil.invokeActionFactory(builder,parentNode,currentChild,childConcept,childSetter,context));
   }
   for (  SNode builder : allBuilders) {
     resultActions=ChildSubstituteActionsUtil.applyActionFilter(builder,resultActions,parentNode,currentChild,childConcept,context);
@@ -54,9 +50,8 @@
  else {
       linkDeclaration=((jetbrains.mps.smodel.SNode)currentChild).getRoleLink();
     }
-    Iterator<INodeSubstituteAction> it=resultActions.iterator();
-    while (it.hasNext()) {
-      INodeSubstituteAction action=it.next();
+    for (Iterator<SubstituteAction> it=resultActions.iterator(); it.hasNext(); ) {
+      SubstituteAction action=it.next();
       SNode conceptNode=action.getOutputConcept();
       if (conceptNode == null) {
         continue;
