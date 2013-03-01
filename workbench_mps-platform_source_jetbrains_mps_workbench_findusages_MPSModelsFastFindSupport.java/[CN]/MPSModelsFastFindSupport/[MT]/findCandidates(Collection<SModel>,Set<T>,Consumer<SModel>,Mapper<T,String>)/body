@@ -1,0 +1,36 @@
+{
+  final ManyToManyMap<SModel,VirtualFile> scopeFiles=new ManyToManyMap<SModel,VirtualFile>();
+  for (  final SModel sm : models) {
+    if (sm instanceof EditableSModel && ((EditableSModel)sm).isChanged()) {
+      continue;
+    }
+    DataSource source=sm.getSource();
+    if (!(source instanceof FileDataSource)) {
+      continue;
+    }
+    IFile modelFile=((FileDataSource)source).getFile();
+    String ext=FileUtil.getExtension(modelFile.getName());
+    if (ext == null || modelFile.isDirectory() || !(indexedFileExtensions.contains(ext.toLowerCase()))) {
+      continue;
+    }
+    VirtualFile vf=VirtualFileUtils.getVirtualFile(modelFile);
+    if (vf == null) {
+      LOG.warning("Model " + sm.getModelName() + ": virtual file not found for model file. Model file: "+ modelFile.getPath());
+      continue;
+    }
+    processedModels.consume(sm);
+    scopeFiles.addLink(sm,vf);
+  }
+  MultiMap<SModel,T> result=new SetBasedMultiMap<SModel,T>();
+  for (  T elem : elems) {
+    String nodeId=id == null ? elem.toString() : id.value(elem);
+    ConcreteFilesGlobalSearchScope allFiles=new ConcreteFilesGlobalSearchScope(scopeFiles.getSecond());
+    Collection<VirtualFile> matchingFiles=FileBasedIndex.getInstance().getContainingFiles(IdIndex.NAME,new IdIndexEntry(nodeId,true),allFiles);
+    for (    VirtualFile file : matchingFiles) {
+      for (      SModel m : scopeFiles.getBySecond(file)) {
+        result.putValue(m,elem);
+      }
+    }
+  }
+  return result;
+}

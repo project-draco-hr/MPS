@@ -1,0 +1,32 @@
+{
+  CollectConsumer<SReference> consumer=new CollectConsumer(new HashSet<SReference>());
+  Collection<FindUsagesParticipant> participants=FastFindUsagesRegistry.getInstance().getParticipants();
+  monitor.start("Finding usages...",participants.size() + 4);
+  try {
+    Collection<SModel> current=IterableUtil.asCollection(scope.getModels());
+    for (    FindUsagesParticipant participant : participants) {
+      final Set<SModel> next=new HashSet<SModel>(current);
+      participant.findUsages(current,nodes,consumer,new Consumer<SModel>(){
+        @Override public void consume(        SModel sModel){
+          next.remove(sModel);
+        }
+      }
+);
+      current=next;
+      monitor.advance(1);
+    }
+    ProgressMonitor subMonitor=monitor.subTask(4,SubProgressKind.DEFAULT);
+    subMonitor.start("",current.size());
+    for (    SModel m : current) {
+      subMonitor.step(m.getModelName());
+      FindUsagesManager.collectUsages(m,nodes,consumer);
+      if (monitor.isCanceled())       break;
+      subMonitor.advance(1);
+    }
+    subMonitor.done();
+  }
+  finally {
+    monitor.done();
+  }
+  return (Set<SReference>)consumer.getResult();
+}
