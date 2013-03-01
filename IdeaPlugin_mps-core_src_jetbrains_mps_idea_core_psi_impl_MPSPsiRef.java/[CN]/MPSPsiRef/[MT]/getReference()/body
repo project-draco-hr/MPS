@@ -7,16 +7,40 @@
       return new TextRange(0,1);
     }
     @Nullable @Override public PsiElement resolve(){
-      return null;
+      return MPSPsiRef.this.resolve();
     }
     @NotNull @Override public String getCanonicalText(){
       return null;
     }
     @Override public PsiElement handleElementRename(    String newElementName) throws IncorrectOperationException {
-      return null;
+      return MPSPsiRef.this;
     }
-    @Override public PsiElement bindToElement(    @NotNull PsiElement element) throws IncorrectOperationException {
-      return null;
+    @Override public PsiElement bindToElement(    final @NotNull PsiElement element) throws IncorrectOperationException {
+      if (element instanceof MPSPsiNodeBase) {
+      }
+ else {
+        final SNode newTargetNode=MPS2PsiMapperUtil.findNodeByPsi(element,getProject());
+        PsiElement psiParent=getParent();
+        if (psiParent instanceof MPSPsiNode) {
+          MPSPsiNode mpsParent=(MPSPsiNode)psiParent;
+          final SNode parentNode=mpsParent.getSNodeReference().resolve(MPSModuleRepository.getInstance());
+          ModelAccess.instance().runWriteAction(new Runnable(){
+            @Override public void run(){
+              if (newTargetNode == null) {
+                parentNode.setReferenceTarget(role,null);
+              }
+ else {
+                parentNode.setReferenceTarget(role,newTargetNode);
+                model=newTargetNode.getModel().getReference();
+                nodeId=newTargetNode.getNodeId();
+                referenceText=element instanceof PsiNamedElement ? ((PsiNamedElement)element).getName() : element.toString();
+              }
+            }
+          }
+);
+        }
+      }
+      return MPSPsiRef.this;
     }
     @Override public boolean isReferenceTo(    PsiElement element){
       return false;
