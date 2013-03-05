@@ -1,37 +1,12 @@
 {
-  final IFile modelFile=getModelFile(parent);
-  if (!(parent instanceof PsiFileNode || parent instanceof PsiDirectoryNode))   return children;
-  if (modelFile == null) {
-    final List<AbstractTreeNode> modifiedChildren=new ArrayList<AbstractTreeNode>();
-    for (    AbstractTreeNode childNode : children) {
-      final IFile childModelFile=getModelFile(childNode);
-      final AbstractTreeNode node=childNode;
-      if (childModelFile != null && childNode instanceof PsiFileNode) {
-        ModelAccess.instance().runReadAction(new Runnable(){
-          public void run(){
-            SModelDescriptor descr=SModelFileTracker.getInstance().findModel(childModelFile);
-            if (descr != null)             modifiedChildren.add(new MPSProjectViewModelPsiFile((PsiFileNode)node,descr));
-          }
-        }
-);
-        continue;
-      }
-      modifiedChildren.add(childNode);
-    }
-    return modifiedChildren;
+  if (treeNode instanceof PsiDirectoryNode) {
+    return modifyDirectoryChildren(treeNode,children,settings);
   }
-  final List<AbstractTreeNode> newChildren=new ArrayList<AbstractTreeNode>(children);
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      SModelDescriptor descr=SModelFileTracker.getInstance().findModel(modelFile);
-      if (descr == null)       return;
-      SModel model=descr.getSModel();
-      if (model == null)       return;
-      for (      SNode root : model.roots()) {
-        newChildren.add(new MPSProjectViewNode(parent.getProject(),root,settings));
-      }
-    }
+  if (!(treeNode instanceof MPSPsiModelTreeNode))   return children;
+  MPSPsiModel psiModel=(MPSPsiModel)((MPSPsiModelTreeNode)treeNode).getValue();
+  List<AbstractTreeNode> newChildren=new ArrayList<AbstractTreeNode>();
+  for (  PsiElement psiElement : psiModel.getChildren()) {
+    newChildren.add(new MPSPsiElementTreeNode(treeNode.getProject(),(MPSPsiNode)psiElement,settings));
   }
-);
   return newChildren;
 }

@@ -11,7 +11,65 @@
   }
   final JBLabel label=new JBLabel();
   label.setText(getInfoText());
-  panel.add(label,new GridConstraints(rowIndex,0,1,1,GridConstraints.ANCHOR_NORTHWEST,GridConstraints.FILL_NONE,GridConstraints.SIZEPOLICY_FIXED,GridConstraints.SIZEPOLICY_FIXED,null,null,null,0,false));
-  panel.add(new Spacer(),new GridConstraints(rowIndex,0,1,1,GridConstraints.ANCHOR_CENTER,GridConstraints.FILL_BOTH,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,null,null,null,0,false));
+  panel.add(label,new GridConstraints(rowIndex++,0,1,1,GridConstraints.ANCHOR_NORTHWEST,GridConstraints.FILL_NONE,GridConstraints.SIZEPOLICY_FIXED,GridConstraints.SIZEPOLICY_FIXED,null,null,null,0,false));
+  final JBTable languagesTable=new JBTable();
+  languagesTable.setShowHorizontalLines(false);
+  languagesTable.setShowVerticalLines(false);
+  languagesTable.setAutoCreateRowSorter(false);
+  languagesTable.setAutoscrolls(true);
+  myLangEngagedOnGenTM=new ModelsLangEngagedOnGenTM(myModelProperties);
+  languagesTable.setModel(myLangEngagedOnGenTM);
+  languagesTable.setDefaultRenderer(ModuleReference.class,new InModelModuleTableCellRender());
+  languagesTable.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+  ToolbarDecorator decorator=ToolbarDecorator.createDecorator(languagesTable);
+  decorator.setAddAction(new AnActionButtonRunnable(){
+    @Override public void run(    AnActionButton anActionButton){
+      List<ModuleReference> list=(new LanguageChooser()).compute();
+      for (      ModuleReference reference : list)       myLangEngagedOnGenTM.addItem(reference);
+    }
+  }
+).setRemoveAction(new AnActionButtonRunnable(){
+    @Override public void run(    AnActionButton anActionButton){
+      TableUtil.removeSelectedItems(languagesTable);
+      myLangEngagedOnGenTM.fireTableDataChanged();
+    }
+  }
+);
+  decorator.setPreferredSize(new Dimension(500,150));
+  JPanel table=decorator.createPanel();
+  table.setBorder(IdeBorderFactory.createBorder());
+  panel.add(table,new GridConstraints(rowIndex,0,1,1,GridConstraints.ANCHOR_CENTER,GridConstraints.FILL_BOTH,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,null,null,null,0,false));
+  new SpeedSearchBase<JBTable>(languagesTable){
+    @Override public int getSelectedIndex(){
+      return languagesTable.getSelectedRow();
+    }
+    @Override protected int convertIndexToModel(    int viewIndex){
+      return languagesTable.convertRowIndexToModel(viewIndex);
+    }
+    @Override public Object[] getAllElements(){
+      final int count=myLangEngagedOnGenTM.getRowCount();
+      Object[] elements=new Object[count];
+      for (int idx=0; idx < count; idx++) {
+        elements[idx]=myLangEngagedOnGenTM.getValueAt(idx);
+      }
+      return elements;
+    }
+    @Override public String getElementText(    Object element){
+      if (!(element instanceof ModuleReference))       return "";
+      return ((ModuleReference)element).getModuleName();
+    }
+    @Override public void selectElement(    Object element,    String selectedText){
+      final int count=myLangEngagedOnGenTM.getRowCount();
+      for (int row=0; row < count; row++) {
+        if (element.equals(myLangEngagedOnGenTM.getValueAt(row))) {
+          final int viewRow=languagesTable.convertRowIndexToView(row);
+          languagesTable.getSelectionModel().setSelectionInterval(viewRow,viewRow);
+          TableUtil.scrollSelectionToVisible(languagesTable);
+          break;
+        }
+      }
+    }
+  }
+.setComparator(new SpeedSearchComparator(false,true));
   setTabComponent(panel);
 }

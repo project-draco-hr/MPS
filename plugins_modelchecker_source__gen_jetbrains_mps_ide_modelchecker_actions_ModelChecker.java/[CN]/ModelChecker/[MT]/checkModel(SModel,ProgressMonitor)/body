@@ -1,0 +1,41 @@
+{
+  final Wrappers._T<List<SpecificChecker>> specificCheckers=new Wrappers._T<List<SpecificChecker>>(mySpecificCheckers);
+  if (specificCheckers.value == null) {
+    specificCheckers.value=ModelCheckerSettings.getInstance().getSpecificCheckers();
+  }
+  monitor.start("Checking " + SNodeOperations.getModelLongName(modelDescriptor),ListSequence.fromList(specificCheckers.value).count());
+  try {
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        IModule module=modelDescriptor.getModule();
+        Project project=myOperationContext.getProject();
+        if (module == null) {
+          LOG.warning("Module is null for " + SNodeOperations.getModelLongName(modelDescriptor) + " model");
+        }
+        if (project == null) {
+          LOG.warning("Project is null for IOperationContext in " + SNodeOperations.getModelLongName(modelDescriptor) + " model");
+        }
+        if (module != null && project != null) {
+          IOperationContext operationContext=new ModelChecker.ModelCheckerOperationContext(project,module);
+          SModel model=modelDescriptor.getSModel();
+          for (          SpecificChecker specificChecker : ListSequence.fromList(specificCheckers.value)) {
+            try {
+              List<SearchResult<ModelCheckerIssue>> specificCheckerResults=specificChecker.checkModel(model,monitor.subTask(1),operationContext);
+              myResults.getSearchResults().addAll(specificCheckerResults);
+            }
+ catch (            Throwable t) {
+              LOG.error("Error while " + SNodeOperations.getModelLongName(model.getModelDescriptor()) + " model checking",t);
+            }
+            if (monitor.isCanceled()) {
+              break;
+            }
+          }
+        }
+      }
+    }
+);
+  }
+  finally {
+    monitor.done();
+  }
+}

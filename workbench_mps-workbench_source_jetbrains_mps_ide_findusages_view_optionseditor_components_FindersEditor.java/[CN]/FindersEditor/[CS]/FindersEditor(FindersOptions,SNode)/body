@@ -6,7 +6,7 @@
   Set<ReloadableFinder> availableFinders=FindersManager.getInstance().getAvailableFinders(node);
   List<ReloadableFinder> sortedFinders=new ArrayList<ReloadableFinder>(availableFinders);
   Collections.sort(sortedFinders,new Comparator<ReloadableFinder>(){
-    public int compare(    ReloadableFinder o1,    ReloadableFinder o2){
+    @Override public int compare(    ReloadableFinder o1,    ReloadableFinder o2){
       return o1.getDescription().compareToIgnoreCase(o2.getDescription());
     }
   }
@@ -23,9 +23,9 @@
       correctEnabledFinders.add(finder.getFinder().getClass().getName());
     }
     final JBCheckBox finderCheckBox=new JBCheckBox(finder.getFinder().getDescription(),isEnabled);
-    finderCheckBox.setToolTipText("Right click to go to finder declaration");
+    finderCheckBox.setBorder(BorderFactory.createEmptyBorder(0,5,5,0));
     finderCheckBox.addChangeListener(new ChangeListener(){
-      public void stateChanged(      ChangeEvent e){
+      @Override public void stateChanged(      ChangeEvent e){
         String finderClassName=finder.getFinder().getClass().getName();
         if (((JCheckBox)e.getSource()).isSelected()) {
           if (!myOptions.getFindersClassNames().contains(finderClassName)) {
@@ -41,7 +41,7 @@
     }
 );
     finderCheckBox.addKeyListener(new KeyAdapter(){
-      public void keyPressed(      KeyEvent e){
+      @Override public void keyPressed(      KeyEvent e){
         if ((e.getKeyCode() == MenuKeyEvent.VK_B) && (e.getID() == MenuKeyEvent.KEY_PRESSED) && (e.isControlDown())) {
           if (finder.canNavigate()) {
             goToFinder(finder);
@@ -51,31 +51,36 @@
       }
     }
 );
-    finderCheckBox.addMouseListener(new MouseListener(){
-      @Override public void mouseClicked(      MouseEvent e){
-        if (e.getButton() == MouseEvent.BUTTON3 && finder.canNavigate()) {
-          goToFinder(finder);
-        }
-      }
-      @Override public void mouseEntered(      MouseEvent e){
-        finderCheckBox.setFont(finderCheckBox.getFont().deriveFont(Font.BOLD));
-      }
-      @Override public void mouseExited(      MouseEvent e){
-        finderCheckBox.setFont(finderCheckBox.getFont().deriveFont(Font.PLAIN));
-      }
-      @Override public void mousePressed(      MouseEvent e){
-      }
-      @Override public void mouseReleased(      MouseEvent e){
-      }
-    }
-);
     if (!finder.getLongDescription().equals("")) {
       StringBuilder htmlTooltipText=new StringBuilder();
-      htmlTooltipText.append("<html>").append(finder.getLongDescription().replaceAll("\n","<br>")).append("<br>").append("<br>(").append(finderCheckBox.getToolTipText()).append(")</html>");
+      htmlTooltipText.append("<html>").append(finder.getLongDescription().replaceAll("\n","<br>")).append(")</html>");
       finderCheckBox.setToolTipText(htmlTooltipText.toString());
     }
     JToolBar finderHolder=new JToolBar(JToolBar.HORIZONTAL);
     finderHolder.add(finderCheckBox);
+    if (finder.canNavigate()) {
+      JBLabel goToFinderLabel=new JBLabel(Nodes.Symlink,JLabel.CENTER);
+      goToFinderLabel.setBorder(BorderFactory.createEmptyBorder());
+      goToFinderLabel.setFocusable(false);
+      goToFinderLabel.setToolTipText("Go to finder declaration");
+      goToFinderLabel.addMouseListener(new MouseListener(){
+        @Override public void mouseClicked(        MouseEvent e){
+          if (finder.canNavigate()) {
+            goToFinder(finder);
+          }
+        }
+        @Override public void mousePressed(        MouseEvent e){
+        }
+        @Override public void mouseReleased(        MouseEvent e){
+        }
+        @Override public void mouseEntered(        MouseEvent e){
+        }
+        @Override public void mouseExited(        MouseEvent e){
+        }
+      }
+);
+      finderHolder.add(goToFinderLabel);
+    }
     finderHolder.setBorder(new EmptyBorder(0,0,0,0));
     finderHolder.setFloatable(false);
     finderHolder.setAlignmentX(JToolBar.LEFT_ALIGNMENT);

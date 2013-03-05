@@ -3,7 +3,7 @@
     return new HashSet<EditorMessage>();
   }
   SModel model=SNodeOperations.getModel(rootNode);
-  if (model.getModelDescriptor() == null || model.isTransient() || model.isDisposed()) {
+  if (model.getModelDescriptor() == null || model instanceof TransientSModel || jetbrains.mps.util.SNodeOperations.isModelDisposed(model)) {
     return new HashSet<EditorMessage>(0);
   }
   final Map<SNode,SNode> reResolvedTargets=new HashMap<SNode,SNode>();
@@ -19,7 +19,7 @@ synchronized (myRecalculatedTypesLock) {
       myCurrentExpressionsWithChangedTypes.clear();
     }
     SModelEventVisitor visitor=new SModelEventVisitorAdapter(){
-      public void visitChildEvent(      SModelChildEvent event){
+      @Override public void visitChildEvent(      SModelChildEvent event){
         SNode child=event.getChild();
         if (event.isAdded()) {
           nodeAdded(child,reResolvedTargets);
@@ -28,14 +28,14 @@ synchronized (myRecalculatedTypesLock) {
           nodeRemoved(child,event.getParent(),event.getModel(),reResolvedTargets);
         }
       }
-      public void visitReferenceEvent(      SModelReferenceEvent event){
+      @Override public void visitReferenceEvent(      SModelReferenceEvent event){
         SReference reference=event.getReference();
         SNode sourceNode=reference.getSourceNode();
         if (SNodeOperations.isInstanceOf(sourceNode,"jetbrains.mps.baseLanguage.structure.IMethodCall") && "baseMethodDeclaration".equals(reference.getRole())) {
           methodCallDeclarationChanged(SNodeOperations.cast(sourceNode,"jetbrains.mps.baseLanguage.structure.IMethodCall"),reResolvedTargets);
         }
       }
-      public void visitPropertyEvent(      SModelPropertyEvent event){
+      @Override public void visitPropertyEvent(      SModelPropertyEvent event){
         SNode node=event.getNode();
         SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration");
         if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration") && "name".equals(event.getPropertyName())) {
@@ -52,7 +52,7 @@ synchronized (myRecalculatedTypesLock) {
       event.accept(visitor);
     }
     for (    SNodeReference expressionWithChangedType : expressionsWithChangedTypes) {
-      expressionTypeChanged(((SNodePointer)expressionWithChangedType).getNode(),reResolvedTargets);
+      expressionTypeChanged(((SNodePointer)expressionWithChangedType).resolve(MPSModuleRepository.getInstance()),reResolvedTargets);
     }
   }
   ThreadUtils.runInUIThreadNoWait(new Runnable(){
