@@ -1,13 +1,13 @@
 {
   SModelReference dsmRef=getReference();
-  IFile modelFile=getSource().getFile();
-  if (!modelFile.isReadOnly() && !modelFile.exists()) {
+  StreamDataSource source=getSource();
+  if (!source.isReadOnly() && source.getTimestamp() == -1) {
     DefaultSModel model=new DefaultSModel(dsmRef,new RegularNodeIdMap());
     return new ModelLoadResult(model,ModelLoadingState.FULLY_LOADED);
   }
   ModelLoadResult result;
   try {
-    result=ModelPersistence.readModel(myHeader,modelFile,state);
+    result=ModelPersistence.readModel(myHeader,source,state);
   }
  catch (  ModelReadException e) {
     SuspiciousModelHandler.getHandler().handleSuspiciousModel(this,false);
@@ -17,10 +17,10 @@
   SModel model=result.getModel();
   if (result.getState() == ModelLoadingState.FULLY_LOADED) {
     boolean needToSave=((jetbrains.mps.smodel.SModel)model).updateSModelReferences() || ((jetbrains.mps.smodel.SModel)model).updateModuleReferences();
-    if (needToSave && !modelFile.isReadOnly()) {
-      SModelRepository.getInstance().markChanged(model);
+    if (needToSave && !source.isReadOnly()) {
+      setChanged(true);
     }
   }
-  LOG.assertLog(model.getReference().equals(dsmRef),"\nError loading model from file: \"" + modelFile + "\"\n"+ "expected model UID     : \""+ dsmRef+ "\"\n"+ "but was UID            : \""+ model.getReference()+ "\"\n"+ "the model will not be available.\n"+ "Make sure that all project's roots and/or the model namespace is correct");
+  LOG.assertLog(model.getReference().equals(dsmRef),"\nError loading model from: \"" + source.getLocation() + "\"\n"+ "expected model UID     : \""+ dsmRef+ "\"\n"+ "but was UID            : \""+ model.getReference()+ "\"\n"+ "the model will not be available.\n"+ "Make sure that all project's roots and/or the model namespace is correct");
   return result;
 }
