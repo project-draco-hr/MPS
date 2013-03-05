@@ -1,0 +1,28 @@
+{
+  LOG.debug("Saving model " + model.getReference() + " to "+ source.getLocation());
+  persistenceVersion=Math.min(7,persistenceVersion);
+  if (source.isReadOnly()) {
+    LOG.error("Can't write to " + source.getLocation());
+    return null;
+  }
+  int oldVersion=persistenceVersion;
+  if (model instanceof DefaultSModel) {
+    DefaultSModel defaultSModel=(DefaultSModel)model;
+    oldVersion=defaultSModel.getPersistenceVersion();
+    if (oldVersion != persistenceVersion) {
+      defaultSModel.setPersistenceVersion(persistenceVersion);
+    }
+  }
+  Document document=saveModel(model);
+  try {
+    JDOMUtil.writeDocument(document,source);
+  }
+ catch (  IOException e) {
+    LOG.error("Error in " + source.getLocation(),e);
+  }
+  if (oldVersion != persistenceVersion) {
+    LOG.info("persistence upgraded: " + oldVersion + "->"+ persistenceVersion+ " "+ model.getReference());
+    return (DefaultSModel)model;
+  }
+  return null;
+}

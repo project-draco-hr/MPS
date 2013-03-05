@@ -1,0 +1,24 @@
+{
+  nodes=SetSequence.fromSetWithValues(new HashSet<SNode>(),SetSequence.fromSet(nodes).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return it.getNodeId() instanceof SNodeId.Foreign;
+    }
+  }
+));
+  MultiMap<SModel,SNode> candidates=findCandidates(models,nodes,processedConsumer,new Mapper<SNode,String>(){
+    @Override public String value(    SNode key){
+      return key.getNodeId().toString();
+    }
+  }
+);
+  for (  SNode node : SetSequence.fromSet(nodes)) {
+    SNode snode=((SNode)node);
+    if (!(SNodeOperations.isInstanceOf(snode,"jetbrains.mps.baseLanguage.structure.TypeVariableDeclaration"))) {
+      continue;
+    }
+    candidates.putValue(SNodeOperations.getModel(snode).getModelDescriptor(),node);
+  }
+  for (  Map.Entry<SModel,Collection<SNode>> e : candidates.entrySet()) {
+    FindUsagesManager.collectUsages(e.getKey(),e.getValue(),consumer);
+  }
+}

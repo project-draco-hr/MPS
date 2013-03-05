@@ -6,15 +6,18 @@
   final Set<NodeDescriptor> keys=new HashSet<NodeDescriptor>();
   for (  SModel sm : models) {
     if (!SModelStereotype.isUserModel(sm))     continue;
+    if (!(sm instanceof BaseEditableSModelDescriptor) || !(sm.getSource() instanceof FileDataSource)) {
+      continue;
+    }
+    FileDataSource source=(FileDataSource)sm.getSource();
+    if (!supportedExtensions.contains(FileUtil.getExtension(source.getFile().getName()))) {
+      continue;
+    }
     if (sm.isLoaded()) {
       findDirectly.add(sm);
       continue;
     }
-    if (!(sm instanceof DefaultSModelDescriptor)) {
-      continue;
-    }
-    DefaultSModelDescriptor esm=(DefaultSModelDescriptor)sm;
-    IFile modelFile=esm.getSource().getFile();
+    IFile modelFile=source.getFile();
     VirtualFile vf=VirtualFileUtils.getVirtualFile(modelFile);
     if (vf == null)     continue;
     int fileId=FileBasedIndex.getFileId(vf);
@@ -37,9 +40,9 @@
     }
   }
   for (  SModel sm : findDirectly) {
-    for (    SNode root : index.getRootsToIterate(((DefaultSModelDescriptor)sm).getSModel())) {
+    for (    SNode root : index.getRootsToIterate(sm)) {
       String nodeName=(root.getName() == null) ? "null" : root.getName();
-      NodeDescriptor nodeDescriptor=SNodeDescriptor.fromModelReference(nodeName,root.getConcept().getId(),(SModelReference)root.getModel().getReference(),root.getNodeId());
+      NodeDescriptor nodeDescriptor=SNodeDescriptor.fromModelReference(nodeName,root.getConcept().getId(),root.getModel().getReference(),root.getNodeId());
       keys.add(nodeDescriptor);
     }
   }

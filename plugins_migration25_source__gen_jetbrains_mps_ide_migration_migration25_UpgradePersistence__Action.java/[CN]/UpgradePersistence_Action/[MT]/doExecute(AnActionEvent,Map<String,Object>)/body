@@ -1,2 +1,40 @@
 {
+  try {
+    Logger LOG=Logger.getLogger("jetbrains.mps.ide.migration.UpgradePersistence_Action");
+    final MPSProject mpsProject=((Project)MapSequence.fromMap(_params).get("project")).getComponent(MPSProject.class);
+    for (    SModule module : mpsProject.getModulesWithGenerators()) {
+      for (      SModel model : module.getModels()) {
+        if (!(model instanceof EditableSModel)) {
+          continue;
+        }
+        DataSource source=model.getSource();
+        if (!(source instanceof FileDataSource)) {
+          continue;
+        }
+        FileDataSource fileSource=(FileDataSource)source;
+        if (!(model.getModelRoot() instanceof DefaultModelRoot) || fileSource.isReadOnly()) {
+          continue;
+        }
+        String ext=FileUtil.getExtension(fileSource.getFile().getName());
+        ModelFactory factory=PersistenceFacade.getInstance().getModelFactory(ext);
+        try {
+          if (factory == null || !(factory.needsUpgrade(fileSource))) {
+            continue;
+          }
+          boolean wasInitialized=model.isLoaded();
+          if (wasInitialized) {
+            model.save();
+          }
+          factory.upgrade(fileSource);
+          ((EditableSModel)model).reloadFromDisk();
+        }
+ catch (        IOException ex) {
+          LOG.error(ex);
+        }
+      }
+    }
+  }
+ catch (  Throwable t) {
+    LOG.error("User's action execute method failed. Action:" + "UpgradePersistence",t);
+  }
 }
