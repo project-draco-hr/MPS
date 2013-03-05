@@ -1,0 +1,27 @@
+{
+  final IScope scope=sm.getModule().getScope();
+  List<String> validationResult=ModelAccess.instance().runReadAction(new Computable<List<String>>(){
+    public List<String> compute(){
+      return new ModelValidator(sm).validate(scope);
+    }
+  }
+);
+  for (  String item : validationResult) {
+    LOG.error("Error in model " + sm.getReference().getSModelFqName() + " : "+ item);
+  }
+  for (  SNode node : new NodesIterable(sm.getSModel())) {
+    if (SModelUtil.findConceptDeclaration(node.getConcept().getId(),GlobalScope.getInstance()) == null) {
+      LOG.error("Error in model " + sm.getReference().getSModelFqName() + " : Unknown concept "+ node.getConcept().getId());
+    }
+  }
+  for (  SNode node : new NodesIterable(sm.getSModel())) {
+    for (    SReference ref : node.getReferences()) {
+      if (SNodeUtil.hasReferenceMacro(node,ref.getRole())) {
+        continue;
+      }
+      if (ref.getTargetNode() == null) {
+        LOG.error("Error in model " + sm.getReference().getSModelFqName() + " : Broken reference in node "+ node);
+      }
+    }
+  }
+}
