@@ -3,14 +3,28 @@
   final MPSProject mpsProject=myProject.getComponent(MPSProject.class);
   ModelAccess.instance().runReadAction(new Runnable(){
     @Override public void run(){
-      for (      IModule module : mpsProject.getModulesWithGenerators()) {
-        for (        SModel smd : SModelRepository.getInstance().getModelDescriptors(module)) {
-          if (smd instanceof DefaultSModelDescriptor) {
-            DefaultSModelDescriptor md=(DefaultSModelDescriptor)smd;
-            int modelVersion=md.getPersistenceVersion();
-            if (modelVersion <= version) {
-              result.add(md.getSource().getFile().getPath());
+      for (      SModule module : mpsProject.getModulesWithGenerators()) {
+        for (        SModel model : module.getModels()) {
+          if (!(model instanceof EditableSModel)) {
+            continue;
+          }
+          DataSource source=model.getSource();
+          if (!(source instanceof FileDataSource)) {
+            continue;
+          }
+          FileDataSource fileSource=(FileDataSource)source;
+          if (!(model.getModelRoot() instanceof DefaultModelRoot) || fileSource.isReadOnly()) {
+            continue;
+          }
+          String ext=FileUtil.getExtension(fileSource.getFile().getName());
+          ModelFactory factory=PersistenceFacade.getInstance().getModelFactory(ext);
+          try {
+            if (factory != null && factory.needsUpgrade(fileSource)) {
+              result.add(fileSource.getFile().getPath());
             }
+          }
+ catch (          IOException ex) {
+            LOG.error(ex);
           }
         }
       }
