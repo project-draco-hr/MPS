@@ -1,16 +1,30 @@
 {
-  INodeSubstituteAction action=(INodeSubstituteAction)value;
+  SubstituteAction action=(SubstituteAction)value;
   String pattern=getPatternEditor().getPattern();
   if (!myLightweightMode) {
     try {
-      myLeft.setIcon(action.getIconFor(pattern));
+      Icon icon=null;
+      if (action instanceof INodeSubstituteAction) {
+        icon=((INodeSubstituteAction)action).getIconFor(pattern);
+      }
+      if (icon == null) {
+        SNode iconNode=action.getIconNode();
+        icon=iconNode != null ? NodeIconUtil.getIcon(iconNode,action.isReferentPresentation()) : IdeIcons.DEFAULT_ICON;
+      }
+      myLeft.setIcon(icon);
     }
  catch (    Throwable t) {
       LOG.error(t);
     }
   }
   try {
-    int style=action.getFontStyleFor(pattern);
+    int style;
+    if (action.getParameterObject() instanceof SNode) {
+      style=NodePresentationUtil.getFontStyle(action.getSourceNode(),(SNode)action.getParameterObject());
+    }
+ else {
+      style=Font.PLAIN;
+    }
     int oldStyle=myLeft.getFont().getStyle();
     if (oldStyle != style) {
       myLeft.setFont(myLeft.getFont().deriveFont(style));
