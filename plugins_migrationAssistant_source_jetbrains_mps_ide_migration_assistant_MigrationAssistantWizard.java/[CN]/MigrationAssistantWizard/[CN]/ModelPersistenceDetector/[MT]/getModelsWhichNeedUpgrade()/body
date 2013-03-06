@@ -1,0 +1,35 @@
+{
+  final List<String> result=new ArrayList<String>();
+  final MPSProject mpsProject=myProject.getComponent(MPSProject.class);
+  ModelAccess.instance().runReadAction(new Runnable(){
+    @Override public void run(){
+      for (      SModule module : mpsProject.getModulesWithGenerators()) {
+        for (        SModel model : module.getModels()) {
+          if (!(model instanceof EditableSModel)) {
+            continue;
+          }
+          DataSource source=model.getSource();
+          if (!(source instanceof FileDataSource)) {
+            continue;
+          }
+          FileDataSource fileSource=(FileDataSource)source;
+          if (!(model.getModelRoot() instanceof DefaultModelRoot) || fileSource.isReadOnly()) {
+            continue;
+          }
+          String ext=FileUtil.getExtension(fileSource.getFile().getName());
+          ModelFactory factory=PersistenceFacade.getInstance().getModelFactory(ext);
+          try {
+            if (factory != null && factory.needsUpgrade(fileSource)) {
+              result.add(fileSource.getFile().getPath());
+            }
+          }
+ catch (          IOException ex) {
+            LOG.error(ex);
+          }
+        }
+      }
+    }
+  }
+);
+  return result;
+}

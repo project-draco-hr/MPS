@@ -4,7 +4,10 @@
   if (!(myDifference.isEnabled())) {
     return;
   }
-  IFile modelFile=myModelDescriptor.getSource().getFile();
+  if (!(myModelDescriptor.getSource() instanceof FileDataSource)) {
+    return;
+  }
+  IFile modelFile=((FileDataSource)myModelDescriptor.getSource()).getFile();
   if (!(modelFile.exists())) {
     return;
   }
@@ -39,18 +42,30 @@
     baseVersionModel.value=new jetbrains.mps.smodel.SModel(myModelDescriptor.getSModelReference());
   }
  else {
-    String content=BaseVersionUtil.getBaseVersionContent(modelVFile,myProject);
+    Object content=BaseVersionUtil.getBaseVersionContent(modelVFile,myProject);
     if (content == null && status != FileStatus.NOT_CHANGED) {
       LOG.error("Base version content is null while file status is " + status);
     }
     if (content == null) {
       return;
     }
-    try {
-      baseVersionModel.value=ModelPersistence.readModel(content,false);
+    String ext=modelVFile.getExtension();
+    SModel md=(content instanceof String ? PersistenceUtil.loadModel((String)content,ext) : PersistenceUtil.loadModel((byte[])content,ext));
+    if (md == null) {
+      return;
     }
- catch (    ModelReadException e) {
-      LOG.warning("",e);
+    baseVersionModel.value=md.getSModel();
+    if (Sequence.fromIterable(((Iterable<SModel.Problem>)md.getProblems())).any(new IWhereFilter<SModel.Problem>(){
+      public boolean accept(      SModel.Problem it){
+        return it.isError();
+      }
+    }
+)) {
+      StringBuilder sb=new StringBuilder();
+      for (      SModel.Problem p : Sequence.fromIterable((Iterable<SModel.Problem>)md.getProblems())) {
+        sb.append((p.isError() ? "error: " : "warn: ")).append(p.getText()).append("\n");
+      }
+      LOG.warning(sb.toString());
       return;
     }
   }
