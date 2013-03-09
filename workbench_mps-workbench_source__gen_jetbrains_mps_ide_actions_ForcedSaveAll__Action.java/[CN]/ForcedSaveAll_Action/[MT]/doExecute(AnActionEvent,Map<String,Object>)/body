@@ -1,10 +1,23 @@
 {
   try {
-    for (    SModel descr : ListSequence.fromList(SModelRepository.getInstance().getModelDescriptors())) {
-      if (!(SModelStereotype.isUserModel(descr) && descr instanceof EditableSModel)) {
-        continue;
+    Iterable<SModule> modules=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModules();
+    List<EditableSModel> allModels=Sequence.fromIterable(modules).translate(new ITranslator2<SModule,SModel>(){
+      public Iterable<SModel> translate(      SModule it){
+        return it.getModels();
       }
-      EditableSModel model=(EditableSModel)descr;
+    }
+).where(new IWhereFilter<SModel>(){
+      public boolean accept(      SModel it){
+        return SModelStereotype.isUserModel(it) && it instanceof EditableSModel;
+      }
+    }
+).select(new ISelector<SModel,EditableSModel>(){
+      public EditableSModel select(      SModel it){
+        return (EditableSModel)it;
+      }
+    }
+).toListSequence();
+    for (    EditableSModel model : ListSequence.fromList(allModels)) {
       if (model.isReadOnly()) {
         continue;
       }
