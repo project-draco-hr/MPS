@@ -3,23 +3,23 @@
   if (c != null) {
     return c;
   }
-  List<IClassLoadingModule> queue=new ArrayList<IClassLoadingModule>();
-  for (  IClassLoadingModule m : myModule.getClassLoadingDependencies()) {
+  List<SModule> queue=new ArrayList<SModule>();
+  for (  SModule m : ClassLoaderManager.getInstance().getClassLoadingDependencies(myModule)) {
     if (m.equals(myModule))     continue;
-    if (!ClassLoaderManager.getInstance().canLoad((SModule)myModule))     continue;
-    if (m.canLoadFromSelf() && getLocator().canFindClass(name)) {
-      return Class.forName(name,false,ClassLoaderManager.getInstance().getClassLoader((SModule)m));
+    if (!ClassLoaderManager.getInstance().canLoad(myModule))     continue;
+    if (canLoadFromSelf(m) && getLocator().canFindClass(name)) {
+      return Class.forName(name,false,ClassLoaderManager.getInstance().getClassLoader(m));
     }
  else {
       queue.add(m);
     }
   }
   Set<ClassLoader> processedParentClassLoaders=new HashSet<ClassLoader>();
-  for (  IClassLoadingModule m : queue) {
+  for (  SModule m : queue) {
     try {
       ModuleClassLoader classLoader=ClassLoaderManager.getInstance().getClassLoader((SModule)m);
       if (classLoader == null) {
-        LOG.warning("Null classloader for module with canLoad() = true; module name: " + ((SModule)m).getModuleName() + "; module class "+ m.getClass());
+        LOG.warning("Null classloader for module with canLoad() = true; module name: " + m.getModuleName() + "; module class "+ m.getClass());
         continue;
       }
       if (processedParentClassLoaders.contains(classLoader.getParent())) {
