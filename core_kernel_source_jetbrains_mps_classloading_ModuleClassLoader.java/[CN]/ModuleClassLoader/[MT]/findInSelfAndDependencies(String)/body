@@ -3,30 +3,20 @@
   if (c != null) {
     return c;
   }
-  List<SModule> queue=new ArrayList<SModule>();
-  for (  SModule m : mySupport.getCompileDependencies()) {
-    if (m.equals(mySupport.getModule()))     continue;
-    if (!ClassLoaderManager.getInstance().canLoad(mySupport.getModule()))     continue;
-    if (canLoadFromSelf(m) && ClassLoaderManager.getInstance().getClassLoader(m).mySupport.canFindClass(name)) {
-      return Class.forName(name,false,ClassLoaderManager.getInstance().getClassLoader(m));
-    }
- else {
-      queue.add(m);
+  for (  ModuleClassLoader dep : getDependencyClassLoaders()) {
+    if (dep == this)     continue;
+    if (dep.mySupport.canFindClass(name)) {
+      return Class.forName(name,false,dep);
     }
   }
   Set<ClassLoader> processedParentClassLoaders=new HashSet<ClassLoader>();
-  for (  SModule m : queue) {
+  for (  ModuleClassLoader dep : getDependencyClassLoaders()) {
     try {
-      ModuleClassLoader classLoader=ClassLoaderManager.getInstance().getClassLoader(m);
-      if (classLoader == null) {
-        LOG.warning("Null classloader for module with canLoad() = true; module name: " + m.getModuleName() + "; module class "+ m.getClass());
+      if (processedParentClassLoaders.contains(dep.getParent())) {
         continue;
       }
-      if (processedParentClassLoaders.contains(classLoader.getParent())) {
-        continue;
-      }
-      processedParentClassLoaders.add(classLoader.getParent());
-      return Class.forName(name,false,classLoader.getParent());
+      processedParentClassLoaders.add(dep.getParent());
+      return Class.forName(name,false,dep.getParent());
     }
  catch (    ClassNotFoundException e) {
     }
