@@ -1,0 +1,35 @@
+{
+  CollectConsumer<NavigationTarget> consumer=new CollectConsumer(new HashSet<NavigationTarget>());
+  Collection<NavigationParticipant> participants=PersistenceFacade.getInstance().getNavigationParticipants();
+  monitor.start("Finding targets...",participants.size() + 5);
+  try {
+    Collection<SModel> current=IterableUtil.asCollection(scope.getModels());
+    for (    NavigationParticipant participant : participants) {
+      final Set<SModel> next=new HashSet<SModel>(current);
+      participant.findTargets(kind,current,consumer,new Consumer<SModel>(){
+        @Override public void consume(        SModel sModel){
+          next.remove(sModel);
+        }
+      }
+);
+      current=next;
+      monitor.advance(1);
+    }
+    ProgressMonitor subMonitor=monitor.subTask(4,SubProgressKind.DEFAULT);
+    subMonitor.start("",current.size());
+    for (    SModel m : current) {
+      subMonitor.step(m.getModelName());
+      for (      SNode root : RootNodeNameIndex.getRootsToIterate(m)) {
+        String nodeName=(root.getName() == null) ? "null" : root.getName();
+        consumer.consume(SNodeDescriptor.fromModelReference(nodeName,root.getConcept().getId(),root.getModel().getReference(),root.getNodeId()));
+      }
+      if (monitor.isCanceled())       break;
+      subMonitor.advance(1);
+    }
+    subMonitor.done();
+  }
+  finally {
+    monitor.done();
+  }
+  return consumer.getResult();
+}
