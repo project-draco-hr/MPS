@@ -1,0 +1,64 @@
+{
+  return new IJob.Stub(){
+    @Override public IResult execute(    final Iterable<IResource> rawInput,    final IJobMonitor monitor,    final IPropertiesAccessor pa,    @NotNull final ProgressMonitor progressMonitor){
+      Iterable<IResource> _output_wf1ya0_a0c=null;
+      final Iterable<FResource> input=(Iterable<FResource>)(Iterable)rawInput;
+switch (0) {
+case 0:
+        final JavaCompiler jc=new JavaCompiler();
+      final Set<IModule> modules=SetSequence.fromSet(new HashSet<IModule>());
+    for (    FResource fres : Sequence.fromIterable(input)) {
+      MapSequence.fromMap(fres.contents()).visitAll(new IVisitor<IMapping<String,Object>>(){
+        public void visit(        IMapping<String,Object> m){
+          jc.addSourceFile("",m.key(),m.value());
+        }
+      }
+);
+      if (fres.module() != null) {
+        SetSequence.fromSet(modules).addElement(fres.module());
+      }
+    }
+  pa.global().properties(Target_compileToMemory.this.getName(),JavaCompile_Facet.Target_compileToMemory.Parameters.class).errors(false);
+jc.addCompilationResultListener(new CompilationResultAdapter(){
+  @Override public void onCompilationResult(  CompilationResult cr){
+    if (cr.hasErrors()) {
+      pa.global().properties(Target_compileToMemory.this.getName(),JavaCompile_Facet.Target_compileToMemory.Parameters.class).errors(true);
+      CategorizedProblem[] categorizedProblems=cr.getErrors();
+      for (int i=0; i < 3 && i < categorizedProblems.length; i++) {
+        monitor.reportFeedback(new IFeedback.ERROR(String.valueOf(String.valueOf(categorizedProblems[i]))));
+      }
+    }
+  }
+}
+);
+final Wrappers._T<CompositeClassPathItem> ccp=new Wrappers._T<CompositeClassPathItem>();
+ModelAccess.instance().runReadAction(new Runnable(){
+public void run(){
+ccp.value=JavaModuleOperations.createClassPathItem(JavaModuleOperations.collectCompileClasspath(modules,true),"JavaCompile_Facet");
+Sequence.fromIterable(pa.global().properties(Target_compileToMemory.this.getName(),JavaCompile_Facet.Target_compileToMemory.Parameters.class).classPath()).visitAll(new IVisitor<IClassPathItem>(){
+  public void visit(  IClassPathItem cpi){
+    ccp.value.add(cpi);
+  }
+}
+);
+}
+}
+);
+jc.compile(ccp.value);
+if ((boolean)pa.global().properties(Target_compileToMemory.this.getName(),JavaCompile_Facet.Target_compileToMemory.Parameters.class).errors()) {
+return new IResult.FAILURE(_output_wf1ya0_a0c);
+}
+IClassesData function=new IClassesData(){
+public ClassLoader getClassLoader(ClassLoader parent){
+return jc.getClassLoader(parent);
+}
+}
+;
+_output_wf1ya0_a0c=Sequence.fromIterable(_output_wf1ya0_a0c).concat(Sequence.fromIterable(Sequence.<IResource>singleton(new CResource(function))));
+default :
+return new IResult.SUCCESS(_output_wf1ya0_a0c);
+}
+}
+}
+;
+}
