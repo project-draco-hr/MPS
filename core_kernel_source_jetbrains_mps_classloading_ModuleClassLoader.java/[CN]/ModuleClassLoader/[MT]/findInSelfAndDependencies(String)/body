@@ -1,0 +1,25 @@
+{
+  Class c=loadFromSelf(name);
+  if (c != null) {
+    return c;
+  }
+  for (  ModuleClassLoader dep : getDependencyClassLoaders()) {
+    if (dep == this)     continue;
+    if (dep.mySupport.canFindClass(name)) {
+      return Class.forName(name,false,dep);
+    }
+  }
+  Set<ClassLoader> processedParentClassLoaders=new HashSet<ClassLoader>();
+  for (  ModuleClassLoader dep : getDependencyClassLoaders()) {
+    try {
+      if (processedParentClassLoaders.contains(dep.getParent())) {
+        continue;
+      }
+      processedParentClassLoaders.add(dep.getParent());
+      return Class.forName(name,false,dep.getParent());
+    }
+ catch (    ClassNotFoundException e) {
+    }
+  }
+  return processedParentClassLoaders.contains(getParent()) ? null : loadFromParent(name);
+}

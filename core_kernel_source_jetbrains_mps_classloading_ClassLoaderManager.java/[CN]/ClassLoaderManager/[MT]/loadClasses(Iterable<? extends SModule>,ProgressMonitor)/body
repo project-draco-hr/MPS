@@ -1,0 +1,35 @@
+{
+  long startTime=System.currentTimeMillis();
+  Set<SModule> modulesToLoad=new HashSet<SModule>();
+  for (  SModule module : modules) {
+    modulesToLoad.add(module);
+  }
+  modulesToLoad=Collections.unmodifiableSet(modulesToLoad);
+  for (  SModule module : modules) {
+    if (ModuleClassLoaderSupport.canCreate(module)) {
+      getClassLoader(module);
+    }
+  }
+  addStat("load:main",startTime);
+  monitor.start("Load classes...",1);
+  try {
+    monitor.step("Rebuilding ui...");
+    for (    MPSClassesListener listener : myClassesHandlers) {
+      startTime=System.currentTimeMillis();
+      try {
+        listener.onClassesLoad(modulesToLoad);
+      }
+ catch (      Throwable t) {
+        LOG.error(t);
+      }
+ finally {
+        addStat("load:" + listener.getClass().getName(),startTime);
+      }
+    }
+    monitor.advance(1);
+  }
+  finally {
+    monitor.done();
+  }
+  return modulesToLoad;
+}
