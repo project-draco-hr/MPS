@@ -6,7 +6,7 @@
     hasAnythingToCompile=true;
   }
   if (!hasAnythingToCompile) {
-    return new MPSCompilationResult(0,0,false,false);
+    return new MPSCompilationResult(0,0,false,Collections.<SModule>emptySet());
   }
   JavaCompiler compiler=new JavaCompiler();
   boolean hasJavaToCompile=false;
@@ -35,13 +35,14 @@
   }
   ttrace.pop();
   if (!hasJavaToCompile && !hasFilesToCopyOrDelete) {
-    return new MPSCompilationResult(0,0,false,false,messages);
+    return new MPSCompilationResult(0,0,false,Collections.<SModule>emptySet(),messages);
   }
   ttrace.push("invalidating classpath",false);
   for (  SModule module : modulesWithRemovals) {
     invalidateCompiledClasses(module);
   }
   ttrace.pop();
+  Set<SModule> changedModules=new HashSet<SModule>();
   MyCompilationResultAdapter listener=null;
   if (hasJavaToCompile) {
     ttrace.push("compiling java",false);
@@ -51,6 +52,7 @@
     ttrace.push("eclipse compiler",true);
     compiler.compile(classPathItems);
     ttrace.pop();
+    changedModules.addAll(listener.myChangedModules);
     compiler.removeCompilationResultListener(listener);
     ttrace.pop();
   }
@@ -77,5 +79,11 @@
     invalidateCompiledClasses(module);
   }
   ttrace.pop();
-  return new MPSCompilationResult(listener == null ? 0 : listener.getErrorCount(),0,false,hasJavaToCompile,messages);
+  if (hasJavaToCompile && changedModules.isEmpty()) {
+    LOG.error("has java to compile but changed modules is empty");
+  }
+  if (!hasJavaToCompile && !changedModules.isEmpty()) {
+    LOG.error("has not java to compile but changed modules is not empty");
+  }
+  return new MPSCompilationResult(listener == null ? 0 : listener.getErrorCount(),0,false,changedModules,messages);
 }
