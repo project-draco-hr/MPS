@@ -1,0 +1,108 @@
+{
+  List<SubstituteAction> result=ListSequence.fromList(new ArrayList<SubstituteAction>());
+{
+    Iterable<Quadruplet> parameterObjects=new Computable<Iterable<Quadruplet>>(){
+      public Iterable<Quadruplet> compute(){
+        List<Quadruplet> res=ListSequence.fromList(new ArrayList<Quadruplet>());
+        SNode nodeType=SNodeOperations.cast(TypeChecker.getInstance().getTypeOf(_context.getSourceNode()),"jetbrains.mps.baseLanguage.structure.Type");
+        for (        SNode aspect : ListSequence.fromList(TreePathAspectUtil.getTreePathAspects(_context.getSourceNode(),operationContext.getScope()))) {
+          for (          TraversalAxis axis : ListSequence.fromList(TraversalAxis.getConstants())) {
+            ListSequence.fromList(res).addElement(new Quadruplet<SNode,TraversalAxis,SNode,SNode>(aspect,axis,null,null));
+            for (            SNode feat : Sequence.fromIterable(TreePath_Behavior.call_getFeature_1213877481312(aspect,nodeType))) {
+              if (TraversalAxisUtil.isAcceptableFeatureForAxis(feat,axis)) {
+                if (SPropertyOperations.getBoolean(feat,"default")) {
+                  ListSequence.fromList(res).addElement(new Quadruplet<SNode,TraversalAxis,SNode,SNode>(aspect,axis,feat,null));
+                }
+ else                 if (SNodeOperations.isInstanceOf(feat,"jetbrains.mps.ypath.structure.IParamFeature")) {
+                  for (                  SNode pw : ListSequence.fromList(IParamFeature_Behavior.call_getParameterObjects_1213877340242(SNodeOperations.cast(feat,"jetbrains.mps.ypath.structure.IParamFeature"),nodeType))) {
+                    ListSequence.fromList(res).addElement(new Quadruplet<SNode,TraversalAxis,SNode,SNode>(aspect,axis,feat,pw));
+                  }
+                }
+ else {
+                  ListSequence.fromList(res).addElement(new Quadruplet<SNode,TraversalAxis,SNode,SNode>(aspect,axis,feat,null));
+                }
+              }
+            }
+          }
+        }
+        return res;
+      }
+    }
+.compute();
+    if (parameterObjects != null) {
+      for (      final Quadruplet item : parameterObjects) {
+        ListSequence.fromList(result).addElement(new AbstractSideTransformHintSubstituteAction(SConceptOperations.findConceptDeclaration("jetbrains.mps.ypath.structure.TreePathOperationExpression"),item,_context.getSourceNode()){
+          public SNode doSubstitute(          @Nullable final EditorContext editorContext,          String pattern){
+            SNode aspect=(SNode)(item).first();
+            TraversalAxis axis=(TraversalAxis)(item).second();
+            SNode feat=(SNode)(item).third();
+            SNode pw=(SNode)(item).fourth();
+            SNode tpoExp=SNodeFactoryOperations.replaceWithNewChild(_context.getSourceNode(),"jetbrains.mps.ypath.structure.TreePathOperationExpression");
+            SNodeFactoryOperations.setNewChild(tpoExp,"operand","jetbrains.mps.ypath.structure.TreePathAdapterExpression");
+            SLinkOperations.setTarget(SNodeOperations.cast(SLinkOperations.getTarget(tpoExp,"operand",true),"jetbrains.mps.ypath.structure.TreePathAdapterExpression"),"expression",_context.getSourceNode(),true);
+            SLinkOperations.setTarget(SNodeOperations.cast(SLinkOperations.getTarget(tpoExp,"operand",true),"jetbrains.mps.ypath.structure.TreePathAdapterExpression"),"treepathAspect",aspect,false);
+            SPropertyOperations.set(SNodeFactoryOperations.setNewChild(tpoExp,"operation","jetbrains.mps.ypath.structure.IterateOperation"),"axis",axis.getValue());
+            if ((feat != null)) {
+              SLinkOperations.setTarget(SNodeOperations.cast(SLinkOperations.getTarget(tpoExp,"operation",true),"jetbrains.mps.ypath.structure.IterateOperation"),"usedFeature",feat,false);
+              if (SPropertyOperations.getBoolean(feat,"default")) {
+              }
+ else               if ((pw != null)) {
+                SLinkOperations.setTarget(SNodeOperations.cast(SLinkOperations.getTarget(tpoExp,"operation",true),"jetbrains.mps.ypath.structure.IterateOperation"),"paramObject",pw,true);
+              }
+            }
+            return tpoExp;
+          }
+          public String getMatchingText(          String pattern){
+            SNode aspect=(SNode)(item).first();
+            TraversalAxis axis=(TraversalAxis)(item).second();
+            SNode feat=(SNode)(item).third();
+            SNode pw=(SNode)(item).fourth();
+            String suffix="";
+            if ((feat == null)) {
+              suffix=" *";
+            }
+ else {
+              if (SPropertyOperations.getBoolean(feat,"default")) {
+                suffix="";
+              }
+ else               if ((pw != null)) {
+                suffix=SPropertyOperations.getString(pw,"name");
+              }
+ else {
+                suffix=SPropertyOperations.getString(feat,"name");
+              }
+            }
+            return TraversalAxisUtil.getOperationSign(axis) + suffix;
+          }
+          public String getVisibleMatchingText(          String pattern){
+            return getMatchingText(pattern);
+          }
+          public String getDescriptionText(          String pattern){
+            SNode aspect=(SNode)(item).first();
+            TraversalAxis axis=(TraversalAxis)(item).second();
+            SNode feat=(SNode)(item).third();
+            SNode pw=(SNode)(item).fourth();
+            String suffix="";
+            if ((feat == null)) {
+              suffix="all";
+            }
+ else {
+              if (SPropertyOperations.getBoolean(feat,"default")) {
+                suffix="default";
+              }
+ else               if ((pw != null)) {
+                suffix=SPropertyOperations.getString(pw,"name") + " " + SPropertyOperations.getString(feat,"name");
+              }
+ else {
+                suffix=SPropertyOperations.getString(feat,"name");
+              }
+            }
+            return "iterate " + axis.getName() + " @"+ suffix+ " using "+ SPropertyOperations.getString(aspect,"name");
+          }
+        }
+);
+      }
+    }
+  }
+  return result;
+}
