@@ -1,0 +1,24 @@
+{
+  final List<ModulesMiner.ModuleHandle> collectModules=ModulesMiner.getInstance().collectModules(FileSystem.getInstance().getFileByPath(modulePath),false);
+  if (collectModules.isEmpty()) {
+    return ListSequence.fromList(new ArrayList<SModule>());
+  }
+  return ModelAccess.instance().runWriteAction(new Computable<List<SModule>>(){
+    public List<SModule> compute(){
+      List<SModule> modules=new ArrayList<SModule>();
+      BaseMPSModuleOwner owner=new BaseMPSModuleOwner(){
+      }
+;
+      for (      ModulesMiner.ModuleHandle moduleHandle : collectModules) {
+        IModule module=ModuleRepositoryFacade.createModule(moduleHandle,owner);
+        if (module != null) {
+          modules.add(module);
+        }
+      }
+      CleanupManager.getInstance().cleanup();
+      ClassLoaderManager.getInstance().reloadAll(new EmptyProgressMonitor());
+      return modules;
+    }
+  }
+);
+}
