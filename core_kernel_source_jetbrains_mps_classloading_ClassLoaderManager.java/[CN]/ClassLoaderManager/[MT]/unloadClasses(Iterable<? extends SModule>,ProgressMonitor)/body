@@ -1,0 +1,60 @@
+{
+  LOG.assertCanWrite();
+  Set<SModule> toUnload=new HashSet<SModule>();
+  for (  SModule module : modules) {
+    if (SModuleOperations.isCompileInMps(module)) {
+      toUnload.add(module);
+    }
+  }
+  long startTime=System.currentTimeMillis();
+  monitor.start("Unloading classes...",2);
+  try {
+    monitor.step("Invalidate classloaders...");
+    toUnload=collectBackReferences(toUnload);
+    for (    Set<SModule> backRefs : myBackRefs.values()) {
+      backRefs.removeAll(toUnload);
+    }
+    for (    SModule module : toUnload) {
+      myBackRefs.remove(module);
+    }
+    for (    SModule module : toUnload) {
+      if (myClassLoaders.containsKey(module)) {
+        myClassLoaders.get(module).dispose();
+        myClassLoaders.remove(module);
+      }
+    }
+    Set<SModuleReference> moduleReferences=new HashSet<SModuleReference>();
+    for (    SModule module : toUnload) {
+      moduleReferences.add(module.getModuleReference());
+    }
+    Set<String> classesToRemove=new HashSet<String>();
+    for (    Map.Entry<String,SModuleReference> entry : myLoadedClasses.entrySet()) {
+      if (moduleReferences.contains(entry.getValue())) {
+        classesToRemove.add(entry.getKey());
+      }
+    }
+    for (    String className : classesToRemove) {
+      myLoadedClasses.remove(className);
+    }
+    monitor.advance(1);
+    addStat("unload:main",startTime);
+    monitor.step("Disposing old classes...");
+    for (    MPSClassesListener listener : myClassesHandlers) {
+      try {
+        startTime=System.currentTimeMillis();
+        listener.onClassesUnload(toUnload);
+      }
+ catch (      Throwable t) {
+        LOG.error(t);
+      }
+ finally {
+        addStat("unload:" + listener.getClass().getName(),startTime);
+      }
+    }
+    monitor.advance(1);
+    return toUnload;
+  }
+  finally {
+    monitor.done();
+  }
+}
