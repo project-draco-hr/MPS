@@ -1,6 +1,12 @@
 {
-  this.myRoot=SModelOperations.createNewRootNode(myModel,"jetbrains.mps.console.lang.structure.Console",null);
-  this.myEditor=new UIEditorComponent(new ProjectOperationContext(ProjectHelper.toMPSProject(getProject())),null);
+  ModelAccess.instance().runWriteAction(new Runnable(){
+    public void run(){
+      jetbrains.mps.project.Project project=ProjectHelper.toMPSProject(getProject());
+      ConsoleTool.this.myEditor=new UIEditorComponent(new ModuleContext(myModel.getModule(),project),null);
+      ConsoleTool.this.myRoot=SModelOperations.createNewRootNode(myModel,"jetbrains.mps.console.lang.structure.Console",null);
+    }
+  }
+);
   nextCommand();
   myMainComponent=new JPanel();
   myMainComponent.setLayout(new BorderLayout());
@@ -10,30 +16,45 @@
   btnPanel.setLayout(new FlowLayout());
   btnPanel.add(new JButton(new AbstractAction("Execute"){
     public void actionPerformed(    ActionEvent p0){
-      if ((myLastCommand != null)) {
-        BehaviorReflection.invokeVirtual(Void.class,myLastCommand,"virtual_execute_757553790980855637",new Object[]{});
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          if ((myLastCommand != null)) {
+            BehaviorReflection.invokeVirtual(Void.class,myLastCommand,"virtual_execute_757553790980855637",new Object[]{});
+          }
+        }
       }
+);
       nextCommand();
     }
   }
 ));
   btnPanel.add(new JButton(new AbstractAction("Prev"){
     public void actionPerformed(    ActionEvent p0){
-      if ((SNodeOperations.getPrevSibling(myLastCommand) == null)) {
-        return;
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          if ((SNodeOperations.getPrevSibling(myLastCommand) == null)) {
+            return;
+          }
+          myLastCommand=SNodeOperations.cast(SNodeOperations.getPrevSibling(myLastCommand),"jetbrains.mps.console.lang.structure.ConsoleCommand");
+          myEditor.editNode(myLastCommand);
+        }
       }
-      myLastCommand=SNodeOperations.getPrevSibling(myLastCommand);
-      myEditor.editNode(myLastCommand);
+);
     }
   }
 ));
   btnPanel.add(new JButton(new AbstractAction("Next"){
     public void actionPerformed(    ActionEvent p0){
-      if ((SNodeOperations.getNextSibling(myLastCommand) == null)) {
-        return;
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          if ((SNodeOperations.getNextSibling(myLastCommand) == null)) {
+            return;
+          }
+          myLastCommand=SNodeOperations.cast(SNodeOperations.getNextSibling(myLastCommand),"jetbrains.mps.console.lang.structure.ConsoleCommand");
+          myEditor.editNode(myLastCommand);
+        }
       }
-      myLastCommand=SNodeOperations.getNextSibling(myLastCommand);
-      myEditor.editNode(myLastCommand);
+);
     }
   }
 ));
