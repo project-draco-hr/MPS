@@ -1,0 +1,38 @@
+{
+  myProject=project;
+  myMergeSession=mergeSession;
+  myRootId=rootId;
+  myStateToRestore=myMergeSession.getCurrentState();
+  myTitles=titles;
+  myStatusBar=statusBar;
+  myConflictChecker=new ChangeEditorMessage.ConflictChecker(){
+    public boolean isChangeConflicted(    ModelChange ch){
+      return Sequence.fromIterable(myMergeSession.getConflictedWith(ch)).isNotEmpty();
+    }
+  }
+;
+  myMineEditor=addEditor(0,myMergeSession.getMyModel());
+  myResultEditor=addEditor(1,myMergeSession.getResultModel());
+  myRepositoryEditor=addEditor(2,myMergeSession.getRepositoryModel());
+  linkEditors(true,false);
+  linkEditors(false,false);
+  linkEditors(true,true);
+  linkEditors(false,true);
+  myMergeSession.setChangesInvalidateHandler(new MergeSession.ChangesInvalidateHandler(){
+    public void someChangesInvalidated(){
+      ModelAccess.instance().runWriteInEDT(new Runnable(){
+        public void run(){
+          rehighlight();
+        }
+      }
+);
+    }
+  }
+);
+  myPanel.setFirstComponent(myTopPanel);
+  myPanel.setSecondComponent(myBottomPanel);
+  myTraverser=new NextPreviousTraverser(myChangeGroupLayouts,myResultEditor.getMainEditor());
+  createActionGroup(rootName);
+  highlightAllChanges();
+  myTraverser.goToFirstChangeLater();
+}
