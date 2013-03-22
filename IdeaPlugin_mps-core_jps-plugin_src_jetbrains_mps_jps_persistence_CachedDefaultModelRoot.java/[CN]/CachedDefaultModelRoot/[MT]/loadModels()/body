@@ -3,10 +3,10 @@
   if (module instanceof Generator) {
     module=((Generator)module).getSourceLanguage();
   }
-  if (module == null || !(module.getModuleReference() instanceof SModuleReference)) {
+  if (module == null) {
     return super.loadModels();
   }
-  CachedModuleData moduleData=myCachedRepository.getModuleData((SModuleReference)module.getModuleReference());
+  CachedModuleData moduleData=myCachedRepository.getModuleData(module.getModuleReference());
   if (moduleData == null) {
     return super.loadModels();
   }
@@ -15,6 +15,10 @@
     return super.loadModels();
   }
   List<SModel> result=new ArrayList<SModel>();
+  Map<String,String> options=new HashMap<String,String>();
+  options.put(ModelFactory.OPTION_MODULEREF,module.getModuleReference().toString());
+  IFile moduleSourceDir=((AbstractModule)module).getModuleSourceDir();
+  final String moduleHome=moduleSourceDir != null ? moduleSourceDir.getPath().replace("\\","/") : null;
   for (  CachedModelData mdata : models) {
     IFile file=FileSystem.getInstance().getFileByPath(mdata.getFile());
     FileDataSource source=new FileDataSource(file,this);
@@ -32,7 +36,8 @@
       if (extension == null)       continue;
       ModelFactory modelFactory=PersistenceFacade.getInstance().getModelFactory(extension);
       if (modelFactory == null)       continue;
-      SModel model=modelFactory.load(source);
+      options.put(ModelFactory.OPTION_RELPATH,moduleHome != null ? makeRelative(moduleHome,file.getPath()) : null);
+      SModel model=modelFactory.load(source,Collections.unmodifiableMap(options));
       if (model != null) {
         result.add(model);
       }
