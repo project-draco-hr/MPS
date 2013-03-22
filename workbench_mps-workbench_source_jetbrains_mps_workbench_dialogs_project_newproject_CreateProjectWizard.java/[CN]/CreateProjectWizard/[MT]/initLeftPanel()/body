@@ -1,0 +1,86 @@
+{
+  myLeftPanel=new JPanel(new GridLayoutManager(2,1,JBInsets.NONE,-1,-1));
+  mySearchField=new SearchTextField(false);
+  mySearchField.addDocumentListener(new DocumentAdapter(){
+    @Override protected void textChanged(    DocumentEvent e){
+      TemplateItem tmp=myCurrentTemplateItem;
+      myFilteringListModel.refilter();
+      int idx=myFilteringListModel.getElementIndex(tmp);
+      myList.setSelectedIndex(idx < 0 ? 0 : idx);
+    }
+  }
+);
+  new AnAction(){
+    @Override public void actionPerformed(    AnActionEvent e){
+      InputEvent event=e.getInputEvent();
+      if (event instanceof KeyEvent) {
+        int row=myList.getSelectedIndex();
+        int toSelect;
+switch (((KeyEvent)event).getKeyCode()) {
+case KeyEvent.VK_UP:
+          toSelect=row == 0 ? myList.getItemsCount() - 1 : row - 1;
+        myList.setSelectedIndex(toSelect);
+      myList.ensureIndexIsVisible(toSelect);
+    break;
+case KeyEvent.VK_DOWN:
+  toSelect=row < myList.getItemsCount() - 1 ? row + 1 : 0;
+myList.setSelectedIndex(toSelect);
+myList.ensureIndexIsVisible(toSelect);
+break;
+}
+}
+}
+}
+.registerCustomShortcutSet(new CustomShortcutSet(KeyEvent.VK_UP,KeyEvent.VK_DOWN),mySearchField);
+myLeftPanel.add(mySearchField,new GridConstraints(0,0,1,1,GridConstraints.ANCHOR_NORTHWEST,GridConstraints.FILL_HORIZONTAL,GridConstraints.SIZEPOLICY_CAN_SHRINK,GridConstraints.SIZEPOLICY_FIXED,null,null,null));
+myList=new JBList();
+List<ProjectTemplatesGroup> templatesGroups=new LinkedList<ProjectTemplatesGroup>();
+List<TemplateItem> templateItems=new LinkedList<TemplateItem>();
+String projectPath=getProjectsDir() + File.separator + getDefaultProjectName();
+templatesGroups.add(new LanguageProjectsGroup(projectPath));
+templatesGroups.add(new SolutionProjectsGroup(projectPath));
+templatesGroups.add(new OtherProjectsGroup());
+for (ProjectTemplatesGroup templatesGroup : templatesGroups) {
+for (MPSProjectTemplate template : templatesGroup.getTemplates()) {
+templateItems.add(new TemplateItem(template,templatesGroup));
+}
+}
+CollectionListModel<TemplateItem> model=new CollectionListModel<TemplateItem>(templateItems);
+myFilteringListModel=new FilteringListModel<TemplateItem>(model);
+myFilteringListModel.setFilter(new Condition<TemplateItem>(){
+@Override public boolean value(TemplateItem templateItem){
+return templateItem.getName().toLowerCase().contains(mySearchField.getText().trim().toLowerCase());
+}
+}
+);
+myList.setModel(myFilteringListModel);
+myList.setCellRenderer(new GroupedItemsListRenderer(new ListItemDescriptor(){
+@Nullable @Override public String getTextFor(Object value){
+return ((TemplateItem)value).getName();
+}
+@Nullable @Override public String getTooltipFor(Object value){
+return null;
+}
+@Nullable @Override public Icon getIconFor(Object value){
+return ((TemplateItem)value).getIcon();
+}
+@Override public boolean hasSeparatorAboveOf(Object value){
+TemplateItem item=(TemplateItem)value;
+int index=myFilteringListModel.getElementIndex(item);
+return index == 0 || !myFilteringListModel.getElementAt(index - 1).getGroupName().equals(item.getGroupName());
+}
+@Nullable @Override public String getCaptionAboveOf(Object value){
+return ((TemplateItem)value).getGroupName();
+}
+}
+));
+myList.getSelectionModel().addListSelectionListener(new ListSelectionListener(){
+@Override public void valueChanged(ListSelectionEvent e){
+myCurrentTemplateItem=(TemplateItem)myList.getSelectedValue();
+updateRightPanel();
+}
+}
+);
+myLeftPanel.add(ScrollPaneFactory.createScrollPane(myList),new GridConstraints(1,0,1,1,GridConstraints.ANCHOR_NORTHWEST,GridConstraints.FILL_BOTH,GridConstraints.SIZEPOLICY_CAN_SHRINK,GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_CAN_SHRINK,null,null,null));
+myLeftPanel.setPreferredSize(new Dimension(200,400));
+}
