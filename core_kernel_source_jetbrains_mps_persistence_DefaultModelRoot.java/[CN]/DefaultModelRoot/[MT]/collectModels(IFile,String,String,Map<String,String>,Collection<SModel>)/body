@@ -1,0 +1,29 @@
+{
+  if (FileSystem.getInstance().isFileIgnored(dir.getName()))   return;
+  if (!dir.isDirectory())   return;
+  List<IFile> files=dir.getChildren();
+  for (  IFile file : files) {
+    String fileName=file.getName();
+    String extension=FileUtil.getExtension(fileName);
+    if (extension == null)     continue;
+    ModelFactory modelFactory=PersistenceFacade.getInstance().getModelFactory(extension);
+    if (modelFactory == null)     continue;
+    FileDataSource source=new FileDataSource(file,this);
+    options.put(ModelFactory.OPTION_PACKAGE,package_);
+    options.put(ModelFactory.OPTION_RELPATH,relativePath != null ? relativePath + "/" + fileName : null);
+    options.put(ModelFactory.OPTION_MODELNAME,package_ != null ? package_ + "." + FileUtil.getNameWithoutExtension(fileName) : null);
+    SModel model=modelFactory.load(source,Collections.unmodifiableMap(options));
+    if (model != null) {
+      model.setModelRoot(this);
+      models.add(model);
+    }
+  }
+  for (  IFile childDir : files) {
+    if (childDir.isDirectory()) {
+      String name=childDir.getName();
+      String innerPackage=package_ != null && JavaNameUtil.isJavaIdentifier(name) ? (package_.isEmpty() ? name : package_ + "." + name) : null;
+      String innerPath=relativePath != null ? relativePath + "/" + name : null;
+      collectModels(childDir,innerPackage,innerPath,options,models);
+    }
+  }
+}

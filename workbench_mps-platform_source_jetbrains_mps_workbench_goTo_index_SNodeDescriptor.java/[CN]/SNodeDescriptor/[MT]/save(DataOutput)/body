@@ -1,18 +1,29 @@
 {
-  out.writeLong(myMostSignificantBits);
-  out.writeLong(myLeastSignificantBits);
+  SModelId modelId=myModelReference.getModelId();
+  if (modelId instanceof RegularSModelId) {
+    out.writeByte(7);
+    UUID id=((RegularSModelId)modelId).getId();
+    out.writeLong(id.getMostSignificantBits());
+    out.writeLong(id.getLeastSignificantBits());
+    writeString(out,myModelReference.getModelName());
+  }
+ else {
+    out.writeByte(8);
+    writeString(out,modelId.toString());
+  }
   SNodeId id=myId;
-  if (id != null && id instanceof Regular) {
+  if (id == null) {
+    out.writeByte(0x70);
+  }
+ else   if (id instanceof Regular) {
     long longId=((Regular)id).getId();
+    out.writeByte(11);
     out.writeLong(longId);
   }
  else {
-    out.writeLong(-1);
+    out.writeByte(12);
+    writeString(out,id.toString());
   }
-  short conceptNameLength=(short)myConceptFqName.length();
-  out.writeShort(conceptNameLength);
-  out.write(myConceptFqName.getBytes(),0,conceptNameLength);
-  short nodeNameLength=(short)myNodeName.length();
-  out.writeShort(nodeNameLength);
-  out.write(myNodeName.getBytes(),0,nodeNameLength);
+  writeString(out,myConceptFqName);
+  writeString(out,myNodeName);
 }
