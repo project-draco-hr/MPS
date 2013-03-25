@@ -1,0 +1,43 @@
+{
+  if (!(queryParameters.getEffectiveSearchScope() instanceof GlobalSearchScope)) {
+    return;
+  }
+  final GlobalSearchScope scope=(GlobalSearchScope)queryParameters.getEffectiveSearchScope();
+  final PsiElement psiTarget=queryParameters.getElementToSearch();
+  final Project project=psiTarget.getProject();
+  final MPSPsiProvider psiProvider=MPSPsiProvider.getInstance(project);
+  ModelAccess.instance().runReadAction(new Runnable(){
+    @Override public void run(){
+      final SNode targetNode=getNodeForElement(psiTarget);
+      if (targetNode == null) {
+        return;
+      }
+      List<SNode> targetNodes=new ArrayList<SNode>(1);
+      targetNodes.add(targetNode);
+      for (      Module module : ModuleManager.getInstance(project).getModules()) {
+        if (!scope.isSearchInModuleContent(module))         continue;
+        MPSFacet facet=FacetManager.getInstance(module).getFacetByType(MPSFacetType.ID);
+        if (facet == null)         continue;
+        final Solution facetSolution=facet.getSolution();
+        for (        SModel model : SModelRepository.getInstance().getModelDescriptors(facetSolution)) {
+          FindUsagesManager.collectUsages(model,targetNodes,new Consumer<SReference>(){
+            @Override public void consume(            SReference sReference){
+              SNode source=sReference.getSourceNode();
+              String role=sReference.getRole();
+              MPSPsiNode psiNode=(MPSPsiNode)psiProvider.getPsi(source);
+              String refRole=sReference.getRole();
+              MPSPsiRef[] refs=psiNode.getReferences(refRole);
+              for (              MPSPsiRef r : refs) {
+                if (targetNode.getNodeId().equals(r.getNodeId())) {
+                  consumer.process(r.getReference());
+                }
+              }
+            }
+          }
+);
+        }
+      }
+    }
+  }
+);
+}
