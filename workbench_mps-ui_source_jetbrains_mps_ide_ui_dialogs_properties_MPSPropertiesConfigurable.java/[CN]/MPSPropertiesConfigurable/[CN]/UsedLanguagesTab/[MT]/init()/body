@@ -6,7 +6,7 @@
   usedLangsTable.setShowVerticalLines(false);
   usedLangsTable.setAutoCreateRowSorter(false);
   usedLangsTable.setAutoscrolls(true);
-  usedLangsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+  usedLangsTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
   myUsedLangsTableModel=getUsedLangsTableModel();
   usedLangsTable.setModel(myUsedLangsTableModel);
   usedLangsTable.setDefaultRenderer(SModuleReference.class,getTableCellRender());
@@ -18,7 +18,6 @@
     }
   }
 );
-  usedLangsTable.getSelectionModel().setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
   usedLangsTable.addMouseListener(new MouseAdapter(){
     @Override public void mouseClicked(    MouseEvent e){
     }
@@ -34,18 +33,19 @@
 ).setRemoveAction(new AnActionButtonRunnable(){
     @Override public void run(    AnActionButton anActionButton){
       int first=usedLangsTable.getSelectionModel().getMinSelectionIndex();
-      if (!confirmRemove(myUsedLangsTableModel.getValueAt(first,UsedLangsTableModel.ITEM_COLUMN)))       return;
       int last=usedLangsTable.getSelectionModel().getMaxSelectionIndex();
+      for (      int i : usedLangsTable.getSelectedRows()) {
+        if (!confirmRemove(myUsedLangsTableModel.getValueAt(i,UsedLangsTableModel.ITEM_COLUMN)))         return;
+      }
       TableUtil.removeSelectedItems(usedLangsTable);
       myUsedLangsTableModel.fireTableRowsDeleted(first,last);
-    }
-  }
-).addExtraAction(new FindAnActionButton(usedLangsTable){
-    @Override public void actionPerformed(    AnActionEvent e){
-      findUsages(myUsedLangsTableModel.getValueAt(usedLangsTable.getSelectionModel().getMinSelectionIndex(),UsedLangsTableModel.ITEM_COLUMN));
+      first=Math.max(0,first - 1);
+      usedLangsTable.getSelectionModel().setSelectionInterval(first,first);
     }
   }
 );
+  FindAnActionButton findAnActionButton=getFindAnAction(usedLangsTable);
+  if (findAnActionButton != null)   decorator.addExtraAction(findAnActionButton);
   decorator.setPreferredSize(new Dimension(500,300));
   JPanel table=decorator.createPanel();
   table.setBorder(IdeBorderFactory.createBorder());
