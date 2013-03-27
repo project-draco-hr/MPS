@@ -1,13 +1,22 @@
 {
-  byte[] bytes=new byte[1024];
-  myMostSignificantBits=in.readLong();
-  myLeastSignificantBits=in.readLong();
-  long id=in.readLong();
-  short conceptNameLength=in.readShort();
-  in.readFully(bytes,0,conceptNameLength);
-  myConceptFqName=getString(bytes,0,conceptNameLength);
-  short nodeNameLength=in.readShort();
-  in.readFully(bytes,0,nodeNameLength);
-  myNodeName=getString(bytes,0,nodeNameLength);
-  myId=id == -1 ? null : new Regular(id);
+  byte c=in.readByte();
+  if (c == 7) {
+    SModelId id=jetbrains.mps.smodel.SModelId.regular(new UUID(in.readLong(),in.readLong()));
+    myModelReference=PersistenceFacade.getInstance().createModelReference(null,id,readString(in));
+  }
+ else {
+    myModelReference=PersistenceFacade.getInstance().createModelReference(readString(in));
+  }
+  c=in.readByte();
+  if (c == 0x70) {
+    myId=null;
+  }
+ else   if (c == 11) {
+    myId=new jetbrains.mps.smodel.SNodeId.Regular(in.readLong());
+  }
+ else {
+    myId=jetbrains.mps.smodel.SNodeId.fromString(readString(in));
+  }
+  myConceptFqName=readString(in);
+  myNodeName=readString(in);
 }

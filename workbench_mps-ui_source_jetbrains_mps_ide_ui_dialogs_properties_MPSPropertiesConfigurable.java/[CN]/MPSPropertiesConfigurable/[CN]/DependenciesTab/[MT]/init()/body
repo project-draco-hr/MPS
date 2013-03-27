@@ -6,14 +6,13 @@
   tableDepend.setShowVerticalLines(false);
   tableDepend.setAutoCreateRowSorter(false);
   tableDepend.setAutoscrolls(true);
-  tableDepend.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+  tableDepend.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
   myDependTableModel=getDependTableModel();
   tableDepend.setModel(myDependTableModel);
   tableDepend.setDefaultRenderer(DependenciesTableItem.class,getTableCellRender());
   tableDepend.setDefaultRenderer(Boolean.class,new BooleanTableCellRenderer());
   tableDepend.setDefaultRenderer(SDependencyScope.class,new ComboBoxTableRenderer<SDependencyScope>(SDependencyScope.values()));
   tableDepend.setDefaultEditor(SDependencyScope.class,getTableCellEditor());
-  tableDepend.getSelectionModel().setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
   TableColumn column=null;
   if (myDependTableModel.getExportColumnIndex() >= 0) {
     column=tableDepend.getTableHeader().getColumnModel().getColumn(myDependTableModel.getExportColumnIndex());
@@ -40,20 +39,21 @@
   decorator.setAddAction(getAnActionButtonRunnable()).setRemoveAction(new AnActionButtonRunnable(){
     @Override public void run(    AnActionButton anActionButton){
       int first=tableDepend.getSelectionModel().getMinSelectionIndex();
-      if (!confirmRemove(myDependTableModel.getValueAt(first,myDependTableModel.getItemColumnIndex()))) {
-        return;
-      }
       int last=tableDepend.getSelectionModel().getMaxSelectionIndex();
+      for (      int i : tableDepend.getSelectedRows()) {
+        if (!confirmRemove(myDependTableModel.getValueAt(i,myDependTableModel.getItemColumnIndex()))) {
+          return;
+        }
+      }
       TableUtil.removeSelectedItems(tableDepend);
       myDependTableModel.fireTableRowsDeleted(first,last);
-    }
-  }
-).addExtraAction(new FindAnActionButton(tableDepend){
-    @Override public void actionPerformed(    AnActionEvent e){
-      findUsages(myDependTableModel.getValueAt(tableDepend.getSelectionModel().getMinSelectionIndex(),myDependTableModel.getItemColumnIndex()));
+      first=Math.max(0,first - 1);
+      tableDepend.getSelectionModel().setSelectionInterval(first,first);
     }
   }
 );
+  FindAnActionButton findAnActionButton=getFindAnAction(tableDepend);
+  if (findAnActionButton != null)   decorator.addExtraAction(findAnActionButton);
   decorator.setPreferredSize(new Dimension(500,300));
   JPanel table=decorator.createPanel();
   table.setBorder(IdeBorderFactory.createBorder());
