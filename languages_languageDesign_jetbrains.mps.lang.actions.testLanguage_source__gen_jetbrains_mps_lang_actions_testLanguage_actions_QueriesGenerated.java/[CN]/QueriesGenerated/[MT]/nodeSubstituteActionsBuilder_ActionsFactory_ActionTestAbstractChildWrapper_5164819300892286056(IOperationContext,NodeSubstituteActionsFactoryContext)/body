@@ -5,6 +5,7 @@
     SNode childConcept=(SNode)_context.getChildConcept();
     if (SConceptOperations.isSuperConceptOf(childConcept,NameUtil.nodeFQName(outputConcept))) {
       SNode wrappedConcept=SConceptOperations.findConceptDeclaration("jetbrains.mps.lang.actions.testLanguage.structure.ActionTestChildToWrap1");
+      final boolean[] returnSmallPartResult=new boolean[]{false};
       IChildNodeSetter setter=new AbstractChildNodeSetter(){
         private SNode wrapNode(        SNode nodeToWrap,        SModel model,        @Nullable EditorContext editorContext){
           boolean tmpVar=nodeToWrap != null;
@@ -32,11 +33,43 @@
         @Override public SNode doExecute(        SNode pn,        SNode oc,        SNode nc,        IScope sc,        @Nullable EditorContext editorContext){
           SNode wrappedNode=wrapNode(nc,nc.getModel(),editorContext);
           _context.getChildSetter().execute(_context.getParentNode(),_context.getCurrentTargetNode(),wrappedNode,operationContext.getScope(),editorContext);
-          return (returnSmallPart(nc) ? nc : wrappedNode);
+          return ((returnSmallPartResult[0]=returnSmallPart(nc)) ? nc : wrappedNode);
         }
       }
 ;
-      ListSequence.fromList(result).addSequence(ListSequence.fromList(ModelActions.createChildNodeSubstituteActions(_context.getParentNode(),_context.getCurrentTargetNode(),wrappedConcept,setter,operationContext)));
+      for (      SubstituteAction substituteAction : ListSequence.fromList(ModelActions.createChildNodeSubstituteActions(_context.getParentNode(),_context.getCurrentTargetNode(),wrappedConcept,setter,operationContext))) {
+        ListSequence.fromList(result).addElement(new NodeSubstituteActionWrapper(substituteAction){
+          @Override public SNode substitute(          @Nullable EditorContext editorContext,          String pattern){
+            SNode substitutionResult=super.substitute(editorContext,pattern);
+            if (returnSmallPartResult[0]) {
+              return substitutionResult;
+            }
+            return setupSelection(substitutionResult,substitutionResult.getModel(),pattern,editorContext);
+          }
+          private SNode setupSelection(          SNode createdNode,          SModel model,          String pattern,          EditorContext editorContext){
+            boolean tmpVar=_context.getParentNode() != null;
+            tmpVar=tmpVar && _context.getParentNode() != null;
+            tmpVar=tmpVar && createdNode != null;
+            tmpVar=tmpVar && _context.getChildConcept() != null;
+            tmpVar=tmpVar && model != null;
+            tmpVar=tmpVar && operationContext != null;
+            tmpVar=tmpVar && operationContext.getScope() != null;
+            tmpVar=tmpVar && editorContext != null;
+            editorContext.flushEvents();
+            EditorCell createdNodeCell=editorContext.getEditorComponent().findNodeCell(createdNode);
+            if (createdNodeCell != null) {
+              EditorCell firstLeaf=CellTraversalUtil.getFirstLeaf(createdNodeCell);
+              editorContext.getEditorComponent().changeSelection(firstLeaf);
+              if (firstLeaf instanceof EditorCell_Label) {
+                ((EditorCell_Label)firstLeaf).setCaretPosition(2);
+              }
+              return null;
+            }
+            return createdNode;
+          }
+        }
+);
+      }
     }
   }
   return result;
