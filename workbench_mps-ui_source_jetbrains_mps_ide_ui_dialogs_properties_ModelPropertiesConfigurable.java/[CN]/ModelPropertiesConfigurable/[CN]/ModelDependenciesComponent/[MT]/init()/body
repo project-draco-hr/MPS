@@ -1,11 +1,12 @@
 {
   myImportedModelsComponent=new JPanel();
-  myImportedModelsComponent.setLayout(new GridLayoutManager(2,1,JBInsets.NONE,-1,-1));
+  myImportedModelsComponent.setLayout(new GridLayoutManager(2,1,MPSPropertiesConfigurable.INSETS,-1,-1));
   final JBTable importedModelsTable=new JBTable();
   importedModelsTable.setShowHorizontalLines(false);
   importedModelsTable.setShowVerticalLines(false);
   importedModelsTable.setAutoCreateRowSorter(false);
   importedModelsTable.setAutoscrolls(true);
+  importedModelsTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
   importedModelsTable.setModel(myImportedModels);
   importedModelsTable.setDefaultRenderer(SModelReference.class,new ModelTableCellRender(getScope()){
     @Override protected DependencyCellState getDependencyCellState(    org.jetbrains.mps.openapi.model.SModelReference modelReference){
@@ -22,7 +23,6 @@
     }
   }
 );
-  importedModelsTable.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
   ToolbarDecorator decorator=ToolbarDecorator.createDecorator(importedModelsTable);
   decorator.setAddAction(new AnActionButtonRunnable(){
     @Override public void run(    AnActionButton anActionButton){
@@ -33,17 +33,63 @@
 ).setRemoveAction(new AnActionButtonRunnable(){
     @Override public void run(    AnActionButton anActionButton){
       int first=importedModelsTable.getSelectionModel().getMinSelectionIndex();
-      if (!confirmRemove(importedModelsTable.getValueAt(first,0))) {
-        return;
-      }
       int last=importedModelsTable.getSelectionModel().getMaxSelectionIndex();
+      for (      int i : importedModelsTable.getSelectedRows()) {
+        if (!confirmRemove(importedModelsTable.getValueAt(i,0))) {
+          return;
+        }
+      }
       TableUtil.removeSelectedItems(importedModelsTable);
       myImportedModels.fireTableRowsDeleted(first,last);
+      first=Math.max(0,first - 1);
+      importedModelsTable.getSelectionModel().setSelectionInterval(first,first);
     }
   }
-).addExtraAction(new FindAnActionButton(importedModelsTable){
+).addExtraAction(myFindAnActionButton=new FindAnActionButton(importedModelsTable){
     @Override public void actionPerformed(    AnActionEvent e){
-      findUsages(myImportedModels.getValueAt(importedModelsTable.getSelectionModel().getMinSelectionIndex(),0));
+      if (myInPlugin) {
+        Messages.showMessageDialog(ProjectHelper.toIdeaProject(myProject),"This functions is not implemented in plugin yet","=(",Messages.getInformationIcon());
+        return;
+      }
+      final SearchQuery[] query=new SearchQuery[1];
+      final IResultProvider[] provider=new IResultProvider[1];
+      final IScope scope=new ModelsOnlyScope(myModelDescriptor);
+      ModelAccess.instance().runReadAction(new Runnable(){
+        @Override public void run(){
+          List<SModel> models=new LinkedList<SModel>();
+          for (          int i : myTable.getSelectedRows()) {
+            Object value=myImportedModels.getValueAt(i,0);
+            if (value instanceof SModelReference) {
+              models.add(((SModelReference)value).resolve(MPSModuleRepository.getInstance()));
+            }
+          }
+          ModelsHolder modelsHolder=new ModelsHolder(models,null){
+            @Override public void read(            Element element,            Project project) throws CantLoadSomethingException {
+            }
+            @Override public void write(            Element element,            Project project) throws CantSaveSomethingException {
+            }
+          }
+;
+          query[0]=new SearchQuery(modelsHolder,scope);
+          provider[0]=FindUtils.makeProvider(new ModelUsagesFinder(){
+            @Override public SearchResults find(            SearchQuery query,            ProgressMonitor monitor){
+              SearchResults searchResults=new SearchResults();
+              ModelsHolder modelsHolder=(ModelsHolder)query.getObjectHolder();
+              for (              SModel searchedModel : modelsHolder.getObject()) {
+                searchResults.getSearchedNodes().add(searchedModel);
+                SearchQuery searchQuery=new SearchQuery(searchedModel,query.getScope());
+                searchResults.addAll(super.find(searchQuery,monitor));
+              }
+              return searchResults;
+            }
+          }
+);
+        }
+      }
+);
+      IUsagesViewTool usagesViewTool=(IUsagesViewTool)ProjectHelper.toIdeaProject(myProject).getComponent("jetbrains.mps.ide.findusages.view.UsagesViewTool");
+      usagesViewTool.findUsages(provider[0],query[0],true,true,true,"No usages found");
+      forceCancelCloseDialog();
     }
   }
 );
