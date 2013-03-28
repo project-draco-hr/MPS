@@ -1,41 +1,45 @@
 {
   try {
     List<SModel> m=((List<SModel>)MapSequence.fromMap(_params).get("models"));
-    final Iterable<IFile> seq=ListSequence.fromList(m).where(new IWhereFilter<SModel>(){
+    final Iterable<SModel> seq=ListSequence.fromList(m).where(new IWhereFilter<SModel>(){
       public boolean accept(      SModel it){
-        return it instanceof DefaultSModelDescriptor && !(((DefaultSModelDescriptor)it).isReadOnly());
-      }
-    }
-).select(new ISelector<SModel,IFile>(){
-      public IFile select(      SModel it){
-        return ((FileDataSource)it.getSource()).getFile();
+        return it instanceof EditableSModel && !(((EditableSModel)it).isReadOnly()) && it.getSource() instanceof FileDataSource;
       }
     }
 );
+    final ModelFactory binaryFactory=PersistenceFacade.getInstance().getModelFactory(MPSExtentions.MODEL_BINARY);
     ModelAccess.instance().runWriteAction(new Runnable(){
       public void run(){
-        for (        IFile oldFile : Sequence.fromIterable(seq)) {
-          if (!(oldFile.getName().endsWith(MPSExtentions.DOT_MODEL))) {
+        for (        SModel smodel : Sequence.fromIterable(seq)) {
+          IFile oldFile=((FileDataSource)smodel.getSource()).getFile();
+          SModel newModel=PersistenceUtil.loadModel(oldFile);
+          if (newModel == null) {
+            LOG.error("cannot read " + smodel);
             continue;
           }
-          DefaultSModel rmodel;
-          try {
-            rmodel=ModelPersistence.readModel(new FileDataSource(oldFile),false);
+          Iterable<SModel.Problem> problems=Sequence.fromIterable(((Iterable<SModel.Problem>)newModel.getProblems())).where(new IWhereFilter<SModel.Problem>(){
+            public boolean accept(            SModel.Problem it){
+              return it.isError();
+            }
           }
- catch (          ModelReadException ex) {
-            LOG.error("cannot read " + oldFile,ex);
-            continue;
-          }
-          SModel modelDescriptor=rmodel.getReference().resolve(((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository());
-          if (modelDescriptor == null) {
+);
+          if (Sequence.fromIterable(problems).isNotEmpty()) {
+            LOG.error("cannot read " + smodel + ": "+ Sequence.fromIterable(problems).first().getText());
             continue;
           }
           IFile newFile=oldFile.getParent().getDescendant(FileUtil.getNameWithoutExtension(oldFile.getName()) + "." + MPSExtentions.MODEL_BINARY);
-          SModule module=modelDescriptor.getModule();
-          if (BinaryPersistence.writeModel(rmodel,new FileDataSource(newFile))) {
-            SModelRepository.getInstance().removeModelDescriptor(modelDescriptor);
+          SModule module=smodel.getModule();
+          try {
+            binaryFactory.save(newModel,new FileDataSource(newFile));
+            SModelRepository.getInstance().removeModelDescriptor(smodel);
             oldFile.delete();
             ((AbstractModule)module).updateModelsSet();
+          }
+ catch (          IOException ex) {
+            LOG.error("cannot write " + smodel,ex);
+          }
+catch (          ModelSaveException ex) {
+            LOG.error("cannot write " + smodel,ex);
           }
         }
       }
