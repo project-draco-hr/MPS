@@ -1,0 +1,26 @@
+{
+  final HashMap<String,Collection<SNodeDescriptor>> map=new HashMap<String,Collection<SNodeDescriptor>>();
+  ModelAccess.instance().runIndexing(new Runnable(){
+    @Override public void run(){
+      try {
+        SModel model=RootNodeNameIndex.doModelParsing(inputData);
+        SModelReference modelRef=model.getReference();
+        for (        SNode node : JavaClassUtil.getJavaClasses(model)) {
+          String persistentName=node.getProperty(SNodeUtil.property_INamedConcept_name);
+          String nodeName=(persistentName == null) ? "null" : persistentName;
+          Collection<SNodeDescriptor> descriptors=map.get(nodeName);
+          if (descriptors == null) {
+            descriptors=new ArrayList<SNodeDescriptor>();
+            map.put(nodeName,descriptors);
+          }
+          descriptors.add(SNodeDescriptor.fromModelReference(nodeName,node.getConcept().getId(),modelRef,node.getNodeId()));
+        }
+      }
+ catch (      Exception e) {
+        LOG.error("Error indexing model file " + inputData.getFileName() + "; "+ e.getMessage());
+      }
+    }
+  }
+);
+  return map;
+}
