@@ -4,5 +4,31 @@
     LOG.errorWithTrace("Opening editor with null context");
   }
   setOperationContext(operationContext);
-  editNode(node);
+  if (myNode != null && notifiesCreation()) {
+    notifyDisposal();
+  }
+  ModelAccess.instance().runReadAction(new Runnable(){
+    @Override public void run(){
+      disposeTypeCheckingContext();
+      clearModelDisposedTrace();
+      myNode=node;
+      if (myNode != null) {
+        myNodePointer=new jetbrains.mps.smodel.SNodePointer(myNode);
+        myVirtualFile=!myNoVirtualFile ? MPSNodesVirtualFileSystem.getInstance().getFileFor(node) : null;
+      }
+ else {
+        myNodePointer=null;
+        myVirtualFile=null;
+      }
+      SModel model=node == null ? null : node.getModel();
+      setEditorContext(new EditorContext(EditorComponent.this,model,operationContext));
+      rebuildEditorContent();
+      getTypeCheckingContext();
+      setReadOnly(node == null || node.getModel() == null || SModelOperations.isReadOnly(node.getModel()));
+    }
+  }
+);
+  if (myNode != null && notifiesCreation()) {
+    notifyCreation();
+  }
 }
