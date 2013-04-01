@@ -2,7 +2,8 @@
   final jetbrains.mps.project.Project project=ProjectHelper.toMPSProject(getProject());
   ModelAccess.instance().runWriteActionInCommand(new Runnable(){
     public void run(){
-      ConsoleTool.this.myEditor=new UIEditorComponent(new ModuleContext(myModel.getModule(),project),null);
+      ConsoleTool.this.myContext=new ModuleContext(myModel.getModule(),project);
+      ConsoleTool.this.myEditor=new UIEditorComponent(ConsoleTool.this.myContext,null);
       ((SModelInternal)myModel).addLanguage(ModuleRepositoryFacade.getInstance().getModule("jetbrains.mps.console.lang",Language.class).getModuleReference());
       ((SModelInternal)myModel).addLanguage(ModuleRepositoryFacade.getInstance().getModule("jetbrains.mps.console.lang.commands",Language.class).getModuleReference());
       ((SModelInternal)myModel).addLanguage(ModuleRepositoryFacade.getInstance().getModule("jetbrains.mps.baseLanguage",Language.class).getModuleReference());
@@ -19,8 +20,9 @@
   btnPanel.setLayout(new FlowLayout());
   btnPanel.add(new JButton(new AbstractAction("Execute"){
     public void actionPerformed(    ActionEvent p0){
-      ModelAccess.instance().runReadAction(new Runnable(){
+      ModelAccess.instance().runWriteAction(new Runnable(){
         public void run(){
+          TemporaryModels.getInstance().fixImports(myModel);
           if ((myLastCommand != null)) {
             BehaviorReflection.invokeVirtual(Void.class,myLastCommand,"virtual_execute_757553790980855637",new Object[]{project});
           }
@@ -39,7 +41,7 @@
             return;
           }
           myLastCommand=SNodeOperations.cast(SNodeOperations.getPrevSibling(myLastCommand),"jetbrains.mps.console.lang.structure.ConsoleCommand");
-          myEditor.editNode(myLastCommand);
+          myEditor.editNode(myLastCommand,myContext);
         }
       }
 );
@@ -54,7 +56,7 @@
             return;
           }
           myLastCommand=SNodeOperations.cast(SNodeOperations.getNextSibling(myLastCommand),"jetbrains.mps.console.lang.structure.ConsoleCommand");
-          myEditor.editNode(myLastCommand);
+          myEditor.editNode(myLastCommand,myContext);
         }
       }
 );
