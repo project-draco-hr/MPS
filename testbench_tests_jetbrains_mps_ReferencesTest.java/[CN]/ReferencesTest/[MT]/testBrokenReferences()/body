@@ -10,24 +10,20 @@
 );
   final List<String> errors=new ArrayList<String>();
   final List<String> fatals=new ArrayList<String>();
-  ILoggingHandler handler=new ILoggingHandler(){
-    public void info(    LogEntry e){
-    }
-    public void warning(    LogEntry e){
-    }
-    public void debug(    LogEntry e){
-    }
-    public void error(    LogEntry e){
-      System.out.println("error: " + e.getMessage());
-      errors.add(e.getMessage());
-    }
-    public void fatal(    LogEntry e){
-      System.out.println("fatal: " + e.getMessage());
-      fatals.add(e.getMessage());
+  MpsAppenderSkeleton handler=new MpsAppenderSkeleton(){
+    @Override protected void append(    @NotNull Priority level,    @NotNull String categoryName,    @NotNull String message,    @Nullable Throwable t,    @Nullable Object hintObject){
+      if (level.equals(org.apache.log4j.Level.ERROR)) {
+        System.out.println("error: " + message);
+        errors.add(message);
+      }
+ else       if (level.equals(org.apache.log4j.Level.FATAL)) {
+        System.out.println("fatal: " + message);
+        fatals.add(message);
+      }
     }
   }
 ;
-  Logger.addLoggingHandler(handler);
+  handler.register();
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
       for (      SModel sm : SModelRepository.getInstance().getModelDescriptors()) {
@@ -40,7 +36,7 @@
     }
   }
 );
-  Logger.removeLoggingHandler(handler);
+  handler.unRegister();
   assertTrue(errors.isEmpty());
   assertTrue(fatals.isEmpty());
 }
