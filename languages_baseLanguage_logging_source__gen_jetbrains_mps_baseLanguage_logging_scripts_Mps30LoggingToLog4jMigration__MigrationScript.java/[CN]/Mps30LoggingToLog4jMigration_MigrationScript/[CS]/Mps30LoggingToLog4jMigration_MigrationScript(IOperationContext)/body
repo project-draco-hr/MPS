@@ -21,15 +21,6 @@
       return SLinkOperations.getTarget(SNodeOperations.cast(initializer,"jetbrains.mps.baseLanguage.structure.StaticMethodCall"),"baseMethodDeclaration",false) == SLinkOperations.getTarget(_quotation_createNode_t030w_a0a0f0a0(),"baseMethodDeclaration",false) || SLinkOperations.getTarget(SNodeOperations.cast(initializer,"jetbrains.mps.baseLanguage.structure.StaticMethodCall"),"baseMethodDeclaration",false) == SLinkOperations.getTarget(_quotation_createNode_t030w_a0a0f0a0_0(),"baseMethodDeclaration",false);
     }
     public void doUpdateInstanceNode(    final SNode node){
-      SLinkOperations.setTarget(node,"type",_quotation_createNode_t030w_a0a0a0a(),true);
-      SNode methodCall=SNodeOperations.cast(SLinkOperations.getTarget(node,"initializer",true),"jetbrains.mps.baseLanguage.structure.StaticMethodCall");
-      if (SLinkOperations.getTarget(methodCall,"baseMethodDeclaration",false) == SLinkOperations.getTarget(_quotation_createNode_t030w_a0a2a0a(),"baseMethodDeclaration",false)) {
-        SNodeOperations.replaceWithAnother(methodCall,_quotation_createNode_t030w_a0a0a2a0a(SLinkOperations.getTargets(methodCall,"actualArgument",true)));
-      }
- else       if (SLinkOperations.getTarget(methodCall,"baseMethodDeclaration",false) == SLinkOperations.getTarget(_quotation_createNode_t030w_a0a0c0a0(),"baseMethodDeclaration",false)) {
-        SNodeOperations.replaceWithAnother(methodCall,_quotation_createNode_t030w_a0a0a0c0a0(SLinkOperations.getTargets(methodCall,"actualArgument",true)));
-      }
-      SModelOperations.validateLanguagesAndImports(SNodeOperations.getModel(node),true,true);
       SNode containingRoot=SNodeOperations.getContainingRoot(node);
       Iterable<SNode> references=ListSequence.fromList(SNodeOperations.getDescendants(containingRoot,"jetbrains.mps.baseLanguage.structure.VariableReference",false,new String[]{})).where(new IWhereFilter<SNode>(){
         public boolean accept(        SNode it){
@@ -37,16 +28,35 @@
         }
       }
 );
-      ScopeResolver resolver=new ScopeResolver();
-      ModuleOperationContext context=new ModuleOperationContext(SNodeOperations.getModel(node).getModule());
-      for (      SNode ref : Sequence.fromIterable(references)) {
-        SNode operation=SLinkOperations.getTarget(SNodeOperations.cast(SNodeOperations.getParent(ref),"jetbrains.mps.baseLanguage.structure.DotExpression"),"operation",true);
-        if (SNodeOperations.isInstanceOf(operation,"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation")) {
-          MigrationUtil.migrateInstanceMethodCall(SNodeOperations.cast(operation,"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation"),resolver,context);
+      if ((Sequence.fromIterable(references).findFirst(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          SNode operation=SLinkOperations.getTarget(SNodeOperations.cast(SNodeOperations.getParent(it),"jetbrains.mps.baseLanguage.structure.DotExpression"),"operation",true);
+          return SNodeOperations.isInstanceOf(operation,"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation") && !(MigrationUtil.isLog4jCall(SNodeOperations.cast(operation,"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation")));
         }
+      }
+) != null)) {
+      }
  else {
-          for (          SReference r : Sequence.fromIterable(SNodeOperations.getReferences(operation))) {
-            resolver.resolve(r,operation,context);
+        SLinkOperations.setTarget(node,"type",_quotation_createNode_t030w_a0a2a0c0a0(),true);
+        SNode methodCall=SNodeOperations.cast(SLinkOperations.getTarget(node,"initializer",true),"jetbrains.mps.baseLanguage.structure.StaticMethodCall");
+        if (SLinkOperations.getTarget(methodCall,"baseMethodDeclaration",false) == SLinkOperations.getTarget(_quotation_createNode_t030w_a0a4a0c0a0(),"baseMethodDeclaration",false)) {
+          SNodeOperations.replaceWithAnother(methodCall,_quotation_createNode_t030w_a0a0a4a0c0a0(SLinkOperations.getTargets(methodCall,"actualArgument",true)));
+        }
+ else         if (SLinkOperations.getTarget(methodCall,"baseMethodDeclaration",false) == SLinkOperations.getTarget(_quotation_createNode_t030w_a0a0e0a2a0a(),"baseMethodDeclaration",false)) {
+          SNodeOperations.replaceWithAnother(methodCall,_quotation_createNode_t030w_a0a0a0e0a2a0a(SLinkOperations.getTargets(methodCall,"actualArgument",true)));
+        }
+        SModelOperations.validateLanguagesAndImports(SNodeOperations.getModel(node),true,true);
+        ScopeResolver resolver=new ScopeResolver();
+        ModuleOperationContext context=new ModuleOperationContext(SNodeOperations.getModel(node).getModule());
+        for (        SNode ref : Sequence.fromIterable(references)) {
+          SNode operation=SLinkOperations.getTarget(SNodeOperations.cast(SNodeOperations.getParent(ref),"jetbrains.mps.baseLanguage.structure.DotExpression"),"operation",true);
+          if (SNodeOperations.isInstanceOf(operation,"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation")) {
+            MigrationUtil.migrateInstanceMethodCall(SNodeOperations.cast(operation,"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation"),resolver,context);
+          }
+ else {
+            for (            SReference r : Sequence.fromIterable(SNodeOperations.getReferences(operation))) {
+              resolver.resolve(r,operation,context);
+            }
           }
         }
       }
