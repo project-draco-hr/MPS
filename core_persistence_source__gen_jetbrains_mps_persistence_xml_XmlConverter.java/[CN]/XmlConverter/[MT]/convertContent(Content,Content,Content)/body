@@ -1,0 +1,67 @@
+{
+  if (c instanceof Element) {
+    return Sequence.<SNode>singleton(convertElement((Element)c));
+  }
+ else   if (c instanceof Comment) {
+    String commentText=((Comment)c).getText();
+    SNode res=SConceptOperations.createNewNode("jetbrains.mps.core.xml.structure.XmlComment",null);
+    ListSequence.fromList(SLinkOperations.getTargets(res,"lines",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(commentText.split("\r?\n"))).select(new ISelector<String,SNode>(){
+      public SNode select(      String it){
+        return createXmlCommentLine_h7fa2c_a0a0a0a0c0a0a4(it);
+      }
+    }
+));
+    return Sequence.<SNode>singleton(res);
+  }
+ else   if (c instanceof ProcessingInstruction) {
+    ProcessingInstruction pi=(ProcessingInstruction)c;
+    return Sequence.<SNode>singleton(createXmlProcessingInstruction_h7fa2c_a0a1a1a0e(pi.getTarget(),pi.getData()));
+  }
+ else   if (c instanceof CDATA) {
+    String cdata=((Text)c).getText();
+    return Sequence.<SNode>singleton(createXmlCDATA_h7fa2c_a0a1a2a0e(cdata));
+  }
+ else   if (c instanceof Text) {
+    String text=((Text)c).getText();
+    int index=0;
+    boolean nlSeen=!(prev == null || prev instanceof Element);
+    for (; index < text.length(); index++) {
+      char ch=text.charAt(index);
+      if (ch == '\n') {
+        if (!(nlSeen)) {
+          nlSeen=true;
+          continue;
+        }
+      }
+      if (ch != ' ' && ch != '\t' && ch != '\r') {
+        break;
+      }
+    }
+    text=text.substring(index);
+    index=text.length();
+    for (; index > 0; index--) {
+      char ch=text.charAt(index - 1);
+      if (ch != ' ' && ch != '\t') {
+        break;
+      }
+    }
+    text=text.substring(0,index);
+    if (text.isEmpty()) {
+      return null;
+    }
+    if (text.endsWith("\n") && (next == null || next instanceof Element)) {
+      text=text.substring(0,text.length() - 1);
+    }
+    return convertText(Sequence.fromIterable(Sequence.fromArray((" " + text + " ").split("\n"))).select(new ISelector<String,String>(){
+      public String select(      String it){
+        return ((it == null ? null : it.trim()));
+      }
+    }
+).toGenericArray(String.class));
+  }
+ else   if (c instanceof EntityRef) {
+    String name=((EntityRef)c).getName();
+    return Sequence.<SNode>singleton(createXmlEntityRef_h7fa2c_a0a1a4a0e(name));
+  }
+  return null;
+}

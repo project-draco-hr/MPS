@@ -1,5 +1,5 @@
 {
-  int rowsCount=myIsDefSModelDescr ? 4 : 3;
+  int rowsCount=myIsDefSModelDescr ? 6 : 5;
   int rowIndex=0;
   final JPanel panel=new JPanel();
   panel.setLayout(new GridLayoutManager(rowsCount,1,INSETS,-1,-1));
@@ -9,18 +9,28 @@
     myGenerateIntoModelFolderCheckBox=new JBCheckBox(PropertiesBundle.message("mps.properties.configurable.model.infotab.checkboxGIMF"),myModelProperties.isGenerateIntoModelFolder());
     panel.add(myGenerateIntoModelFolderCheckBox,new GridConstraints(rowIndex++,0,1,1,GridConstraints.ANCHOR_NORTHWEST,GridConstraints.FILL_HORIZONTAL,GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_CAN_SHRINK,GridConstraints.SIZEPOLICY_FIXED,null,null,null,0,false));
   }
-  final JBLabel label=new JBLabel();
-  label.setText(getInfoText());
-  panel.add(label,new GridConstraints(rowIndex++,0,1,1,GridConstraints.ANCHOR_NORTHWEST,GridConstraints.FILL_NONE,GridConstraints.SIZEPOLICY_FIXED,GridConstraints.SIZEPOLICY_FIXED,null,null,null,0,false));
+  panel.add(new JBLabel(getInfoText()),new GridConstraints(rowIndex++,0,1,1,GridConstraints.ANCHOR_NORTHWEST,GridConstraints.FILL_HORIZONTAL,GridConstraints.SIZEPOLICY_CAN_GROW | GridConstraints.SIZEPOLICY_CAN_SHRINK,GridConstraints.SIZEPOLICY_FIXED,null,null,null,0,false));
+  panel.add(new JBLabel(PropertiesBundle.message("mps.properties.configurable.common.commontab.filepathlabel")),new GridConstraints(rowIndex++,0,1,1,GridConstraints.ANCHOR_NORTHWEST,GridConstraints.FILL_NONE,GridConstraints.SIZEPOLICY_FIXED,GridConstraints.SIZEPOLICY_FIXED,null,null,null,0,false));
+  String filePath="(not editable model)";
+  if (myModelDescriptor instanceof EditableSModel) {
+    DataSource source=myModelDescriptor.getSource();
+    if (source instanceof FileDataSource) {
+      filePath=FileUtil.getCanonicalPath(((FileDataSource)source).getFile().getPath());
+    }
+  }
+  JTextField textField=new JTextField();
+  textField.setEditable(false);
+  textField.setText(filePath);
+  panel.add(textField,new GridConstraints(rowIndex++,0,1,1,GridConstraints.ANCHOR_NORTHWEST,GridConstraints.FILL_HORIZONTAL,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,GridConstraints.SIZEPOLICY_FIXED,null,null,null));
   final JBTable languagesTable=new JBTable();
   languagesTable.setShowHorizontalLines(false);
   languagesTable.setShowVerticalLines(false);
   languagesTable.setAutoCreateRowSorter(false);
   languagesTable.setAutoscrolls(true);
+  languagesTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
   myLangEngagedOnGenTM=new ModelsLangEngagedOnGenTM(myModelProperties);
   languagesTable.setModel(myLangEngagedOnGenTM);
   languagesTable.setDefaultRenderer(SModuleReference.class,new InModelModuleTableCellRender());
-  languagesTable.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
   ToolbarDecorator decorator=ToolbarDecorator.createDecorator(languagesTable);
   decorator.setAddAction(new AnActionButtonRunnable(){
     @Override public void run(    AnActionButton anActionButton){
@@ -30,15 +40,19 @@
   }
 ).setRemoveAction(new AnActionButtonRunnable(){
     @Override public void run(    AnActionButton anActionButton){
+      int first=languagesTable.getSelectionModel().getMinSelectionIndex();
+      int last=languagesTable.getSelectionModel().getMaxSelectionIndex();
       TableUtil.removeSelectedItems(languagesTable);
-      myLangEngagedOnGenTM.fireTableDataChanged();
+      myLangEngagedOnGenTM.fireTableRowsDeleted(first,last);
+      first=Math.max(0,first - 1);
+      languagesTable.getSelectionModel().setSelectionInterval(first,first);
     }
   }
 );
   decorator.setPreferredSize(new Dimension(500,150));
   JPanel table=decorator.createPanel();
   table.setBorder(IdeBorderFactory.createBorder());
-  panel.add(table,new GridConstraints(rowIndex,0,1,1,GridConstraints.ANCHOR_CENTER,GridConstraints.FILL_BOTH,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,null,null,null,0,false));
+  panel.add(table,new GridConstraints(rowIndex,0,1,1,GridConstraints.ANCHOR_NORTHWEST,GridConstraints.FILL_BOTH,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,null,null,null,0,false));
   new SpeedSearchBase<JBTable>(languagesTable){
     @Override public int getSelectedIndex(){
       return languagesTable.getSelectedRow();
