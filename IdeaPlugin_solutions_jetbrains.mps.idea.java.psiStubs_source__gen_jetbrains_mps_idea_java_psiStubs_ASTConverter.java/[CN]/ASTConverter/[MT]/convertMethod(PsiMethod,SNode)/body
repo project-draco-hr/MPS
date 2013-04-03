@@ -21,18 +21,6 @@
   SLinkOperations.setTarget(SNodeOperations.cast(method,"jetbrains.mps.baseLanguage.structure.ClassifierMember"),"visibility",getVisibility(x),true);
   SPropertyOperations.set(method,"isFinal","" + (isFinal(x)));
   SPropertyOperations.set(method,"isSynchronized","" + (x.hasModifierProperty(PsiModifier.SYNCHRONIZED)));
-  SLinkOperations.setTarget(method,"returnType",convertType(x.getReturnTypeNoResolve()),true);
-  ListSequence.fromList(SLinkOperations.getTargets(method,"parameter",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(x.getParameterList().getParameters())).select(new ISelector<PsiParameter,SNode>(){
-    public SNode select(    PsiParameter it){
-      SNode param=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ParameterDeclaration",null);
-      SPropertyOperations.set(param,"name",it.getName());
-      SLinkOperations.setTarget(param,"type",convertType(it.getType()),true);
-      SPropertyOperations.set(param,"isFinal","" + (isFinal(it)));
-      addAnnotations(it,param);
-      return param;
-    }
-  }
-));
   ListSequence.fromList(SLinkOperations.getTargets(method,"throwsItem",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(x.getThrowsList().getReferencedTypes())).select(new ISelector<PsiClassType,SNode>(){
     public SNode select(    PsiClassType it){
       SNode typ=resolveClass(it);
@@ -40,7 +28,19 @@
     }
   }
 ));
-  addTypeParams(x,method);
+  final ASTConverter currConverter=addTypeParams(x,method);
+  SLinkOperations.setTarget(method,"returnType",currConverter.convertType(x.getReturnTypeNoResolve()),true);
+  ListSequence.fromList(SLinkOperations.getTargets(method,"parameter",true)).addSequence(Sequence.fromIterable(Sequence.fromArray(x.getParameterList().getParameters())).select(new ISelector<PsiParameter,SNode>(){
+    public SNode select(    PsiParameter it){
+      SNode param=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ParameterDeclaration",null);
+      SPropertyOperations.set(param,"name",it.getName());
+      SLinkOperations.setTarget(param,"type",currConverter.convertType(it.getType()),true);
+      SPropertyOperations.set(param,"isFinal","" + (isFinal(it)));
+      currConverter.addAnnotations(it,param);
+      return param;
+    }
+  }
+));
   if (1 > 0) {
     SLinkOperations.setTarget(method,"body",SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StubStatementList",null),true);
   }
@@ -48,7 +48,7 @@
     SLinkOperations.setTarget(method,"body",SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StatementList",null),true);
   }
   if (needToSetId()) {
-    SNodeId.Foreign nodeId=JavaForeignIdBuilder.computeNodeId(getIdPrefix(),x);
+    SNodeId.Foreign nodeId=JavaForeignIdBuilder.computeNodeId(x);
     if (nodeId != null) {
       ((jetbrains.mps.smodel.SNode)method).setId(nodeId);
     }
