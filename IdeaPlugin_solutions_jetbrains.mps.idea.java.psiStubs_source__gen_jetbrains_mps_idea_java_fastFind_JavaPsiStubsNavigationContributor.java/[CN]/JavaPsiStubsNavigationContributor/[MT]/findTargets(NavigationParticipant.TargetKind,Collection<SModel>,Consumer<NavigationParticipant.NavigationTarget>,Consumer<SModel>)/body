@@ -3,6 +3,38 @@
     if (!(model instanceof PsiJavaStubModelDescriptor)) {
       continue;
     }
+    for (    PsiJavaFile javaFile : Sequence.fromIterable(((PsiJavaStubModelDescriptor)model).getSource().getJavaFiles())) {
+      for (      PsiClass psiClass : javaFile.getClasses()) {
+        final PsiClass psiClaz=psiClass;
+        final String name=psiClaz.getName();
+        if (name == null || name.trim().equals("")) {
+          continue;
+        }
+        consumer.consume(new NavigationParticipant.NavigationTarget(){
+          public String getPresentation(){
+            return name;
+          }
+          public SConcept getConcept(){
+            if (psiClaz.isAnnotationType()) {
+              return SConceptRepository.getInstance().getConcept(BootstrapLanguages.concept_baseLanguage_Annotation);
+            }
+ else             if (psiClaz.isInterface()) {
+              return SConceptRepository.getInstance().getConcept(BootstrapLanguages.concept_baseLanguage_Interface);
+            }
+ else             if (psiClaz.isEnum()) {
+              return SConceptRepository.getInstance().getConcept(BootstrapLanguages.concept_baseLanguage_EnumClass);
+            }
+ else {
+              return SConceptRepository.getInstance().getConcept(BootstrapLanguages.concept_baseLanguage_ClassConcept);
+            }
+          }
+          public SNodeReference getNodeReference(){
+            return JavaForeignIdBuilder.computeNodePtr(psiClaz).toSNodeReference();
+          }
+        }
+);
+      }
+    }
     processedConsumer.consume(model);
   }
 }
