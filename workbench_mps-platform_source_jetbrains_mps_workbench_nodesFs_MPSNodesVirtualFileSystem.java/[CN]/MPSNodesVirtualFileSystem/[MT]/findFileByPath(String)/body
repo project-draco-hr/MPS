@@ -1,17 +1,30 @@
 {
   return ModelAccess.instance().runReadAction(new Computable<VirtualFile>(){
     @Override public VirtualFile compute(){
-      String modelOrNodePath=path;
-      Matcher modelRef=MODEL_UID_PATTERN.matcher(modelOrNodePath);
-      Matcher nodePath=NODE_PATH.matcher(modelOrNodePath);
-      if (!nodePath.matches() && !modelRef.matches())       return null;
-      if (nodePath.matches()) {
-        return getFileFor(SNodePointer.deserialize(path).resolve(MPSModuleRepository.getInstance()));
+      try {
+        if (path.startsWith(MPSNodeVirtualFile.NODE_PREFIX)) {
+          SNodeReference resolved=SNodePointer.deserialize(path.substring(MPSNodeVirtualFile.NODE_PREFIX.length()));
+          if (resolved == null) {
+            return null;
+          }
+          SNode node=resolved.resolve(MPSModuleRepository.getInstance());
+          if (node == null) {
+            return null;
+          }
+          return getFileFor(resolved);
+        }
+ else         if (path.startsWith(MPSModelVirtualFile.MODEL_PREFIX)) {
+          final SModelReference modelReference=PersistenceFacade.getInstance().createModelReference(path.substring(MPSModelVirtualFile.MODEL_PREFIX.length()));
+          SModel model=modelReference.resolve(MPSModuleRepository.getInstance());
+          if (model == null) {
+            return null;
+          }
+          return getFileFor(modelReference);
+        }
       }
- else {
-        final SModelReference modelReference=PersistenceFacade.getInstance().createModelReference(modelRef.group());
-        return getFileFor(modelReference);
+ catch (      IllegalArgumentException e) {
       }
+      return null;
     }
   }
 );
