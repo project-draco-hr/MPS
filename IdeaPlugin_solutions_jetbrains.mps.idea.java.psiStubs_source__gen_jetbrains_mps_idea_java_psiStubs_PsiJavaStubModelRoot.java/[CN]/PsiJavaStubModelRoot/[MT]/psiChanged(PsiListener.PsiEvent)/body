@@ -1,4 +1,5 @@
 {
+  event=new PsiJavaStubModelRoot.NormalizedEvent(event);
   Set<PsiDirectory> newDirs=SetSequence.fromSet(new HashSet<PsiDirectory>());
   Set<PsiDirectory> deletedDirs=SetSequence.fromSet(new HashSet<PsiDirectory>());
   Map<PsiJavaStubDataSource,PsiJavaStubModelRoot.PsiChange> changes=MapSequence.fromMap(new HashMap<PsiJavaStubDataSource,PsiJavaStubModelRoot.PsiChange>());
@@ -10,21 +11,15 @@
     if (!(item instanceof PsiJavaFile)) {
       continue;
     }
-    PsiDirectory parent=((PsiFile)item).getParent();
-    PsiJavaStubDataSource dataSource=MapSequence.fromMap(myDataSources).get(parent);
-    if (dataSource == null) {
-      PsiDirectory ourSourceRoot=findOurSourceRoot(item);
-      if (ourSourceRoot != null) {
-        SetSequence.fromSet(newDirs).addElement(parent);
-      }
-      continue;
+    handleFileCreate((PsiFile)item,null,newDirs,changes);
+  }
+  for (  PsiListener.FSMove move : Sequence.fromIterable(event.getMoved())) {
+    if (move.from instanceof PsiDirectory) {
+      handleFileDelete((PsiFile)move.moved,(PsiDirectory)move.from,deletedDirs,changes);
     }
-    PsiJavaStubModelRoot.PsiChange change=MapSequence.fromMap(changes).get(dataSource);
-    if (change == null) {
-      change=new PsiJavaStubModelRoot.PsiChange();
-      MapSequence.fromMap(changes).put(dataSource,change);
+    if (move.to instanceof PsiDirectory) {
+      handleFileCreate((PsiFile)move.moved,(PsiDirectory)move.to,newDirs,changes);
     }
-    SetSequence.fromSet(change.created).addElement(item);
   }
   for (  PsiFileSystemItem item : Sequence.fromIterable(event.getRemoved())) {
     if (item instanceof PsiDirectory) {
@@ -36,20 +31,7 @@
     if (!(item instanceof PsiJavaFile)) {
       continue;
     }
-    PsiDirectory parent=((PsiFile)item).getParent();
-    PsiJavaStubDataSource dataSource=MapSequence.fromMap(myDataSources).get(parent);
-    if (dataSource == null) {
-      continue;
-    }
-    if (Sequence.fromIterable(Sequence.fromArray(parent.getChildren())).ofType(PsiJavaFile.class).isEmpty()) {
-      SetSequence.fromSet(deletedDirs).addElement(parent);
-    }
-    PsiJavaStubModelRoot.PsiChange change=MapSequence.fromMap(changes).get(dataSource);
-    if (change == null) {
-      change=new PsiJavaStubModelRoot.PsiChange();
-      MapSequence.fromMap(changes).put(dataSource,change);
-    }
-    SetSequence.fromSet(change.removed).addElement(item);
+    handleFileDelete((PsiFile)item,null,deletedDirs,changes);
   }
   for (  PsiFile file : SetSequence.fromSet(event.getChanged().keySet())) {
     if (!(file instanceof PsiJavaFile)) {
