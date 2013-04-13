@@ -1,62 +1,15 @@
 {
   LOG.assertLog(!(ThreadUtils.isEventDispatchThread()),"You should not do this in EDT");
-synchronized (LOCK) {
-    if (myState == PluginStateWidget.State.CONNECTED) {
-      if (isConnected()) {
-        if (canOperate()) {
-          return;
-        }
- else {
-          setNewState(PluginStateWidget.State.CONNECTED_BAD_PROJECT);
-        }
+  try {
+    if (LOCK.tryLock(INITIAL_DELAY / 2,TimeUnit.MILLISECONDS)) {
+      try {
+        tickImpl();
       }
- else {
-        setNewState(PluginStateWidget.State.TRYING_TO_CONNECT);
+  finally {
+        LOCK.unlock();
       }
     }
- else     if (myState == PluginStateWidget.State.CONNECTED_BAD_PROJECT) {
-      if (isConnected()) {
-        if (canOperate()) {
-          setNewState(PluginStateWidget.State.CONNECTED);
-        }
- else {
-          return;
-        }
-      }
- else {
-        setNewState(PluginStateWidget.State.TRYING_TO_CONNECT);
-      }
-    }
- else     if (myState == PluginStateWidget.State.DISCONNECTED) {
-      if (MPSPlugin.getInstance().openConnectionPresent()) {
-        if (isConnected()) {
-          if (canOperate()) {
-            setNewState(PluginStateWidget.State.CONNECTED);
-          }
- else {
-            setNewState(PluginStateWidget.State.CONNECTED_BAD_PROJECT);
-          }
-        }
-      }
-    }
- else     if (myState == PluginStateWidget.State.TRYING_TO_CONNECT) {
-      if (isConnected()) {
-        if (canOperate()) {
-          setNewState(PluginStateWidget.State.CONNECTED);
-        }
- else {
-          setNewState(PluginStateWidget.State.CONNECTED_BAD_PROJECT);
-        }
-      }
- else {
-        int newDelay=(int)(myTimer.getDelay() * DELAY_MUL);
-        if (newDelay <= CRITICAL_DELAY) {
-          myTimer.setNewDelay(newDelay);
-        }
- else {
-          setNewState(PluginStateWidget.State.DISCONNECTED);
-        }
-      }
-    }
+  }
+ catch (  InterruptedException e) {
   }
 }
