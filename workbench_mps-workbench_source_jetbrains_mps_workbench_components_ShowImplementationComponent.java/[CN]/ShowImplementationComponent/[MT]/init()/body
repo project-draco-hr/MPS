@@ -2,25 +2,35 @@
   setLayout(new BorderLayout());
   myEditorPanel=myEditor.getComponenet();
   add(myEditorPanel,BorderLayout.CENTER);
-  JPanel northPanel=new JPanel(new BorderLayout());
-  add(northPanel,BorderLayout.NORTH);
-  JPanel toolbarPanel=new JPanel(new FlowLayout());
-  toolbarPanel.add(createToolbar().getComponent());
-  this.myNodeChooser=new JComboBox(myNodeLabels.toArray());
-  myNodeChooser.setRenderer(new DefaultListCellRenderer(){
-    @Override public Component getListCellRendererComponent(    JList list,    final Object value,    int index,    boolean isSelected,    boolean cellHasFocus){
-      super.getListCellRendererComponent(list,value,index,isSelected,cellHasFocus);
-      if (index != -1) {
-        setIcon(myNodeIcons.get(index));
-        setText(myNodeLabels.get(index));
-      }
-      return this;
+  JPanel northPanel=new JPanel(new BorderLayout(2,0));
+  northPanel.setBorder(BorderFactory.createCompoundBorder(IdeBorderFactory.createBorder(SideBorder.BOTTOM),IdeBorderFactory.createEmptyBorder(0,0,0,5)));
+  JPanel toolbarPanel=new JPanel(new GridBagLayout());
+  final GridBagConstraints gc=new GridBagConstraints(GridBagConstraints.RELATIVE,0,1,1,0,0,GridBagConstraints.WEST,GridBagConstraints.NONE,new Insets(0,2,0,0),0,0);
+  toolbarPanel.add(createToolbar().getComponent(),gc);
+  this.myNodeChooser=new ComboBox(new CollectionComboBoxModel(myImplNodes,null));
+  myNodeChooser.setRenderer(new ColoredListCellRenderer(){
+    @Override protected void customizeCellRenderer(    JList list,    Object value,    int index,    boolean selected,    boolean hasFocus){
+      if (!(value instanceof ImplementationNode))       return;
+      ImplementationNode node=(ImplementationNode)value;
+      setIcon(node.myNodeIcon);
+      append(node.myNodePresentation);
     }
   }
 );
-  toolbarPanel.add(myNodeChooser);
-  toolbarPanel.add(myCountLabel);
-  northPanel.add(toolbarPanel,BorderLayout.LINE_START);
-  northPanel.add(myLocationLabel,BorderLayout.LINE_END);
+  myNodeChooser.addItemListener(new ItemListener(){
+    @Override public void itemStateChanged(    ItemEvent e){
+      ShowImplementationComponent.this.updateControls();
+    }
+  }
+);
+  gc.fill=GridBagConstraints.HORIZONTAL;
+  gc.weightx=1;
+  toolbarPanel.add(myNodeChooser,gc);
+  gc.fill=GridBagConstraints.NONE;
+  gc.weightx=0;
+  toolbarPanel.add(myCountLabel,gc);
+  northPanel.add(toolbarPanel,BorderLayout.CENTER);
+  northPanel.add(myLocationLabel,BorderLayout.EAST);
+  add(northPanel,BorderLayout.NORTH);
   setPreferredSize(new Dimension(600,400));
 }

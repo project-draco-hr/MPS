@@ -1,0 +1,38 @@
+{
+  return new AbstractSModelIndexer<SReference,Pair<SNodeDescriptor,String>>(){
+    @Override protected void updateCollection(    SModelReference modelRef,    SReference sref,    Collection<Pair<SNodeDescriptor,String>> collection){
+      SNode src=sref.getSourceNode();
+      String role=sref.getRole();
+      SNodeDescriptor descriptor=SNodeDescriptor.fromModelReference(getSNodeName(src),src.getConcept().getId(),modelRef,src.getNodeId());
+      collection.add(new Pair<SNodeDescriptor,String>(descriptor,role));
+    }
+    @Override protected Iterable<SReference> getObjectsToIndex(    SModel sModel){
+      Collection<SReference> result=new ArrayList<SReference>();
+      for (      SNode sNode : new NodesIterable(sModel)) {
+        for (        SReference sref : sNode.getReferences()) {
+          result.add(sref);
+        }
+      }
+      return result;
+    }
+    @Override protected String[] getKeys(    SModel model,    SReference sref){
+      SNodeId targetNodeId=sref.getTargetNodeId();
+      if (targetNodeId instanceof Foreign) {
+        String id=targetNodeId.toString();
+        id=id.substring(Foreign.ID_PREFIX.length());
+        int paren=id.indexOf("(");
+        if (paren >= 0) {
+          id=id.substring(0,paren);
+        }
+        ArrayList<String> result=new ArrayList<String>();
+        for (int idx=id.indexOf("."); idx >= 0; idx=id.indexOf(".",idx + 1)) {
+          result.add(id.substring(0,idx + 1));
+        }
+        result.add(id);
+        return result.toArray(new String[result.size()]);
+      }
+      return EMPTY;
+    }
+  }
+;
+}

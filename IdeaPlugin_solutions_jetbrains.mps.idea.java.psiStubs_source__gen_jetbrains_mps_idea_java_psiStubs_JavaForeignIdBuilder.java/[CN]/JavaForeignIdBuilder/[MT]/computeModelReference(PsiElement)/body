@@ -4,5 +4,24 @@
     return null;
   }
   String packageName=((PsiJavaFile)file).getPackageName();
-  return computeModelReference(packageName);
+  SModule mpsModule=null;
+  Project project=element.getProject();
+  VirtualFile vfile=file.getVirtualFile();
+  if (vfile == null) {
+    return null;
+  }
+  for (  Module module : ModuleManager.getInstance(project).getModules()) {
+    MPSFacet facet=FacetManager.getInstance(module).getFacetByType(MPSFacetType.ID);
+    if (facet == null) {
+      continue;
+    }
+    if (new ModuleContentRootSearchScope(module).contains(vfile)) {
+      mpsModule=facet.getSolution();
+      break;
+    }
+  }
+  if (mpsModule == null) {
+    return null;
+  }
+  return Util.makeModelReference(packageName,mpsModule);
 }
