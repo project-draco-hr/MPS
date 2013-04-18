@@ -25,9 +25,8 @@
     }
   }
 );
-  FSChangesWatcher.instance().suspendTasksProcessing();
-  ApplicationManager.getApplication().invokeLater(new Runnable(){
-    public void run(){
+  final Computable<Object> conflictableReload=new Computable<Object>(){
+    public Object compute(){
       for (      final Project project : toMerge.keySet()) {
         List<VirtualFile> virtualFileList=new ArrayList<VirtualFile>();
         virtualFileList.addAll(AbstractVcsHelper.getInstance(project).showMergeDialog(toMerge.get(project)));
@@ -38,19 +37,22 @@
           }
         }
       }
-      try {
-        ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-          public void run(){
-            for (            Conflictable conflictable : toReload) {
-              conflictable.reloadFromDisk();
-            }
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          for (          Conflictable conflictable : toReload) {
+            conflictable.reloadFromDisk();
           }
         }
+      }
 );
-      }
-  finally {
-        FSChangesWatcher.instance().tryToResumeTasksProcessing();
-      }
+      return null;
+    }
+  }
+;
+  ApplicationManager.getApplication().invokeLater(new Runnable(){
+    public void run(){
+      myReloadManager.computeNoReload(conflictableReload);
+      return;
     }
   }
 ,ModalityState.defaultModalityState());
