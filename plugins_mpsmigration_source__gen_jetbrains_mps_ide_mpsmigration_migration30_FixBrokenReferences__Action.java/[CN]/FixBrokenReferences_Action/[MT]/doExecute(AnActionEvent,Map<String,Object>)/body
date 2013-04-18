@@ -1,5 +1,36 @@
 {
   try {
+    ScopeResolver resolver=new ScopeResolver();
+    List<IModule> modulelist=(((List<IModule>)MapSequence.fromMap(_params).get("modules")) == null ? ((MPSProject)MapSequence.fromMap(_params).get("project")).getModulesWithGenerators() : ((List<IModule>)MapSequence.fromMap(_params).get("modules")));
+    List<SModel> modellist=(List<SModel>)((((List<SModel>)MapSequence.fromMap(_params).get("models")) == null || ((List<SModel>)MapSequence.fromMap(_params).get("models")).isEmpty() ? ListSequence.fromList(modulelist).translate(new ITranslator2<IModule,SModel>(){
+      public Iterable<SModel> translate(      IModule it){
+        return it.getModels();
+      }
+    }
+).where(new IWhereFilter<SModel>(){
+      public boolean accept(      SModel m){
+        return SModelStereotype.isUserModel(m) && !(m.isReadOnly());
+      }
+    }
+).toListSequence() : ((List<SModel>)MapSequence.fromMap(_params).get("models"))));
+    for (    SModel model : ListSequence.fromList(modellist)) {
+      if (LOG.isEnabledFor(Priority.WARN)) {
+        LOG.warn("processing model " + SModelOperations.getModelName(model));
+      }
+      for (      SNode node : ListSequence.fromList(SModelOperations.getNodes(model,null))) {
+        for (        SReference ref : Sequence.fromIterable(SNodeOperations.getReferences(node))) {
+          if (jetbrains.mps.util.SNodeOperations.getTargetNodeSilently(ref) == null) {
+            if (LOG.isEnabledFor(Priority.ERROR)) {
+              LOG.error("reference=" + ref.getTargetSModelReference() + " :#: "+ ref.getTargetNodeId()+ " -- resolveInfo="+ SLinkOperations.getResolveInfo(ref)+ "; role="+ SLinkOperations.getRole(ref));
+            }
+            boolean r=resolver.resolve(ref,node,new GlobalOperationContext());
+            if (LOG.isInfoEnabled()) {
+              LOG.info(((r ? "resolved to=" : "not resolved=")) + ref.getTargetSModelReference() + " :#: "+ ref.getTargetNodeId()+ " -- resolveInfo="+ SLinkOperations.getResolveInfo(ref)+ "; role="+ SLinkOperations.getRole(ref));
+            }
+          }
+        }
+      }
+    }
   }
  catch (  Throwable t) {
     if (LOG.isEnabledFor(Priority.ERROR)) {
