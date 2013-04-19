@@ -2,28 +2,25 @@
   if (SNodeOperations.getModel(buildProject).getModule() instanceof TransientModelsModule || SModelStereotype.isGeneratorModel(SNodeOperations.getModel(buildProject)) || !(jetbrains.mps.util.SNodeOperations.isGeneratable(SNodeOperations.getModel(buildProject)))) {
     return;
   }
-  VisibleModules visible=null;
-  String workingDir=null;
+  VisibleModules visible=new VisibleModules(buildProject,null);
+  visible.collect();
+  PathConverter pathConverter=new PathConverter(buildProject);
+  String workingDir=BuildProject_Behavior.call_getBasePath_4959435991187146924(buildProject,Context.defaultContext());
+  if ((workingDir == null || workingDir.length() == 0)) {
+{
+      MessageTarget errorTarget=new NodeMessageTarget();
+      IErrorReporter _reporter_2309309498=typeCheckingContext.reportTypeError(buildProject,"working directory is unavailable","r:473be7a1-ec10-4475-89b9-397d2558ecb0(jetbrains.mps.build.mps.typesystem)","2531699772406302731",null,errorTarget);
+    }
+    return;
+  }
   for (  final SNode module : ListSequence.fromList(SNodeOperations.getDescendants(buildProject,"jetbrains.mps.build.mps.structure.BuildMps_AbstractModule",false,new String[]{})).where(new IWhereFilter<SNode>(){
     public boolean accept(    SNode it){
       return (SLinkOperations.getTarget(it,"path",true) != null);
     }
   }
 )) {
-    if (visible == null) {
-      visible=new VisibleModules(buildProject,null);
-      visible.collect();
-      workingDir=BuildProject_Behavior.call_getBasePath_4959435991187146924(buildProject,Context.defaultContext());
-      if ((workingDir == null || workingDir.length() == 0)) {
-{
-          MessageTarget errorTarget=new NodeMessageTarget();
-          IErrorReporter _reporter_2309309498=typeCheckingContext.reportTypeError(buildProject,"working directory is unavailable","r:473be7a1-ec10-4475-89b9-397d2558ecb0(jetbrains.mps.build.mps.typesystem)","2531699772406302731",null,errorTarget);
-        }
-        return;
-      }
-    }
     final StringBuilder messages=new StringBuilder();
-    new ModuleLoader(module,visible,new PathConverter(buildProject),null){
+    ModuleLoader.Reporter reporter=new ModuleLoader.Reporter(null){
       @Override public void report(      String message,      SNode node,      Exception cause){
         if (messages.length() > 0) {
           messages.append("\n");
@@ -31,7 +28,8 @@
         messages.append(message);
       }
     }
-.checkModule();
+;
+    ModuleLoader.createModuleLoader(module,visible,pathConverter,null,reporter).checkModule();
     if (messages.length() > 0) {
 {
         MessageTarget errorTarget=new NodeMessageTarget();

@@ -1,0 +1,30 @@
+{
+  SNode originalModule=ModuleLoaderUtils.getOriginalModule(module,genContext);
+  String moduleFilePath=BehaviorReflection.invokeVirtual(String.class,SLinkOperations.getTarget(module,"path",true),"virtual_getLocalPath_5481553824944787364",new Object[]{(genContext != null ? Context.defaultContext(genContext) : Context.defaultContext())});
+  try {
+    moduleFilePath=new File(moduleFilePath).getCanonicalPath();
+  }
+ catch (  IOException ex) {
+  }
+  IFile file=FileSystem.getInstance().getFileByPath(moduleFilePath);
+  if (!(file.exists())) {
+    reporter.report("cannot import module file for " + SPropertyOperations.getString(module,"name") + ": file doesn't exist ("+ moduleFilePath+ ")",originalModule,null);
+    return new ModuleLoader(module,originalModule,visible,pathConverter,genContext,null,null,reporter);
+  }
+  if (file.isDirectory()) {
+    reporter.report("cannot import module file for " + SPropertyOperations.getString(module,"name") + ": file is a directory ("+ moduleFilePath+ ")",originalModule,null);
+    return new ModuleLoader(module,originalModule,visible,pathConverter,genContext,null,null,reporter);
+  }
+  ModuleDescriptor md=null;
+  try {
+    md=ModuleLoaderUtils.loadModuleDescriptor(file,genContext,originalModule,reporter);
+    if (md.getLoadException() != null) {
+      reporter.report("cannot import module file for " + SPropertyOperations.getString(module,"name") + ": exception: "+ md.getLoadException().getMessage(),originalModule,null);
+    }
+  }
+ catch (  Exception ex) {
+    reporter.report("cannot import module file for " + SPropertyOperations.getString(module,"name") + ": exception: "+ ex.getMessage(),originalModule,ex);
+    ex.printStackTrace(System.err);
+  }
+  return new ModuleLoader(module,originalModule,visible,pathConverter,genContext,file.getParent(),md,reporter);
+}
