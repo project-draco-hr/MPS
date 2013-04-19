@@ -1,20 +1,41 @@
 {
   myEditorContext=editorContext;
   mySNode=node;
-  myAllSuperConcepts=SConceptUtil.getAllSuperConcepts(node.getConcept(),false);
-  myPropertyNames=ConceptRegistry.getInstance().getConceptDescriptor(node.getConcept().getQualifiedName()).getPropertyNames();
-  for (  SAbstractConcept concept : myAllSuperConcepts) {
-    for (    SLink link : concept.getLinks()) {
-      if (link.isReference()) {
-        myReferences.add(link);
-      }
- else {
-        myChildren.add(link);
-      }
-    }
-    for (    SProperty property : concept.getProperties()) {
-      myProperties.add(property);
-    }
+  SConcept concept=node.getConcept();
+  String qualifiedName=null;
+  if (concept != null) {
+    qualifiedName=concept.getQualifiedName();
   }
+  myConceptDescriptor=ConceptRegistry.getInstance().getConceptDescriptor(qualifiedName);
+  if (concept == null || myConceptDescriptor instanceof IllegalConceptDescriptor) {
+    myNullConcept=true;
+  }
+  ConceptDescriptor baseConceptDescriptor=ConceptRegistry.getInstance().getConceptDescriptor(BASE_CONCEPT_FQ_NAME);
+  if (!myNullConcept) {
+    myPropertyNames=myConceptDescriptor.getPropertyNames();
+    myReferencesNames=myConceptDescriptor.getReferenceNames();
+    myChildrenNames=myConceptDescriptor.getChildrenNames();
+  }
+ else {
+    myPropertyNames=new ArrayList<String>();
+    for (    String name : mySNode.getPropertyNames()) {
+      myPropertyNames.add(name);
+    }
+    myReferencesNames=new ArrayList<String>();
+    for (    SReference ref : mySNode.getReferences()) {
+      myReferencesNames.add(ref.getRole());
+    }
+    Set<String> rolesSet=new HashSet<String>();
+    for (    SNode sNode : mySNode.getChildren()) {
+      rolesSet.add(sNode.getRoleInParent());
+    }
+    myChildrenNames=new ArrayList<String>(rolesSet);
+  }
+  List<String> basePropertyNames=baseConceptDescriptor.getPropertyNames();
+  List<String> baseRefNames=baseConceptDescriptor.getReferenceNames();
+  List<String> baseChildNames=baseConceptDescriptor.getChildrenNames();
+  myPropertyNames.removeAll(basePropertyNames);
+  myReferencesNames.removeAll(baseRefNames);
+  myChildrenNames.removeAll(baseChildNames);
   cacheNameProperty();
 }
