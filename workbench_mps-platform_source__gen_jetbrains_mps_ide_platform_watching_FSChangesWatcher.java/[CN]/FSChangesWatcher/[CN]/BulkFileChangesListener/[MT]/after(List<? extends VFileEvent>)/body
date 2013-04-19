@@ -11,25 +11,23 @@
 )) {
     return;
   }
-synchronized (myLock) {
-    if (myReloadSession == null) {
-      myReloadSession=new ReloadSession(getReloadListeners());
-      myReloadSession.addProcessor(new FileProcessor());
-    }
-    ListSequence.fromList(events).where(new IWhereFilter<VFileEvent>(){
-      public boolean accept(      VFileEvent it){
-        return !(VirtualFileUtils.isFileEventFromMPS(it));
-      }
-    }
-).visitAll(new IVisitor<VFileEvent>(){
-      public void visit(      VFileEvent it){
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Got event " + it);
+  myReloadManager.runReload(FileProcessor.class,new ReloadAction<FileProcessor>(){
+    public void runAction(    final FileProcessor participant){
+      ListSequence.fromList(events).where(new IWhereFilter<VFileEvent>(){
+        public boolean accept(        VFileEvent it){
+          return !(VirtualFileUtils.isFileEventFromMPS(it));
         }
-        processAfterEvent(it,myReloadSession);
       }
-    }
+).visitAll(new IVisitor<VFileEvent>(){
+        public void visit(        VFileEvent it){
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Got event " + it);
+          }
+          processAfterEvent(it,participant);
+        }
+      }
 );
-    queueReload();
+    }
   }
+);
 }
