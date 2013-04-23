@@ -17,12 +17,14 @@
     processed.add(target);
     JpsMPSModuleExtension mpsModule=JpsMPSExtensionService.getInstance().getExtension(target.getModule());
     if (mpsModule == null)     continue;
-    File outputRoot=getOutputRoot(mpsModule.getModule(),myContext.getCompileContext().getProjectDescriptor().dataManager);
+    File outputTmpRoot=getTmpOutputRoot(mpsModule.getModule(),myContext.getCompileContext().getProjectDescriptor().dataManager);
     File cachesOutputRoot=getCachesOutputRoot(mpsModule.getModule(),myContext.getCompileContext().getProjectDescriptor().dataManager);
     boolean useTransientOutputFolder=mpsModule.getConfiguration().isUseTransientOutputFolder();
-    OutputPathRedirects redirects=myRedirects.addRedirects(outputPaths,outputRoot.getAbsolutePath(),cachesOutputRoot.getAbsolutePath(),useTransientOutputFolder);
-    if (useTransientOutputFolder) {
+    File generatorOutputRoot=new File(mpsModule.getConfiguration().getGeneratorOutputPath());
+    myRedirects.addRedirects(outputPaths,outputTmpRoot.getAbsolutePath(),cachesOutputRoot.getAbsolutePath(),useTransientOutputFolder);
+    if (useTransientOutputFolder || !isGenOutputUnderSourceRoot(target,mpsModule)) {
       BuildRootIndex buildRootIndex=myContext.getCompileContext().getProjectDescriptor().getBuildRootIndex();
+      File outputRoot=useTransientOutputFolder ? outputTmpRoot : generatorOutputRoot;
       buildRootIndex.associateTempRoot(myContext.getCompileContext(),target,new JavaSourceRootDescriptor(outputRoot,target,true,true,"",Collections.<File>emptySet()));
     }
   }
