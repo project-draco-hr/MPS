@@ -1,15 +1,24 @@
 {
-  MPSPsiNode psiNode=MPSPsiProvider.getInstance(getProject()).create(node.getNodeId(),node.getConcept().getQualifiedName(),node.getRoleInParent());
+  MPSPsiNode psiNode=MPSPsiProvider.getInstance(getProject()).create(node.getNodeId(),node.getConcept(),node.getRoleInParent());
   myNodes.put(node.getNodeId(),psiNode);
   for (  String key : node.getPropertyNames()) {
     psiNode.setProperty(key,node.getProperty(key));
   }
   for (  SReference ref : node.getReferences()) {
+    SLink link=ref.getLink();
+    SAbstractConcept linkTargetConcept=null;
+    if (link != null) {
+      linkTargetConcept=link.getTargetConcept();
+    }
+    MPSPsiRef psiRef=null;
     if (ref instanceof StaticReference) {
-      psiNode.addChild(null,new MPSPsiRef(ref.getRole(),ref.getTargetSModelReference(),ref.getTargetNodeId()));
+      psiRef=MPSPsiProvider.getInstance(getProject()).createReferenceNode(ref.getRole(),linkTargetConcept,ref.getTargetSModelReference(),ref.getTargetNodeId());
     }
  else     if (ref instanceof DynamicReference) {
-      psiNode.addChild(null,new MPSPsiRef(ref.getRole(),((DynamicReference)ref).getResolveInfo()));
+      psiRef=MPSPsiProvider.getInstance(getProject()).createReferenceNode(ref.getRole(),linkTargetConcept,((DynamicReference)ref).getResolveInfo());
+    }
+    if (psiRef != null) {
+      psiNode.addChild(null,psiRef);
     }
   }
   MPSPsiNode last=null;
