@@ -1,0 +1,62 @@
+{
+  final Set<String> namespaces=SetSequence.fromSet(new HashSet<String>());
+  Set<TemplateModule> seen=SetSequence.fromSet(new HashSet<TemplateModule>());
+  Queue<String> nsq=QueueSequence.fromQueue(new LinkedList<String>());
+  for (  SModule mod : modules) {
+    if (mod instanceof Generator) {
+      Iterable<SModel> genModels=mod.getModels();
+      QueueSequence.fromQueue(nsq).addSequence(Sequence.fromIterable(genModels).translate(new ITranslator2<SModel,String>(){
+        public Iterable<String> translate(        SModel smd){
+          return ModelContentUtil.getUsedLanguageNamespaces(smd,false);
+        }
+      }
+).where(new IWhereFilter<String>(){
+        public boolean accept(        String ns){
+          return !(SetSequence.fromSet(namespaces).contains(ns));
+        }
+      }
+));
+    }
+ else {
+      Set<Language> langs=SetSequence.fromSet(new HashSet<Language>());
+      for (      Language l : CollectionSequence.fromCollection(new GlobalModuleDependenciesManager(mod).getUsedLanguages())) {
+        new LanguageDependenciesManager(l).collectAllExtendedLanguages(langs);
+      }
+      QueueSequence.fromQueue(nsq).addSequence(SetSequence.fromSet(langs).select(new ISelector<Language,String>(){
+        public String select(        Language lang){
+          return lang.getModuleDescriptor().getNamespace();
+        }
+      }
+).where(new IWhereFilter<String>(){
+        public boolean accept(        String ns){
+          return !(SetSequence.fromSet(namespaces).contains(ns));
+        }
+      }
+));
+    }
+    while (QueueSequence.fromQueue(nsq).isNotEmpty()) {
+      String ns=QueueSequence.fromQueue(nsq).removeFirstElement();
+      LanguageRuntime lr=LanguageRegistry.getInstance().getLanguage(ns);
+      if (lr == null) {
+        LOG.debug("language not found for namespace " + ns);
+        continue;
+      }
+      if (!(SetSequence.fromSet(namespaces).contains(ns))) {
+        SetSequence.fromSet(namespaces).addElement(ns);
+        Collection<TemplateModule> gens=lr.getGenerators();
+        if (gens != null) {
+          for (          TemplateModule tm : gens) {
+            if (tm == null) {
+              continue;
+            }
+            if (!(SetSequence.fromSet(seen).contains(tm))) {
+              QueueSequence.fromQueue(nsq).addSequence(CollectionSequence.fromCollection(tm.getUsedLanguages()));
+              SetSequence.fromSet(seen).addElement(tm);
+            }
+          }
+        }
+      }
+    }
+  }
+  return SetSequence.fromSet(namespaces).toListSequence();
+}
