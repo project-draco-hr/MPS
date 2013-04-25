@@ -1,0 +1,99 @@
+{
+  SNode module=SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Module");
+  Map<String,Boolean> usedModuleIds=new HashMap<String,Boolean>();
+  Set<String> extractedModules=new HashSet<String>();
+  for (  SNode dep : SLinkOperations.getTargets(module,"dependencies",true)) {
+    boolean extracted=false;
+    if (SNodeOperations.isInstanceOf(dep,"jetbrains.mps.build.mps.structure.BuildMps_ExtractedModuleDependency")) {
+      dep=SLinkOperations.getTarget(SNodeOperations.cast(dep,"jetbrains.mps.build.mps.structure.BuildMps_ExtractedModuleDependency"),"dependency",true);
+      extracted=true;
+    }
+    if (SNodeOperations.isInstanceOf(dep,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule")) {
+      SNode onModule=SNodeOperations.cast(dep,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule");
+      boolean existing=(usedModuleIds.containsKey(SPropertyOperations.getString(SLinkOperations.getTarget(onModule,"module",false),"uuid")) ? usedModuleIds.get(SPropertyOperations.getString(SLinkOperations.getTarget(onModule,"module",false),"uuid")) : false);
+      usedModuleIds.put(SPropertyOperations.getString(SLinkOperations.getTarget(onModule,"module",false),"uuid"),SPropertyOperations.getBoolean(onModule,"reexport") || existing);
+      if (extracted) {
+        extractedModules.add(SPropertyOperations.getString(SLinkOperations.getTarget(onModule,"module",false),"uuid"));
+      }
+    }
+  }
+  Iterable<Dependency> dependencies=myModuleDescriptor.getDependencies();
+  for (  Dependency dependency : dependencies) {
+    SModuleReference moduleRef=dependency.getModuleRef();
+    if (moduleRef.getModuleName().contains("#")) {
+      report("module cannot depend on generator: `" + moduleRef.getModuleName() + "'",myOriginalModule);
+    }
+  }
+  Map<SNode,Boolean> depsToReexport=new LinkedHashMap<SNode,Boolean>();
+  for (  Dependency dep : dependencies) {
+    boolean reexport=dep.isReexport();
+    SModuleReference moduleRef=dep.getModuleRef();
+    SNode resolved;
+    String targetName=moduleRef.getModuleName();
+    int sharpIndex=targetName.indexOf("#");
+    if (sharpIndex >= 0) {
+      resolved=SNodeOperations.as(myVisibleModules.resolve(targetName.substring(0,sharpIndex),null),"jetbrains.mps.build.mps.structure.BuildMps_Module");
+      if (resolved == null) {
+        report("cannot resolve reference on generator's containing language by module name: " + targetName,myOriginalModule);
+        continue;
+      }
+    }
+ else {
+      resolved=SNodeOperations.as(myVisibleModules.resolve(targetName,moduleRef.getModuleId().toString()),"jetbrains.mps.build.mps.structure.BuildMps_Module");
+      if (resolved == null) {
+        report("unsatisfied dependency: " + dep.getModuleRef().toString(),myOriginalModule);
+        continue;
+      }
+    }
+    Boolean alreadyReexport=depsToReexport.get(resolved);
+    if (alreadyReexport != null && alreadyReexport.booleanValue()) {
+      continue;
+    }
+    depsToReexport.put(resolved,reexport);
+  }
+  for (  Map.Entry<SNode,Boolean> entry : depsToReexport.entrySet()) {
+    SNode resolved=entry.getKey();
+    boolean reexport=entry.getValue().booleanValue();
+    boolean found=false;
+    if (usedModuleIds.containsKey(SPropertyOperations.getString(resolved,"uuid"))) {
+      found=true;
+      boolean foundReexport=usedModuleIds.get(SPropertyOperations.getString(resolved,"uuid"));
+      if (foundReexport != reexport && extractedModules.contains(SPropertyOperations.getString(resolved,"uuid"))) {
+        report("wrong reexport status for dependency in build script for: " + SPropertyOperations.getString(resolved,"name"),myOriginalModule);
+      }
+    }
+    if (!(extractedModules.contains(SPropertyOperations.getString(resolved,"uuid")))) {
+      report("dependencies should be extracted into build script: " + SPropertyOperations.getString(resolved,"name"),myOriginalModule);
+    }
+    if (!(found)) {
+      if (checkOnly) {
+        continue;
+      }
+      SNode res=SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule",null);
+      SLinkOperations.setTarget(res,"module",resolved,false);
+      SPropertyOperations.set(res,"reexport","" + (reexport));
+      ListSequence.fromList(SLinkOperations.getTargets(module,"dependencies",true)).addElement(res);
+    }
+  }
+  for (  String path : myModuleDescriptor.getAdditionalJavaStubPaths()) {
+    SNode p=ListSequence.fromList(convertPath(path,myOriginalModule)).first();
+    if (p == null) {
+      continue;
+    }
+    if (path.endsWith(".jar")) {
+      final String relPath=BehaviorReflection.invokeVirtual(String.class,p,"virtual_getRelativePath_5481553824944787371",new Object[]{});
+      if (!(ListSequence.fromList(SLinkOperations.getTargets(module,"dependencies",true)).any(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          SNode dep=(SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_ExtractedModuleDependency") ? SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ExtractedModuleDependency"),"dependency",true) : it);
+          return SNodeOperations.isInstanceOf(dep,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyJar") && eq_yr5c5g_a0a1a0a0a0a0b0d0q0ab(BehaviorReflection.invokeVirtual(String.class,SLinkOperations.getTarget(SNodeOperations.cast(dep,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyJar"),"path",true),"virtual_getRelativePath_5481553824944787371",new Object[]{}),relPath);
+        }
+      }
+))) {
+        report("jar stub library should be extracted into build script: " + relPath,myOriginalModule);
+      }
+    }
+ else {
+      report("only jar stub libraries are supported, found: " + path,myOriginalModule);
+    }
+  }
+}
