@@ -3,13 +3,39 @@
     return null;
   }
   PsiFile psiFile=element.getContainingFile();
-  if (psiFile instanceof PsiJavaFile) {
+  if (!(psiFile instanceof PsiJavaFile)) {
+    return null;
+  }
+  if (PsiManager.getInstance(element.getProject()).isInProject(element)) {
     NodePtr nodePtr=JavaForeignIdBuilder.computeNodePtr(element);
     if (nodePtr == null) {
       return null;
     }
     SNode node=nodePtr.toSNodeReference().resolve(MPSModuleRepository.getInstance());
     return node;
+  }
+ else {
+    SNodeId nodeId=null;
+    if (element instanceof PsiClass) {
+      nodeId=ASMNodeId.createId(((PsiClass)element).getQualifiedName());
+    }
+ else     if (element instanceof PsiField) {
+      PsiClass clas=((PsiField)element).getContainingClass();
+      String clasFqName=clas.getQualifiedName();
+      nodeId=ASMNodeId.createFieldId(clasFqName,((PsiField)element).getName());
+    }
+ else     if (element instanceof PsiMethod) {
+    }
+    if (nodeId == null) {
+      return null;
+    }
+    String packageName=((PsiJavaFile)psiFile).getPackageName();
+    for (    SModel model : SModelRepository.getInstance().getModelDescriptorsByModelName(packageName)) {
+      if (!(model instanceof JavaClassStubModelDescriptor))       continue;
+      SNode node=model.getNode(nodeId);
+      if (node == null)       continue;
+      return node;
+    }
   }
   return null;
 }

@@ -1,12 +1,26 @@
 {
   ModelAccess.instance().checkReadAccess();
-  if (!(hasCorrespondingPsi(node.getModel()))) {
+  SNode node=nodeParam;
+  if (!(hasCorrespondingPsi(SNodeOperations.getModel(node)))) {
     return null;
   }
-  if (!(SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.Classifier"))) {
-    return null;
+  if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.Classifier")) {
+    return findPsiClass(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier"),project);
   }
-  SModel model=SNodeOperations.getModel(node);
-  String classFqName=BehaviorReflection.invokeVirtual(String.class,SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier"),"virtual_getFqName_1213877404258",new Object[]{});
-  return JavaPsiFacade.getInstance(project).findClass(classFqName,GlobalSearchScope.allScope(project));
+ else   if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.FieldDeclaration")) {
+    PsiClass psiClass=findPsiClass(SNodeOperations.getAncestor(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.FieldDeclaration"),"jetbrains.mps.baseLanguage.structure.Classifier",false,false),project);
+    if (psiClass == null) {
+      return null;
+    }
+    PsiField[] fields=psiClass.getFields();
+    String expectedName=SPropertyOperations.getString(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.FieldDeclaration"),"name");
+    for (    PsiField field : fields) {
+      if (expectedName.equals(field.getName())) {
+        return field;
+      }
+    }
+  }
+ else   if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration")) {
+  }
+  return null;
 }
