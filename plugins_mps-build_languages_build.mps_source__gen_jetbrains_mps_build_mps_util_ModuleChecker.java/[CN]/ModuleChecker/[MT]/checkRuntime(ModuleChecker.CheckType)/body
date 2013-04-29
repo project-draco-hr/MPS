@@ -1,0 +1,36 @@
+{
+  LanguageDescriptor descriptor=(LanguageDescriptor)myModuleDescriptor;
+  SNode module=SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Language");
+  List<SNode> previous=ListSequence.fromListWithValues(new ArrayList<SNode>(),SLinkOperations.getTargets(module,"runtime",true));
+  for (  SModuleReference runtimeModule : descriptor.getRuntimeModules()) {
+    final SNode resolved=SNodeOperations.as(myVisibleModules.resolve(runtimeModule.getModuleName(),runtimeModule.getModuleId().toString()),"jetbrains.mps.build.mps.structure.BuildMps_Solution");
+    if (resolved == null) {
+      report("cannot find runtime solution in dependencies: " + runtimeModule.getModuleName(),myModule);
+      continue;
+    }
+    if (type.doCheck && !(ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Language"),"runtime",true)).any(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleSolutionRuntime") && asOriginal(SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleSolutionRuntime"),"solution",false)) == resolved;
+      }
+    }
+))) {
+      report("runtime solution should be extracted into build script: " + runtimeModule.toString(),myOriginalModule);
+    }
+    if (type.doPartialImport) {
+      SNode ul=SNodeOperations.as(ListSequence.fromList(previous).findFirst(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleSolutionRuntime") && SLinkOperations.getTarget(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ModuleSolutionRuntime"),"solution",false) == resolved;
+        }
+      }
+),"jetbrains.mps.build.mps.structure.BuildMps_ModuleSolutionRuntime");
+      if (ul == null) {
+        ul=SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_ModuleSolutionRuntime",null);
+        SLinkOperations.setTarget(ul,"solution",resolved,false);
+        ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Language"),"runtime",true)).addElement(ul);
+      }
+ else {
+        ListSequence.fromList(previous).removeElement(ul);
+      }
+    }
+  }
+}
