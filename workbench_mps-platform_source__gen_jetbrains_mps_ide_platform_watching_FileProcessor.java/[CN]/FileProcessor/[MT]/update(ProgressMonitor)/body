@@ -1,5 +1,6 @@
 {
   monitor.start("Reloading files... Please wait.",MapSequence.fromMap(dataMap).count() + 1);
+  long updateStartTime=System.currentTimeMillis();
   try {
     for (    FileSystemListener listener : Sequence.fromIterable(sortedListeners())) {
       FileProcessor.ListenerData data=MapSequence.fromMap(dataMap).get(listener);
@@ -7,9 +8,12 @@
         monitor.advance(1);
         continue;
       }
+      long listenerUpdateStartTime=System.currentTimeMillis();
       listener.update(monitor.subTask(1,SubProgressKind.AS_COMMENT),data);
+      printStat("update:" + listener,listenerUpdateStartTime);
       data.isNotified=true;
     }
+    long postNotifyBeginTime=System.currentTimeMillis();
     FileSystemListener listener;
     while ((listener=QueueSequence.fromQueue(postNotify).removeFirstElement()) != null) {
       FileProcessor.ListenerData data=MapSequence.fromMap(dataMap).get(listener);
@@ -19,8 +23,10 @@
       listener.update(monitor.subTask(0,SubProgressKind.AS_COMMENT),data);
       data.isNotified=true;
     }
+    printStat("post-notify",postNotifyBeginTime);
   }
   finally {
+    printStat("update",updateStartTime);
     monitor.done();
   }
 }
