@@ -1,0 +1,50 @@
+{
+  for (  SNode project : SModelOperations.getRoots(_context.getModel(),"jetbrains.mps.build.structure.BuildProject")) {
+    if (!(_context.isDirty(project))) {
+      continue;
+    }
+    SNode originalProject=SNodeOperations.as(_context.getOriginalCopiedInputNode(project),"jetbrains.mps.build.structure.BuildProject");
+    if ((originalProject == null)) {
+      _context.showErrorMessage(project,"no original project is found for " + SPropertyOperations.getString(project,"name"));
+      continue;
+    }
+    PathConverter pathConverter=new PathConverter(originalProject);
+    VisibleModules visibleModules=new VisibleModules(project,_context);
+    visibleModules.collect();
+    ModuleChecker.Reporter reporter=new ModuleChecker.Reporter(_context);
+    Iterable<SNode> parts=SLinkOperations.getTargets(project,"parts",true);
+    parts=Sequence.fromIterable(parts).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_Group");
+      }
+    }
+).translate(new ITranslator2<SNode,SNode>(){
+      public Iterable<SNode> translate(      SNode it){
+        return SLinkOperations.getTargets(SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_Group"),"modules",true);
+      }
+    }
+).union(Sequence.fromIterable(parts)).toListSequence();
+    for (    SNode part : parts) {
+      if (!(SNodeOperations.isInstanceOf(part,"jetbrains.mps.build.mps.structure.BuildMps_AbstractModule"))) {
+        continue;
+      }
+      SNode module=SNodeOperations.cast(part,"jetbrains.mps.build.mps.structure.BuildMps_AbstractModule");
+      if ((SLinkOperations.getTarget(module,"path",true) == null)) {
+        continue;
+      }
+      ModuleLoader.createModuleChecker(module,visibleModules,pathConverter,_context,reporter).check(ModuleChecker.CheckType.LOAD_ALL);
+    }
+    List<SNode> generators=Sequence.fromIterable(parts).translate(new ITranslator2<SNode,SNode>(){
+      public Iterable<SNode> translate(      SNode it){
+        return SNodeOperations.getDescendants(it,"jetbrains.mps.build.mps.structure.BuildMps_Generator",false,new String[]{});
+      }
+    }
+).toListSequence();
+    for (    SNode generator : generators) {
+      if (SNodeOperations.isInstanceOf(SNodeOperations.getParent(generator),"jetbrains.mps.build.mps.structure.BuildMps_Language")) {
+        SLinkOperations.setTarget(generator,"sourceLanguage",SNodeOperations.cast(SNodeOperations.getParent(generator),"jetbrains.mps.build.mps.structure.BuildMps_Language"),false);
+        SNodeOperations.insertNextSiblingChild(SNodeOperations.getParent(generator),generator);
+      }
+    }
+  }
+}
