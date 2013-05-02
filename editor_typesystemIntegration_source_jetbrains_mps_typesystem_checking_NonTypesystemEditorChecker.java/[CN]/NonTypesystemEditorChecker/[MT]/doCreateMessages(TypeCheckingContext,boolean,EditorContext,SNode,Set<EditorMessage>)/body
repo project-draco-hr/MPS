@@ -3,15 +3,19 @@
   ((IncrementalTypecheckingContext)context).runTypeCheckingAction(new Runnable(){
     @Override public void run(){
       IncrementalTypechecking typesComponent=context.getBaseNodeTypesComponent();
-      if (!wasCheckedOnce || !context.isCheckedRoot(true) || context.messagesChanged(editorContext.getEditorComponent().getClass())) {
+      if (!wasCheckedOnce || !typesComponent.isCheckedNonTypesystem()) {
         try {
           myMessagesChanged=true;
-          context.checkIfNotChecked(rootNode,false);
+          context.setIsNonTypesystemComputation();
+          typesComponent.applyNonTypesystemRulesToRoot(editorContext.getOperationContext(),context);
+          typesComponent.setCheckedNonTypesystem();
         }
  catch (        Throwable t) {
           LOG.error(t);
-          typesComponent.setCheckedTypesystem();
-          return;
+          typesComponent.setCheckedNonTypesystem();
+        }
+ finally {
+          context.resetIsNonTypesystemComputation();
         }
       }
       collectMessagesForNodesWithErrors(context,editorContext,messages);
