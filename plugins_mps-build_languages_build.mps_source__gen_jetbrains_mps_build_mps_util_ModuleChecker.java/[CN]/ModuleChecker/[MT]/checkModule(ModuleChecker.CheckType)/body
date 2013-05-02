@@ -1,0 +1,40 @@
+{
+  if (SNodeOperations.isInstanceOf(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Language")) {
+    if (!(myModuleDescriptor instanceof LanguageDescriptor)) {
+      report("imported file is not a language file " + SPropertyOperations.getString(myModule,"name"),myOriginalModule);
+      return;
+    }
+  }
+  if (SNodeOperations.isInstanceOf(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Solution")) {
+    if (!(myModuleDescriptor instanceof SolutionDescriptor)) {
+      report("imported file is not a solution file " + SPropertyOperations.getString(myModule,"name"),myOriginalModule);
+      return;
+    }
+  }
+  SNode module=SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Module");
+  List<SNode> previous=ListSequence.fromList(SLinkOperations.getTargets(module,"dependencies",true)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.build.mps.structure.BuildMps_ExtractedModuleDependency");
+    }
+  }
+).select(new ISelector<SNode,SNode>(){
+    public SNode select(    SNode it){
+      return SNodeOperations.cast(it,"jetbrains.mps.build.mps.structure.BuildMps_ExtractedModuleDependency");
+    }
+  }
+).toListSequence();
+  collectDependencies(type,previous);
+  if (type.doFullImport) {
+    collectLocalDependencies();
+  }
+  if (SNodeOperations.isInstanceOf(module,"jetbrains.mps.build.mps.structure.BuildMps_Language")) {
+    checkLanguage(type,previous);
+  }
+  collectSources(type);
+  if (type.doPartialImport) {
+    ListSequence.fromList(SLinkOperations.getTargets(module,"dependencies",true)).removeSequence(ListSequence.fromList(previous));
+  }
+  if (type.doFullImport) {
+    optimizeDeps();
+  }
+}

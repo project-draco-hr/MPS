@@ -1,0 +1,90 @@
+{
+  Iterable<AbstractModule> modules=Sequence.fromIterable(_modules).where(new IWhereFilter<SModule>(){
+    public boolean accept(    SModule it){
+      return it instanceof AbstractModule;
+    }
+  }
+).select(new ISelector<SModule,AbstractModule>(){
+    public AbstractModule select(    SModule it){
+      return ((AbstractModule)it);
+    }
+  }
+);
+  this.sortedOutDirs=DirUtil.sortDirs(Sequence.fromIterable(modules).select(new ISelector<AbstractModule,String>(){
+    public String select(    AbstractModule mod){
+      return ((AbstractModule)mod).getGeneratorOutputPath();
+    }
+  }
+));
+  this.sortedOutCacheDirs=DirUtil.sortDirs(Sequence.fromIterable(modules).select(new ISelector<AbstractModule,String>(){
+    public String select(    AbstractModule mod){
+      return FileGenerationUtil.getCachesPath(mod.getGeneratorOutputPath());
+    }
+  }
+));
+  this.sortedTestOutDirs=DirUtil.sortDirs(Sequence.fromIterable(modules).select(new ISelector<AbstractModule,String>(){
+    public String select(    AbstractModule mod){
+      String path=mod.getTestsGeneratorOutputPath();
+      return (path != null ? path : mod.getGeneratorOutputPath());
+    }
+  }
+));
+  this.sortedTestOutCacheDirs=DirUtil.sortDirs(Sequence.fromIterable(modules).select(new ISelector<AbstractModule,String>(){
+    public String select(    AbstractModule mod){
+      String path=mod.getTestsGeneratorOutputPath();
+      if (path == null) {
+        path=mod.getGeneratorOutputPath();
+      }
+      return FileGenerationUtil.getCachesPath(path);
+    }
+  }
+));
+  Iterable<String> modelRootPaths=Sequence.fromIterable(_modules).translate(new ITranslator2<SModule,ModelRoot>(){
+    public Iterable<ModelRoot> translate(    SModule mod){
+      return mod.getModelRoots();
+    }
+  }
+).where(new IWhereFilter<ModelRoot>(){
+    public boolean accept(    ModelRoot it){
+      return it instanceof FolderModelRootBase;
+    }
+  }
+).select(new ISelector<ModelRoot,String>(){
+    public String select(    ModelRoot smr){
+      return ((FolderModelRootBase)smr).getPath();
+    }
+  }
+);
+  modelRootPaths=Sequence.fromIterable(modelRootPaths).concat(Sequence.fromIterable(_modules).translate(new ITranslator2<SModule,ModelRoot>(){
+    public Iterable<ModelRoot> translate(    SModule mod){
+      return mod.getModelRoots();
+    }
+  }
+).where(new IWhereFilter<ModelRoot>(){
+    public boolean accept(    ModelRoot it){
+      return it instanceof FileBasedModelRoot;
+    }
+  }
+).select(new ISelector<ModelRoot,String>(){
+    public String select(    ModelRoot smr){
+      return ((FileBasedModelRoot)smr).getContentRoot();
+    }
+  }
+));
+  this.sortedModelDirs=DirUtil.sortDirs(Sequence.fromIterable(modelRootPaths).select(new ISelector<String,IFile>(){
+    public IFile select(    String path){
+      return FileSystem.getInstance().getFileByPath(path);
+    }
+  }
+).where(new IWhereFilter<IFile>(){
+    public boolean accept(    IFile f){
+      return f.isDirectory() && !(f instanceof JarEntryFile);
+    }
+  }
+).select(new ISelector<IFile,String>(){
+    public String select(    IFile dir){
+      return dir.getPath();
+    }
+  }
+));
+}
