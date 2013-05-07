@@ -9,24 +9,21 @@
           if (myStopThread) {
             return;
           }
-          Thread.sleep(200);
+          Thread.sleep(DEFAULT_GRACE_PERIOD);
         }
         while (dumbService.isDumb()) {
           if (myStopThread)           return;
-          Thread.sleep(600);
+          Thread.sleep(DEFAULT_GRACE_PERIOD * 3);
         }
-        long current=System.currentTimeMillis();
-        long commandTime=myLastCommandTime;
-        long millisSinceLastCommand=current - commandTime;
-        if (millisSinceLastCommand < 200) {
-          long millis=200 - millisSinceLastCommand;
-          Thread.sleep(millis);
+        if (!myCommandWatcher.isGracePeriodExpired()) {
+          Thread.sleep(myCommandWatcher.timeToExpiration());
+          continue;
         }
- else         break;
+        break;
       }
       if (myStopThread)       return;
       try {
-        doUpdate();
+        doUpdate(!myCommandWatcher.isLargerGracePeriodExpired());
       }
  catch (      IndexNotReadyException ex) {
         myCheckedOnceEditors.clear();
@@ -36,7 +33,10 @@
       if (myStopThread) {
         return;
       }
-      Thread.sleep(300);
+      Thread.sleep(DEFAULT_GRACE_PERIOD);
+      if (myCommandWatcher.isLargerGracePeriodExpired()) {
+        myCommandWatcher.resetGracePeriod();
+      }
     }
  catch (    Throwable t) {
       LOG.error(t);
