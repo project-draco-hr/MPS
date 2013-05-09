@@ -1,9 +1,10 @@
 {
   try {
-    final Queue<SModule> modules=QueueSequence.fromQueueWithValues(new LinkedList<SModule>(),((Project)MapSequence.fromMap(_params).get("project")).getComponent(MPSProject.class).getModules());
+    final Queue<SModule> modules=QueueSequence.fromQueueWithValues(new LinkedList<SModule>(),((MPSProject)MapSequence.fromMap(_params).get("project")).getModules());
     final List<SModel> modelsToFix=ListSequence.fromList(new ArrayList<SModel>());
     final CountDownLatch latch=new CountDownLatch(1);
-    ModelAccess.instance().runReadAction(new Runnable(){
+    ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
+    modelAccess.runReadAction(new Runnable(){
       public void run(){
         try {
           while (QueueSequence.fromQueue(modules).isNotEmpty()) {
@@ -33,9 +34,9 @@
  catch (    InterruptedException ignore) {
     }
     if (ListSequence.fromList(modelsToFix).isNotEmpty()) {
-      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      modelAccess.executeCommand(new Runnable(){
         public void run(){
-          new OptimizeImportsHelper(((IOperationContext)MapSequence.fromMap(_params).get("context"))).optimizeModelsImports(modelsToFix);
+          new OptimizeImportsHelper().optimizeModelsImports(modelsToFix);
           SModelRepository.getInstance().saveAll();
         }
       }
