@@ -1,0 +1,276 @@
+{
+  myRepository=repository;
+  setEditorContext(new EditorContext(this,null,repository));
+  setBackground(StyleRegistry.getInstance().getEditorBackground());
+  setFocusCycleRoot(true);
+  setFocusTraversalPolicy(new FocusTraversalPolicy(){
+    @Override public Component getComponentAfter(    Container aContainer,    Component aComponent){
+      if (myIsInFiguresHierarchy) {
+        executeComponentAction(jetbrains.mps.openapi.editor.cells.CellActionType.NEXT);
+      }
+      return myIsInFiguresHierarchy ? aContainer : null;
+    }
+    @Override public Component getComponentBefore(    Container aContainer,    Component aComponent){
+      if (myIsInFiguresHierarchy) {
+        executeComponentAction(jetbrains.mps.openapi.editor.cells.CellActionType.PREV);
+      }
+      return myIsInFiguresHierarchy ? aContainer : null;
+    }
+    @Override public Component getFirstComponent(    Container aContainer){
+      return myIsInFiguresHierarchy ? aContainer : null;
+    }
+    @Override public Component getLastComponent(    Container aContainer){
+      return myIsInFiguresHierarchy ? aContainer : null;
+    }
+    @Override public Component getDefaultComponent(    Container aContainer){
+      return myIsInFiguresHierarchy ? aContainer : null;
+    }
+  }
+);
+  setFocusTraversalKeysEnabled(false);
+  setDoubleBuffered(true);
+  myScrollPane=ScrollPaneFactory.createScrollPane();
+  if (rightToLeft) {
+    myScrollPane.setComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT);
+  }
+  myScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+  myScrollPane.setVerticalScrollBar(myVerticalScrollBar);
+  myScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+  myScrollPane.setViewportView(this);
+  myScrollPane.getViewport().addChangeListener(new ChangeListener(){
+    @Override public void stateChanged(    ChangeEvent e){
+      deactivateSubstituteChooser();
+    }
+  }
+);
+  myContainer=new JPanel(){
+    @Override public void addNotify(){
+      super.addNotify();
+      myIsInFiguresHierarchy=true;
+    }
+    @Override public void removeNotify(){
+      myIsInFiguresHierarchy=false;
+      super.removeNotify();
+    }
+  }
+;
+  myContainer.setMinimumSize(new Dimension(0,0));
+  myContainer.setLayout(new BorderLayout());
+  myContainer.add(myScrollPane,BorderLayout.CENTER);
+  if (showErrorsGutter) {
+    getVerticalScrollBar().setPersistentUI(myMessagesGutter);
+  }
+  myNodeSubstituteChooser=new NodeSubstituteChooser(this);
+  myKbdHandlersStack=new Stack<KeyboardHandler>();
+  myKbdHandlersStack.push(new EditorComponentKeyboardHandler(myKeymapHandler));
+  myActionMap=new HashMap<jetbrains.mps.openapi.editor.cells.CellActionType,CellAction>();
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.LEFT,new NodeEditorActions.MoveLeft());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.RIGHT,new NodeEditorActions.MoveRight());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.UP,new NodeEditorActions.MoveUp());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.DOWN,new NodeEditorActions.MoveDown());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.NEXT,new NodeEditorActions.MoveNext());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.PREV,new NodeEditorActions.MovePrev());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.LOCAL_HOME,new NodeEditorActions.MoveLocal(true));
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.LOCAL_END,new NodeEditorActions.MoveLocal(false));
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.ROOT_HOME,new NodeEditorActions.MoveToRoot(true));
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.ROOT_END,new NodeEditorActions.MoveToRoot(false));
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.HOME,new NodeEditorActions.MoveHome());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.END,new NodeEditorActions.MoveEnd());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.PAGE_DOWN,new NodeEditorActions.MovePageUp());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.PAGE_UP,new NodeEditorActions.MovePageDown());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.SELECT_UP,new NodeEditorActions.SelectUp());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.SELECT_DOWN,new NodeEditorActions.SelectDown());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.SELECT_RIGHT,new NodeEditorActions.SideSelect(CellSide.RIGHT));
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.SELECT_LEFT,new NodeEditorActions.SideSelect(CellSide.LEFT));
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.SELECT_NEXT,new NodeEditorActions.EnlargeSelection(true));
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.SELECT_PREVIOUS,new NodeEditorActions.EnlargeSelection(false));
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.COPY,new CellAction_CopyNode());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.CUT,new CellAction_CutNode());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.PASTE,new CellAction_PasteNode());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.PASTE_BEFORE,new CellAction_PasteNodeRelative(true));
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.PASTE_AFTER,new CellAction_PasteNodeRelative(false));
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.FOLD,new CellAction_FoldCell());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.UNFOLD,new CellAction_UnfoldCell());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.FOLD_ALL,new CellAction_FoldAll());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.UNFOLD_ALL,new CellAction_UnfoldAll());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.TOGGLE_FOLDING,new CallAction_ToggleCellFolding());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.RIGHT_TRANSFORM,new CellAction_SideTransform(CellSide.RIGHT));
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.LEFT_TRANSFORM,new CellAction_SideTransform(CellSide.LEFT));
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.COMPLETE,new NodeEditorActions.Complete());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.COMPLETE_SMART,new CompleteSmart());
+  myActionMap.put(jetbrains.mps.openapi.editor.cells.CellActionType.SHOW_MESSAGE,new ShowMessage());
+  registerKeyboardAction(new AbstractAction(){
+    @Override public void actionPerformed(    ActionEvent e){
+      goToNextErrorCell(false);
+    }
+  }
+,KeyStroke.getKeyStroke("F2"),WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+  registerKeyboardAction(new AbstractAction(){
+    @Override public void actionPerformed(    ActionEvent e){
+      goToNextErrorCell(true);
+    }
+  }
+,KeyStroke.getKeyStroke("shift F2"),WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+  registerKeyboardAction(new AbstractAction(){
+    @Override public void actionPerformed(    ActionEvent e){
+      goToNextHighlightedCell(false);
+    }
+  }
+,KeyStroke.getKeyStroke("F3"),WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+  registerKeyboardAction(new AbstractAction(){
+    @Override public void actionPerformed(    ActionEvent e){
+      goToNextHighlightedCell(true);
+    }
+  }
+,KeyStroke.getKeyStroke("shift F3"),WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+  registerKeyboardAction(new AbstractAction(){
+    @Override public void actionPerformed(    ActionEvent e){
+      final EditorCell cell=getSelectedCell();
+      if (cell == null)       return;
+      getModelAccess().runReadAction(new Runnable(){
+        @Override public void run(){
+          showPopupMenu(cell.getX(),cell.getY());
+        }
+      }
+);
+    }
+  }
+,KeyStroke.getKeyStroke("CONTEXT_MENU"),WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+  addMouseListener(new MouseAdapter(){
+    @Override public void mousePressed(    final MouseEvent e){
+      if (areMouseEventsBlocked()) {
+        return;
+      }
+      if (e.isPopupTrigger()) {
+        processPopupMenu(e);
+      }
+ else {
+        processMousePressed(e);
+      }
+    }
+    @Override public void mouseClicked(    MouseEvent e){
+      if (areMouseEventsBlocked()) {
+        return;
+      }
+      EditorCell selectedCell=getSelectedCell();
+      if (e.getClickCount() == 2 && myRootCell.findLeaf(e.getX(),e.getY()) == selectedCell && selectedCell instanceof EditorCell_Label) {
+        ((EditorCell_Label)selectedCell).selectWordOrAll();
+        repaint();
+      }
+    }
+    @Override public void mouseReleased(    MouseEvent e){
+      if (areMouseEventsBlocked()) {
+        return;
+      }
+      if (e.isPopupTrigger()) {
+        processPopupMenu(e);
+      }
+      super.mouseReleased(e);
+    }
+  }
+);
+  addKeyListener(new KeyAdapter(){
+    @Override public void keyPressed(    final KeyEvent e){
+      processKeyPressed(e);
+    }
+    @Override public void keyTyped(    KeyEvent e){
+      processKeyTyped(e);
+    }
+    @Override public void keyReleased(    final KeyEvent e){
+      processKeyReleased(e);
+    }
+  }
+);
+  myMessagesGutter=new MessagesGutter(this,rightToLeft);
+  myLeftHighlighter=new LeftEditorHighlighter(this,rightToLeft);
+  myLeftHighlighter.addMouseListener(new MouseAdapter(){
+    @Override public void mousePressed(    MouseEvent e){
+      for (      LeftMarginMouseListener listener : new ArrayList<LeftMarginMouseListener>(myLeftMarginPressListeners)) {
+        listener.mousePressed(e,EditorComponent.this);
+      }
+    }
+    @Override public void mouseReleased(    MouseEvent e){
+      for (      LeftMarginMouseListener listener : new ArrayList<LeftMarginMouseListener>(myLeftMarginPressListeners)) {
+        listener.mouseReleased(e,EditorComponent.this);
+      }
+    }
+    @Override public void mouseClicked(    MouseEvent e){
+      for (      LeftMarginMouseListener listener : new ArrayList<LeftMarginMouseListener>(myLeftMarginPressListeners)) {
+        listener.mouseClicked(e,EditorComponent.this);
+      }
+    }
+  }
+);
+  myScrollPane.setRowHeaderView(myLeftHighlighter);
+  addFocusListener(new FocusListener(){
+    @Override public void focusGained(    FocusEvent e){
+      if (isDisposed()) {
+        return;
+      }
+      if (getSelectionManager().getSelection() == null) {
+        EditorCell rootCell=getRootCell();
+        if (rootCell instanceof EditorCell_Collection) {
+          jetbrains.mps.openapi.editor.cells.EditorCell focusPolicyCell=FocusPolicyUtil.findCellToSelectDueToFocusPolicy(rootCell);
+          jetbrains.mps.openapi.editor.cells.EditorCell toSelect;
+          if (focusPolicyCell == null || (focusPolicyCell == rootCell && !FocusPolicyUtil.hasFocusPolicy(focusPolicyCell))) {
+            toSelect=CellFinderUtil.findChildByManyFinders(rootCell,Finder.FIRST_EDITABLE,Finder.FIRST_SELECTABLE_LEAF);
+          }
+ else {
+            toSelect=focusPolicyCell;
+          }
+          if (toSelect == null)           toSelect=rootCell;
+          changeSelection(toSelect);
+          repaint();
+          return;
+        }
+        if (rootCell != null && rootCell.isSelectable()) {
+          changeSelection(rootCell);
+        }
+      }
+      repaint();
+    }
+    @Override public void focusLost(    FocusEvent e){
+      repaint();
+      if (myNodeSubstituteChooser.getWindow() != null && (myNodeSubstituteChooser.getWindow().isAncestorOf(e.getOppositeComponent()) || myNodeSubstituteChooser.getWindow() == e.getOppositeComponent()))       return;
+      deactivateSubstituteChooser();
+    }
+  }
+);
+  myIntentionsSupport=new IntentionsSupport(this);
+  myAutoValidator=new AutoValidator(this);
+  if (MPSToolTipManager.getInstance() != null) {
+    MPSToolTipManager.getInstance().registerComponent(this);
+  }
+  if (CaretBlinker.getInstance() != null) {
+    CaretBlinker.getInstance().registerEditor(this);
+  }
+  KeyboardFocusManager.getCurrentKeyboardFocusManager().addPropertyChangeListener("focusOwner",myFocusListener=new PropertyChangeListener(){
+    @Override public void propertyChange(    PropertyChangeEvent evt){
+      Component focusOwner=KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+      if (EditorComponent.this.isAncestorOf(focusOwner)) {
+        Component current=focusOwner;
+        while (current.getParent() != EditorComponent.this) {
+          current=current.getParent();
+        }
+        selectComponentCell(current);
+      }
+    }
+  }
+);
+  EditorSettings.getInstance().addEditorSettingsListener(mySettingsListener);
+  ClassLoaderManager.getInstance().addReloadHandler(myReloadListener);
+  addFocusListener(new FocusAdapter(){
+    @Override public void focusLost(    FocusEvent e){
+      commitAll();
+    }
+  }
+);
+  getSelectionManager().addSelectionListener(new SelectionListener(){
+    @Override public void selectionChanged(    EditorComponent editorComponent,    Selection oldSelection,    Selection newSelection){
+      deactivateSubstituteChooser();
+      updateStatusBarMessage();
+    }
+  }
+);
+  SModelRepository.getInstance().addModelRepositoryListener(mySimpleModelListener);
+}
