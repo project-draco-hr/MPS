@@ -1,4 +1,5 @@
 {
+  assertCanChange();
   if (ourMemberAccessModifier != null) {
     role=ourMemberAccessModifier.getNewChildRole(getModel(),myConceptFqName,role);
   }
@@ -10,7 +11,6 @@
   if (getTopmostAncestor() == child) {
     throw new RuntimeException("Trying to create a cyclic tree");
   }
-  ModelChange.assertLegalNodeChange(getModel(),this);
   children_insertAfter(((SNode)anchor),schild);
   schild.setRoleInParent(role);
   if (myModel == null) {
@@ -20,14 +20,16 @@
   }
  else {
     schild.registerInModel(myModel);
+  }
+  if (myModelForUndo != null) {
     final String finalRole=role;
-    myModel.performUndoableAction(new Computable<SNodeUndoableAction>(){
+    myModelForUndo.performUndoableAction(new Computable<SNodeUndoableAction>(){
       @Override public SNodeUndoableAction compute(){
         return new InsertChildAtUndoableAction(SNode.this,anchor,finalRole,schild);
       }
     }
 );
-    if (ModelChange.needFireEvents(getModel(),this)) {
+    if (myModel != null && ModelChange.needFireEvents(getModel(),this)) {
       myModel.fireChildAddedEvent(this,role,schild,((SNode)anchor));
     }
   }

@@ -10,7 +10,8 @@
     return;
   }
   final LanguageRenamer renamer=new LanguageRenamer(myProject,myLanguage,fqName);
-  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+  ModelAccess modelAccess=myProject.getRepository().getModelAccess();
+  modelAccess.executeCommand(new Runnable(){
     public void run(){
       renamer.rename(needToRegenerate);
       renamer.update();
@@ -19,36 +20,36 @@
 );
   if (needToRegenerate) {
     final Set<Language> langs=new LinkedHashSet<Language>();
-    ModelAccess.instance().runReadAction(new Runnable(){
-      @Override public void run(){
+    modelAccess.runReadAction(new Runnable(){
+      public void run(){
         langs.add(myLanguage);
         langs.addAll(ModuleRepositoryFacade.getInstance().getAllExtendingLanguages(myLanguage));
       }
     }
 );
     for (    final Language l : langs) {
-      GenParameters params=ModelAccess.instance().runReadAction(new Computable<GenParameters>(){
-        @Override public GenParameters compute(){
+      final Wrappers._T<GenParameters> params=new Wrappers._T<GenParameters>(null);
+      modelAccess.runReadAction(new Runnable(){
+        public void run(){
           ModuleTestConfiguration languageConfig=new ModuleTestConfiguration();
           languageConfig.setModuleRef(l.getModuleReference());
           languageConfig.setName("tmp");
           try {
-            return languageConfig.getGenParams(myProject.getComponent(MPSProject.class),true);
+            params.value=languageConfig.getGenParams(myProject,true);
           }
- catch (          IllegalGeneratorConfigurationException e) {
-            return null;
+ catch (          IllegalGeneratorConfigurationException ignored) {
           }
         }
       }
 );
-      if (params == null) {
+      if (params.value == null) {
         setErrorText("Rebuild configuration is invalid");
         return;
       }
-      ModuleContext context=new ModuleContext(myLanguage,ProjectHelper.toMPSProject(myProject));
+      ModuleContext context=new ModuleContext(myLanguage,myProject);
       MakeSession sess=new MakeSession(context);
       if (IMakeService.INSTANCE.get().openNewSession(sess)) {
-        IMakeService.INSTANCE.get().make(sess,new ModelsToResources(context,ListSequence.fromListWithValues(new ArrayList<SModel>(),(Iterable<SModel>)params.getModelDescriptors())).resources(false));
+        IMakeService.INSTANCE.get().make(sess,new ModelsToResources(context,ListSequence.fromListWithValues(new ArrayList<SModel>(),(Iterable<SModel>)params.value.getModelDescriptors())).resources(false));
       }
     }
   }
