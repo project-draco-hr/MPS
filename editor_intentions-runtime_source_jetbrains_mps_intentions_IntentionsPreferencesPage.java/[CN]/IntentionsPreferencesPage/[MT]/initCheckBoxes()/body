@@ -1,15 +1,20 @@
 {
-  myCheckBoxes=new ArrayList<IntentionEnabledCheckBox>();
-  for (  Intention intention : myIntentionsManager.getAllIntentions()) {
-    myCheckBoxes.add(new IntentionEnabledCheckBox(intention));
-  }
-  for (  IntentionFactory intentionFactory : myIntentionsManager.getAllIntentionFactories()) {
-    myCheckBoxes.add(new IntentionEnabledCheckBox(intentionFactory));
-  }
-  Collections.sort(myCheckBoxes,new Comparator<IntentionEnabledCheckBox>(){
-    @Override public int compare(    IntentionEnabledCheckBox o1,    IntentionEnabledCheckBox o2){
-      return StringUtil.compare(o1.getLanguageFqName(),o2.getLanguageFqName());
+  List<IntentionDescriptor> intentionList=new SortedList<IntentionDescriptor>(new Comparator<IntentionDescriptor>(){
+    @Override public int compare(    IntentionDescriptor o1,    IntentionDescriptor o2){
+      int langCompare=StringUtil.compare(o1.getLanguageFqName(),o2.getLanguageFqName());
+      return langCompare != 0 ? langCompare : StringUtil.compare(o1.getPresentation().toLowerCase(),o2.getPresentation().toLowerCase());
     }
   }
 );
+  intentionList.addAll(myIntentionsManager.getAllIntentions());
+  intentionList.addAll(myIntentionsManager.getAllIntentionFactories());
+  for (  IntentionDescriptor descriptor : intentionList) {
+    final String languageFqName=descriptor.getLanguageFqName() != null ? descriptor.getLanguageFqName() : "Unspecified Language";
+    LanguageTreeNode langTreeNode=myLanguageTreeNodes.get(languageFqName);
+    if (langTreeNode == null) {
+      langTreeNode=new LanguageTreeNode(languageFqName);
+      myLanguageTreeNodes.put(languageFqName,langTreeNode);
+    }
+    langTreeNode.add(new IntentionTreeNode(descriptor));
+  }
 }
