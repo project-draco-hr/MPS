@@ -1,0 +1,33 @@
+{
+  SNode language=SNodeOperations.cast(myModule,"jetbrains.mps.build.mps.structure.BuildMps_Language");
+  LanguageDescriptor languageDescriptor=(LanguageDescriptor)myModuleDescriptor;
+  String langName=languageDescriptor.getModuleReference().getModuleName();
+  if (languageDescriptor.getGenerators().size() > 1) {
+    report("more than one generator for language `" + langName + "'",myOriginalModule);
+    return;
+  }
+  if (languageDescriptor.getGenerators().isEmpty()) {
+    if (type.doCheck && (SLinkOperations.getTarget(language,"generator",true) != null)) {
+      report("no generators in module descriptor for `" + langName + "'",myOriginalModule);
+    }
+    if (type.doPartialImport) {
+      SLinkOperations.setTarget(language,"generator",null,true);
+    }
+    return;
+  }
+  GeneratorDescriptor generatorDescriptor=languageDescriptor.getGenerators().get(0);
+  String generatorName=generatorDescriptor.getGeneratorUID();
+  if (generatorName != null && !(generatorName.startsWith(langName + "#"))) {
+    report("wrong generator name `" + generatorName + "', should start with `"+ langName+ "#'",myOriginalModule);
+    return;
+  }
+  if (type.doCheck && (SLinkOperations.getTarget(language,"generator",true) == null)) {
+    report("language generator should be extracted for `" + langName + "'",myOriginalModule);
+    return;
+  }
+  if (type.doPartialImport & (SLinkOperations.getTarget(language,"generator",true) == null)) {
+    SLinkOperations.setTarget(language,"generator",SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMps_Generator",null),true);
+  }
+  ModuleChecker moduleCheckerForGenerator=new ModuleChecker(SLinkOperations.getTarget(language,"generator",true),SLinkOperations.getTarget(language,"generator",true),myVisibleModules,myPathConverter,myGenContext,myModuleSourceDir,generatorDescriptor,myReporter);
+  moduleCheckerForGenerator.check(type);
+}

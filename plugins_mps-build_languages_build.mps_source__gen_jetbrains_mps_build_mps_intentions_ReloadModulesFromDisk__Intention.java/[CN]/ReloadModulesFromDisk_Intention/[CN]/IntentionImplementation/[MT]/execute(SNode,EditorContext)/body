@@ -1,16 +1,19 @@
 {
+  VisibleModules visible=new VisibleModules(node,null);
+  visible.collect();
+  PathConverter pathConverter=new PathConverter(node);
 {
     Iterator<SNode> module_it=ListSequence.fromList(SNodeOperations.getDescendants(node,"jetbrains.mps.build.mps.structure.BuildMps_AbstractModule",false,new String[]{})).iterator();
     SNode module_var;
     while (module_it.hasNext()) {
       module_var=module_it.next();
-      PathConverter pathConverter=new PathConverter(node);
-      try {
-        VisibleModules visible=new VisibleModules(node,null);
-        visible.collect();
-        new ModuleLoader(module_var,visible,pathConverter,null).importRequired();
+      if (SNodeOperations.isInstanceOf(module_var,"jetbrains.mps.build.mps.structure.BuildMps_Generator")) {
+        continue;
       }
- catch (      ModuleLoader.ModuleLoaderException ex) {
+      try {
+        ModuleLoader.createModuleChecker(module_var,visible,pathConverter).check(ModuleChecker.CheckType.LOAD_IMPORTANT_PART);
+      }
+ catch (      ModuleLoaderException ex) {
         if (LOG.isEnabledFor(Priority.ERROR)) {
           LOG.error(ex.getMessage(),ex);
         }
