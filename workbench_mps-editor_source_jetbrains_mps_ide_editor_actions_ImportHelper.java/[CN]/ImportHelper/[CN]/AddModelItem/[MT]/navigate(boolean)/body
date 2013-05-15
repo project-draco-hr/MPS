@@ -1,31 +1,45 @@
 {
-  final SModuleReference moduleToImport=ModelAccess.instance().runReadAction(new Computable<SModuleReference>(){
-    @Override public SModuleReference compute(){
-      SModel md=SModelRepository.getInstance().getModelDescriptor(getModelReference());
-      final SModuleReference moduleReference=md.getModule().getModuleReference();
-      if (((AbstractModule)myModule).getScope().getModelDescriptor(getModelReference()) == null) {
-        return moduleReference;
+  final SModuleReference[] module={null};
+  final boolean[] dependency={true};
+  ModelAccess.instance().runReadAction(new Runnable(){
+    @Override public void run(){
+      SModelReference mrefToImport=getModelReference();
+      SModel modelToImport=SModelRepository.getInstance().getModelDescriptor(mrefToImport);
+      SModule moduleToImport=modelToImport.getModule();
+      if (moduleToImport instanceof Language && myModule instanceof Solution && ((Language)moduleToImport).isAccessoryModel(mrefToImport)) {
+        dependency[0]=false;
       }
-      return null;
+      if (((AbstractModule)myModule).getScope().getModelDescriptor(mrefToImport) == null) {
+        module[0]=moduleToImport.getModuleReference();
+      }
     }
   }
 );
-  if (moduleToImport != null) {
-    int res=JOptionPane.showConfirmDialog(getFrame(),"<html>Model <b>" + getModelReference().getModelName() + "</b> is owned by module <b>"+ moduleToImport.getModuleName()+ "</b> which is not imported.</html>\n\n"+ "Importing the module will take some time.\n"+ "Do you want to automatically import the module?","Module import",JOptionPane.YES_NO_OPTION);
+  if (module[0] != null) {
+    int res=JOptionPane.showConfirmDialog(getFrame(),"<html>Model <b>" + getModelReference().getModelName() + "</b> is owned by module <b>"+ module[0].getModuleName()+ "</b> which is not imported.</html>\n\n"+ "Importing the module will take some time.\n"+ "Do you want to automatically import the module?","Module import",JOptionPane.YES_NO_OPTION);
     if (res == JOptionPane.YES_OPTION) {
       ModelAccess.instance().runWriteActionInCommand(new Runnable(){
         @Override public void run(){
-          ((AbstractModule)myModule).addDependency(moduleToImport,false);
+          if (dependency[0]) {
+            ((AbstractModule)myModule).addDependency(module[0],false);
+            ((jetbrains.mps.smodel.SModelInternal)myModel).addModelImport(getModelReference(),false);
+          }
+ else {
+            ((AbstractModule)myModule).addUsedLanguage(module[0]);
+            ((jetbrains.mps.smodel.SModelInternal)myModel).addLanguage(module[0]);
+          }
           ClassLoaderManager.getInstance().reloadAll(new EmptyProgressMonitor());
         }
       }
 );
     }
   }
-  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-    @Override public void run(){
-      ((jetbrains.mps.smodel.SModelInternal)myModel).addModelImport(getModelReference(),false);
+ else {
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      @Override public void run(){
+        ((jetbrains.mps.smodel.SModelInternal)myModel).addModelImport(getModelReference(),false);
+      }
     }
-  }
 );
+  }
 }

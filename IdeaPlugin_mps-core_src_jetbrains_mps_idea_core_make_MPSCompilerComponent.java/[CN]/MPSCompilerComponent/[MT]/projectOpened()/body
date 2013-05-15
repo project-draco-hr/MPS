@@ -4,13 +4,17 @@
   project.getMessageBus().connect().subscribe(CustomBuilderMessageHandler.TOPIC,new RefreshFilesCompilationStatusListener());
   project.getMessageBus().connect().subscribe(CustomBuilderMessageHandler.TOPIC,new NavigateToNodesWithErrors(errorMessages));
   compilerManager.addCompilableFileType(MPSFileTypeFactory.MPS_FILE_TYPE);
-  for (  MPSCompiler2 compiler : compilerManager.getCompilers(MPSCompiler2.class)) {
-    compilerManager.removeCompiler(compiler);
-  }
-  compilerManager.addCompiler(new MPSCompiler2(project));
   compilerManager.addBeforeTask(new CompileTask(){
     @Override public boolean execute(    final CompileContext context){
-      if (!CompilerWorkspaceConfiguration.getInstance(project).USE_COMPILE_SERVER)       return true;
+      final CompileScope compileScope=context.getCompileScope();
+      if (compileScope == null)       return true;
+      if (!CompilerWorkspaceConfiguration.getInstance(project).USE_COMPILE_SERVER) {
+        final VirtualFile[] files=compileScope.getFiles(MPSFileTypeFactory.MPS_FILE_TYPE,true);
+        if (files.length > 0) {
+          context.addMessage(CompilerMessageCategory.ERROR,"Generating MPS models is not supported for in-process compiler",null,0,0);
+          return false;
+        }
+      }
       StringBuilder sb=new StringBuilder();
       PluginLibrariesContributor pluginLibContributor=ApplicationManager.getApplication().getComponent(PluginLibrariesContributor.class);
       for (      LibDescriptor library : pluginLibContributor.getLibraries()) {
@@ -20,7 +24,7 @@
         }
         sb.append(path);
       }
-      context.getCompileScope().putUserData(MPSMakeConstants.MPS_LANGUAGES,sb.toString());
+      compileScope.putUserData(MPSMakeConstants.MPS_LANGUAGES,sb.toString());
       final File repositoryCache=new File(CompilerPaths.getCompilerSystemDirectory(project),"mps_repository.dat");
       final long start=System.nanoTime();
       ModelAccess.instance().runReadAction(new Runnable(){
@@ -30,7 +34,7 @@
           try {
             mos=new ModelOutputStream(new FileOutputStream(repositoryCache));
             cachedRepositoryData.save(mos);
-            context.getCompileScope().putUserData(MPSMakeConstants.MPS_REPOSITORY,repositoryCache.getPath());
+            compileScope.putUserData(MPSMakeConstants.MPS_REPOSITORY,repositoryCache.getPath());
           }
  catch (          IOException e) {
             context.addMessage(CompilerMessageCategory.INFORMATION,"cannot save cache for MPS, generation may be slow",null,0,0);
