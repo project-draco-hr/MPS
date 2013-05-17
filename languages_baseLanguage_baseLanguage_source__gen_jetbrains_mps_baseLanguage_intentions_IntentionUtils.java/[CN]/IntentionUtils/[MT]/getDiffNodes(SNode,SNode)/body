@@ -1,0 +1,54 @@
+{
+  if (neq_k79hya_a0a0g(SNodeOperations.getConceptDeclaration(node1),SNodeOperations.getConceptDeclaration(node2))) {
+    return MultiTuple.<SNode,SNode>from(node1,node2);
+  }
+  SNode concept=SNodeOperations.getConceptDeclaration(node1);
+  for (  SNode property : ListSequence.fromList(SLinkOperations.getTargets(concept,"propertyDeclaration",true))) {
+    if (neq_k79hya_a0a0d0g(node1.getProperty(SPropertyOperations.getString(property,"name")),node2.getProperty(SPropertyOperations.getString(property,"name")))) {
+      return MultiTuple.<SNode,SNode>from(node1,node2);
+    }
+  }
+  for (  SNode refLink : ListSequence.fromList(SLinkOperations.getTargets(concept,"linkDeclaration",true)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SPropertyOperations.hasValue(it,"metaClass","reference","reference");
+    }
+  }
+)) {
+    if (node1.getReference(SPropertyOperations.getString(refLink,"role")).getTargetNode() != node2.getReference(SPropertyOperations.getString(refLink,"role")).getTargetNode()) {
+      return MultiTuple.<SNode,SNode>from(node1,node2);
+    }
+  }
+  Tuples._2<SNode,SNode> currentResult=null;
+  for (  SNode childLink : ListSequence.fromList(SLinkOperations.getTargets(concept,"linkDeclaration",true)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SPropertyOperations.hasValue(it,"metaClass","aggregation","reference");
+    }
+  }
+)) {
+    List<SNode> children1=IterableUtil.asList(node1.getChildren(SPropertyOperations.getString(childLink,"role")));
+    List<SNode> children2=IterableUtil.asList(node2.getChildren(SPropertyOperations.getString(childLink,"role")));
+    if (children1.size() != children2.size()) {
+      return MultiTuple.<SNode,SNode>from(node1,node2);
+    }
+{
+      Iterator<SNode> child1_it=ListSequence.fromList(children1).iterator();
+      Iterator<SNode> child2_it=ListSequence.fromList(children2).iterator();
+      SNode child1_var;
+      SNode child2_var;
+      while (child1_it.hasNext() && child2_it.hasNext()) {
+        child1_var=child1_it.next();
+        child2_var=child2_it.next();
+        Tuples._2<SNode,SNode> currentChildDiff=getDiffNodes(child1_var,child2_var);
+        if (currentChildDiff != null) {
+          if (currentResult == null) {
+            currentResult=currentChildDiff;
+          }
+ else {
+            return MultiTuple.<SNode,SNode>from(node1,node2);
+          }
+        }
+      }
+    }
+  }
+  return currentResult;
+}
