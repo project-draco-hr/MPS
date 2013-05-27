@@ -1,0 +1,44 @@
+{
+  try {
+    for (    SModel md : ListSequence.fromList(SModelRepository.getInstance().getModelDescriptors())) {
+      if (md.isReadOnly()) {
+        continue;
+      }
+      for (      SNode node : new NodesIterable(md)) {
+        for (        SReference ref : Sequence.fromIterable(node.getReferences())) {
+          if (!(ref instanceof jetbrains.mps.smodel.SReference)) {
+            continue;
+          }
+          SModelReference targetModel=ref.getTargetSModelReference();
+          if (targetModel == null) {
+            continue;
+          }
+          if (!(targetModel.getModelName().equals("jetbrains.mps.util@java_stub"))) {
+            continue;
+          }
+          SNodeId id=ref.getTargetNodeId();
+          if (id == null) {
+            continue;
+          }
+          if (!(id instanceof jetbrains.mps.smodel.SNodeId.Foreign)) {
+            continue;
+          }
+          jetbrains.mps.smodel.SNodeId.Foreign fid=((jetbrains.mps.smodel.SNodeId.Foreign)id);
+          if (!(fid.getId().equals("~Condition"))) {
+            continue;
+          }
+          ((jetbrains.mps.smodel.SReference)ref).setTargetSModelReference(SModelRepository.getInstance().getModelDescriptor(new jetbrains.mps.smodel.SModelReference("org.jetbrains.mps.util","java_stub")).getReference());
+          if (md instanceof EditableSModel) {
+            ((EditableSModel)md).setChanged(true);
+          }
+        }
+      }
+    }
+    SModelRepository.getInstance().saveAll();
+  }
+ catch (  Throwable t) {
+    if (LOG.isEnabledFor(Priority.ERROR)) {
+      LOG.error("User's action execute method failed. Action:" + "MigrateCondition",t);
+    }
+  }
+}
