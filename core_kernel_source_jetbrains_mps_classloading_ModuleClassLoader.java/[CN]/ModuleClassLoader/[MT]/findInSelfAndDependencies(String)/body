@@ -3,23 +3,22 @@
   if (c != null) {
     return c;
   }
-  for (  ModuleClassLoader dep : getDependencyClassLoaders()) {
-    if (dep == this)     continue;
-    if (dep.mySupport.canFindClass(name)) {
-      return Class.forName(name,false,dep);
-    }
-  }
-  Set<ClassLoader> processedParentClassLoaders=new HashSet<ClassLoader>();
-  for (  ModuleClassLoader dep : getDependencyClassLoaders()) {
-    try {
-      if (processedParentClassLoaders.contains(dep.getParent())) {
-        continue;
+  for (  ClassLoader dep : getDependencyClassLoaders()) {
+    if (dep instanceof ModuleClassLoader) {
+      if (dep == this)       continue;
+      if (((ModuleClassLoader)dep).mySupport.canFindClass(name)) {
+        return Class.forName(name,false,dep);
       }
-      processedParentClassLoaders.add(dep.getParent());
-      return Class.forName(name,false,dep.getParent());
-    }
- catch (    ClassNotFoundException e) {
     }
   }
-  return processedParentClassLoaders.contains(getParent()) ? null : loadFromParent(name);
+  for (  ClassLoader dep : getDependencyClassLoaders()) {
+    if (!(dep instanceof ModuleClassLoader)) {
+      try {
+        return Class.forName(name,false,dep);
+      }
+ catch (      ClassNotFoundException e) {
+      }
+    }
+  }
+  return getDependencyClassLoaders().contains(getParent()) ? null : loadFromParent(name);
 }
