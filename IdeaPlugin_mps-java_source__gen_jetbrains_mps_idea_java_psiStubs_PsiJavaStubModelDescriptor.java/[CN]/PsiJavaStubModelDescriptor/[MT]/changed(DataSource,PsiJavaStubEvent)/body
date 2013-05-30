@@ -1,0 +1,50 @@
+{
+  if (myModel == null) {
+    return;
+  }
+  SModel myModelCopy=CopyUtil.copyModel(myModel);
+  for (  PsiJavaFile file : event.removed()) {
+    myMps2PsiMapper.clearFile(file.getName());
+  }
+  for (  PsiListener.FSRename rename : event.renamed()) {
+    String oldName=rename.oldName;
+    myMps2PsiMapper.clearFile(oldName);
+  }
+  for (  PsiJavaFile file : event.needReparse()) {
+    if (!(file.isValid())) {
+      String name=file.getName();
+      for (      PsiFile f : file.getParent().getFiles()) {
+        if (name.equals(f.getName()) && f instanceof PsiJavaFile) {
+          file=(PsiJavaFile)f;
+          break;
+        }
+      }
+    }
+    if (!(file.isValid())) {
+      continue;
+    }
+    SNode javaImports=getImports(file.getImportList().getAllImportStatements());
+    ASTConverter converter=new ASTConverter(myMps2PsiMapper);
+    Set<SNode> roots=SetSequence.fromSet(new HashSet<SNode>());
+    for (    PsiClass cls : file.getClasses()) {
+      SNode node=converter.convertClass(cls);
+      if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.Classifier")) {
+        AttributeOperations.setAttribute(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier"),new IAttributeDescriptor.NodeAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.JavaImports")),javaImports);
+      }
+      SNodeId id=node.getNodeId();
+      SNode oldNode=myModelCopy.getNode(id);
+      if ((oldNode != null)) {
+        SNodeOperations.replaceWithAnother(oldNode,node);
+      }
+ else {
+        myModelCopy.addRootNode(node);
+      }
+      SetSequence.fromSet(roots).addElement(node);
+    }
+    if (SetSequence.fromSet(roots).isNotEmpty()) {
+      MapSequence.fromMap(myRootsPerFile).put(file.getName(),roots);
+    }
+  }
+  myModel=myModelCopy;
+  myModel.setModelDescriptor(this);
+}
