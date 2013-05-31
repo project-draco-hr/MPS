@@ -1,48 +1,17 @@
 {
-  List<SModuleReference> list=new ArrayList<SModuleReference>(((GeneratorDescriptor)myModule.getModuleDescriptor()).getDepGenerators());
   JPanel panel=new JPanel();
   panel.setLayout(new GridLayoutManager(2,1,INSETS,-1,-1));
-  final JBTable table=new JBTable();
-  table.setAutoscrolls(true);
+  myTable=new JBTable();
+  myTable.setSelectionBackground(myTable.getSelectionBackground().darker());
+  myTable.setAutoscrolls(true);
+  myTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
   myPrioritiesTableModel=new GenPrioritiesTableModel();
-  table.setModel(myPrioritiesTableModel);
-  for (  TableColumnModelListener listener : ((DefaultTableColumnModel)table.getColumnModel()).getColumnModelListeners()) {
-    table.getColumnModel().removeColumnModelListener(listener);
-  }
-  table.setDefaultRenderer(RuleType.class,new RuleTypeRenderer());
-  table.setDefaultEditor(RuleType.class,new RuleTypeEditor());
-  table.setDefaultRenderer(MappingConfig_AbstractRef.class,new TableCellRenderer(){
-    @Override public Component getTableCellRendererComponent(    JTable table,    Object value,    boolean isSelected,    boolean hasFocus,    int row,    int column){
-      if (value instanceof MappingConfig_AbstractRef) {
-        MappingConfig_AbstractRef mapping=(MappingConfig_AbstractRef)value;
-        GeneratorPrioritiesTree tree=new GeneratorPrioritiesTree((GeneratorDescriptor)myModuleDescriptor,mapping,column == 0);
-        CheckedTreeNode rootNode=(CheckedTreeNode)tree.getTree().getModel().getRoot();
-        if (!tree.getTree().isRootVisible() && rootNode.getChildCount() == 1)         rootNode=(CheckedTreeNode)rootNode.getChildAt(0);
-        noCheckedChildren(rootNode);
-        CheckboxTree checkboxTree=new CheckboxTree(GeneratorPrioritiesTree.getCheckboxTreeCellRenderer(),rootNode,new CheckPolicy(true,true,false,true));
-        checkboxTree.setRootVisible(true);
-        GeneratorPrioritiesTree.expandAllRows(checkboxTree);
-        table.setRowHeight(row,Math.max(checkboxTree.getPreferredSize().height,table.getRowHeight(row)));
-        return checkboxTree;
-      }
-      return null;
-    }
-    private boolean noCheckedChildren(    CheckedTreeNode node){
-      List<CheckedTreeNode> children=Collections.list(node.children());
-      for (int i=0; i < children.size(); i++) {
-        CheckedTreeNode child=children.get(i);
-        if (noCheckedChildren(child) && !child.isChecked()) {
-          node.remove(child);
-          child.removeFromParent();
-        }
-      }
-      return node.isLeaf();
-    }
-  }
-);
-  table.setDefaultEditor(MappingConfig_AbstractRef.class,new AbstractTableCellEditor(){
+  myTable.setModel(myPrioritiesTableModel);
+  myTable.setDefaultRenderer(RuleType.class,new RuleTypeRenderer());
+  myTable.setDefaultEditor(RuleType.class,new RuleTypeEditor());
+  myTable.setDefaultRenderer(MappingConfig_AbstractRef.class,new TableCellRenderer(){
     private GeneratorPrioritiesTree myCurrentTree=null;
-    @Override public Component getTableCellEditorComponent(    JTable table,    Object value,    boolean isSelected,    int row,    int column){
+    @Override public Component getTableCellRendererComponent(    final JTable table,    Object value,    boolean isSelected,    boolean hasFocus,    final int row,    final int column){
       if (value instanceof MappingConfig_AbstractRef) {
         MappingConfig_AbstractRef mapping=(MappingConfig_AbstractRef)value;
         if (myMappings.containsKey(mapping)) {
@@ -52,14 +21,33 @@
           myCurrentTree=new GeneratorPrioritiesTree((GeneratorDescriptor)myModuleDescriptor,mapping,column == 0);
           myMappings.put(mapping,myCurrentTree);
         }
-        table.setRowHeight(row,myCurrentTree.getTree().getPreferredSize().height + 20);
-        SwingUtilities.invokeLater(new Runnable(){
-          @Override public void run(){
-            myCurrentTree.getTree().requestFocus();
+        table.setRowHeight(row,Math.max(myCurrentTree.getTree().getPreferredSize().height + 10,table.getRowHeight(row)));
+        TableColumn tableColumn=table.getColumnModel().getColumn(column);
+        tableColumn.setResizable(true);
+        tableColumn.setPreferredWidth(Math.max(table.getColumnModel().getColumn(column).getWidth(),myCurrentTree.getTree().getPreferredSize().width));
+        tableColumn.setResizable(false);
+        myCurrentTree.getTree().setBackground(isSelected ? table.getSelectionBackground() : table.getBackground());
+        if (hasFocus && table.isRowSelected(row)) {
+          SwingUtilities.invokeLater(new Runnable(){
+            @Override public void run(){
+              table.editCellAt(row,column);
+            }
           }
-        }
 );
-        return ScrollPaneFactory.createScrollPane(myCurrentTree.getTree(),true);
+        }
+        return myCurrentTree.getTreePanel();
+      }
+      return null;
+    }
+  }
+);
+  myTable.setDefaultEditor(MappingConfig_AbstractRef.class,new AbstractTableCellEditor(){
+    private GeneratorPrioritiesTree myCurrentTree=null;
+    @Override public Component getTableCellEditorComponent(    JTable table,    Object value,    boolean isSelected,    int row,    int column){
+      if (value instanceof MappingConfig_AbstractRef) {
+        MappingConfig_AbstractRef mapping=(MappingConfig_AbstractRef)value;
+        myCurrentTree=new GeneratorPrioritiesTree((GeneratorDescriptor)myModuleDescriptor,mapping,column == 0);
+        return myCurrentTree.getTreePanel();
       }
       return null;
     }
@@ -70,16 +58,10 @@
     }
   }
 );
-  table.addPropertyChangeListener("tableCellEditor",new PropertyChangeListener(){
-    @Override public void propertyChange(    PropertyChangeEvent evt){
-      if (!table.isEditing())       table.setRowHeight(table.getSelectedRow(),5);
-    }
-  }
-);
-  TableColumn column=table.getColumnModel().getColumn(1);
+  TableColumn column=myTable.getColumnModel().getColumn(1);
   column.setMaxWidth(50);
   column.setResizable(false);
-  ToolbarDecorator decorator=ToolbarDecorator.createDecorator(table);
+  ToolbarDecorator decorator=ToolbarDecorator.createDecorator(myTable);
   decorator.setAddAction(new AnActionButtonRunnable(){
     @Override public void run(    AnActionButton anActionButton){
       myPrioritiesTableModel.addItem(new MappingRuleCreator().compute());
@@ -88,7 +70,7 @@
   }
 ).setRemoveAction(new AnActionButtonRunnable(){
     @Override public void run(    AnActionButton anActionButton){
-      TableUtil.removeSelectedItems(table);
+      TableUtil.removeSelectedItems(myTable);
       myPrioritiesTableModel.fireTableDataChanged();
     }
   }
