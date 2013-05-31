@@ -3,6 +3,7 @@
   JpsProject jpsProject=context.getProjectDescriptor().getProject();
   myProject=new JpsMPSProject(jpsProject);
   Set<JpsLibrary> processedSdks=new HashSet<JpsLibrary>();
+  JpsLibrary jdk=null;
   for (  JpsModule mod : jpsProject.getModules()) {
     JpsMPSModuleExtension extension=JpsMPSExtensionService.getInstance().getExtension(mod);
     if (extension == null) {
@@ -21,25 +22,26 @@
     }
     myProject.addModule(solutionIdea.getModuleReference());
     jpsToMpsModules.put(mod,solutionIdea);
-    JpsLibrary sdk=getModuleSdk(mod,context);
-    if (sdk != null && !processedSdks.contains(sdk)) {
+    for (    JpsLibrary sdk : getModuleSdks(mod,context)) {
       MPSCompilerUtil.debug(context,"SDK name" + sdk.getName() + " type: "+ sdk.getType());
-      boolean replaceJdk=sdk.getType() instanceof JpsJavaSdkType;
-      JpsLibSolution sdkSolution=createLibSolution(sdk,replaceJdk,context);
+      JpsLibSolution sdkSolution=createLibSolution(sdk,jdk,context);
       JpsLibSolution regSolution=MPSModuleRepository.getInstance().registerModule(sdkSolution,myProject);
       MPSCompilerUtil.debug(context,"SDK " + regSolution.getModuleReference().toString());
       if (sdkSolution == regSolution) {
         MPSCompilerUtil.debug(context,"SDK updating model set for " + sdk.getName());
         sdkSolution.updateModelsSet();
       }
-      processedSdks.add(sdk);
+      if (JpsJavaSdkType.INSTANCE.equals(sdk.getType()) && !processedSdks.contains(sdk)) {
+        jdk=jdk != null ? jdk : sdk;
+        processedSdks.add(sdk);
+      }
     }
   }
   if (processedSdks.size() > 1) {
     context.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.ERROR,"Different SDKs in modules with MPS facets are not supported"));
   }
   for (  JpsLibrary jpsLib : jpsProject.getLibraryCollection().getLibraries()) {
-    JpsLibSolution libSolution=createLibSolution(jpsLib,false,context);
+    JpsLibSolution libSolution=createLibSolution(jpsLib,jdk,context);
     JpsLibSolution regSolution=MPSModuleRepository.getInstance().registerModule(libSolution,myProject);
     MPSCompilerUtil.debug(context,"LIB " + regSolution.getModuleReference().toString());
     if (libSolution == regSolution) {

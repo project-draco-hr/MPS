@@ -1,24 +1,20 @@
 {
   List<ModelRoot> modelRoots=new ArrayList<ModelRoot>();
   ModelRootFactory factory=PersistenceFacade.getInstance().getModelRootFactory(PersistenceRegistry.JAVA_CLASSES_ROOT);
+  Set<String> ignoredPaths=new HashSet<String>();
+  if (myIgnoreRootsFrom != null) {
+    for (    JpsLibraryRoot libRoot : myIgnoreRootsFrom.getRoots(JpsOrderRootType.COMPILED)) {
+      ignoredPaths.add(getPath(libRoot));
+    }
+  }
   for (  JpsLibraryRoot libRoot : myLibrary.getRoots(JpsOrderRootType.COMPILED)) {
     ModelRoot modelRoot=factory.create();
     if (!(modelRoot instanceof JavaClassStubsModelRoot)) {
       MPSCompilerUtil.debug(context,"@@@@ return null, " + getModuleName());
       return null;
     }
-    final String jarscheme="jar://";
-    final String filescheme="file://";
-    String path=libRoot.getUrl();
-    if (path.startsWith(jarscheme)) {
-      path=path.substring(jarscheme.length());
-    }
-    if (path.startsWith(filescheme)) {
-      path=path.substring(filescheme.length());
-    }
-    if (path.endsWith("!/")) {
-      path=path.substring(0,path.length() - 2);
-    }
+    String path=getPath(libRoot);
+    if (ignoredPaths.contains(path))     continue;
     MPSCompilerUtil.debug(context,"@@@@ path = " + path);
     ((JavaClassStubsModelRoot)modelRoot).setPath(path);
     modelRoots.add(modelRoot);
