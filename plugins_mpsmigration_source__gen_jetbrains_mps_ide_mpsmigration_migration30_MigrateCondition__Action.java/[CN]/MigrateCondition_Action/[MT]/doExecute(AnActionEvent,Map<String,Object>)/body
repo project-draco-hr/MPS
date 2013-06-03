@@ -1,9 +1,17 @@
 {
   try {
-    for (    SModel md : ListSequence.fromList(SModelRepository.getInstance().getModelDescriptors())) {
-      if (md.isReadOnly()) {
-        continue;
+    List<SModule> modulelist=((MPSProject)MapSequence.fromMap(_params).get("project")).getModulesWithGenerators();
+    for (    SModel md : ListSequence.fromList(modulelist).translate(new ITranslator2<SModule,SModel>(){
+      public Iterable<SModel> translate(      SModule it){
+        return it.getModels();
       }
+    }
+).where(new IWhereFilter<SModel>(){
+      public boolean accept(      SModel m){
+        return SModelStereotype.isUserModel(m) && !(m.isReadOnly());
+      }
+    }
+)) {
       for (      SNode node : new NodesIterable(md)) {
         for (        SReference ref : Sequence.fromIterable(node.getReferences())) {
           if (!(ref instanceof jetbrains.mps.smodel.SReference)) {
