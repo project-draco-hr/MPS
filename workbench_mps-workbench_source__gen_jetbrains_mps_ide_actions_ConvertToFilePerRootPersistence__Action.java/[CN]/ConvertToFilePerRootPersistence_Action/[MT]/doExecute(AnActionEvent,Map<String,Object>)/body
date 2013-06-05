@@ -1,0 +1,65 @@
+{
+  try {
+    List<SModel> m=((List<SModel>)MapSequence.fromMap(_params).get("models"));
+    final Iterable<SModel> seq=ListSequence.fromList(m).where(new IWhereFilter<SModel>(){
+      public boolean accept(      SModel it){
+        return !(it.isReadOnly()) && it.getSource() instanceof FileDataSource;
+      }
+    }
+);
+    ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
+    final FolderModelFactory filePerRootFactory=PersistenceRegistry.getInstance().getFolderModelFactories().iterator().next();
+    modelAccess.runWriteAction(new Runnable(){
+      public void run(){
+        for (        SModel smodel : Sequence.fromIterable(seq)) {
+          IFile oldFile=((FileDataSource)smodel.getSource()).getFile();
+          SModel newModel=PersistenceUtil.loadModel(oldFile);
+          if (newModel == null) {
+            if (LOG.isEnabledFor(Priority.ERROR)) {
+              LOG.error("cannot read " + smodel);
+            }
+            continue;
+          }
+          Iterable<SModel.Problem> problems=Sequence.fromIterable(((Iterable<SModel.Problem>)newModel.getProblems())).where(new IWhereFilter<SModel.Problem>(){
+            public boolean accept(            SModel.Problem it){
+              return it.isError();
+            }
+          }
+);
+          if (Sequence.fromIterable(problems).isNotEmpty()) {
+            if (LOG.isEnabledFor(Priority.ERROR)) {
+              LOG.error("cannot read " + smodel + ": "+ Sequence.fromIterable(problems).first().getText());
+            }
+            continue;
+          }
+          DataSource newSource=filePerRootFactory.createNewSource(smodel.getModelRoot(),null,newModel.getModelName());
+          SModule module=smodel.getModule();
+          try {
+            filePerRootFactory.save(newModel,newSource);
+            if (module != null) {
+              ((SModuleBase)module).unregisterModel((SModelBase)smodel);
+            }
+            oldFile.delete();
+            ((AbstractModule)module).updateModelsSet();
+          }
+ catch (          IOException ex) {
+            if (LOG.isEnabledFor(Priority.ERROR)) {
+              LOG.error("cannot write " + smodel,ex);
+            }
+          }
+catch (          ModelSaveException ex) {
+            if (LOG.isEnabledFor(Priority.ERROR)) {
+              LOG.error("cannot write " + smodel,ex);
+            }
+          }
+        }
+      }
+    }
+);
+  }
+ catch (  Throwable t) {
+    if (LOG.isEnabledFor(Priority.ERROR)) {
+      LOG.error("User's action execute method failed. Action:" + "ConvertToFilePerRootPersistence",t);
+    }
+  }
+}
