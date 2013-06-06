@@ -1,9 +1,17 @@
 {
-  if (myModel == null) {
-    myModel=loadSModel();
-    myModel.setModelDescriptor(this);
-    updateTimestamp();
-    fireModelStateChanged(ModelLoadingState.FULLY_LOADED);
+  ModelLoadingState oldState=myModel.getState();
+  if (oldState.ordinal() >= ModelLoadingState.ROOTS_LOADED.ordinal()) {
+    return (BinarySModel)myModel.getModel(ModelLoadingState.ROOTS_LOADED);
   }
-  return myModel;
+synchronized (myModel) {
+    if (myModel instanceof InvalidSModel)     return (BinarySModel)myModel.getModel(null);
+    oldState=myModel.getState();
+    BinarySModel res=(BinarySModel)myModel.getModel(ModelLoadingState.ROOTS_LOADED);
+    if (res == null)     return null;
+    if (oldState != myModel.getState()) {
+      res.setModelDescriptor(this);
+      fireModelStateChanged(myModel.getState());
+    }
+    return res;
+  }
 }
