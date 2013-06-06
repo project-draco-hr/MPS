@@ -8,11 +8,15 @@
     }
 );
     ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
-    final FolderModelFactory filePerRootFactory=PersistenceRegistry.getInstance().getFolderModelFactories().iterator().next();
+    final FolderModelFactory filePerRootFactory=PersistenceRegistry.getInstance().getFolderModelFactory("file-per-root");
     modelAccess.runWriteAction(new Runnable(){
       public void run(){
         for (        SModel smodel : Sequence.fromIterable(seq)) {
           IFile oldFile=((FileDataSource)smodel.getSource()).getFile();
+          ModelRoot modelRoot=smodel.getModelRoot();
+          if (!(modelRoot instanceof FileBasedModelRoot)) {
+            continue;
+          }
           SModel newModel=PersistenceUtil.loadModel(oldFile);
           if (newModel == null) {
             if (LOG.isEnabledFor(Priority.ERROR)) {
@@ -32,9 +36,9 @@
             }
             continue;
           }
-          DataSource newSource=filePerRootFactory.createNewSource(smodel.getModelRoot(),null,newModel.getModelName());
-          SModule module=smodel.getModule();
           try {
+            DataSource newSource=filePerRootFactory.createNewSource((FileBasedModelRoot)modelRoot,null,newModel.getModelName());
+            SModule module=smodel.getModule();
             filePerRootFactory.save(newModel,newSource);
             if (module != null) {
               ((SModuleBase)module).unregisterModel((SModelBase)smodel);

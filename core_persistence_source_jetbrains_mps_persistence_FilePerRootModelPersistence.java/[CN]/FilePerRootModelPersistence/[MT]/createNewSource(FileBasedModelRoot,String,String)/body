@@ -1,28 +1,24 @@
 {
-  if (!(root instanceof FileBasedModelRoot)) {
-    return null;
-  }
-  FileBasedModelRoot modelRoot=(FileBasedModelRoot)root;
   Collection<String> sourceRoots=new LinkedHashSet<String>(modelRoot.getFiles(FileBasedModelRoot.SOURCE_ROOTS));
   if (sourceRoots.isEmpty()) {
-    return null;
+    throw new IOException("empty list of source roots");
   }
   if (sourceRoot == null || !sourceRoots.contains(sourceRoot)) {
     sourceRoot=null;
     for (    String sr : sourceRoots) {
-      if (root instanceof DefaultModelRoot && ((DefaultModelRoot)root).isLanguageAspectsSourceRoot(sr)) {
+      if (modelRoot instanceof DefaultModelRoot && ((DefaultModelRoot)modelRoot).isLanguageAspectsSourceRoot(sr)) {
         continue;
       }
       sourceRoot=sr;
       break;
     }
     if (sourceRoot == null) {
-      return null;
+      throw new IOException("no suitable source root found");
     }
   }
   IFile folder=FileSystem.getInstance().getFileByPath(sourceRoot + File.separator + NameUtil.pathFromNamespace(modelName));
   if (folder.getDescendant(FilePerRootDataSource.HEADER_FILE).exists()) {
-    return null;
+    throw new IOException("model already exists");
   }
-  return new FilePerRootDataSource(folder,root);
+  return new FilePerRootDataSource(folder,modelRoot);
 }
