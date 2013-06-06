@@ -1,0 +1,31 @@
+{
+  BigInteger fileHash=BigInteger.ZERO;
+  Map<String,String> result=new HashMap<String,String>();
+  for (  String streamName : source.getAvailableStreams()) {
+    Map<String,String> generationHashes=null;
+    if (source instanceof FolderDataSource) {
+      IFile file=((FolderDataSource)source).getFile(streamName);
+      generationHashes=file == null ? null : ModelDigestHelper.getInstance().getGenerationHashes(file);
+    }
+    if (generationHashes == null) {
+      generationHashes=DefaultModelPersistence.getDigestMap(source,streamName);
+      if (generationHashes == null) {
+        return null;
+      }
+    }
+    String streamHash=generationHashes.get(GeneratableSModel.FILE);
+    if (streamName.equals(FilePerRootDataSource.HEADER_FILE)) {
+      result.put(GeneratableSModel.HEADER,streamHash);
+    }
+ else {
+      for (      Entry<String,String> entry : generationHashes.entrySet()) {
+        String key=entry.getKey();
+        if (GeneratableSModel.FILE.equals(key) || GeneratableSModel.HEADER.equals(key))         continue;
+        result.put(entry.getKey(),entry.getValue());
+      }
+    }
+    fileHash=fileHash.xor(new BigInteger(streamHash,Character.MAX_RADIX));
+  }
+  result.put(GeneratableSModel.FILE,fileHash.toString(Character.MAX_RADIX));
+  return result;
+}
