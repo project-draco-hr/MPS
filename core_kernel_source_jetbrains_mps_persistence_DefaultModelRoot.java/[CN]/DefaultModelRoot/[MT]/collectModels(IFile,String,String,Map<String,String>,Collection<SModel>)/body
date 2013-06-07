@@ -2,6 +2,7 @@
   if (FileSystem.getInstance().isFileIgnored(dir.getName()))   return;
   if (!dir.isDirectory())   return;
   List<IFile> files=dir.getChildren();
+  options.put(ModelFactory.OPTION_PACKAGE,package_);
   for (  IFile file : files) {
     String fileName=file.getName();
     String extension=FileUtil.getExtension(fileName);
@@ -9,13 +10,22 @@
     ModelFactory modelFactory=PersistenceFacade.getInstance().getModelFactory(extension);
     if (modelFactory == null || file.isDirectory())     continue;
     FileDataSource source=new FileDataSource(file,this);
-    options.put(ModelFactory.OPTION_PACKAGE,package_);
     options.put(ModelFactory.OPTION_RELPATH,combinePath(relativePath,fileName));
     String fileNameWE=FileUtil.getNameWithoutExtension(fileName);
     options.put(ModelFactory.OPTION_MODELNAME,package_ != null ? (package_.isEmpty() ? fileNameWE : package_ + "." + fileNameWE) : null);
-    SModel model=modelFactory.load(source,Collections.unmodifiableMap(options));
-    if (model != null) {
-      model.setModelRoot(this);
+    try {
+      SModel model=modelFactory.load(source,Collections.unmodifiableMap(options));
+      ((SModelBase)model).setModelRoot(this);
+      models.add(model);
+    }
+ catch (    UnsupportedDataSourceException ex) {
+    }
+  }
+  options.put(ModelFactory.OPTION_RELPATH,relativePath);
+  for (  FolderModelFactory factory : PersistenceRegistry.getInstance().getFolderModelFactories()) {
+    for (    DataSource dataSource : factory.createDataSources(this,dir)) {
+      SModel model=factory.load(dataSource,Collections.unmodifiableMap(options));
+      ((SModelBase)model).setModelRoot(this);
       models.add(model);
     }
   }

@@ -2,22 +2,12 @@
   if (descriptor == null || descriptorFile.isReadOnly()) {
     return;
   }
+  excludeGeneratedSourcesDir(ProjectPathUtil.getGeneratorOutputPath(descriptorFile.getParent(),descriptor),excludes);
+  excludeGeneratedSourcesDir(ProjectPathUtil.getGeneratorTestsOutputPath(descriptorFile,descriptor),excludes);
+  excludeIdeaClassesGen(descriptorFile,descriptor,excludes);
+  excludeClassesGen(descriptorFile,descriptor,excludes);
   for (  String p : descriptor.getSourcePaths()) {
     excludes.add(FileSystem.getInstance().getFileByPath(p));
-  }
-  IFile genPath=ProjectPathUtil.getGeneratorOutputPath(descriptorFile.getParent(),descriptor);
-  if (genPath != null) {
-    excludes.add(genPath);
-    if (!descriptorFile.isReadOnly()) {
-      FileSystem.getInstance().getFileByPath(FileGenerationUtil.getCachesPath(genPath.getPath()));
-    }
-  }
-  IFile testsGenPath=ProjectPathUtil.getGeneratorTestsOutputPath(descriptorFile,descriptor);
-  if (testsGenPath != null) {
-    excludes.add(testsGenPath);
-    if (!descriptorFile.isReadOnly()) {
-      FileSystem.getInstance().getFileByPath(FileGenerationUtil.getCachesPath(testsGenPath.getPath()));
-    }
   }
   for (  ModelRootDescriptor rootDescriptor : descriptor.getModelRootDescriptors()) {
     ModelRoot root=rootDescriptor.getRoot();
@@ -26,17 +16,12 @@
     }
     excludes.add(FileSystem.getInstance().getFileByPath(root.getPath()));
   }
-  IFile classesGen=ProjectPathUtil.getClassesGenFolder(descriptorFile.getParent(),false);
-  if (classesGen != null) {
-    excludes.add(classesGen);
-  }
-  if (descriptor instanceof LanguageDescriptor) {
-    IFile generatorClassesGen=ProjectPathUtil.getClassesGenFolder(descriptorFile.getParent(),true);
-    if (generatorClassesGen != null) {
-      excludes.add(generatorClassesGen);
-    }
-  }
   for (  String entry : descriptor.getAdditionalJavaStubPaths()) {
     excludes.add(FileSystem.getInstance().getFileByPath(entry));
+  }
+  if (descriptor instanceof LanguageDescriptor) {
+    for (    GeneratorDescriptor generator : ((LanguageDescriptor)descriptor).getGenerators()) {
+      processExcludes(descriptorFile,generator,excludes);
+    }
   }
 }
