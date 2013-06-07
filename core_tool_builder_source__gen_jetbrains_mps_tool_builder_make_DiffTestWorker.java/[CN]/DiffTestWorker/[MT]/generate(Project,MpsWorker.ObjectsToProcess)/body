@@ -26,43 +26,7 @@
   }
 ;
   final int[] count=new int[]{1};
-  IScriptController ctl=new IScriptController.Stub(new IConfigMonitor.Stub(),new IJobMonitor.Stub(new IProgress.Stub(){
-    @Override public void beginWork(    String name,    int estimate,    int ofTotal){
-      reportIfStartsWith("Generating ",name,startTestFormat);
-    }
-    @Override public void finishWork(    String name){
-      reportIfStartsWith("Generating ",name,finishTestFormat);
-    }
-    @Override public void advanceWork(    String name,    int done,    String comment){
-      if (comment != null) {
-        _FunctionTypes._void_P1_E0<? super String> format=startTestFormat;
-        if (done > 1) {
-          format=finishTestFormat;
-        }
-        reportIfStartsWith("Diffing ",name + " " + comment,format);
-      }
-    }
-  }
-){
-    @Override public void reportFeedback(    IFeedback fdbk){
-      if (fdbk.getSeverity() == IFeedback.Severity.ERROR) {
-        String test=myReporter.getCurrentTestName();
-        if (test == null) {
-          test="unknown";
-        }
-        Throwable thr=fdbk.getException();
-        String msg=fdbk.getMessage();
-        String details=(thr == null ? "(no details)" : String.valueOf(MpsWorker.extractStackTrace(thr)));
-        int eol=msg.indexOf("\n");
-        if (eol >= 0) {
-          details=msg.substring(eol + 1) + "\n" + details;
-          msg=msg.substring(0,eol);
-        }
-        myReporter.testFailed(test,msg,details);
-      }
-    }
-  }
-){
+  IScriptController ctl=new IScriptController.Stub(new IConfigMonitor.Stub(),new DiffTestWorker.MyJobMonitor(new DiffTestWorker.MyProgress(startTestFormat,finishTestFormat),startTestFormat,finishTestFormat)){
     @Override public void setup(    IPropertiesPool ppool,    Iterable<ITarget> toExecute,    Iterable<? extends IResource> input){
       super.setup(ppool,toExecute,input);
       Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>> makeparams=(Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>>)ppool.properties(new ITarget.Name("jetbrains.mps.make.facets.Make.make"),Object.class);
@@ -110,48 +74,7 @@
       }
     }
 ;
-    bms.make(ms,collectResources(context,go.getProjects(),go.getModules(),go.getModels()),null,ctl,new ProgressMonitorBase(){
-      private String prevTitle;
-      @Override protected void update(      double p0){
-      }
-      @Override protected void startInternal(      String text){
-      }
-      @Override protected void doneInternal(      String text){
-      }
-      @Override protected void setTitleInternal(      String text){
-        prevTitle=text;
-      }
-      @Override protected void setStepInternal(      String p0){
-      }
-      @Override public boolean isCanceled(){
-        return false;
-      }
-      @Override public void cancel(){
-      }
-      private ProgressMonitorBase.SubProgressMonitor customSubProgress(      ProgressMonitorBase parent,      int work,      SubProgressKind kind){
-        if (prevTitle != null && prevTitle.startsWith("Generating :: ")) {
-          return new ProgressMonitorBase.SubProgressMonitor(parent,work,kind){
-            @Override protected void startInternal(            String text){
-              reportIfStartsWith("Generating ","Generating " + text,startTestFormat);
-            }
-            @Override protected void doneInternal(            String text){
-              reportIfStartsWith("Generating ","Generating " + text,finishTestFormat);
-            }
-          }
-;
-        }
-        return new ProgressMonitorBase.SubProgressMonitor(parent,work,kind){
-          @Override protected ProgressMonitorBase.SubProgressMonitor subTaskInternal(          int work,          SubProgressKind kind){
-            return customSubProgress(this,work,kind);
-          }
-        }
-;
-      }
-      @Override protected ProgressMonitorBase.SubProgressMonitor subTaskInternal(      int work,      SubProgressKind kind){
-        return customSubProgress(this,work,kind);
-      }
-    }
-).get();
+    bms.make(ms,collectResources(context,go.getProjects(),go.getModules(),go.getModels()),null,ctl,new DiffTestWorker.MyProgressMonitorBase(startTestFormat,finishTestFormat)).get();
   }
  catch (  InterruptedException ignore) {
   }

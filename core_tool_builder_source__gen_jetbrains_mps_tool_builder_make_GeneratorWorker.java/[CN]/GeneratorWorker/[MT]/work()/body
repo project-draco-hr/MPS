@@ -1,40 +1,39 @@
 {
+  GeneratorWorker.MyEnvironment environment=new GeneratorWorker.MyEnvironment();
+  Map<String,File> libraries=MapSequence.fromMap(new LinkedHashMap<String,File>(16,(float)0.75,false));
+  for (  String jar : ListSequence.fromList(myWhatToDo.getLibraryJars())) {
+    MapSequence.fromMap(libraries).put(jar,new File(jar));
+  }
+  environment.init(myWhatToDo.getMacro(),false,libraries,myWhatToDo.getLogLevel(),null);
+  setEnvironment(environment);
   setupEnvironment();
+  setGenerationProperties();
   boolean doneSomething=false;
-  Map<File,List<String>> mpsProjects=myWhatToDo.getMPSProjectFiles();
-  for (  File file : mpsProjects.keySet()) {
-    if (!(file.getName().endsWith(MPSExtentions.DOT_MPS_PROJECT))) {
-      continue;
+  Project project=createDummyProject();
+  for (  IMapping<List<String>,Boolean> chunk : MapSequence.fromMap(myWhatToDo.getChunks())) {
+    List<String> modulePaths=chunk.key();
+    LinkedHashSet<SModule> modules=new LinkedHashSet<SModule>();
+    for (    String modulePath : ListSequence.fromList(modulePaths)) {
+      processModuleFile(new File(modulePath),modules);
     }
-    FileMPSProject p=new FileMPSProject(file);
-    p.init(new FileMPSProject.ProjectDescriptor(file));
-    makeProject();
-    p.projectOpened();
-    info("Loaded project " + p);
-    executeTask(p,new MpsWorker.ObjectsToProcess(Collections.singleton(p),new HashSet<SModule>(),new HashSet<SModel>()));
-    p.projectClosed();
-    disposeProject(p);
-    doneSomething=true;
-  }
-  LinkedHashSet<SModule> modules=new LinkedHashSet<SModule>();
-  LinkedHashSet<SModel> models=new LinkedHashSet<SModel>();
-  collectFromModuleFiles(modules);
-  ModelAccess.instance().runWriteAction(new Runnable(){
-    public void run(){
-      ClassLoaderManager.getInstance().reloadAll(new EmptyProgressMonitor());
+    Boolean bootstrap=chunk.value();
+    if (bootstrap) {
+      warning("Found bootstrap chunk " + chunk.key() + ". Generation may be impossible.");
     }
-  }
+    MpsWorker.ObjectsToProcess go=new MpsWorker.ObjectsToProcess(Collections.EMPTY_SET,modules,Collections.EMPTY_SET);
+    if (go.hasAnythingToGenerate()) {
+      generate(project,go);
+      doneSomething=true;
+      ModelAccess.instance().runWriteAction(new Runnable(){
+        public void run(){
+          ClassLoaderManager.getInstance().reloadAll(new EmptyProgressMonitor());
+        }
+      }
 );
-  collectFromModelFiles(models);
-  MpsWorker.ObjectsToProcess go=new MpsWorker.ObjectsToProcess(Collections.EMPTY_SET,modules,models);
-  if (go.hasAnythingToGenerate()) {
-    Project project=createDummyProject();
-    executeTask(project,go);
-    doneSomething=true;
+    }
   }
   if (!(doneSomething)) {
     error("Could not find anything to generate.");
-    myTestFailed=true;
   }
   dispose();
   showStatistic();
