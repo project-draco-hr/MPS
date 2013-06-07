@@ -1,8 +1,30 @@
 {
   this.config=config;
   ActiveEnvironment.activateEnvironment(this);
-  BasicConfigurator.configure();
+  BasicConfigurator.configure(new ConsoleAppender(new SimpleLayout()));
   Logger.getRootLogger().setLevel(Level.INFO);
-  for (  String macro : MapSequence.fromMap(config.macros()).keySet()) {
+  MpsPlatform.init();
+  MPSCore.getInstance().setTestMode();
+  GenerationSettingsProvider.getInstance().setGenerationSettings(new DefaultModifiableGenerationSettings());
+  try {
+    EnvironmentUtils.setSystemProperties(false);
+    EnvironmentUtils.setPluginPath();
   }
+ catch (  Exception ex) {
+    throw new RuntimeException(ex);
+  }
+  Map<String,String> macros=MapSequence.fromMap(new HashMap<String,String>());
+  for (  String name : SetSequence.fromSet(MapSequence.fromMap(config.macros()).keySet())) {
+    MapSequence.fromMap(macros).put(name,MapSequence.fromMap(config.macros()).get(name).getAbsolutePath());
+  }
+  macroProvider=EnvironmentUtils.createMapMacrosProvider(macros);
+  PathMacros.getInstance().addMacrosProvider(macroProvider);
+  libContributor=EnvironmentUtils.createLibContributor(false,config.libs());
+  LibraryInitializer.getInstance().addContributor(libContributor);
+  ModelAccess.instance().runWriteAction(new Runnable(){
+    @Override public void run(){
+      LibraryInitializer.getInstance().update();
+    }
+  }
+);
 }
