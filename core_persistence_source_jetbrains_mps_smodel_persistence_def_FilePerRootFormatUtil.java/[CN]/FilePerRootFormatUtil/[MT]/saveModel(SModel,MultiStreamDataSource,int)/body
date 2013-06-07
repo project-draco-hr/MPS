@@ -1,0 +1,32 @@
+{
+  IModelPersistence modelPersistence=ModelPersistence.getModelPersistence(Math.max(persistenceVersion,8));
+  if (modelPersistence == null) {
+    modelPersistence=ModelPersistence.getCurrentModelPersistence();
+  }
+  persistenceVersion=modelPersistence.getVersion();
+  int oldVersion=persistenceVersion;
+  if (modelData instanceof DefaultSModel) {
+    DefaultSModel defaultSModel=(DefaultSModel)modelData;
+    oldVersion=defaultSModel.getPersistenceVersion();
+    if (oldVersion != persistenceVersion) {
+      defaultSModel.setPersistenceVersion(persistenceVersion);
+    }
+  }
+  modelData.calculateImplicitImports();
+  Map<String,Document> result=modelPersistence.getModelWriter().saveModelAsMultiStream(modelData);
+  Set<String> toRemove=new HashSet<String>();
+  for (  String s : source.getAvailableStreams()) {
+    if (!result.containsKey(s))     toRemove.add(s);
+  }
+  for (  Entry<String,Document> entry : result.entrySet()) {
+    JDOMUtil.writeDocument(entry.getValue(),source,entry.getKey());
+  }
+  for (  String r : toRemove) {
+    source.delete(r);
+  }
+  if (oldVersion != persistenceVersion) {
+    LOG.info("persistence upgraded: " + oldVersion + "->"+ persistenceVersion+ " "+ modelData.getReference());
+    return true;
+  }
+  return false;
+}
