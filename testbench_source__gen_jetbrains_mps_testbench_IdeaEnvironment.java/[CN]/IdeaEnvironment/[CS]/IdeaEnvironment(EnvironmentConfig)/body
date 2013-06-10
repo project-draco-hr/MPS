@@ -5,7 +5,34 @@
   Logger.getRootLogger().setLevel(Level.ERROR);
   IdeMain.setTestMode(IdeMain.TestMode.CORE_TEST);
   EnvironmentUtils.setSystemProperties(true);
-  TestMain.configureMPS(SetSequence.fromSet(config.plugins()).toGenericArray(String.class));
+  String mpsInternal=System.getProperty("mps.internal");
+  System.setProperty("idea.is.internal",(mpsInternal == null ? "false" : mpsInternal));
+  System.setProperty("idea.no.jre.check","true");
+  System.setProperty("idea.platform.prefix","Idea");
+  StringBuffer pluginPath=new StringBuffer();
+  File pluginDir=new File(PathManager.getPreinstalledPluginsPath());
+  if (pluginDir.listFiles() != null) {
+    for (    File pluginFolder : pluginDir.listFiles()) {
+      if (pluginPath.length() > 0) {
+        pluginPath.append(File.pathSeparator);
+      }
+      pluginPath.append(pluginFolder.getPath());
+    }
+  }
+  System.setProperty("plugin.path",pluginPath.toString());
+  if (System.getProperty("idea.load.plugins") == null || System.getProperty("idea.load.plugins").equals("false")) {
+    System.setProperty("idea.load.plugins.id",IterableUtils.join(config.plugins(),","));
+  }
+  if (!(cachesInvalidated)) {
+    FSRecords.invalidateCaches();
+    cachesInvalidated=true;
+  }
+  try {
+    IdeaTestApplication.getInstance(null);
+  }
+ catch (  Exception e) {
+    throw new RuntimeException(e);
+  }
   try {
     SwingUtilities.invokeAndWait(new Runnable(){
       @Override public void run(){
