@@ -1,6 +1,6 @@
 {
   final PsiElement element=e.getData(LangDataKeys.PSI_ELEMENT);
-  Module module=e.getData(LangDataKeys.MODULE);
+  final Module module=e.getData(LangDataKeys.MODULE);
   MPSFacet facet=FacetManager.getInstance(module).getFacetByType(MPSFacetType.ID);
   SModule mpsModule=facet.getSolution();
   MPSProject mpsProject=e.getProject().getComponent(MPSProject.class);
@@ -16,11 +16,36 @@
 catch (  IOException exc) {
     throw new RuntimeException(exc);
   }
-  ApplicationManager.getApplication().runWriteAction(new Runnable(){
+  mpsProject.getRepository().getModelAccess().executeCommand(new Runnable(){
     @Override public void run(){
+      Set<PsiClass> psiClasses=getPsiClasses(dirParser.getSuccessfulFiles(),PsiManager.getInstance(e.getProject()));
+      Set<SNode> stubNodes=getStubNodes(psiClasses);
+      GlobalSearchScope scope=new ModuleWithDependentsScope(module,false);
+      SearchScope mpsScope=new IdeaSearchScope(scope);
+      Set<SNode> affectedNodes=new HashSet<SNode>();
+      Set<SReference> references=FindUsagesFacade.getInstance().findUsages(mpsScope,stubNodes,null);
+      for (      SReference ref : references) {
+        if (!(ref instanceof StaticReference))         continue;
+        SNode source=ref.getSourceNode();
+        String role=ref.getRole();
+        SModelReference targetModelRef=ref.getTargetSModelReference();
+        SModelReference newModelRef=null;
+        String modelName=targetModelRef.getModelName();
+        modelName=modelName.substring(0,modelName.indexOf('@'));
+        for (        SModel model : dirParser.getAffectedModels()) {
+          if (modelName.equals(model.getModelName())) {
+            newModelRef=model.getReference();
+          }
+        }
+        source.setReference(role,new DynamicReference(role,source,newModelRef,((StaticReference)ref).getResolveInfo()));
+        SModel sourceModel=source.getModel();
+        ((SModelInternal)sourceModel).addModelImport(newModelRef,false);
+        affectedNodes.add(source);
+      }
       for (      IFile file : dirParser.getSuccessfulFiles()) {
         file.delete();
       }
+      JavaParser.tryResolveDynamicRefs(affectedNodes);
     }
   }
 );
