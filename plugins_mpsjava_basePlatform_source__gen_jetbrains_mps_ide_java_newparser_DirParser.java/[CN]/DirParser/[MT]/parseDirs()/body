@@ -2,17 +2,20 @@
   for (  IFile sourceDir : ListSequence.fromList(mySourceDirs)) {
     addSourceFromDirectory(sourceDir);
   }
-  ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
+  Runnable finalize=new Runnable(){
     @Override public void run(){
       for (      SModel m : ListSequence.fromList(myAffectedModels)) {
         Iterable<SNode> roots=SModelOperations.getRoots(m,null);
         JavaParser.tryResolveUnknowns(roots);
         JavaParser.tryResolveDynamicRefs(roots);
-        if (m instanceof EditableSModel) {
-          ((EditableSModel)m).save();
-        }
       }
     }
   }
-,myProject);
+;
+  if (myModelAccess.isCommandAction()) {
+    finalize.run();
+  }
+ else {
+    myModelAccess.executeUndoTransparentCommand(finalize);
+  }
 }
