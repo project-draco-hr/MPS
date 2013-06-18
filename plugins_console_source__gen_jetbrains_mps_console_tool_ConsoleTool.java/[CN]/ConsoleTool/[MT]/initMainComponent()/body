@@ -2,22 +2,33 @@
   final jetbrains.mps.project.Project project=ProjectHelper.toMPSProject(getProject());
   ModelAccess.instance().runWriteActionInCommand(new Runnable(){
     public void run(){
-      ConsoleTool.this.myContext=new ModuleContext(myModel.getModule(),project);
-      ConsoleTool.this.myEditor=new UIEditorComponent(ProjectHelper.toMPSProject(getProject()).getRepository(),null);
+      ConsoleTool.this.myHistEditor=new UIEditorComponent(ProjectHelper.toMPSProject(getProject()).getRepository(),null){
+        @Override public boolean isReadOnly(){
+          return true;
+        }
+      }
+;
+      ConsoleTool.this.myCommandEditor=new UIEditorComponent(ProjectHelper.toMPSProject(getProject()).getRepository(),null);
       Language[] langs=new Language[]{ModuleRepositoryFacade.getInstance().getModule(PersistenceFacade.getInstance().createModuleReference("de1ad86d-6e50-4a02-b306-d4d17f64c375(jetbrains.mps.console.base)"),Language.class),ModuleRepositoryFacade.getInstance().getModule(PersistenceFacade.getInstance().createModuleReference("1a8554c4-eb84-43ba-8c34-6f0d90c6e75a(jetbrains.mps.console.blCommand)"),Language.class),ModuleRepositoryFacade.getInstance().getModule(PersistenceFacade.getInstance().createModuleReference("f3061a53-9226-4cc5-a443-f952ceaf5816(jetbrains.mps.baseLanguage)"),Language.class),ModuleRepositoryFacade.getInstance().getModule(PersistenceFacade.getInstance().createModuleReference("a5e4de53-46a3-44da-aab3-68fdf1c34ed0(jetbrains.mps.console.ideCommands)"),Language.class)};
       for (      Language l : langs) {
         ((SModelInternal)myModel).addLanguage(l.getModuleReference());
         ((AbstractModule)myModel.getModule()).addUsedLanguage(l.getModuleReference());
       }
-      ConsoleTool.this.myRoot=SModelOperations.createNewRootNode(myModel,"jetbrains.mps.console.base.structure.Console",null);
-      myEditor.editNode(myRoot,myContext);
+      ConsoleTool.this.myContext=new ModuleContext(myModel.getModule(),project);
+      ConsoleTool.this.myHistRoot=SModelOperations.createNewRootNode(myModel,"jetbrains.mps.console.base.structure.History",null);
+      myHistEditor.editNode(myHistRoot,myContext);
+      ConsoleTool.this.myCommandRoot=SModelOperations.createNewRootNode(myModel,"jetbrains.mps.console.base.structure.CommandHolder",null);
+      myCommandEditor.editNode(myCommandRoot,myContext);
     }
   }
 );
   myMainComponent=new JPanel();
   myMainComponent.setLayout(new BorderLayout());
-  JScrollPane pane=new JScrollPane(myEditor);
-  myMainComponent.add(pane,BorderLayout.CENTER);
+  JScrollPane histPane=new JScrollPane(myHistEditor);
+  JScrollPane commandPane=new JScrollPane(myCommandEditor);
+  JSplitPane editorPane=new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,histPane,commandPane);
+  editorPane.setDividerLocation(0.7);
+  myMainComponent.add(editorPane,BorderLayout.CENTER);
   JPanel upper=new JPanel(new FlowLayout());
   upper.add(createScopeComponent());
   myMainComponent.add(upper,BorderLayout.NORTH);
