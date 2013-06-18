@@ -1,0 +1,37 @@
+{
+  final Wrappers._T<SModel> targetModelDescriptor=new Wrappers._T<SModel>();
+  ModelAccess modelAccess=project.getRepository().getModelAccess();
+  modelAccess.runReadAction(new Runnable(){
+    public void run(){
+      targetModelDescriptor.value=SNodeOperations.getModel(ListSequence.fromList(target).first());
+    }
+  }
+);
+  final Object newLocation=MoveNodesDialog.getSelectedObject(project.getProject(),targetModelDescriptor.value,new MoveNodesDialog.ModelFilter("Choose Node or Model"){
+    @Override public boolean check(    Object selectedObject,    SModel model){
+      return selectedObject instanceof jetbrains.mps.smodel.SNode || selectedObject instanceof jetbrains.mps.smodel.SModel;
+    }
+  }
+);
+  if (newLocation == null) {
+    return;
+  }
+  modelAccess.runReadInEDT(new Runnable(){
+    @Override public void run(){
+      for (      SNode n : ListSequence.fromList(target)) {
+        jetbrains.mps.smodel.SNode node=((jetbrains.mps.smodel.SNode)n);
+        if (!(node.getModel() != null) || jetbrains.mps.util.SNodeOperations.isDisposed(node)) {
+          return;
+        }
+      }
+      if (newLocation instanceof jetbrains.mps.smodel.SNode && (!(((jetbrains.mps.smodel.SNode)newLocation).getModel() != null) || jetbrains.mps.util.SNodeOperations.isDisposed(((jetbrains.mps.smodel.SNode)newLocation)))) {
+        return;
+      }
+      if (newLocation instanceof jetbrains.mps.smodel.SModel && (((jetbrains.mps.smodel.SModel)newLocation).getReference().resolve(MPSModuleRepository.getInstance()) != newLocation)) {
+        return;
+      }
+      executeRefactoring.run(newLocation);
+    }
+  }
+);
+}
