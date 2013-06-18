@@ -1,6 +1,29 @@
 {
   myReporter.init();
-  super.work();
+  GeneratorWorker.MyEnvironment environment=new GeneratorWorker.MyEnvironment();
+  Map<String,File> libraries=MapSequence.fromMap(new LinkedHashMap<String,File>(16,(float)0.75,false));
+  for (  String jar : ListSequence.fromList(myWhatToDo.getLibraryJars())) {
+    MapSequence.fromMap(libraries).put(jar,new File(jar));
+  }
+  environment.init(myWhatToDo.getMacro(),false,libraries,myWhatToDo.getLogLevel(),null);
+  setEnvironment(environment);
+  setupEnvironment();
+  setGenerationProperties();
+  Project project=createDummyProject();
+  LinkedHashSet<SModule> modules=new LinkedHashSet<SModule>();
+  for (  File moduleFilePath : SetSequence.fromSet(myWhatToDo.getModules())) {
+    processModuleFile(moduleFilePath,modules);
+  }
+  MpsWorker.ObjectsToProcess go=new MpsWorker.ObjectsToProcess(Collections.EMPTY_SET,modules,Collections.EMPTY_SET);
+  if (go.hasAnythingToGenerate()) {
+    loadAndMake(go);
+    generate(project,go);
+  }
+ else {
+    error("Could not find anything to test.");
+  }
+  dispose();
+  showStatistic();
   myReporter.finishRun();
   cleanUp();
 }
