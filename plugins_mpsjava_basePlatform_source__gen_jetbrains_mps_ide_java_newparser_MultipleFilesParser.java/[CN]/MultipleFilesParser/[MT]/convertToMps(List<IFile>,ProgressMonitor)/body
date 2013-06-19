@@ -1,5 +1,6 @@
 {
-  final ProgressMonitor parseProgress=progress.subTask(ListSequence.fromList(files).count());
+  progress.start("Converting...",10);
+  final ProgressMonitor parseProgress=progress.subTask(1);
   parseProgress.start("Parsing...",ListSequence.fromList(files).count());
   myModelAccess.runReadAction(new Runnable(){
     public void run(){
@@ -18,9 +19,9 @@ catch (        IOException e) {
   }
 );
   parseProgress.done();
-  final _FunctionTypes._void_P0_E0 resolveWork=new _FunctionTypes._void_P0_E0(){
+  final Wrappers._int rootCount=new Wrappers._int(0);
+  final _FunctionTypes._void_P0_E0 createModelsWork=new _FunctionTypes._void_P0_E0(){
     public void invoke(){
-      int rootCount=0;
       for (      String pakage : SetSequence.fromSet(MapSequence.fromMap(classesPerPackage).keySet())) {
         final SModel model=registerModelForPackage(pakage);
         Set<SNode> roots=MapSequence.fromMap(classesPerPackage).get(pakage);
@@ -30,10 +31,8 @@ catch (        IOException e) {
           }
         }
 );
-        rootCount=rootCount + SetSequence.fromSet(roots).count();
+        rootCount.value=rootCount.value + SetSequence.fromSet(roots).count();
       }
-      ProgressMonitor resolveProgress=progress.subTask(rootCount);
-      resolveProgress.start("Resolving...",rootCount);
       for (      String pakage : SetSequence.fromSet(MapSequence.fromMap(classesPerPackage).keySet())) {
         final SModel model=registerModelForPackage(pakage);
         Set<SNode> roots=MapSequence.fromMap(classesPerPackage).get(pakage);
@@ -43,30 +42,25 @@ catch (        IOException e) {
           }
         }
 );
-        rootCount=rootCount + SetSequence.fromSet(roots).count();
+        rootCount.value=rootCount.value + SetSequence.fromSet(roots).count();
         ListSequence.fromList(myModels).addElement(model);
       }
       for (      SModel model : ListSequence.fromList(myModels)) {
-        for (        SNode root : ListSequence.fromList(SModelOperations.getRoots(model,null))) {
-          JavaParser.tryResolveUnknowns(Sequence.<SNode>singleton(root));
-          JavaParser.tryResolveDynamicRefs(Sequence.<SNode>singleton(root));
-          resolveProgress.advance(1);
-        }
+        JavaParser.tryResolveUnknowns(SModelOperations.getRoots(model,null));
       }
-      resolveProgress.done();
     }
   }
 ;
   if (myModelAccess.isCommandAction()) {
-    resolveWork.invoke();
+    createModelsWork.invoke();
   }
  else {
     try {
       SwingUtilities.invokeAndWait(new Runnable(){
         public void run(){
-          myModelAccess.executeCommandInEDT(new Runnable(){
+          myModelAccess.executeCommand(new Runnable(){
             public void run(){
-              resolveWork.invoke();
+              createModelsWork.invoke();
             }
           }
 );
@@ -75,10 +69,84 @@ catch (        IOException e) {
 );
     }
  catch (    InterruptedException e) {
-      LOG.error("Reference resolving pass was interrupted",e);
+      LOG.error("Models creation pass was interrupted",e);
     }
 catch (    InvocationTargetException e) {
-      LOG.error("Exception in reference resolving pass",e.getCause());
+      LOG.error("Exception in model creation pass",e.getCause());
     }
   }
+  final ProgressMonitor resolveProgress=progress.subTask(9);
+  resolveProgress.start("Resolving...",rootCount.value);
+  final Map<SNodeReference,List<SReference>> referenceMap=MapSequence.fromMap(new HashMap<SNodeReference,List<SReference>>());
+  myModelAccess.runReadAction(new Runnable(){
+    public void run(){
+      for (      SModel model : ListSequence.fromList(myModels)) {
+        for (        SNode root : ListSequence.fromList(SModelOperations.getRoots(model,null))) {
+          resolveProgress.step(root.getName());
+          try {
+            resolveReferences(root,referenceMap,0);
+          }
+ catch (          Exception e) {
+          }
+          resolveProgress.advance(1);
+        }
+      }
+      resolveProgress.done();
+    }
+  }
+);
+  try {
+    SwingUtilities.invokeAndWait(new Runnable(){
+      public void run(){
+        myModelAccess.executeCommand(new Runnable(){
+          public void run(){
+            updateReference(referenceMap);
+          }
+        }
+);
+      }
+    }
+);
+  }
+ catch (  InterruptedException e) {
+    LOG.error("Reference update pass was interrupted",e);
+  }
+catch (  InvocationTargetException e) {
+    LOG.error("Exception in reference update pass",e.getCause());
+  }
+  MapSequence.fromMap(referenceMap).clear();
+  myModelAccess.runReadAction(new Runnable(){
+    public void run(){
+      for (      SModel model : ListSequence.fromList(myModels)) {
+        for (        SNode root : ListSequence.fromList(SModelOperations.getRoots(model,null))) {
+          try {
+            resolveReferences(root,referenceMap,1);
+          }
+ catch (          Exception e) {
+          }
+        }
+      }
+    }
+  }
+);
+  try {
+    SwingUtilities.invokeAndWait(new Runnable(){
+      public void run(){
+        myModelAccess.executeCommand(new Runnable(){
+          public void run(){
+            updateReference(referenceMap);
+          }
+        }
+);
+      }
+    }
+);
+  }
+ catch (  InterruptedException e) {
+    LOG.error("Reference update pass was interrupted",e);
+  }
+catch (  InvocationTargetException e) {
+    LOG.error("Exception in reference update pass",e.getCause());
+  }
+  progress.done();
 }

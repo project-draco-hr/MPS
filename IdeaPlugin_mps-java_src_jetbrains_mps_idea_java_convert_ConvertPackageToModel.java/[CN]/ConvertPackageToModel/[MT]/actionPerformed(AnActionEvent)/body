@@ -4,13 +4,13 @@
   MPSFacet facet=FacetManager.getInstance(module).getFacetByType(MPSFacetType.ID);
   SModule mpsModule=facet.getSolution();
   MPSProject mpsProject=e.getProject().getComponent(MPSProject.class);
-  final MultipleFilesParser parser=new MultipleFilesParser(mpsModule,mpsProject.getRepository().getModelAccess(),mpsProject);
+  final MultipleFilesParser parser=new MultipleFilesParser(mpsModule,mpsProject.getRepository(),mpsProject);
   final List<IFile> javaFiles=new ArrayList<IFile>();
   collectJavaFiles((PsiDirectory)element,javaFiles);
   ProgressManager.getInstance().run(new Task.Modal(null,"Convert to MPS",false){
     @Override public void run(    @NotNull final ProgressIndicator progressIndicator){
       try {
-        parser.convertToMps(javaFiles,new EmptyProgressMonitor());
+        parser.convertToMps(javaFiles,new ProgressMonitorAdapter(progressIndicator));
       }
  catch (      JavaParseException exc) {
         throw new RuntimeException(exc);
@@ -25,8 +25,8 @@ catch (      IOException exc) {
     @Override public void run(){
       Set<PsiClass> psiClasses=getPsiClasses(parser.getSuccessfulFiles(),PsiManager.getInstance(e.getProject()));
       Set<SNode> stubNodes=getStubNodes(psiClasses);
-      GlobalSearchScope scope=new ModuleWithDependentsScope(module,false);
-      SearchScope mpsScope=new IdeaSearchScope(scope);
+      Set<SModel> excludeSet=new HashSet<SModel>(parser.getModels());
+      SearchScope mpsScope=new SearchScopeWithoutModels(module,excludeSet);
       Set<SNode> affectedNodes=new HashSet<SNode>();
       boolean wasUnresolved=false;
       Set<SReference> references=FindUsagesFacade.getInstance().findUsages(mpsScope,stubNodes,null);
