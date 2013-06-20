@@ -1,0 +1,32 @@
+{
+  myReporter.init();
+  EnvironmentConfig config=EnvironmentConfig.emptyEnvironment();
+  for (  String jar : ListSequence.fromList(myWhatToDo.getLibraryJars())) {
+    config=config.addLib(jar,new File(jar));
+  }
+  for (  IMapping<String,String> macro : MapSequence.fromMap(myWhatToDo.getMacro())) {
+    config=config.addMacro(macro.key(),new File(macro.value()));
+  }
+  Environment environment=new GeneratorWorker.MyEnvironment(config);
+  Logger.getRootLogger().setLevel(myWhatToDo.getLogLevel());
+  setupEnvironment();
+  setGenerationProperties();
+  Project project=createDummyProject();
+  LinkedHashSet<SModule> modules=new LinkedHashSet<SModule>();
+  for (  File moduleFilePath : SetSequence.fromSet(myWhatToDo.getModules())) {
+    processModuleFile(moduleFilePath,modules);
+  }
+  MpsWorker.ObjectsToProcess go=new MpsWorker.ObjectsToProcess(Collections.EMPTY_SET,modules,Collections.EMPTY_SET);
+  if (go.hasAnythingToGenerate()) {
+    loadAndMake(go);
+    generate(project,go);
+  }
+ else {
+    error("Could not find anything to test.");
+  }
+  environment.disposeEnvironment();
+  dispose();
+  showStatistic();
+  myReporter.finishRun();
+  cleanUp();
+}
