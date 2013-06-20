@@ -1,0 +1,82 @@
+{
+  StringBuffer s=new StringBuffer("Generating:");
+  for (  Project p : go.getProjects()) {
+    s.append("\n    ");
+    s.append(p);
+  }
+  for (  SModule m : go.getModules()) {
+    s.append("\n    ");
+    s.append(m);
+  }
+  for (  SModel m : go.getModels()) {
+    s.append("\n    ");
+    s.append(m);
+  }
+  info(s.toString());
+  final _FunctionTypes._void_P1_E0<? super String> startTestFormat=new _FunctionTypes._void_P1_E0<String>(){
+    public void invoke(    String msg){
+      myReporter.testStarted(((msg == null ? null : msg.trim())));
+    }
+  }
+;
+  final _FunctionTypes._void_P1_E0<? super String> finishTestFormat=new _FunctionTypes._void_P1_E0<String>(){
+    public void invoke(    String msg){
+      myReporter.testFinished(((msg == null ? null : msg.trim())));
+    }
+  }
+;
+  IScriptController ctl=new IScriptController.Stub(new IConfigMonitor.Stub(),new DiffTestWorker.MyJobMonitor(new DiffTestWorker.MyProgress(startTestFormat,finishTestFormat))){
+    @Override public void setup(    IPropertiesPool ppool,    Iterable<ITarget> toExecute,    Iterable<? extends IResource> input){
+      super.setup(ppool,toExecute,input);
+      Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>> makeparams=(Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>>)ppool.properties(new ITarget.Name("jetbrains.mps.make.facets.Make.make"),Object.class);
+      makeparams._0(new _FunctionTypes._return_P1_E0<IFile,String>(){
+        public IFile invoke(        String path){
+          return tmpFile(path);
+        }
+      }
+);
+      Tuples._1<Boolean> tparams=(Tuples._1<Boolean>)ppool.properties(new ITarget.Name("jetbrains.mps.lang.core.TextGen.textGen"),Object.class);
+      if (tparams != null) {
+        tparams._0(false);
+      }
+      Tuples._2<_FunctionTypes._return_P1_E0<? extends String,? super IFile>,Set<File>> dparams=(Tuples._2<_FunctionTypes._return_P1_E0<? extends String,? super IFile>,Set<File>>)ppool.properties(new ITarget.Name("jetbrains.mps.tool.gentest.Diff.diff"),Object.class);
+      if (dparams != null && isShowDiff()) {
+        dparams._0(new _FunctionTypes._return_P1_E0<String,IFile>(){
+          public String invoke(          IFile f){
+            return pathOfTmpFile(f);
+          }
+        }
+);
+        dparams._1(myWhatToDo.getExcludedFromDiffFiles());
+      }
+      if (isInvokeTestsSet()) {
+        Tuples._1<UnitTestListener> testParams=(Tuples._1<UnitTestListener>)ppool.properties(new ITarget.Name("jetbrains.mps.tool.gentest.Test.runTests"),Object.class);
+        testParams._0(new DiffTestWorker.MyUnitTestAdapter());
+      }
+      myReporter.finishRun();
+      myReporter.startRun(DiffTestWorker.this.myWhatToDo.getProperty("ant.project.name"));
+    }
+  }
+;
+  IOperationContext context=new ProjectOperationContext(project);
+  try {
+    BuildMakeService bms=new BuildMakeService();
+    MakeSession ms=new MakeSession(context,myMessageHandler,true){
+      @Override public IScript toScript(      ScriptBuilder scriptBuilder){
+        if (isInvokeTestsSet()) {
+          scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.tool.gentest.Test"));
+        }
+        if (isShowDiff()) {
+          scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.tool.gentest.Diff"));
+        }
+        return scriptBuilder.toScript();
+      }
+    }
+;
+    bms.make(ms,collectResources(context,go.getModules(),go.getModels()),null,ctl,new DiffTestWorker.MyProgressMonitorBase(startTestFormat,finishTestFormat)).get();
+  }
+ catch (  InterruptedException ignore) {
+  }
+catch (  ExecutionException ignore) {
+  }
+}
