@@ -1,13 +1,18 @@
 {
-  Deque<SNode> stack=DequeSequence.fromDeque(new LinkedList<SNode>());
-  DequeSequence.fromDeque(stack).pushElement(startNode);
-  while (DequeSequence.fromDeque(stack).isNotEmpty()) {
-    SNode node=DequeSequence.fromDeque(stack).popElement();
+  final Queue<SNode> stack=QueueSequence.fromQueue(new LinkedList<SNode>());
+  QueueSequence.fromQueue(stack).addLastElement(startNode);
+  while (QueueSequence.fromQueue(stack).isNotEmpty()) {
+    SNode node=QueueSequence.fromQueue(stack).removeFirstElement();
     SModel ourModel=node.getModel();
-    DequeSequence.fromDeque(stack).addSequence(ListSequence.fromList(SNodeOperations.getChildren(node)));
+    ListSequence.fromList(SNodeOperations.getChildren(node)).visitAll(new IVisitor<SNode>(){
+      public void visit(      SNode it){
+        QueueSequence.fromQueue(stack).addLastElement(it);
+      }
+    }
+);
     Iterable<? extends SReference> refs=node.getReferences();
     List<SReference> newRefs=ListSequence.fromList(new ArrayList<SReference>());
-    for (    SReference ref : Sequence.fromIterable(refs)) {
+    for (    final SReference ref : Sequence.fromIterable(refs)) {
       if (!(ref instanceof DynamicReference)) {
         continue;
       }
@@ -15,7 +20,7 @@
         if (ref.getRole().equals("baseMethodDeclaration")) {
           continue;
         }
-        if (ref.getRole().equals("fieldDeclaration")) {
+        if (ref.getRole().equals("fieldDeclaration") || ref.getRole().equals("variableDeclaration")) {
           continue;
         }
       }
@@ -30,7 +35,31 @@
           continue;
         }
       }
-      SNode target=ref.getTargetNode();
+      SNode target=null;
+      ExecutorService executor=Executors.newSingleThreadExecutor();
+      Future<SNode> future=executor.submit(new Callable<SNode>(){
+        public SNode call() throws Exception {
+          final Wrappers._T<SNode> result=new Wrappers._T<SNode>();
+          myModelAccess.runReadAction(new Runnable(){
+            public void run(){
+              result.value=ref.getTargetNode();
+            }
+          }
+);
+          return result.value;
+        }
+      }
+);
+      try {
+        target=future.get(1000,TimeUnit.MILLISECONDS);
+      }
+ catch (      TimeoutException e) {
+        LOG.error("Reference resolve timeout");
+        future.cancel(true);
+      }
+catch (      Exception e) {
+        future.cancel(true);
+      }
       if (target == null) {
         continue;
       }

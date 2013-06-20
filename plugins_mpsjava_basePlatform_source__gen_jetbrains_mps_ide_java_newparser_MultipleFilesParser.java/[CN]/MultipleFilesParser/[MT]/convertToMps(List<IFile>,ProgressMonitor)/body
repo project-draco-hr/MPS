@@ -1,5 +1,5 @@
 {
-  progress.start("Converting...",10);
+  progress.start("Converting...",31);
   final ProgressMonitor parseProgress=progress.subTask(1);
   parseProgress.start("Parsing...",ListSequence.fromList(files).count());
   myModelAccess.runReadAction(new Runnable(){
@@ -20,8 +20,8 @@ catch (        IOException e) {
 );
   parseProgress.done();
   final Wrappers._int rootCount=new Wrappers._int(0);
-  final _FunctionTypes._void_P0_E0 createModelsWork=new _FunctionTypes._void_P0_E0(){
-    public void invoke(){
+  runCommand("model creation pass",new Runnable(){
+    public void run(){
       for (      String pakage : SetSequence.fromSet(MapSequence.fromMap(classesPerPackage).keySet())) {
         final SModel model=registerModelForPackage(pakage);
         Set<SNode> roots=MapSequence.fromMap(classesPerPackage).get(pakage);
@@ -32,6 +32,7 @@ catch (        IOException e) {
         }
 );
         rootCount.value=rootCount.value + SetSequence.fromSet(roots).count();
+        ((SModelInternal)model).addLanguage(PersistenceFacade.getInstance().createModuleReference("f3061a53-9226-4cc5-a443-f952ceaf5816(jetbrains.mps.baseLanguage)"));
       }
       for (      String pakage : SetSequence.fromSet(MapSequence.fromMap(classesPerPackage).keySet())) {
         final SModel model=registerModelForPackage(pakage);
@@ -50,103 +51,26 @@ catch (        IOException e) {
       }
     }
   }
-;
-  if (myModelAccess.isCommandAction()) {
-    createModelsWork.invoke();
-  }
- else {
-    try {
-      SwingUtilities.invokeAndWait(new Runnable(){
-        public void run(){
-          myModelAccess.executeCommand(new Runnable(){
-            public void run(){
-              createModelsWork.invoke();
-            }
-          }
 );
-        }
-      }
-);
-    }
- catch (    InterruptedException e) {
-      LOG.error("Models creation pass was interrupted",e);
-    }
-catch (    InvocationTargetException e) {
-      LOG.error("Exception in model creation pass",e.getCause());
+  myRootCount=rootCount.value;
+  ProgressMonitor resolveProgress=progress.subTask(30);
+  resolveUpdatePass("top level refs",new _FunctionTypes._return_P1_E0<Iterable<SReference>,SNode>(){
+    public Iterable<SReference> invoke(    SNode node){
+      return getTopLevelRefs(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier"));
     }
   }
-  final ProgressMonitor resolveProgress=progress.subTask(9);
-  resolveProgress.start("Resolving...",rootCount.value);
-  final Map<SNodeReference,List<SReference>> referenceMap=MapSequence.fromMap(new HashMap<SNodeReference,List<SReference>>());
-  myModelAccess.runReadAction(new Runnable(){
-    public void run(){
-      for (      SModel model : ListSequence.fromList(myModels)) {
-        for (        SNode root : ListSequence.fromList(SModelOperations.getRoots(model,null))) {
-          resolveProgress.step(root.getName());
-          try {
-            resolveReferences(root,referenceMap,0);
-          }
- catch (          Exception e) {
-          }
-          resolveProgress.advance(1);
-        }
-      }
-      resolveProgress.done();
+,resolveProgress.subTask(10));
+  resolveUpdatePass("field/method type refs",new _FunctionTypes._return_P1_E0<Iterable<SReference>,SNode>(){
+    public Iterable<SReference> invoke(    SNode node){
+      return getFieldAndMethodTypeRefs(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier"));
     }
   }
-);
-  try {
-    SwingUtilities.invokeAndWait(new Runnable(){
-      public void run(){
-        myModelAccess.executeCommand(new Runnable(){
-          public void run(){
-            updateReference(referenceMap);
-          }
-        }
-);
-      }
-    }
-);
-  }
- catch (  InterruptedException e) {
-    LOG.error("Reference update pass was interrupted",e);
-  }
-catch (  InvocationTargetException e) {
-    LOG.error("Exception in reference update pass",e.getCause());
-  }
-  MapSequence.fromMap(referenceMap).clear();
-  myModelAccess.runReadAction(new Runnable(){
-    public void run(){
-      for (      SModel model : ListSequence.fromList(myModels)) {
-        for (        SNode root : ListSequence.fromList(SModelOperations.getRoots(model,null))) {
-          try {
-            resolveReferences(root,referenceMap,1);
-          }
- catch (          Exception e) {
-          }
-        }
-      }
+,resolveProgress.subTask(10));
+  resolveUpdatePass("all type refs",new _FunctionTypes._return_P1_E0<Iterable<SReference>,SNode>(){
+    public Iterable<SReference> invoke(    SNode node){
+      return getFieldAndMethodTypeRefs(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier"));
     }
   }
-);
-  try {
-    SwingUtilities.invokeAndWait(new Runnable(){
-      public void run(){
-        myModelAccess.executeCommand(new Runnable(){
-          public void run(){
-            updateReference(referenceMap);
-          }
-        }
-);
-      }
-    }
-);
-  }
- catch (  InterruptedException e) {
-    LOG.error("Reference update pass was interrupted",e);
-  }
-catch (  InvocationTargetException e) {
-    LOG.error("Exception in reference update pass",e.getCause());
-  }
+,resolveProgress.subTask(10));
   progress.done();
 }
