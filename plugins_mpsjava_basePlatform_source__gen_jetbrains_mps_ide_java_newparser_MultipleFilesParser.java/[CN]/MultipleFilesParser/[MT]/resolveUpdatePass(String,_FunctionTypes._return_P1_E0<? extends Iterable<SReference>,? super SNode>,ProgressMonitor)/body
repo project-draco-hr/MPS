@@ -1,36 +1,26 @@
 {
   final Map<SNodeReference,List<SReference>> resolveMap=MapSequence.fromMap(new HashMap<SNodeReference,List<SReference>>());
-  progress.start(stepName,myRootCount);
+  progress.start(stepName,myRootCount + 1);
   myModelAccess.runReadAction(new Runnable(){
     public void run(){
       for (      SModel model : ListSequence.fromList(myModels)) {
         for (        SNode claz : ListSequence.fromList(SModelOperations.getRoots(model,"jetbrains.mps.baseLanguage.structure.Classifier"))) {
+          progress.step(SPropertyOperations.getString(claz,"name"));
           Iterable<SReference> refs=extractor.invoke(claz);
           resolveRefs(refs,resolveMap);
+          SetSequence.fromSet(myVisitedRefs).addSequence(Sequence.fromIterable(refs));
           progress.advance(1);
         }
       }
     }
   }
 );
-  try {
-    SwingUtilities.invokeAndWait(new Runnable(){
-      public void run(){
-        myModelAccess.executeCommand(new Runnable(){
-          public void run(){
-            updateReference(resolveMap);
-          }
-        }
-);
-      }
+  runCommand(stepName,new Runnable(){
+    public void run(){
+      updateReference(resolveMap);
     }
+  }
 );
-  }
- catch (  InterruptedException e) {
-    LOG.error(stepName + " pass was interrupted",e);
-  }
-catch (  InvocationTargetException e) {
-    LOG.error("Exception in " + stepName + " pass",e.getCause());
-  }
+  progress.advance(1);
   progress.done();
 }
