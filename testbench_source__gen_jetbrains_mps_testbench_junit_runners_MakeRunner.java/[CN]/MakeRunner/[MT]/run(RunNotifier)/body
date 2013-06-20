@@ -1,15 +1,9 @@
 {
   notifier.fireTestStarted(myDescription);
-  ModelAccess.instance().runReadAction(new Runnable(){
-    @Override public void run(){
-      ModuleMaker maker=new ModuleMaker();
-      MPSCompilationResult compilationResult=maker.make(IterableUtil.asCollection(MPSModuleRepository.getInstance().getModules()),new EmptyProgressMonitor());
-      if (compilationResult != null && compilationResult.getErrors() > 0) {
-        notifier.fireTestFailure(new Failure(myDescription,new Exception("Compilation errors: " + compilationResult)));
-      }
-    }
+  MPSCompilationResult compilationResult=MpsTestsSupport.makeAllInCreatedEnvironment();
+  if (compilationResult != null && compilationResult.getErrors() > 0) {
+    notifier.fireTestFailure(new Failure(myDescription,new Exception("Compilation errors: " + compilationResult)));
   }
-);
   ModelAccess.instance().runWriteAction(new Runnable(){
     public void run(){
       ClassLoaderManager.getInstance().reloadClasses(MPSModuleRepository.getInstance().getModules(),new EmptyProgressMonitor());
@@ -27,24 +21,28 @@
     }
   }
 );
-  try {
-    SwingUtilities.invokeAndWait(new Runnable(){
-      @Override public void run(){
-        ModelAccess.instance().runWriteAction(new Runnable(){
-          @Override public void run(){
-            LocalFileSystem.getInstance().refresh(false);
+  if (ActiveEnvironment.get().hasIdeaInstance()) {
+    try {
+      SwingUtilities.invokeAndWait(new Runnable(){
+        @Override public void run(){
+          ModelAccess.instance().runWriteAction(new Runnable(){
+            @Override public void run(){
+              LocalFileSystem.getInstance().refresh(false);
+            }
           }
+);
         }
-);
       }
-    }
 );
+    }
+ catch (    InterruptedException e) {
+      notifier.fireTestFailure(new Failure(myDescription,e));
+    }
+catch (    InvocationTargetException e) {
+      notifier.fireTestFailure(new Failure(myDescription,e));
+    }
   }
- catch (  InterruptedException e) {
-    notifier.fireTestFailure(new Failure(myDescription,e));
-  }
-catch (  InvocationTargetException e) {
-    notifier.fireTestFailure(new Failure(myDescription,e));
+ else {
   }
   notifier.fireTestFinished(myDescription);
 }
