@@ -4,41 +4,15 @@
     final ArrayList<BaseAction> actionsCopy=new ArrayList<BaseAction>(mySelectedActions);
     for (    final BaseAction action : actionsCopy) {
       final CountDownLatch latch=new CountDownLatch(1);
-      runCommand(new Runnable(){
+      final Runnable cmdRunnable=new MyActionRunnable(action,component,latch);
+      final boolean cmd=action.isExecuteOutsideCommand();
+      SwingUtilities.invokeLater(new Runnable(){
         @Override public void run(){
-          try {
-            DumbService.getInstance(myProject).runWhenSmart(new Runnable(){
-              @Override public void run(){
-                fireStartingAction(action);
-                AnActionEvent event=new AnActionEvent(null,DataManager.getInstance().getDataContext(component),ActionPlaces.UNKNOWN,action.getTemplatePresentation(),ActionManager.getInstance(),0);
-                boolean success=false;
-                boolean oldFlag=action.isExecuteOutsideCommand();
-                try {
-                  action.setExecuteOutsideCommand(true);
-                  action.update(event);
-                  if (action.getTemplatePresentation().isEnabled()) {
-                    action.actionPerformed(event);
-                    success=true;
-                  }
-                }
- catch (                Exception e) {
-                  LOG.error(null,e);
-                }
- finally {
-                  action.setExecuteOutsideCommand(oldFlag);
-                  if (success) {
-                    fireFinishedAction(action);
-                  }
- else {
-                    fireFailedAction(action);
-                  }
-                }
-              }
-            }
-);
+          if (cmd) {
+            cmdRunnable.run();
           }
-  finally {
-            latch.countDown();
+ else {
+            ModelAccess.instance().runWriteActionInCommand(cmdRunnable);
           }
         }
       }

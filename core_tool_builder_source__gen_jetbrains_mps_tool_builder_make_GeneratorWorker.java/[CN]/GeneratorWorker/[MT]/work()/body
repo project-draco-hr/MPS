@@ -1,11 +1,13 @@
 {
-  GeneratorWorker.MyEnvironment environment=new GeneratorWorker.MyEnvironment();
-  Map<String,File> libraries=MapSequence.fromMap(new LinkedHashMap<String,File>(16,(float)0.75,false));
+  EnvironmentConfig config=EnvironmentConfig.emptyEnvironment();
   for (  String jar : ListSequence.fromList(myWhatToDo.getLibraryJars())) {
-    MapSequence.fromMap(libraries).put(jar,new File(jar));
+    config=config.addLib(jar,new File(jar));
   }
-  environment.init(myWhatToDo.getMacro(),false,libraries,myWhatToDo.getLogLevel(),null);
-  setEnvironment(environment);
+  for (  IMapping<String,String> macro : MapSequence.fromMap(myWhatToDo.getMacro())) {
+    config=config.addMacro(macro.key(),new File(macro.value()));
+  }
+  Environment environment=new GeneratorWorker.MyEnvironment(config);
+  Logger.getRootLogger().setLevel(myWhatToDo.getLogLevel());
   setupEnvironment();
   setGenerationProperties();
   boolean doneSomething=false;
@@ -35,6 +37,7 @@
   if (!(doneSomething)) {
     error("Could not find anything to generate.");
   }
+  environment.disposeEnvironment();
   dispose();
   showStatistic();
 }

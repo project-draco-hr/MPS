@@ -7,12 +7,17 @@
   }
   List<SNode> resultNodes=new ArrayList<SNode>();
   for (  SModel aModel : modelsList) {
-    Iterable<? extends SNode> nodes=(roots ? aModel.getRootNodes() : new NodesIterable(aModel));
+    Iterable<SNode> nodes=(roots ? aModel.getRootNodes() : new NodesIterable(aModel));
     if (concept == null) {
       resultNodes.addAll(IterableUtil.asList(nodes));
     }
  else     if (roots) {
-      resultNodes.addAll(IterableUtil.asList(new ConditionalIterable(nodes,new IsInstanceCondition(concept))));
+      ListSequence.fromList(resultNodes).addSequence(Sequence.fromIterable(nodes).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return jetbrains.mps.lang.smodel.generator.smodelAdapter.SNodeOperations.isInstanceOf(((SNode)it),NameUtil.nodeFQName(concept));
+        }
+      }
+));
     }
  else {
       resultNodes.addAll(IterableUtil.asList(((SModelInternal)aModel).getFastNodeFinder().getNodes(NameUtil.nodeFQName(concept),true)));

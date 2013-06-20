@@ -1,0 +1,60 @@
+{
+  final jetbrains.mps.project.Project project=ProjectHelper.toMPSProject(getProject());
+  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+    public void run(){
+      ConsoleTool.this.myContext=new ModuleContext(myModel.getModule(),project);
+      ConsoleTool.this.myEditor=new UIEditorComponent(ProjectHelper.toMPSProject(getProject()).getRepository(),null);
+      Language[] langs=new Language[]{ModuleRepositoryFacade.getInstance().getModule(PersistenceFacade.getInstance().createModuleReference("de1ad86d-6e50-4a02-b306-d4d17f64c375(jetbrains.mps.console.lang)"),Language.class),ModuleRepositoryFacade.getInstance().getModule(PersistenceFacade.getInstance().createModuleReference("1a8554c4-eb84-43ba-8c34-6f0d90c6e75a(jetbrains.mps.console.lang.commands)"),Language.class),ModuleRepositoryFacade.getInstance().getModule(PersistenceFacade.getInstance().createModuleReference("f3061a53-9226-4cc5-a443-f952ceaf5816(jetbrains.mps.baseLanguage)"),Language.class)};
+      for (      Language l : langs) {
+        ((SModelInternal)myModel).addLanguage(l.getModuleReference());
+        ((AbstractModule)myModel.getModule()).addUsedLanguage(l.getModuleReference());
+      }
+      ConsoleTool.this.myRoot=SModelOperations.createNewRootNode(myModel,"jetbrains.mps.console.lang.structure.Console",null);
+      myEditor.editNode(myRoot,myContext);
+    }
+  }
+);
+  nextCommand();
+  myMainComponent=new JPanel();
+  myMainComponent.setLayout(new BorderLayout());
+  myMainComponent.add(myEditor,BorderLayout.CENTER);
+  JPanel btnPanel=new JPanel();
+  myMainComponent.add(btnPanel,BorderLayout.SOUTH);
+  btnPanel.setLayout(new FlowLayout());
+  btnPanel.add(new JButton(new AbstractAction("Execute"){
+    public void actionPerformed(    ActionEvent p0){
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          TemporaryModels.getInstance().addMissingModuleImports(myModel);
+          myLastCommand=ListSequence.fromList(SLinkOperations.getTargets(myRoot,"item",true)).last();
+          if ((myLastCommand != null)) {
+            final SNode res=_quotation_createNode_xg3v07_a0a0c0a0a0a0a0a0a0a11a11();
+            BehaviorReflection.invokeVirtual(Void.class,myLastCommand,"virtual_execute_757553790980855637",new Object[]{project,new ConsoleStream(){
+              public void addText(              String text){
+                checkResultAvailable();
+                ListSequence.fromList(SLinkOperations.getTargets(ListSequence.fromList(SLinkOperations.getTargets(res,"line",true)).last(),"part",true)).addElement(_quotation_createNode_xg3v07_a0a1a0a0b0a1a2a0a0a0a0a0a0a0l0l(text));
+              }
+              public void addNode(              SNode node){
+                checkResultAvailable();
+                SLinkOperations.setTarget(SLinkOperations.addNewChild(ListSequence.fromList(SLinkOperations.getTargets(res,"line",true)).last(),"part","jetbrains.mps.console.lang.commands.structure.NodeResultPart"),"target",node,false);
+              }
+              public void addNewLine(){
+                checkResultAvailable();
+                SLinkOperations.addNewChild(res,"line","jetbrains.mps.console.lang.commands.structure.BLCommandResultLine");
+              }
+              private void checkResultAvailable(){
+                if ((SNodeOperations.getNextSibling(myLastCommand) == null)) {
+                  SNodeOperations.insertNextSiblingChild(myLastCommand,res);
+                }
+              }
+            }
+});
+          }
+        }
+      }
+);
+      nextCommand();
+    }
+  }
+));
+}
