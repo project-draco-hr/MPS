@@ -4,15 +4,33 @@
   this.add(new JLabel("Language name:"),Util.getGridConstraints(0));
   myLanguageName=new JTextField("NewLanguage");
   myLanguageName.setName("Name");
-  myLanguageName.addCaretListener(new CaretListener(){
-    public void caretUpdate(    CaretEvent p0){
-      updateLanguageLocation();
+  myLanguageName.getDocument().addDocumentListener(new DocumentAdapter(){
+    protected void textChanged(    DocumentEvent p0){
+      if ((myProjectPath == null || myProjectPath.length() == 0)) {
+        return;
+      }
+      String path=myProjectPath + File.separator + "languages"+ File.separator;
+      final String langName=getLanguageName();
+      if (!(Comparing.strEqual(langName,getLanguageLocation()))) {
+        path+=langName;
+      }
+      if (!(myLangLocationChangedByUser)) {
+        setLanguageLocation(path);
+      }
     }
   }
 );
   this.add(myLanguageName,Util.getGridConstraints(1));
   myLanguageLocation=new JTextField();
   myLanguageLocation.setName("Path");
+  myLanguageLocation.getDocument().addDocumentListener(new DocumentAdapter(){
+    protected void textChanged(    DocumentEvent p0){
+      if (myLangLocationDocListenerEnabled) {
+        myLangLocationChangedByUser=true;
+      }
+    }
+  }
+);
   final FileChooserDescriptor descriptor=FileChooserDescriptorFactory.createSingleFolderDescriptor();
   InsertPathAction.addTo(myLanguageLocation,descriptor);
   BrowseFilesListener listener=new BrowseFilesListener(myLanguageLocation,"Choose Language Location Folder","",descriptor);
@@ -24,5 +42,7 @@
   mySandboxSolution=new JCheckBox("Create Sandbox Solution",false);
   this.add(mySandboxSolution,Util.getGridConstraints(4));
   this.setPreferredSize(new Dimension(400,100));
-  updateLanguageLocation();
+  if (myProjectPath != null) {
+    setLanguageLocation(myProjectPath + File.separator + "languages"+ File.separator+ getLanguageName());
+  }
 }
