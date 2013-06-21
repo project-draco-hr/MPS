@@ -39,7 +39,7 @@
   }
   final Wrappers._T<SModel> baseVersionModel=new Wrappers._T<SModel>(null);
   if (BaseVersionUtil.isAddedFileStatus(status) || ConflictsUtil.isModelOrModuleConflicting(myModelDescriptor,myProject)) {
-    baseVersionModel.value=TemporaryModels.getInstance().create(true,TempModuleOptions.forDefaultModule());
+    baseVersionModel.value=new MergeTemporaryModel(myModelDescriptor.getReference(),true);
   }
  else {
     Object content=BaseVersionUtil.getBaseVersionContent(modelVFile,myProject);
@@ -52,19 +52,18 @@
       return;
     }
     String ext=modelVFile.getExtension();
-    SModel md=(content instanceof String ? PersistenceUtil.loadModel((String)content,ext) : PersistenceUtil.loadModel((byte[])content,ext));
-    if (md == null) {
+    baseVersionModel.value=(content instanceof String ? PersistenceUtil.loadModel((String)content,ext) : PersistenceUtil.loadModel((byte[])content,ext));
+    if (baseVersionModel.value == null) {
       return;
     }
-    baseVersionModel.value=md;
-    if (Sequence.fromIterable(((Iterable<SModel.Problem>)md.getProblems())).any(new IWhereFilter<SModel.Problem>(){
+    if (Sequence.fromIterable(((Iterable<SModel.Problem>)baseVersionModel.value.getProblems())).any(new IWhereFilter<SModel.Problem>(){
       public boolean accept(      SModel.Problem it){
         return it.isError();
       }
     }
 )) {
       StringBuilder sb=new StringBuilder();
-      for (      SModel.Problem p : Sequence.fromIterable((Iterable<SModel.Problem>)md.getProblems())) {
+      for (      SModel.Problem p : Sequence.fromIterable((Iterable<SModel.Problem>)baseVersionModel.value.getProblems())) {
         sb.append((p.isError() ? "error: " : "warn: ")).append(p.getText()).append("\n");
       }
       if (LOG.isEnabledFor(Priority.WARN)) {
