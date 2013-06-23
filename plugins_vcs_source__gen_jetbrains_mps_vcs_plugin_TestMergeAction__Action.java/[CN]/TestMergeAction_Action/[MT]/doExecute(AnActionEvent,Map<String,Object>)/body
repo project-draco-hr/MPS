@@ -11,21 +11,19 @@
     SwingUtilities.invokeLater(new Runnable(){
       public void run(){
         VirtualFile vFile=FileChooser.chooseFile(((Project)MapSequence.fromMap(_params).get("project")),descriptor);
-        String resString;
+        final String resFile;
         SModel[] zipped;
         try {
           zipped=MergeBackupUtil.loadZippedModels(new File(vFile.getCanonicalPath()),new MergeVersion[]{MergeVersion.BASE,MergeVersion.MINE,MergeVersion.REPOSITORY});
-          resString=File.createTempFile("mpstmp",".result").getAbsolutePath();
+          resFile=File.createTempFile("mpstmp",".result").getAbsolutePath();
         }
  catch (        Exception e) {
           e.printStackTrace();
           return;
         }
-        final String resFile=resString;
-        final SModel[] models=zipped;
-        MergeModelsDialog dialog=new MergeModelsDialog(models[0],models[1],models[2],new SimpleDiffRequest(((Project)MapSequence.fromMap(_params).get("project")),models,new String[]{"Local Version","Merge Result","Remote Version"}));
+        MergeModelsDialog dialog=new MergeModelsDialog(new MergeTemporaryModel(zipped[0],true),new MergeTemporaryModel(zipped[1],true),new MergeTemporaryModel(zipped[2],true),new SimpleDiffRequest(((Project)MapSequence.fromMap(_params).get("project")),zipped,new String[]{"Local Version","Merge Result","Remote Version"}));
         dialog.show();
-        final SModel result=dialog.getResultModelWithFixedId();
+        final org.jetbrains.mps.openapi.model.SModel result=dialog.getResultModelWithFixedId();
         if (result != null) {
           ModelAccess.instance().runWriteAction(new Runnable(){
             @Override public void run(){
@@ -34,7 +32,7 @@
                 iFile.createNewFile();
               }
               try {
-                ModelPersistence.saveModel(result,new FileDataSource(iFile));
+                ModelPersistence.saveModel(as_81bq2k_a0a0a0c0a0a0a0a0j0a0a0a4a0a5(result,SModelBase.class).getSModelInternal(),new FileDataSource(iFile));
               }
  catch (              IOException e) {
                 if (LOG.isEnabledFor(Priority.ERROR)) {
