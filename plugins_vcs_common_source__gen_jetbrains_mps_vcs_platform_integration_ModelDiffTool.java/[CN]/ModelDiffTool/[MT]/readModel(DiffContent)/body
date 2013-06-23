@@ -1,16 +1,18 @@
 {
   if ((content instanceof DocumentContent || content instanceof FileContent) && content.getFile() != null) {
-    final org.jetbrains.mps.openapi.model.SModel modelDescriptor=SModelFileTracker.getInstance().findModel(VirtualFileUtils.toIFile(content.getFile()));
-    if (modelDescriptor != null) {
-      return ((SModelBase)modelDescriptor).getSModelInternal();
+    final SModel model=SModelFileTracker.getInstance().findModel(VirtualFileUtils.toIFile(content.getFile()));
+    if (model != null) {
+      return model;
     }
   }
   try {
     byte[] bytes=content.getBytes();
+    FileType contentType=content.getContentType();
+    String ext=(contentType != null ? contentType.getDefaultExtension() : MPSExtentions.MODEL);
     if (bytes.length == 0) {
-      return new DefaultSModel(new SModelReference("",""));
+      return new MergeTemporaryModel(new SModelReference("",""),true);
     }
-    return ModelPersistence.readModel(new String(bytes,FileUtil.DEFAULT_CHARSET),false);
+    return PersistenceUtil.loadModel(new String(bytes,FileUtil.DEFAULT_CHARSET),ext);
   }
  catch (  IOException ioe) {
     throw new ModelReadException("Couldn't read content: " + ioe.getMessage(),ioe);
