@@ -1,0 +1,118 @@
+{
+  progress.start("Converting...",31);
+  final ProgressMonitor parseProgress=progress.subTask(1);
+  parseProgress.start("Parsing...",ListSequence.fromList(files).count());
+  myModelAccess.runReadAction(new Runnable(){
+    public void run(){
+      for (      IFile file : ListSequence.fromList(files)) {
+        try {
+          parseFile(file);
+          parseProgress.advance(1);
+          ListSequence.fromList(mySuccessfulFiles).addElement(file);
+        }
+ catch (        JavaParseException e) {
+        }
+catch (        IOException e) {
+        }
+      }
+    }
+  }
+);
+  parseProgress.done();
+  final Wrappers._int rootCount=new Wrappers._int(0);
+  runCommand("model creation pass",new Runnable(){
+    public void run(){
+      ((AbstractModule)myModule).addDependency(PersistenceFacade.getInstance().createModuleReference("6354ebe7-c22a-4a0f-ac54-50b52ab9b065(JDK)"),false);
+      for (      String pakage : SetSequence.fromSet(MapSequence.fromMap(classesPerPackage).keySet())) {
+        final SModel model=registerModelForPackage(pakage);
+        if (model == null) {
+          continue;
+        }
+        ((SModelInternal)model).addLanguage(PersistenceFacade.getInstance().createModuleReference("f3061a53-9226-4cc5-a443-f952ceaf5816(jetbrains.mps.baseLanguage)"));
+        Set<SNode> roots=MapSequence.fromMap(classesPerPackage).get(pakage);
+        SetSequence.fromSet(roots).visitAll(new IVisitor<SNode>(){
+          public void visit(          SNode it){
+            model.addRootNode(it);
+          }
+        }
+);
+        rootCount.value=rootCount.value + SetSequence.fromSet(roots).count();
+        ListSequence.fromList(myRoots).addSequence(SetSequence.fromSet(roots));
+        ListSequence.fromList(myModels).addElement(model);
+      }
+      for (      SModel model : ListSequence.fromList(myModels)) {
+        JavaParser.tryResolveUnknowns(SModelOperations.getRoots(model,null));
+      }
+    }
+  }
+);
+  myRootCount=rootCount.value;
+  ProgressMonitor resolveProgress=progress.subTask(30);
+  resolveProgress.start("Resolving...",10);
+  resolveUpdatePass("top level refs",new _FunctionTypes._return_P1_E0<Iterable<SReference>,SNode>(){
+    public Iterable<SReference> invoke(    SNode node){
+      return getTopLevelRefs(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier"));
+    }
+  }
+,resolveProgress.subTask(1));
+  resolveUpdatePass("field/method type refs",new _FunctionTypes._return_P1_E0<Iterable<SReference>,SNode>(){
+    public Iterable<SReference> invoke(    SNode node){
+      return getFieldAndMethodTypeRefs(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier"));
+    }
+  }
+,resolveProgress.subTask(1));
+  resolveUpdatePass("all type refs",new _FunctionTypes._return_P1_E0<Iterable<SReference>,SNode>(){
+    public Iterable<SReference> invoke(    SNode node){
+      return getVarTypeRefs(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier"));
+    }
+  }
+,resolveProgress.subTask(2));
+  resolveUpdatePass("all variable refs",new _FunctionTypes._return_P1_E0<Iterable<SReference>,SNode>(){
+    public Iterable<SReference> invoke(    SNode node){
+      return getVariableRefs(node);
+    }
+  }
+,resolveProgress.subTask(2));
+  resolveUpdatePass("all operands",new _FunctionTypes._return_P1_E0<ISequence<SReference>,SNode>(){
+    public ISequence<SReference> invoke(    SNode node){
+      return ListSequence.fromList(SNodeOperations.getDescendants(node,"jetbrains.mps.baseLanguage.structure.DotExpression",false,new String[]{})).translate(new ITranslator2<SNode,SReference>(){
+        public Iterable<SReference> translate(        SNode it){
+          return deepReferences(SLinkOperations.getTarget(it,"operand",true));
+        }
+      }
+);
+    }
+  }
+,resolveProgress.subTask(2));
+  resolveUpdatePass("all operations",new _FunctionTypes._return_P1_E0<ISequence<SReference>,SNode>(){
+    public ISequence<SReference> invoke(    SNode node){
+      return ListSequence.fromList(SNodeOperations.getDescendants(node,"jetbrains.mps.baseLanguage.structure.DotExpression",false,new String[]{})).translate(new ITranslator2<SNode,SReference>(){
+        public Iterable<SReference> translate(        SNode it){
+          if (Sequence.fromIterable(deepReferences(SLinkOperations.getTarget(it,"operand",true))).any(new IWhereFilter<SReference>(){
+            public boolean accept(            SReference it){
+              return (SReference)it instanceof DynamicReference;
+            }
+          }
+)) {
+            return ListSequence.fromList(new ArrayList<SReference>());
+          }
+ else {
+            if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(it,"operation",true),"jetbrains.mps.baseLanguage.structure.FieldReferenceOperation")) {
+              return Sequence.<SReference>singleton(SNodeOperations.getReference(SNodeOperations.cast(SLinkOperations.getTarget(it,"operation",true),"jetbrains.mps.baseLanguage.structure.FieldReferenceOperation"),SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.FieldReferenceOperation","fieldDeclaration")));
+            }
+ else             if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(it,"operation",true),"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation")) {
+              return Sequence.<SReference>singleton(SNodeOperations.getReference(SNodeOperations.cast(SLinkOperations.getTarget(it,"operation",true),"jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation"),SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.InstanceMethodCallOperation","instanceMethodDeclaration")));
+            }
+ else {
+              return ListSequence.fromList(new ArrayList<SReference>());
+            }
+          }
+        }
+      }
+);
+    }
+  }
+,resolveProgress.subTask(2));
+  resolveProgress.done();
+  progress.done();
+}
