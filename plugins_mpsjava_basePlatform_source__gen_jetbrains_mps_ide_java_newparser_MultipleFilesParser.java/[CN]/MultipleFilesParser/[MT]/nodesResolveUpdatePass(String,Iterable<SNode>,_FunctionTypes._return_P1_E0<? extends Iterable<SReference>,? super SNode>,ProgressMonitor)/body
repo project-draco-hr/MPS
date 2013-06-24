@@ -1,0 +1,26 @@
+{
+  final Map<SNodeReference,List<SReference>> resolveMap=MapSequence.fromMap(new HashMap<SNodeReference,List<SReference>>());
+  progress.start(name,Sequence.fromIterable(nodes).count() + 1);
+  myModelAccess.runReadAction(new Runnable(){
+    public void run(){
+      for (      SNode node : Sequence.fromIterable(nodes)) {
+        if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.lang.core.structure.INamedConcept")) {
+          progress.step(SPropertyOperations.getString(SNodeOperations.cast(node,"jetbrains.mps.lang.core.structure.INamedConcept"),"name"));
+        }
+        Iterable<SReference> refs=extractor.invoke(node);
+        resolveRefs(refs,resolveMap);
+        SetSequence.fromSet(myVisitedRefs).addSequence(Sequence.fromIterable(refs));
+        progress.advance(1);
+      }
+    }
+  }
+);
+  runCommand(name,new Runnable(){
+    public void run(){
+      updateReference(resolveMap);
+    }
+  }
+);
+  progress.advance(1);
+  progress.done();
+}
