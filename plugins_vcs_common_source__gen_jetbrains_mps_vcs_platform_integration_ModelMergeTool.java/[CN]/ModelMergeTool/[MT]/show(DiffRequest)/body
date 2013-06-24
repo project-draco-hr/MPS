@@ -1,26 +1,26 @@
 {
   MergeRequestImpl mrequest=(MergeRequestImpl)request;
   try {
-    VirtualFile file=getFileFromMergeRequest(mrequest);
-    if (file == null) {
+    final Wrappers._T<VirtualFile> file=new Wrappers._T<VirtualFile>(getFileFromMergeRequest(mrequest));
+    if (file.value == null) {
       if (LOG_705910402.isEnabledFor(Priority.ERROR)) {
         LOG_705910402.error("No file");
       }
-      file=LocalFileSystem.getInstance().findFileByPath("/");
+      file.value=LocalFileSystem.getInstance().findFileByPath("/");
     }
-    File backupFile=MergeBackupUtil.zipModel(request.getContents(),file);
+    final IFile iFile=FileSystem.getInstance().getFileByPath(file.value.getPath());
+    File backupFile=MergeBackupUtil.zipModel(request.getContents(),file.value);
     DiffContent[] contents=mrequest.getContents();
-    final SModel baseModel;
-    final SModel mineModel;
-    final SModel newModel;
-    try {
-      baseModel=ModelPersistence.readModel(contents[MergeConstants.ORIGINAL].getDocument().getText(),false);
-      mineModel=ModelPersistence.readModel(new String(contents[MergeConstants.CURRENT].getBytes(),FileUtil.DEFAULT_CHARSET),false);
-      newModel=ModelPersistence.readModel(new String(contents[MergeConstants.LAST_REVISION].getBytes(),FileUtil.DEFAULT_CHARSET),false);
+    final Wrappers._T<String> ext=new Wrappers._T<String>(file.value.getExtension());
+    if (FilePerRootDataSource.isPerRootPersistenceFile(iFile)) {
+      ext.value=MPSExtentions.MODEL;
     }
- catch (    ModelReadException e) {
+    SModel baseModel=PersistenceUtil.loadModel(contents[MergeConstants.ORIGINAL].getDocument().getText(),ext.value);
+    SModel mineModel=PersistenceUtil.loadModel(new String(contents[MergeConstants.CURRENT].getBytes(),FileUtil.DEFAULT_CHARSET),ext.value);
+    SModel newModel=PersistenceUtil.loadModel(new String(contents[MergeConstants.LAST_REVISION].getBytes(),FileUtil.DEFAULT_CHARSET),ext.value);
+    if (baseModel == null || mineModel == null || newModel == null) {
       if (LOG_705910402.isEnabledFor(Priority.WARN)) {
-        LOG_705910402.warn("Couldn't read model, invoking text merge",e);
+        LOG_705910402.warn("Couldn't read model, invoking text merge");
       }
       super.show(request);
       return;
@@ -33,11 +33,22 @@
     }
 );
     dialog.show();
-    SModel resultModel=dialog.getResultModelWithFixedId();
+    final SModel resultModel=dialog.getResultModelWithFixedId();
     if (resultModel != null) {
-      String asString=ModelPersistence.modelToString(resultModel);
-      resolved(mrequest,asString);
-      MergeBackupUtil.packMergeResult(backupFile,file.getName(),asString);
+      final Wrappers._T<String> resultContent=new Wrappers._T<String>();
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          if (FilePerRootDataSource.isPerRootPersistenceFile(iFile)) {
+            resultContent.value=PersistenceUtil.savePerRootModel(resultModel,file.value.getExtension().equals(MPSExtentions.MODEL_HEADER));
+          }
+ else {
+            resultContent.value=PersistenceUtil.saveModel(resultModel,ext.value);
+          }
+        }
+      }
+);
+      resolved(mrequest,resultContent.value);
+      MergeBackupUtil.packMergeResult(backupFile,file.value.getName(),resultContent.value);
     }
     dialog.unregisterModels();
   }

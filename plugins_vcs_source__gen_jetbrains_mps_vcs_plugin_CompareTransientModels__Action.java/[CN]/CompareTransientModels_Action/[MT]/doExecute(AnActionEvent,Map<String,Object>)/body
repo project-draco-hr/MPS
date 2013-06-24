@@ -1,16 +1,15 @@
 {
   try {
-    final List<SModel> sortedModels=SortUtil.sortModels(((List<SModel>)MapSequence.fromMap(_params).get("models")));
-    ModelAccess.instance().runReadInEDT(new Runnable(){
-      public void run(){
-        final jetbrains.mps.smodel.SModel first=((SModelBase)sortedModels.get(0)).getSModelInternal();
-        final jetbrains.mps.smodel.SModel second=((SModelBase)sortedModels.get(1)).getSModelInternal();
-        ApplicationManager.getApplication().invokeLater(new Runnable(){
-          public void run(){
-            new ModelDifferenceDialog(first,second,((Project)MapSequence.fromMap(_params).get("project")),first.getReference().getModelName(),second.getReference().getModelName()).show();
-          }
-        }
+    final SModel[] model=SortUtil.sortModels(((List<SModel>)MapSequence.fromMap(_params).get("models"))).toArray(new SModel[((List<SModel>)MapSequence.fromMap(_params).get("models")).size()]);
+    final String[] titles=ModelAccess.instance().runReadAction(new Computable<String[]>(){
+      public String[] compute(){
+        return new String[]{SModelOperations.getModelName(model[0]),SModelOperations.getModelName(model[1])};
+      }
+    }
 );
+    ApplicationManager.getApplication().invokeLater(new Runnable(){
+      public void run(){
+        new ModelDifferenceDialog(((Project)MapSequence.fromMap(_params).get("project")),model[0],model[1],titles[0],titles[1],null).show();
       }
     }
 );
