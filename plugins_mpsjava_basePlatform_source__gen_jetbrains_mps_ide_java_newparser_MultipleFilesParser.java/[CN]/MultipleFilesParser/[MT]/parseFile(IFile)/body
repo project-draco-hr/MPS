@@ -1,0 +1,24 @@
+{
+  String contents=IFileUtils.getTextContents(file);
+  JavaParser.JavaParseResult parseResult=myJavaParser.parseCompilationUnit(contents);
+  String pkg=parseResult.getPackage();
+  if (pkg == null) {
+    if (!(wasDefaultPkg)) {
+      LOG.error("default package is not supported in java source directory input (first such file in dir: " + file.getName() + ")");
+      wasDefaultPkg=true;
+    }
+    return;
+  }
+  IFile dir=file.getParent();
+  if (!(DirParser.checkPackageMatchesSourceDirectory(pkg,dir))) {
+    LOG.error("package " + pkg + " doesn't match directory "+ dir.getPath()+ " (in file "+ file.getName()+ ")");
+    return;
+  }
+  Iterable<SNode> roots=parseResult.getNodes();
+  Set<SNode> classesInPackage=MapSequence.fromMap(classesPerPackage).get(pkg);
+  if (classesInPackage == null) {
+    classesInPackage=SetSequence.fromSet(new HashSet<SNode>(Sequence.fromIterable(roots).count()));
+    MapSequence.fromMap(classesPerPackage).put(pkg,classesInPackage);
+  }
+  SetSequence.fromSet(classesInPackage).addSequence(Sequence.fromIterable(roots));
+}

@@ -4,25 +4,31 @@
   MPSFacet facet=FacetManager.getInstance(module).getFacetByType(MPSFacetType.ID);
   SModule mpsModule=facet.getSolution();
   MPSProject mpsProject=e.getProject().getComponent(MPSProject.class);
-  VirtualFile dir=((PsiDirectory)element).getVirtualFile();
-  IFile ifile=new IdeaFileSystemProvider().getFile(dir.getPath());
-  final DirParser dirParser=new DirParser(mpsModule,mpsProject,ifile);
-  try {
-    dirParser.parseDirs();
+  final MultipleFilesParser parser=new MultipleFilesParser(mpsModule,mpsProject.getRepository());
+  final List<IFile> javaFiles=new ArrayList<IFile>();
+  collectJavaFiles((PsiDirectory)element,javaFiles);
+  ProgressManager.getInstance().run(new Task.Modal(null,"Convert to MPS",false){
+    @Override public void run(    @NotNull final ProgressIndicator progressIndicator){
+      try {
+        parser.convertToMps(javaFiles,new ProgressMonitorAdapter(progressIndicator));
+      }
+ catch (      JavaParseException exc) {
+        throw new RuntimeException(exc);
+      }
+catch (      IOException exc) {
+        throw new RuntimeException(exc);
+      }
+    }
   }
- catch (  JavaParseException exc) {
-    throw new RuntimeException(exc);
-  }
-catch (  IOException exc) {
-    throw new RuntimeException(exc);
-  }
+);
   mpsProject.getRepository().getModelAccess().executeCommand(new Runnable(){
     @Override public void run(){
-      Set<PsiClass> psiClasses=getPsiClasses(dirParser.getSuccessfulFiles(),PsiManager.getInstance(e.getProject()));
+      Set<PsiClass> psiClasses=getPsiClasses(parser.getSuccessfulFiles(),PsiManager.getInstance(e.getProject()));
       Set<SNode> stubNodes=getStubNodes(psiClasses);
-      GlobalSearchScope scope=new ModuleWithDependentsScope(module,false);
-      SearchScope mpsScope=new IdeaSearchScope(scope);
+      Set<SModel> excludeSet=new HashSet<SModel>(parser.getModels());
+      SearchScope mpsScope=new SearchScopeWithoutModels(module,excludeSet);
       Set<SNode> affectedNodes=new HashSet<SNode>();
+      boolean wasUnresolved=false;
       Set<SReference> references=FindUsagesFacade.getInstance().findUsages(mpsScope,stubNodes,null);
       for (      SReference ref : references) {
         if (!(ref instanceof StaticReference))         continue;
@@ -32,18 +38,25 @@ catch (  IOException exc) {
         SModelReference newModelRef=null;
         String modelName=targetModelRef.getModelName();
         modelName=modelName.substring(0,modelName.indexOf('@'));
-        for (        SModel model : dirParser.getAffectedModels()) {
+        for (        SModel model : parser.getModels()) {
           if (modelName.equals(model.getModelName())) {
             newModelRef=model.getReference();
           }
+        }
+        if (newModelRef == null) {
+          wasUnresolved=true;
+          continue;
         }
         source.setReference(role,new DynamicReference(role,source,newModelRef,((StaticReference)ref).getResolveInfo()));
         SModel sourceModel=source.getModel();
         ((SModelInternal)sourceModel).addModelImport(newModelRef,false);
         affectedNodes.add(source);
       }
-      for (      IFile file : dirParser.getSuccessfulFiles()) {
+      for (      IFile file : parser.getSuccessfulFiles()) {
         file.delete();
+      }
+      if (wasUnresolved) {
+        LOG.error("could not resolve some references");
       }
       ReloadManager.getInstance().flush();
       JavaParser.tryResolveDynamicRefs(affectedNodes);
