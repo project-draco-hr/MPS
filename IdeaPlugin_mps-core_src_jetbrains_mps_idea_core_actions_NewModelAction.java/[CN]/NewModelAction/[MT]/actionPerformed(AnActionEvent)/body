@@ -2,13 +2,13 @@
   CreateFromTemplateDialog dialog=new CreateFromTemplateDialog(myProject){
     @Override protected void doOKAction(){
       final ModelTemplates template=ModelTemplates.valueOf(getKindCombo().getSelectedName());
-      final SModelFqName modelFqName=new SModelFqName(getNameField().getText().trim(),"");
-      if (!isModelNameValid(modelFqName)) {
+      final String modelName=getNameField().getText().trim();
+      if (!isModelNameValid(modelName)) {
         return;
       }
       SModel newModelDescriptor=ModelAccess.instance().runWriteActionInCommand(new Computable<SModel>(){
         @Override public SModel compute(){
-          EditableSModel descriptor=SModuleOperations.createModelWithAdjustments(modelFqName.toString(),myModelRoot);
+          EditableSModel descriptor=SModuleOperations.createModelWithAdjustments(modelName,myModelRoot);
           template.preConfigure(descriptor,mySolution);
           descriptor.save();
           return descriptor;
@@ -23,21 +23,20 @@
         close(OK_EXIT_CODE);
       }
     }
-    private boolean isModelNameValid(    SModelFqName modelFqName){
-      String modelName=modelFqName.getLongName();
+    private boolean isModelNameValid(    String modelName){
       if (modelName.length() == 0) {
         showError(MPSBundle.message("create.new.model.dialog.error.empty.name"));
         return false;
       }
-      if (SModelRepository.getInstance().getModelDescriptor(modelFqName) != null) {
+      if (SModelRepository.getInstance().getModelDescriptor(modelName) != null) {
         showError(MPSBundle.message("create.new.model.dialog.error.model.exists",modelName));
         return false;
       }
-      if (modelName.lastIndexOf(".") == modelName.length()) {
+      if (modelName.endsWith(".")) {
         showError(MPSBundle.message("create.new.model.dialog.error.empty.short.name"));
         return false;
       }
-      if (!(SourceVersion.isName(modelName))) {
+      if (!(SourceVersion.isName(SModelStereotype.withoutStereotype(modelName)))) {
         showError(MPSBundle.message("create.new.model.dialog.error.invalid.java",modelName));
         return false;
       }
