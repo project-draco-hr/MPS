@@ -1,2 +1,29 @@
 {
+  if (!(state instanceof BaseEditorState))   return;
+  final BaseEditorState s=(BaseEditorState)state;
+  if (s.myMemento == null || myEditorComponent == null) {
+    return;
+  }
+  final EditorContext editorContext=getEditorContext();
+  executeInEDT(new PrioritizedTask(TaskType.EDITOR_MEMENTO,myType2TaskMap){
+    @Override public void performTask(){
+      editorContext.setMemento(s.myMemento);
+    }
+  }
+);
+  if (s.myInspectorMemento == null || !(getCurrentEditorComponent() instanceof NodeEditorComponent)) {
+    return;
+  }
+  final NodeEditorComponent editorComponent=(NodeEditorComponent)getCurrentEditorComponent();
+  if (editorComponent.getInspector() == null) {
+    LOG.error("No inspector - memento will not be restored");
+    return;
+  }
+  final EditorContext inspectorEditorContext=editorComponent.getInspector().getEditorContext();
+  executeInEDT(new PrioritizedTask(TaskType.INSPECTOR_MEMENTO,myType2TaskMap){
+    @Override public void performTask(){
+      inspectorEditorContext.setMemento(s.myInspectorMemento);
+    }
+  }
+);
 }
