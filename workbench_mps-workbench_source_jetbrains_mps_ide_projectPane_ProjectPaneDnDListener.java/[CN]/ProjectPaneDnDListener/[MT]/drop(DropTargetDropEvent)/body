@@ -1,42 +1,20 @@
 {
-  Point point=dtde.getLocation();
-  final TreePath treePath=myTree.getPathForLocation(point.x,point.y);
-  if (treePath == null) {
+  final MPSTreeNode target=getTargetTreeNode(dtde);
+  final List<Pair<SNodeReference,String>> sourceNodes=getSourceNodes(dtde);
+  if (!isDropTargetAcceptable(target,sourceNodes)) {
     dtde.rejectDrop();
     return;
-  }
-  Object target=treePath.getLastPathComponent();
-  if (!(target instanceof MPSTreeNode)) {
-    dtde.rejectDrop();
-    return;
-  }
-  Object source=null;
-  try {
-    source=dtde.getTransferable().getTransferData(myDataFlavor);
-    if (!(source instanceof List) || ((List)source).isEmpty()) {
-      dtde.rejectDrop();
-      return;
-    }
-  }
- catch (  UnsupportedFlavorException e) {
-    LOG.error(null,e);
-    dtde.rejectDrop();
-  }
-catch (  IOException e) {
-    LOG.error(null,e);
-    dtde.rejectDrop();
   }
   dtde.acceptDrop(dtde.getDropAction());
-  final List<Pair<SNodeReference,String>> sourceNodes=(List<Pair<SNodeReference,String>>)source;
   Project project=MPSDataKeys.PROJECT.getData(DataManager.getInstance().getDataContext());
   JFrame frame=WindowManager.getInstance().getFrame(project);
-  final String targetPackage=(getTargetVirtualPackage(treePath) == null) ? "" : getTargetVirtualPackage(treePath);
+  final String targetPackage=(getTargetVirtualPackage(target) == null) ? "" : getTargetVirtualPackage(target);
   String text=getConfirmLabel(sourceNodes.size(),targetPackage);
   int result=JOptionPane.showConfirmDialog(frame,text,"Move Nodes",JOptionPane.YES_NO_OPTION);
   if (result != JOptionPane.YES_OPTION)   return;
   ModelAccess.instance().runWriteActionInCommand(new Runnable(){
     @Override public void run(){
-      SModel targetModel=getTargetModel(treePath);
+      SModel targetModel=getTargetModel(target);
       if (targetModel == null)       return;
       for (      Pair<SNode,String> sourceNode : getNodesToMove(targetModel,targetPackage,sourceNodes)) {
         String fullTargetPack=getFullTargetPack(targetPackage,sourceNode.o2);
