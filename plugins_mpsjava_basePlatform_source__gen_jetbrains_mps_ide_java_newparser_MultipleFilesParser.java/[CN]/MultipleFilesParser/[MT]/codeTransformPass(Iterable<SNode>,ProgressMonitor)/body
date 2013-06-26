@@ -3,6 +3,7 @@
   final TypeChecker typeChecker=TypeChecker.getInstance();
   final List<SNode> toReplaceWithArrayLength=ListSequence.fromList(new ArrayList<SNode>());
   final Map<SNode,SNode> enumConstRefs=MapSequence.fromMap(new HashMap<SNode,SNode>());
+  final Map<SNode,SNode> staticMethodQualifiers=MapSequence.fromMap(new HashMap<SNode,SNode>());
   myModelAccess.runReadAction(new Runnable(){
     public void run(){
       for (      SNode node : Sequence.fromIterable(nodes)) {
@@ -68,6 +69,28 @@
           SLinkOperations.setTarget(x,"enumConstantDeclaration",enumConst,false);
           MapSequence.fromMap(enumConstRefs).put(SNodeOperations.cast(caseExp,"jetbrains.mps.baseLanguage.structure.VariableReference"),x);
         }
+        for (        SNode localCall : ListSequence.fromList(SNodeOperations.getDescendants(node,"jetbrains.mps.baseLanguage.structure.LocalMethodCall",false,new String[]{}))) {
+          SReference ref=SNodeOperations.getReference(localCall,SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.LocalMethodCall","method"));
+          if (!(ref instanceof StaticReference)) {
+            continue;
+          }
+          SNode target=ref.getTargetNode();
+          if (!(SNodeOperations.isInstanceOf(target,"jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration"))) {
+            continue;
+          }
+          SNode thisClass=SNodeOperations.getAncestor(localCall,"jetbrains.mps.baseLanguage.structure.Classifier",false,false);
+          SNode thatClass=SNodeOperations.getAncestor(target,"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false);
+          if (thisClass == thatClass) {
+            continue;
+          }
+          SNode smc=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StaticMethodCall",null);
+          SLinkOperations.setTarget(smc,"classConcept",thatClass,false);
+          SLinkOperations.setTarget(smc,"baseMethodDeclaration",SNodeOperations.cast(target,"jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration"),false);
+          for (          SNode arg : ListSequence.fromList(SLinkOperations.getTargets(localCall,"actualArgument",true))) {
+            ListSequence.fromList(SLinkOperations.getTargets(smc,"actualArgument",true)).addElement(SNodeOperations.copyNode(arg));
+          }
+          MapSequence.fromMap(staticMethodQualifiers).put(localCall,smc);
+        }
       }
     }
   }
@@ -78,6 +101,9 @@
         SNodeOperations.replaceWithNewChild(fieldRefOp,"jetbrains.mps.baseLanguage.structure.ArrayLengthOperation");
       }
       for (      IMapping<SNode,SNode> pair : MapSequence.fromMap(enumConstRefs)) {
+        SNodeOperations.replaceWithAnother(pair.key(),pair.value());
+      }
+      for (      IMapping<SNode,SNode> pair : MapSequence.fromMap(staticMethodQualifiers)) {
         SNodeOperations.replaceWithAnother(pair.key(),pair.value());
       }
     }
