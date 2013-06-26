@@ -3,27 +3,27 @@
   MPSCore.getInstance().setMergeDriverMode(true);
   LightModelEnvironmentInfoImpl persistenceEnv=new LightModelEnvironmentInfoImpl();
   PersistenceRegistry.getInstance().setModelEnvironmentInfo(persistenceEnv);
-  DefaultSModel baseModel;
-  DefaultSModel localModel;
-  DefaultSModel latestModel;
-  try {
-    if (LOG.isInfoEnabled()) {
-      LOG.info("Reading models...");
-    }
-    baseModel=ModelPersistence.readModel(new String(baseContent.getData(),FileUtil.DEFAULT_CHARSET),false);
-    myModelName=baseModel.getReference().getModelName();
-    localModel=ModelPersistence.readModel(new String(localContent.getData(),FileUtil.DEFAULT_CHARSET),false);
-    latestModel=ModelPersistence.readModel(new String(latestContent.getData(),FileUtil.DEFAULT_CHARSET),false);
+  IFile file=FileSystem.getInstance().getFileByPath(baseContent.getFile().getPath());
+  String fileExt=FileUtil.getExtension(file.getPath());
+  boolean isPerRoot=FilePerRootDataSource.isPerRootPersistenceFile(file);
+  String ext=(isPerRoot ? MPSExtentions.MODEL : fileExt);
+  ext=MPSExtentions.MODEL;
+  if (LOG.isInfoEnabled()) {
+    LOG.info("Reading models...");
   }
- catch (  ModelReadException e) {
+  SModel baseModel=PersistenceUtil.loadModel(new String(baseContent.getData(),FileUtil.DEFAULT_CHARSET),ext);
+  SModel localModel=PersistenceUtil.loadModel(new String(localContent.getData(),FileUtil.DEFAULT_CHARSET),ext);
+  SModel latestModel=PersistenceUtil.loadModel(new String(latestContent.getData(),FileUtil.DEFAULT_CHARSET),ext);
+  if (baseModel == null || localModel == null || latestModel == null) {
     if (LOG.isEnabledFor(Priority.ERROR)) {
-      LOG.error("Exception while reading models",e);
+      LOG.error("Error while reading models");
     }
     return backup(baseContent,localContent,latestContent);
   }
-  int baseP=baseModel.getPersistenceVersion();
-  int localP=localModel.getPersistenceVersion();
-  int latestP=latestModel.getPersistenceVersion();
+  myModelName=baseModel.getModelName();
+  int baseP=getPersistenceVersion(baseModel);
+  int localP=getPersistenceVersion(localModel);
+  int latestP=getPersistenceVersion(latestModel);
   if (baseP >= 7 && localP >= 7 && latestP >= 7 || baseP < 7 && localP < 7 && latestP < 7) {
   }
  else {
@@ -53,20 +53,31 @@
       if (LOG.isInfoEnabled()) {
         LOG.info(String.format("%s: %d changes detected: %d local and %d latest.",myModelName,Sequence.fromIterable(mergeSession.getAllChanges()).count(),ListSequence.fromList(mergeSession.getMyChangeSet().getModelChanges()).count(),ListSequence.fromList(mergeSession.getRepositoryChangeSet().getModelChanges()).count()));
       }
-      Runnable applyAction=new Runnable(){
+      ModelAccess.instance().runReadAction(new Runnable(){
         public void run(){
           mergeSession.applyChanges(mergeSession.getAllChanges());
         }
       }
-;
-      ModelAccess.instance().runReadAction(applyAction);
+);
       if (mergeSession.hasIdsToRestore()) {
         if (LOG.isInfoEnabled()) {
           LOG.info(String.format("%s: node id duplication detected, should merge in UI.",myModelName));
         }
       }
  else {
-        String resultString=ModelPersistence.modelToString(mergeSession.getResultModel());
+        String resultString;
+        if (isPerRoot) {
+          resultString=PersistenceUtil.savePerRootModel(mergeSession.getResultModel(),fileExt.equals(MPSExtentions.MODEL_HEADER));
+        }
+ else {
+          resultString=PersistenceUtil.saveModel(mergeSession.getResultModel(),ext);
+        }
+        if (resultString == null) {
+          if (LOG.isEnabledFor(Priority.ERROR)) {
+            LOG.error("Error while saving result model");
+          }
+          return backup(baseContent,localContent,latestContent);
+        }
         if (LOG.isInfoEnabled()) {
           LOG.info(String.format("%s: merged successfully.",myModelName));
         }
