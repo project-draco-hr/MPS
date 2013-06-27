@@ -1,0 +1,33 @@
+{
+  SNode caseExp=SLinkOperations.getTarget(switchCase,"expression",true);
+  if (!(SNodeOperations.isInstanceOf(caseExp,"jetbrains.mps.baseLanguage.structure.VariableReference"))) {
+    return null;
+  }
+  SReference ref=SNodeOperations.getReference(SNodeOperations.cast(caseExp,"jetbrains.mps.baseLanguage.structure.VariableReference"),SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.VariableReference","variableDeclaration"));
+  if (!(ref instanceof DynamicReference)) {
+    return null;
+  }
+  final String enumConstName=((DynamicReference)ref).getResolveInfo();
+  SNode scrutenee=SLinkOperations.getTarget(SNodeOperations.getAncestor(caseExp,"jetbrains.mps.baseLanguage.structure.SwitchStatement",false,false),"expression",true);
+  if ((scrutenee == null)) {
+    return null;
+  }
+  SNode scruteneeType=typeChecker.getTypeOf(scrutenee);
+  if (!(SNodeOperations.isInstanceOf(scruteneeType,"jetbrains.mps.baseLanguage.structure.ClassifierType"))) {
+    return null;
+  }
+  SNode claz=SLinkOperations.getTarget(SNodeOperations.cast(scruteneeType,"jetbrains.mps.baseLanguage.structure.ClassifierType"),"classifier",false);
+  if (!(SNodeOperations.isInstanceOf(claz,"jetbrains.mps.baseLanguage.structure.EnumClass"))) {
+    return null;
+  }
+  SNode enumConst=ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(claz,"jetbrains.mps.baseLanguage.structure.EnumClass"),"enumConstant",true)).findFirst(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SPropertyOperations.getString(it,"name").equals(enumConstName);
+    }
+  }
+);
+  SNode enumConstRef=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.EnumConstantReference",null);
+  SLinkOperations.setTarget(enumConstRef,"enumClass",SNodeOperations.cast(claz,"jetbrains.mps.baseLanguage.structure.EnumClass"),false);
+  SLinkOperations.setTarget(enumConstRef,"enumConstantDeclaration",enumConst,false);
+  return enumConstRef;
+}
