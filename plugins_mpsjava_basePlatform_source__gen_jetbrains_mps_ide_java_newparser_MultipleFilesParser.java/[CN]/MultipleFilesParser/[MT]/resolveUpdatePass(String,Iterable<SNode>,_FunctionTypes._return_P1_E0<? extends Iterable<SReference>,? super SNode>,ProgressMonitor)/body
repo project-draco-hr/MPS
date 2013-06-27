@@ -1,21 +1,21 @@
 {
   final Map<SNodeReference,List<SReference>> resolveMap=MapSequence.fromMap(new HashMap<SNodeReference,List<SReference>>());
-  progress.start(stepName,myRootCount + 1);
+  progress.start(name,Sequence.fromIterable(nodes).count() + 1);
   myModelAccess.runReadAction(new Runnable(){
     public void run(){
-      for (      SModel model : ListSequence.fromList(myModels)) {
-        for (        SNode claz : ListSequence.fromList(SModelOperations.getRoots(model,"jetbrains.mps.baseLanguage.structure.Classifier"))) {
-          progress.step(SPropertyOperations.getString(claz,"name"));
-          Iterable<SReference> refs=extractor.invoke(claz);
-          resolveRefs(refs,resolveMap);
-          SetSequence.fromSet(myVisitedRefs).addSequence(Sequence.fromIterable(refs));
-          progress.advance(1);
+      for (      SNode node : Sequence.fromIterable(nodes)) {
+        if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.lang.core.structure.INamedConcept")) {
+          progress.step(SPropertyOperations.getString(SNodeOperations.cast(node,"jetbrains.mps.lang.core.structure.INamedConcept"),"name"));
         }
+        Iterable<SReference> refs=extractor.invoke(node);
+        resolveRefs(refs,resolveMap);
+        SetSequence.fromSet(myVisitedRefs).addSequence(Sequence.fromIterable(refs));
+        progress.advance(1);
       }
     }
   }
 );
-  runCommand(stepName,new Runnable(){
+  runCommand(name,new Runnable(){
     public void run(){
       updateReference(resolveMap);
     }
