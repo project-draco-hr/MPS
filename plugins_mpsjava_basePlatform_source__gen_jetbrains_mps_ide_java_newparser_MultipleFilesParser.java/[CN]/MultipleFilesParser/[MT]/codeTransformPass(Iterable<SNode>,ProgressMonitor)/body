@@ -1,9 +1,10 @@
 {
-  progress.start("Code transforms",Sequence.fromIterable(nodes).count() * 3 + 1);
+  progress.start("Code transforms",Sequence.fromIterable(nodes).count() * 4 + 1);
   final TypeChecker typeChecker=TypeChecker.getInstance();
   final List<SNode> toReplaceWithArrayLength=ListSequence.fromList(new ArrayList<SNode>());
   final Map<SNode,SNode> enumConstRefs=MapSequence.fromMap(new HashMap<SNode,SNode>());
   final Map<SNode,SNode> staticMethodQualifiers=MapSequence.fromMap(new HashMap<SNode,SNode>());
+  final Map<SNode,SNode> staticFieldQualifiers=MapSequence.fromMap(new HashMap<SNode,SNode>());
   myModelAccess.runReadAction(new Runnable(){
     public void run(){
       for (      SNode node : Sequence.fromIterable(nodes)) {
@@ -44,6 +45,14 @@
           MapSequence.fromMap(staticMethodQualifiers).put(localCall,smc);
         }
         progress.advance(1);
+        for (        SNode varRef : ListSequence.fromList(SNodeOperations.getDescendants(node,"jetbrains.mps.baseLanguage.structure.VariableReference",false,new String[]{}))) {
+          SNode exp=transformLocalNameRef(varRef);
+          if ((exp == null)) {
+            continue;
+          }
+          MapSequence.fromMap(staticFieldQualifiers).put(varRef,exp);
+        }
+        progress.advance(1);
       }
     }
   }
@@ -57,6 +66,9 @@
         SNodeOperations.replaceWithAnother(pair.key(),pair.value());
       }
       for (      IMapping<SNode,SNode> pair : MapSequence.fromMap(staticMethodQualifiers)) {
+        SNodeOperations.replaceWithAnother(pair.key(),pair.value());
+      }
+      for (      IMapping<SNode,SNode> pair : MapSequence.fromMap(staticFieldQualifiers)) {
         SNodeOperations.replaceWithAnother(pair.key(),pair.value());
       }
     }
