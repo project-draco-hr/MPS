@@ -27,14 +27,18 @@ catch (      IOException exc) {
       Set<SNode> stubNodes=getStubNodes(psiClasses);
       Set<SModel> excludeSet=new HashSet<SModel>(parser.getModels());
       SearchScope mpsScope=new SearchScopeWithoutModels(module,excludeSet);
-      Set<SNode> affectedNodes=new HashSet<SNode>();
+      List<SReference> referencesToFix=new ArrayList<SReference>();
       boolean wasUnresolved=false;
       Set<SReference> references=FindUsagesFacade.getInstance().findUsages(mpsScope,stubNodes,null);
       for (      SReference ref : references) {
-        if (!(ref instanceof StaticReference))         continue;
+        if (!(ref instanceof StaticReference)) {
+          referencesToFix.add(ref);
+          continue;
+        }
         SNode source=ref.getSourceNode();
         String role=ref.getRole();
         SModelReference targetModelRef=ref.getTargetSModelReference();
+        SNode targetNode=ref.getTargetNode();
         SModelReference newModelRef=null;
         String modelName=targetModelRef.getModelName();
         modelName=modelName.substring(0,modelName.indexOf('@'));
@@ -47,10 +51,21 @@ catch (      IOException exc) {
           wasUnresolved=true;
           continue;
         }
-        source.setReference(role,new DynamicReference(role,source,newModelRef,((StaticReference)ref).getResolveInfo()));
+        String resolveInfo=SNodeOperations.getResolveInfo(targetNode);
+        SReference tempDynamicRef=new DynamicReference(role,source,newModelRef,resolveInfo);
+        referencesToFix.add(tempDynamicRef);
+        source.setReference(role,tempDynamicRef);
         SModel sourceModel=source.getModel();
-        ((SModelInternal)sourceModel).addModelImport(newModelRef,false);
-        affectedNodes.add(source);
+        ((SModelBase)sourceModel).deleteModelImport(targetModelRef);
+        ((SModelBase)sourceModel).addModelImport(newModelRef,false);
+      }
+      for (      SReference ref : referencesToFix) {
+        SNode target=ref.getTargetNode();
+        if (target == null)         continue;
+        SNode source=ref.getSourceNode();
+        String role=ref.getRole();
+        SReference finalStaticRef=StaticReference.create(role,source,target,((DynamicReference)ref).getResolveInfo());
+        source.setReference(role,finalStaticRef);
       }
       for (      IFile file : parser.getSuccessfulFiles()) {
         file.delete();
@@ -59,7 +74,6 @@ catch (      IOException exc) {
         LOG.error("could not resolve some references");
       }
       ReloadManager.getInstance().flush();
-      JavaParser.tryResolveDynamicRefs(affectedNodes);
     }
   }
 );
