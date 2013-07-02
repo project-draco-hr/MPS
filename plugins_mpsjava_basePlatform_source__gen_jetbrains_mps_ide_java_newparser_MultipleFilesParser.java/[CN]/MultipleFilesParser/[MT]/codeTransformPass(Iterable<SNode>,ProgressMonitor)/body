@@ -29,14 +29,6 @@
           }
         }
         progress.advance(1);
-        for (        SNode swicthCase : ListSequence.fromList(SNodeOperations.getDescendants(node,"jetbrains.mps.baseLanguage.structure.SwitchCase",false,new String[]{}))) {
-          SNode subst=transformUnqualifedEnum(swicthCase,typeChecker);
-          if ((subst == null)) {
-            continue;
-          }
-          MapSequence.fromMap(enumConstRefs).put(SNodeOperations.cast(SLinkOperations.getTarget(swicthCase,"expression",true),"jetbrains.mps.baseLanguage.structure.VariableReference"),subst);
-        }
-        progress.advance(1);
         for (        SNode localCall : ListSequence.fromList(SNodeOperations.getDescendants(node,"jetbrains.mps.baseLanguage.structure.LocalMethodCall",false,new String[]{}))) {
           SNode smc=transformLocalCall(localCall);
           if ((smc == null)) {
@@ -45,12 +37,26 @@
           MapSequence.fromMap(staticMethodQualifiers).put(localCall,smc);
         }
         progress.advance(1);
-        for (        SNode varRef : ListSequence.fromList(SNodeOperations.getDescendants(node,"jetbrains.mps.baseLanguage.structure.VariableReference",false,new String[]{}))) {
-          SNode exp=transformLocalNameRef(varRef);
-          if ((exp == null)) {
+        TypeChecker typeChecker=TypeChecker.getInstance();
+        for (        SNode swicthCase : ListSequence.fromList(SNodeOperations.getDescendants(node,"jetbrains.mps.baseLanguage.structure.SwitchCase",false,new String[]{}))) {
+          SNode subst=transformUnqualifedEnumUnderSwitch(swicthCase,typeChecker);
+          if ((subst == null)) {
             continue;
           }
-          MapSequence.fromMap(staticFieldQualifiers).put(varRef,exp);
+          MapSequence.fromMap(enumConstRefs).put(SNodeOperations.cast(SLinkOperations.getTarget(swicthCase,"expression",true),"jetbrains.mps.baseLanguage.structure.VariableReference"),subst);
+        }
+        progress.advance(1);
+        for (        SNode varRef : ListSequence.fromList(SNodeOperations.getDescendants(node,"jetbrains.mps.baseLanguage.structure.VariableReference",false,new String[]{}))) {
+          SNode exp=transformLocalNameRef(varRef);
+          if ((exp != null)) {
+            MapSequence.fromMap(staticFieldQualifiers).put(varRef,exp);
+            continue;
+          }
+          SNode subst=transformUnqualifedEnum(varRef);
+          if ((subst == null)) {
+            continue;
+          }
+          MapSequence.fromMap(enumConstRefs).put(varRef,subst);
         }
         progress.advance(1);
       }

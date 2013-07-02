@@ -1,0 +1,41 @@
+{
+  SNode caseExp=SLinkOperations.getTarget(switchCase,"expression",true);
+  if (!(SNodeOperations.isInstanceOf(caseExp,"jetbrains.mps.baseLanguage.structure.VariableReference"))) {
+    return;
+  }
+  SReference ref=SNodeOperations.getReference(SNodeOperations.cast(caseExp,"jetbrains.mps.baseLanguage.structure.VariableReference"),SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.VariableReference","variableDeclaration"));
+  if (!(ref instanceof DynamicReference)) {
+    return;
+  }
+  final String enumConstName=((DynamicReference)ref).getResolveInfo();
+  SNode scrutenee=SLinkOperations.getTarget(SNodeOperations.getAncestor(caseExp,"jetbrains.mps.baseLanguage.structure.SwitchStatement",false,false),"expression",true);
+  if ((scrutenee == null)) {
+    return;
+  }
+  SNode scruteneeType=TypeChecker.getInstance().getTypeOf(scrutenee);
+  if (!(SNodeOperations.isInstanceOf(scruteneeType,"jetbrains.mps.baseLanguage.structure.ClassifierType"))) {
+    return;
+  }
+  SNode claz=SLinkOperations.getTarget(SNodeOperations.cast(scruteneeType,"jetbrains.mps.baseLanguage.structure.ClassifierType"),"classifier",false);
+  if (!(SNodeOperations.isInstanceOf(claz,"jetbrains.mps.baseLanguage.structure.EnumClass"))) {
+    return;
+  }
+  SNode enumConst=ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(claz,"jetbrains.mps.baseLanguage.structure.EnumClass"),"enumConstant",true)).findFirst(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SPropertyOperations.getString(it,"name").equals(enumConstName);
+    }
+  }
+);
+  SNode qualifiedEnumRef=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.EnumConstantReference",null);
+  SLinkOperations.setTarget(qualifiedEnumRef,"enumClass",SNodeOperations.cast(claz,"jetbrains.mps.baseLanguage.structure.EnumClass"),false);
+  SLinkOperations.setTarget(qualifiedEnumRef,"enumConstantDeclaration",enumConst,false);
+{
+    MessageTarget errorTarget=new NodeMessageTarget();
+    IErrorReporter _reporter_2309309498=typeCheckingContext.reportTypeError(caseExp,"Unqualified enum constant reference","r:00000000-0000-4000-0000-011c895902c5(jetbrains.mps.baseLanguage.typesystem)","5230012391939085755",null,errorTarget);
+{
+      BaseQuickFixProvider intentionProvider=new BaseQuickFixProvider("jetbrains.mps.baseLanguage.typesystem.replaceNode_QuickFix",true);
+      intentionProvider.putArgument("newNode;",qualifiedEnumRef);
+      _reporter_2309309498.addIntentionProvider(intentionProvider);
+    }
+  }
+}
