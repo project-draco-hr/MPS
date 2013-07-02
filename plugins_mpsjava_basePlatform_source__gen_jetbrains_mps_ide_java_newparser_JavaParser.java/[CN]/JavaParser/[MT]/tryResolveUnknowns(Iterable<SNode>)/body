@@ -9,8 +9,20 @@
       }
       ModelAccess.instance().runWriteActionInCommand(new Runnable(){
         @Override public void run(){
-          SNode theRightNode=subst.invoke();
+          final SNode theRightNode=subst.invoke();
           SNodeOperations.replaceWithAnother(unkNode,theRightNode);
+          Sequence.fromIterable(MultipleFilesParser.deepReferences(theRightNode)).where(new IWhereFilter<SReference>(){
+            public boolean accept(            SReference it){
+              return (SReference)it instanceof StaticReference;
+            }
+          }
+).visitAll(new IVisitor<SReference>(){
+            public void visit(            SReference it){
+              SModelReference targetModel=((StaticReference)it).getTargetSModelReference();
+              ((SModelInternal)theRightNode.getModel()).addModelImport(targetModel,true);
+            }
+          }
+);
         }
       }
 );

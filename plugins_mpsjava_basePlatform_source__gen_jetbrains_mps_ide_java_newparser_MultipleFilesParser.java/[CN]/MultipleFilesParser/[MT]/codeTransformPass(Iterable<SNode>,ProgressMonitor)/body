@@ -1,8 +1,9 @@
 {
-  progress.start("Code transforms",Sequence.fromIterable(nodes).count() + 1);
+  progress.start("Code transforms",Sequence.fromIterable(nodes).count() * 3 + 1);
   final TypeChecker typeChecker=TypeChecker.getInstance();
   final List<SNode> toReplaceWithArrayLength=ListSequence.fromList(new ArrayList<SNode>());
   final Map<SNode,SNode> enumConstRefs=MapSequence.fromMap(new HashMap<SNode,SNode>());
+  final Map<SNode,SNode> staticMethodQualifiers=MapSequence.fromMap(new HashMap<SNode,SNode>());
   myModelAccess.runReadAction(new Runnable(){
     public void run(){
       for (      SNode node : Sequence.fromIterable(nodes)) {
@@ -27,47 +28,22 @@
           }
         }
         progress.advance(1);
-        for (        SNode caseExp : ListSequence.fromList(SNodeOperations.getDescendants(node,"jetbrains.mps.baseLanguage.structure.SwitchCase",false,new String[]{})).where(new IWhereFilter<SNode>(){
-          public boolean accept(          SNode it){
-            return (SLinkOperations.getTarget(it,"expression",true) != null);
+        for (        SNode swicthCase : ListSequence.fromList(SNodeOperations.getDescendants(node,"jetbrains.mps.baseLanguage.structure.SwitchCase",false,new String[]{}))) {
+          SNode subst=transformUnqualifedEnum(swicthCase,typeChecker);
+          if ((subst == null)) {
+            continue;
           }
+          MapSequence.fromMap(enumConstRefs).put(SNodeOperations.cast(SLinkOperations.getTarget(swicthCase,"expression",true),"jetbrains.mps.baseLanguage.structure.VariableReference"),subst);
         }
-).select(new ISelector<SNode,SNode>(){
-          public SNode select(          SNode it){
-            return SLinkOperations.getTarget(it,"expression",true);
+        progress.advance(1);
+        for (        SNode localCall : ListSequence.fromList(SNodeOperations.getDescendants(node,"jetbrains.mps.baseLanguage.structure.LocalMethodCall",false,new String[]{}))) {
+          SNode smc=transformLocalCall(localCall);
+          if ((smc == null)) {
+            continue;
           }
+          MapSequence.fromMap(staticMethodQualifiers).put(localCall,smc);
         }
-)) {
-          if (!(SNodeOperations.isInstanceOf(caseExp,"jetbrains.mps.baseLanguage.structure.VariableReference"))) {
-            continue;
-          }
-          SReference ref=SNodeOperations.getReference(SNodeOperations.cast(caseExp,"jetbrains.mps.baseLanguage.structure.VariableReference"),SLinkOperations.findLinkDeclaration("jetbrains.mps.baseLanguage.structure.VariableReference","variableDeclaration"));
-          if (!(ref instanceof DynamicReference)) {
-            continue;
-          }
-          final String enumConstName=((DynamicReference)ref).getResolveInfo();
-          SNode scrutenee=SLinkOperations.getTarget(SNodeOperations.getAncestor(caseExp,"jetbrains.mps.baseLanguage.structure.SwitchStatement",false,false),"expression",true);
-          if ((scrutenee == null)) {
-            continue;
-          }
-          SNode scruteneeType=typeChecker.getTypeOf(scrutenee);
-          if (!(SNodeOperations.isInstanceOf(scruteneeType,"jetbrains.mps.baseLanguage.structure.ClassifierType"))) {
-            continue;
-          }
-          SNode claz=SLinkOperations.getTarget(SNodeOperations.cast(scruteneeType,"jetbrains.mps.baseLanguage.structure.ClassifierType"),"classifier",false);
-          if (!(SNodeOperations.isInstanceOf(claz,"jetbrains.mps.baseLanguage.structure.EnumClass"))) {
-          }
-          SNode enumConst=ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.cast(claz,"jetbrains.mps.baseLanguage.structure.EnumClass"),"enumConstant",true)).findFirst(new IWhereFilter<SNode>(){
-            public boolean accept(            SNode it){
-              return SPropertyOperations.getString(it,"name").equals(enumConstName);
-            }
-          }
-);
-          SNode x=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.EnumConstantReference",null);
-          SLinkOperations.setTarget(x,"enumClass",SNodeOperations.cast(claz,"jetbrains.mps.baseLanguage.structure.EnumClass"),false);
-          SLinkOperations.setTarget(x,"enumConstantDeclaration",enumConst,false);
-          MapSequence.fromMap(enumConstRefs).put(SNodeOperations.cast(caseExp,"jetbrains.mps.baseLanguage.structure.VariableReference"),x);
-        }
+        progress.advance(1);
       }
     }
   }
@@ -78,6 +54,9 @@
         SNodeOperations.replaceWithNewChild(fieldRefOp,"jetbrains.mps.baseLanguage.structure.ArrayLengthOperation");
       }
       for (      IMapping<SNode,SNode> pair : MapSequence.fromMap(enumConstRefs)) {
+        SNodeOperations.replaceWithAnother(pair.key(),pair.value());
+      }
+      for (      IMapping<SNode,SNode> pair : MapSequence.fromMap(staticMethodQualifiers)) {
         SNodeOperations.replaceWithAnother(pair.key(),pair.value());
       }
     }
