@@ -1,6 +1,7 @@
 {
   try {
-    final ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
+    final SRepository repository=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository();
+    final ModelAccess modelAccess=repository.getModelAccess();
     if (!(((SModule)MapSequence.fromMap(_params).get("module")).getModelRoots().iterator().hasNext())) {
       int code=JOptionPane.showConfirmDialog(((Frame)MapSequence.fromMap(_params).get("frame")),"There are no model roots. Do you want to create one?","",JOptionPane.YES_NO_OPTION);
       if (code == JOptionPane.YES_OPTION) {
@@ -23,44 +24,45 @@
     }
 );
     dialog.value.show();
-    SModel result=dialog.value.getResult();
-    if (result == null) {
+    SModel ignored=dialog.value.getResult();
+    if (ignored == null) {
       return;
     }
-    TreeFileChooser treeFileChooser=new TreeFileChooser();
-    treeFileChooser.setDirectoriesAreAlwaysVisible(true);
-    treeFileChooser.setMode(TreeFileChooser.MODE_DIRECTORIES);
-    final SModel sModel=result;
-    File initial=ImportSourcesIntoModelUtils.getInitialDirectoryForImport((AbstractModule)((SModule)MapSequence.fromMap(_params).get("module")),SNodeOperations.getModelLongName(sModel));
-    if (initial != null) {
-      treeFileChooser.setInitialFile(FileSystem.getInstance().getFileByPath(initial.getAbsolutePath()));
+    FileChooserDescriptor descriptor=new FileChooserDescriptor(true,true,false,false,false,true);
+    FileChooserDialog fileDialog=FileChooserFactory.getInstance().createFileChooser(descriptor,((Project)MapSequence.fromMap(_params).get("ideaProject")),((Frame)MapSequence.fromMap(_params).get("frame")));
+    VirtualFile[] chosen=fileDialog.choose(null,((Project)MapSequence.fromMap(_params).get("ideaProject")));
+    if (chosen.length == 0) {
+      return;
     }
-    IFile resultFile=treeFileChooser.showDialog(((Frame)MapSequence.fromMap(_params).get("frame")));
-    if (resultFile != null) {
-      IFileUtils.getAllFiles(FileSystem.getInstance().getFileByPath(resultFile.getPath()));
-      final MultipleFilesParser parser=new MultipleFilesParser(((SModule)MapSequence.fromMap(_params).get("module")),((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository());
-      final List<IFile> files=IFileUtils.getAllFiles(FileSystem.getInstance().getFileByPath(resultFile.getPath()));
-      final Ref<JavaParseException> parseException=new Ref<JavaParseException>();
-      ProgressManager.getInstance().run(new Task.Modal(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject(),"Converting Java to MPS",true){
-        public void run(        @NotNull ProgressIndicator progress){
-          try {
-            parser.convertToMps(files,new ProgressMonitorAdapter(progress));
-          }
- catch (          JavaParseException e) {
-            parseException.set(e);
-          }
-catch (          IOException e) {
-            throw new RuntimeException(e);
-          }
+    List<IFile> chosenIFiles=ListSequence.fromList(new ArrayList<IFile>(chosen.length));
+    for (    VirtualFile vfile : chosen) {
+      ListSequence.fromList(chosenIFiles).addElement(FileSystem.getInstance().getFileByPath(vfile.getPath()));
+    }
+    final List<IFile> ifilesToParse=Sequence.fromIterable(JavaConvertUtil.openDirs(chosenIFiles)).toListSequence();
+    final MultipleFilesParser parser=new MultipleFilesParser(((SModule)MapSequence.fromMap(_params).get("module")),repository);
+    final Ref<JavaParseException> parseException=new Ref<JavaParseException>();
+    ProgressManager.getInstance().run(new Task.Modal(null,"Convert to MPS",false){
+      public void run(      @NotNull ProgressIndicator indicator){
+        try {
+          parser.convertToMps(ifilesToParse,new ProgressMonitorAdapter(indicator));
+        }
+ catch (        JavaParseException e) {
+          parseException.set(e);
+        }
+catch (        IOException e) {
+          throw new RuntimeException(e);
         }
       }
-);
-      if (!(parseException.isNull())) {
-        JOptionPane.showMessageDialog(((Frame)MapSequence.fromMap(_params).get("frame")),parseException.get().getMessage(),"Parse error",JOptionPane.ERROR_MESSAGE);
-      }
     }
-    SModel modelDescriptor=result;
-    ProjectPane.getInstance(((MPSProject)MapSequence.fromMap(_params).get("project"))).selectModel(modelDescriptor,false);
+);
+    if (!(parseException.isNull())) {
+      JOptionPane.showMessageDialog(((Frame)MapSequence.fromMap(_params).get("frame")),parseException.get().getMessage(),"Parse error",JOptionPane.ERROR_MESSAGE);
+    }
+    List<SModel> resulting=parser.getModels();
+    if (ListSequence.fromList(resulting).isNotEmpty()) {
+      SModel firstModel=ListSequence.fromList(resulting).first();
+      ProjectPane.getInstance(((MPSProject)MapSequence.fromMap(_params).get("project"))).selectModel(firstModel,false);
+    }
   }
  catch (  Throwable t) {
     if (LOG.isEnabledFor(Priority.ERROR)) {
