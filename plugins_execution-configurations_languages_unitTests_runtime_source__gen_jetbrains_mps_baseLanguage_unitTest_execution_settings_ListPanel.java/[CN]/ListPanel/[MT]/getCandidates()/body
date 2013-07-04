@@ -1,69 +1,21 @@
 {
   boolean needsUpdate;
 synchronized (myLock) {
-    needsUpdate=this.myCandidates == null;
+    needsUpdate=ListSequence.fromList(this.myCandidates).isEmpty();
   }
   if (needsUpdate) {
     ProgressManager.getInstance().runProcessWithProgressSynchronously(new Runnable(){
       @Override public void run(){
-        final List<SNode> nodesList=new ArrayList<SNode>();
-        ModelAccess.instance().runReadAction(new Runnable(){
-          public void run(){
-            for (            SNode concept : Sequence.fromIterable(TestNodeWrapperFactory.getWrappedRootConcepts())) {
-              SAbstractConcept c=SConceptRepository.getInstance().getConcept(NameUtil.nodeFQName(concept));
-              Set<SNode> usages=FindUsagesFacade.getInstance().findInstances(GlobalScope.getInstance(),Collections.singleton(c),false,new ProgressMonitorAdapter(ProgressManager.getInstance().getProgressIndicator()));
-              ListSequence.fromList(nodesList).addSequence(SetSequence.fromSet(usages));
-            }
-          }
-        }
-);
-        if (ListPanel.this.myIsTestMethods) {
-          final List<ITestNodeWrapper> methodsList=ListSequence.fromList(new ArrayList<ITestNodeWrapper>());
-          ModelAccess.instance().runReadAction(new Runnable(){
-            public void run(){
-              for (              SNode testCase : nodesList) {
-                ITestNodeWrapper wrapper=TestNodeWrapperFactory.tryToWrap(testCase);
-                if (wrapper == null) {
-                  continue;
-                }
-                ListSequence.fromList(methodsList).addSequence(Sequence.fromIterable(wrapper.getTestMethods()));
-              }
-            }
-          }
-);
-synchronized (myLock) {
-            ListPanel.this.myCandidates=methodsList;
-          }
-        }
- else {
-          ModelAccess.instance().runReadAction(new Runnable(){
-            public void run(){
-synchronized (myLock) {
-                ListPanel.this.myCandidates=ListSequence.fromList(nodesList).select(new ISelector<SNode,ITestNodeWrapper>(){
-                  public ITestNodeWrapper select(                  SNode it){
-                    return TestNodeWrapperFactory.tryToWrap(it);
-                  }
-                }
-).where(new IWhereFilter<ITestNodeWrapper>(){
-                  public boolean accept(                  ITestNodeWrapper it){
-                    return it != null;
-                  }
-                }
-).toListSequence();
-              }
-            }
-          }
-);
-        }
+        collectCandidates();
       }
     }
-,"Searching for test nodes",false,myProject);
+,"Searching for nodes",false,myProject);
   }
 synchronized (myLock) {
     ListSequence.fromList(this.myCandidates).removeSequence(ListSequence.fromList(this.myValues));
-    return ListSequence.fromList(this.myCandidates).select(new ISelector<ITestNodeWrapper,SNodeReference>(){
-      public SNodeReference select(      ITestNodeWrapper it){
-        return it.getNodePointer();
+    return ListSequence.fromList(this.myCandidates).select(new ISelector<T,SNodeReference>(){
+      public SNodeReference select(      T it){
+        return unwrap(it);
       }
     }
 ).toListSequence();
