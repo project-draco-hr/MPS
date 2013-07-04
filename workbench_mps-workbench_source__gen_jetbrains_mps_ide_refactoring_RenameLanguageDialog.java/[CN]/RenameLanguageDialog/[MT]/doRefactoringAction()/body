@@ -28,28 +28,26 @@
     }
 );
     for (    final Language l : langs) {
-      final Wrappers._T<GenParameters> params=new Wrappers._T<GenParameters>(null);
+      final List<SModel> models=ListSequence.fromList(new ArrayList<SModel>());
       modelAccess.runReadAction(new Runnable(){
         public void run(){
-          ModuleTestConfiguration languageConfig=new ModuleTestConfiguration();
-          languageConfig.setModuleRef(l.getModuleReference());
-          languageConfig.setName("tmp");
-          try {
-            params.value=languageConfig.getGenParams(myProject,true);
+          ListSequence.fromList(models).addSequence(Sequence.fromIterable(Sequence.fromArray(l.getModels().toArray(new SModel[0]))).where(new IWhereFilter<Object>(){
+            public boolean accept(            Object it){
+              return it instanceof GeneratableSModel && ((GeneratableSModel)it).isGeneratable();
+            }
           }
- catch (          IllegalGeneratorConfigurationException ignored) {
-          }
+));
         }
       }
 );
-      if (params.value == null) {
+      if (models == null) {
         setErrorText("Rebuild configuration is invalid");
         return;
       }
       ModuleContext context=new ModuleContext(myLanguage,myProject);
       MakeSession sess=new MakeSession(context);
       if (IMakeService.INSTANCE.get().openNewSession(sess)) {
-        IMakeService.INSTANCE.get().make(sess,new ModelsToResources(context,ListSequence.fromListWithValues(new ArrayList<SModel>(),(Iterable<SModel>)params.value.getModelDescriptors())).resources(false));
+        IMakeService.INSTANCE.get().make(sess,new ModelsToResources(context,models).resources(false));
       }
     }
   }
