@@ -19,5 +19,23 @@
     }
   }
 );
-  return makeModels(project,descriptors.value);
+  if (ListSequence.fromList(descriptors.value).isEmpty()) {
+    return true;
+  }
+  MakeSession session=new MakeSession(new ProjectOperationContext(ProjectHelper.toMPSProject(project)),null,true);
+  if (IMakeService.INSTANCE.get().openNewSession(session)) {
+    Future<IResult> future=IMakeService.INSTANCE.get().make(session,new ModelsToResources(new ProjectOperationContext(ProjectHelper.toMPSProject(project)),descriptors.value).resources(false));
+    IResult result=null;
+    try {
+      result=future.get();
+    }
+ catch (    CancellationException ignore) {
+    }
+catch (    InterruptedException ignore) {
+    }
+catch (    ExecutionException ignore) {
+    }
+    return result != null && result.isSucessful();
+  }
+  return true;
 }
