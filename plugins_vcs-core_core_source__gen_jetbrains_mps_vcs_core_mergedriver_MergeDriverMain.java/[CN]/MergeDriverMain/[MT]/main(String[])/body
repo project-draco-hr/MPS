@@ -2,21 +2,25 @@
   byte[] conflictStart=CONFLICT_START.getBytes();
   byte[] conflictEnd=CONFLICT_END.getBytes();
   byte[] conflictSeparator=CONFLICT_SEPARATOR.getBytes();
-  if (args.length < 4) {
-    System.err.println("Usage <merger> --<vcs> <base> <current> <other> " + "[<base name> <current name> <other name>]");
+  if (args.length < 5) {
+    System.err.println("Usage <merger> <filetype> --<vcs> <base> <current> <other> ");
     System.exit(2);
   }
-  File baseFile=new File(args[1]);
-  File currentFile=new File(args[2]);
-  File otherFile=new File(args[3]);
+  String filetype=args[0];
+  if (NO_FILETYPE.equals(filetype)) {
+    filetype=null;
+  }
+  File baseFile=new File(args[2]);
+  File currentFile=new File(args[3]);
+  File otherFile=new File(args[4]);
   boolean overwrite=false;
-  if (SVN_OPTION.equals(args[0])) {
-    if (args.length >= 7) {
-      conflictStart=(CONFLICT_START + " " + args[5]).getBytes();
-      conflictEnd=(CONFLICT_END + " " + args[6]).getBytes();
+  if (SVN_OPTION.equals(args[1])) {
+    if (args.length >= 8) {
+      conflictStart=(CONFLICT_START + " " + args[6]).getBytes();
+      conflictEnd=(CONFLICT_END + " " + args[7]).getBytes();
     }
   }
- else   if (GIT_OPTION.equals(args[0])) {
+ else   if (GIT_OPTION.equals(args[1])) {
     overwrite=true;
   }
  else {
@@ -29,11 +33,11 @@
   String systemPath=new File(System.getProperty(LOG_PROPERTY)).getParentFile().getParentFile().getAbsolutePath();
   MergeDriverBackupUtil.setMergeBackupDirPath(systemPath + File.separator + "merge-backup");
   File[] files={baseFile,currentFile,otherFile};
-  AbstractContentMerger merger=selectMerger(files);
+  AbstractContentMerger merger=selectMerger(filetype,files);
   if (merger == null) {
-    merger=(SVN_OPTION.equals(args[0]) ? new TextMerger() : new SimpleMerger());
+    merger=(SVN_OPTION.equals(args[1]) ? new TextMerger() : new SimpleMerger());
   }
-  boolean convertCRLF=GIT_OPTION.equals(args[0]) && !(hasCRLF(Sequence.fromIterable(Sequence.fromArray(files)).findFirst(new IWhereFilter<File>(){
+  boolean convertCRLF=GIT_OPTION.equals(args[1]) && !(hasCRLF(Sequence.fromIterable(Sequence.fromArray(files)).findFirst(new IWhereFilter<File>(){
     public boolean accept(    File f){
       return f != null;
     }

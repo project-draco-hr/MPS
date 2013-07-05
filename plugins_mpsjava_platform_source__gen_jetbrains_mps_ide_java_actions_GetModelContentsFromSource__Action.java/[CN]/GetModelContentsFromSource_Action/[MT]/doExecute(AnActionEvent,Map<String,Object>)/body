@@ -1,32 +1,32 @@
 {
   try {
-    AbstractModule module=(AbstractModule)((SModel)MapSequence.fromMap(_params).get("model")).getModule();
-    TreeFileChooser treeFileChooser=new TreeFileChooser();
-    treeFileChooser.setDirectoriesAreAlwaysVisible(true);
-    treeFileChooser.setMode(TreeFileChooser.MODE_DIRECTORIES);
-    final SModel sModel=((SModel)MapSequence.fromMap(_params).get("model"));
-    File initial=ImportSourcesIntoModelUtils.getInitialDirectoryForImport(module,SNodeOperations.getModelLongName(sModel));
-    if (initial != null) {
-      treeFileChooser.setInitialFile(FileSystem.getInstance().getFileByPath(initial.getAbsolutePath()));
+    Project ideaProject=((MPSProject)MapSequence.fromMap(_params).get("mpsProject")).getProject();
+    FileChooserDescriptor descriptor=new FileChooserDescriptor(true,true,false,false,false,true);
+    FileChooserDialog dialog=FileChooserFactory.getInstance().createFileChooser(descriptor,ideaProject,((Frame)MapSequence.fromMap(_params).get("frame")));
+    VirtualFile[] chosen=dialog.choose(null,ideaProject);
+    if (chosen.length == 0) {
+      return;
     }
-    IFile result=treeFileChooser.showDialog(((Frame)MapSequence.fromMap(_params).get("frame")));
-    if (result != null) {
-      final DirParser dirParser=new DirParser(module,null,FileSystem.getInstance().getFileByPath(result.getPath()));
-      ModelAccess.instance().runWriteAction(new Runnable(){
-        public void run(){
-          try {
-            dirParser.parseDirs();
-          }
- catch (          JavaParseException e) {
-            throw new RuntimeException(e);
-          }
-catch (          IOException e) {
-            throw new RuntimeException(e);
-          }
+    List<IFile> chosenIFiles=ListSequence.fromList(new ArrayList<IFile>(chosen.length));
+    for (    VirtualFile vfile : chosen) {
+      ListSequence.fromList(chosenIFiles).addElement(FileSystem.getInstance().getFileByPath(vfile.getPath()));
+    }
+    final List<IFile> ifilesToParse=Sequence.fromIterable(JavaConvertUtil.openDirs(chosenIFiles)).toListSequence();
+    final MultipleFilesParser parser=new MultipleFilesParser(((SModel)MapSequence.fromMap(_params).get("model")),((MPSProject)MapSequence.fromMap(_params).get("mpsProject")).getRepository());
+    ProgressManager.getInstance().run(new Task.Modal(null,"Convert to MPS",false){
+      public void run(      @NotNull ProgressIndicator indicator){
+        try {
+          parser.convertToMps(ifilesToParse,new ProgressMonitorAdapter(indicator));
+        }
+ catch (        JavaParseException e) {
+          throw new RuntimeException(e);
+        }
+catch (        IOException e) {
+          throw new RuntimeException(e);
         }
       }
-);
     }
+);
   }
  catch (  Throwable t) {
     if (LOG.isEnabledFor(Priority.ERROR)) {
