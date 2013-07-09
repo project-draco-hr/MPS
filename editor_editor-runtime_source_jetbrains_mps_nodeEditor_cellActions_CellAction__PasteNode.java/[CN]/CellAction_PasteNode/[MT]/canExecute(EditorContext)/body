@@ -1,19 +1,33 @@
 {
-  EditorCell selectedCell=getCellToPasteTo(context.getSelectedCell());
-  if (selectedCell == null) {
-    return false;
+  Selection selection=context.getSelectionManager().getSelection();
+  if (selection instanceof SingularSelection) {
+    EditorCell selectedCell=getCellToPasteTo(context.getSelectedCell());
+    if (selectedCell == null) {
+      return false;
+    }
+    SNode selectedNode=selectedCell.getSNode();
+    if (selectedNode == null || jetbrains.mps.util.SNodeOperations.isDisposed(selectedNode)) {
+      return false;
+    }
+    List<SNode> pasteNodes=CopyPasteUtil.getNodesFromClipboard(selectedNode.getModel());
+    if (pasteNodes == null || pasteNodes.isEmpty()) {
+      return CopyPasteUtil.isConversionAvailable(selectedNode.getModel(),selectedNode);
+    }
+    if (selection instanceof EditorCellLabelSelection) {
+      if (!new NodePaster(pasteNodes).canPaste(selectedCell)) {
+        LOG.debug("Couldn't paste node here");
+        return false;
+      }
+      return true;
+    }
+ else     if (selection instanceof EditorCellSelection) {
+      return canPasteViaNodePaster(selection,pasteNodes);
+    }
   }
-  SNode selectedNode=selectedCell.getSNode();
-  if (selectedNode == null || jetbrains.mps.util.SNodeOperations.isDisposed(selectedNode)) {
-    return false;
+ else   if (selection instanceof MultipleSelection) {
+    SNode selectedNode=selection.getSelectedNodes().get(0);
+    List<SNode> pasteNodes=CopyPasteUtil.getNodesFromClipboard(selectedNode.getModel());
+    return canPasteViaNodePaster(selection,pasteNodes);
   }
-  List<SNode> pasteNodes=CopyPasteUtil.getNodesFromClipboard(selectedNode.getModel());
-  if (pasteNodes == null || pasteNodes.isEmpty()) {
-    return CopyPasteUtil.isConversionAvailable(selectedNode.getModel(),selectedNode);
-  }
-  if (!new NodePaster(pasteNodes).canPaste(selectedCell)) {
-    LOG.debug("Couldn't paste node here");
-    return false;
-  }
-  return true;
+  return false;
 }
