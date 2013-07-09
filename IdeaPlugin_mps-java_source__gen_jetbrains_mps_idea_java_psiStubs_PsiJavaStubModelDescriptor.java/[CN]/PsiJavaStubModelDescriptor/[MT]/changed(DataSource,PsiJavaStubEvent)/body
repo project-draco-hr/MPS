@@ -6,50 +6,43 @@
   SModel myModelCopy=CopyUtil.copyModel(myModel);
   SModel myOldModel=myModel;
   myModel=myModelCopy;
-  try {
-    for (    PsiJavaFile file : event.removed()) {
-      myMps2PsiMapper.clearFile(file.getName());
-    }
-    for (    PsiListener.FSRename rename : event.renamed()) {
-      String oldName=rename.oldName;
-      myMps2PsiMapper.clearFile(oldName);
-    }
-    for (    PsiJavaFile file : event.needReparse()) {
-      if (!(file.isValid())) {
-        String name=file.getName();
-        for (        PsiFile f : file.getParent().getFiles()) {
-          if (name.equals(f.getName()) && f instanceof PsiJavaFile) {
-            file=(PsiJavaFile)f;
-            break;
-          }
+  for (  PsiJavaFile file : event.removed()) {
+    myMps2PsiMapper.clearFile(file.getName());
+  }
+  for (  PsiListener.FSRename rename : event.renamed()) {
+    String oldName=rename.oldName;
+    myMps2PsiMapper.clearFile(oldName);
+  }
+  for (  PsiJavaFile file : event.needReparse()) {
+    if (!(file.isValid())) {
+      String name=file.getName();
+      for (      PsiFile f : file.getParent().getFiles()) {
+        if (name.equals(f.getName()) && f instanceof PsiJavaFile) {
+          file=(PsiJavaFile)f;
+          break;
         }
       }
-      if (!(file.isValid())) {
-        continue;
-      }
-      myMps2PsiMapper.clearFile(file.getName());
-      SNode javaImports=getImports(file.getImportList().getAllImportStatements());
-      ASTConverter converter=new ASTConverter(myMps2PsiMapper);
-      Set<SNodeId> roots=SetSequence.fromSet(new HashSet<SNodeId>());
-      for (      PsiClass cls : file.getClasses()) {
-        SNode node=converter.convertClass(cls);
-        if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.Classifier")) {
-          AttributeOperations.setAttribute(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier"),new IAttributeDescriptor.NodeAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.JavaImports")),javaImports);
-        }
-        myModel.addRootNode(node);
-        SetSequence.fromSet(roots).addElement(node.getNodeId());
-      }
-      if (SetSequence.fromSet(roots).isNotEmpty()) {
-        MapSequence.fromMap(myRootsPerFile).put(file.getName(),roots);
-      }
     }
-    myModel.setModelDescriptor(this);
-    for (    SNode node : Sequence.fromIterable(myOldModel.getRootNodes())) {
-      myOldModel.removeRoot(node);
+    if (!(file.isValid())) {
+      continue;
     }
-    myOldModel.dispose();
+    myMps2PsiMapper.clearFile(file.getName());
+    SNode javaImports=getImports(file.getImportList().getAllImportStatements());
+    ASTConverter converter=new ASTConverter(myMps2PsiMapper);
+    Set<SNodeId> roots=SetSequence.fromSet(new HashSet<SNodeId>());
+    for (    PsiClass cls : file.getClasses()) {
+      SNode node=converter.convertClass(cls);
+      if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.Classifier")) {
+        AttributeOperations.setAttribute(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier"),new IAttributeDescriptor.NodeAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.JavaImports")),javaImports);
+      }
+      myModel.addRootNode(node);
+      SetSequence.fromSet(roots).addElement(node.getNodeId());
+    }
+    if (SetSequence.fromSet(roots).isNotEmpty()) {
+      MapSequence.fromMap(myRootsPerFile).put(file.getName(),roots);
+    }
   }
- catch (  ProcessCanceledException cancel) {
-    System.out.println("psi change cancled");
-  }
+  myModel.setModelDescriptor(this);
+  MPSModuleRepository.getInstance().invalidateCaches();
+  notifyModelReplaced(myOldModel.getModelDescriptor());
 }
