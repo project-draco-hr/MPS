@@ -1,6 +1,15 @@
 {
   Selection selection=context.getSelectionManager().getSelection();
-  if (selection instanceof SingularSelection) {
+  List<SNode> pasteNodes=CopyPasteUtil.getNodesFromClipboard(selection.getSelectedNodes().get(0).getModel());
+  boolean disposed=false;
+  for (  SNode node : selection.getSelectedNodes()) {
+    if (jetbrains.mps.util.SNodeOperations.isDisposed(node)) {
+      disposed=true;
+      break;
+    }
+  }
+  boolean canPasteWithRemove=!disposed && canPasteViaNodePasterWithRemove(selection.getSelectedNodes(),pasteNodes);
+  if (selection instanceof SingularSelection && (selection instanceof EditorCellLabelSelection || (selection instanceof EditorCellSelection && !canPasteWithRemove))) {
     EditorCell selectedCell=getCellToPasteTo(context.getSelectedCell());
     if (selectedCell == null) {
       return false;
@@ -9,21 +18,13 @@
     if (selectedNode == null || jetbrains.mps.util.SNodeOperations.isDisposed(selectedNode)) {
       return false;
     }
-    List<SNode> pasteNodes=CopyPasteUtil.getNodesFromClipboard(selectedNode.getModel());
     if (pasteNodes == null || pasteNodes.isEmpty()) {
       return CopyPasteUtil.isConversionAvailable(selectedNode.getModel(),selectedNode);
     }
-    if (selection instanceof EditorCellLabelSelection) {
-      return canPasteViaNodePaster(selectedCell,pasteNodes);
-    }
- else     if (selection instanceof EditorCellSelection) {
-      return canPasteViaNodePasterWithRemove(selection,pasteNodes) || canPasteViaNodePaster(selectedCell,pasteNodes);
-    }
+    return canPasteViaNodePaster(selectedCell,pasteNodes);
   }
- else   if (selection instanceof MultipleSelection) {
-    SNode selectedNode=selection.getSelectedNodes().get(0);
-    List<SNode> pasteNodes=CopyPasteUtil.getNodesFromClipboard(selectedNode.getModel());
-    return canPasteViaNodePasterWithRemove(selection,pasteNodes);
+ else   if ((selection instanceof MultipleSelection || selection instanceof EditorCellSelection) && canPasteWithRemove) {
+    return true;
   }
   return false;
 }
