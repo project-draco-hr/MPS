@@ -47,7 +47,21 @@ catch (    ExecutionException ignore) {
   }
   ApplicationManager.getApplication().invokeAndWait(new Runnable(){
     public void run(){
-      ExecutionManager.getInstance(projectFinal).getContentManager().showRunContent(DefaultRunExecutor.getRunExecutorInstance(),new RunContentDescriptor(console,process.value,console.getComponent(),"Deploy plugins"));
+      Executor executor=DefaultRunExecutor.getRunExecutorInstance();
+      DefaultActionGroup group=new DefaultActionGroup();
+      JPanel consolePanel=new JPanel(new BorderLayout());
+      consolePanel.add(ActionManager.getInstance().createActionToolbar(ActionPlaces.UNKNOWN,group,false).getComponent(),BorderLayout.WEST);
+      consolePanel.add(console.getComponent(),BorderLayout.CENTER);
+      RunContentDescriptor descriptor=new RunContentDescriptor(console,process.value,consolePanel,"Deploy plugins"){
+        @Override public boolean isContentReuseProhibited(){
+          return true;
+        }
+      }
+;
+      group.add(ActionManager.getInstance().getAction("Stop"));
+      group.addSeparator();
+      group.add(new CloseAction(executor,descriptor,projectFinal));
+      ExecutionManager.getInstance(projectFinal).getContentManager().showRunContent(executor,descriptor);
     }
   }
 ,ModalityState.NON_MODAL);
