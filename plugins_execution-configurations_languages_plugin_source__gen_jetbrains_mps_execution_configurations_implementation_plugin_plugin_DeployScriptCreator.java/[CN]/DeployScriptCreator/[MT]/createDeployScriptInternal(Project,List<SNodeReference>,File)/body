@@ -1,0 +1,28 @@
+{
+  SNode deployProject=SConceptOperations.createNewNode("jetbrains.mps.build.structure.BuildProject",null);
+  SPropertyOperations.set(deployProject,"name","deploy");
+  SPropertyOperations.set(deployProject,"fileName","deploy.xml");
+  SPropertyOperations.set(deployProject,"internalBaseDirectory","" + (createPathFromFullPath(baseDir,project.getBasePath())));
+  SLinkOperations.getTargets(deployProject,"plugins",true).add(SConceptOperations.createNewNode("jetbrains.mps.build.structure.BuildJavaPlugin",null));
+  SLinkOperations.getTargets(deployProject,"plugins",true).add(SConceptOperations.createNewNode("jetbrains.mps.build.mps.structure.BuildMPSPlugin",null));
+  Iterable<SNode> pluginNodes=ListSequence.fromList(plugins).select(new ISelector<SNodeReference,SNode>(){
+    public SNode select(    SNodeReference it){
+      return it.resolve(MPSModuleRepository.getInstance());
+    }
+  }
+).ofType(SNode.class);
+  Iterable<SNode> projects=Sequence.fromIterable(pluginNodes).select(new ISelector<SNode,SNode>(){
+    public SNode select(    SNode it){
+      return SNodeOperations.getContainingRoot(it);
+    }
+  }
+).ofType(SNode.class).distinct();
+  for (  SNode projectNode : Sequence.fromIterable(projects)) {
+    ListSequence.fromList(SLinkOperations.getTargets(deployProject,"dependencies",true)).addElement(_quotation_createNode_ppcj9p_a0a0a11a2(projectNode));
+  }
+  SLinkOperations.setNewChild(deployProject,"layout","jetbrains.mps.build.structure.BuildLayout");
+  for (  SNode plugin : Sequence.fromIterable(pluginNodes)) {
+    ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(deployProject,"layout",true),"children",true)).addElement(_quotation_createNode_ppcj9p_a0a0a41a2(plugin));
+  }
+  return MultiTuple.<SNode,File>from(deployProject,new File(baseDir,BehaviorReflection.invokeNonVirtual(String.class,deployProject,"jetbrains.mps.build.structure.BuildProject","call_getOutputFileName_4915877860351551360",new Object[]{})));
+}

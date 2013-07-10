@@ -1,0 +1,60 @@
+{
+  if (ListSequence.fromList(myPlugins).isEmpty()) {
+    return true;
+  }
+  final Project projectFinal=project;
+  final Wrappers._T<Tuples._2<SModel,File>> deployScript=new Wrappers._T<Tuples._2<SModel,File>>();
+  ApplicationManager.getApplication().invokeAndWait(new Runnable(){
+    public void run(){
+      ModelAccess.instance().executeCommand(new Runnable(){
+        public void run(){
+          deployScript.value=DeployScriptCreator.createDeployScript(projectFinal,myPlugins);
+        }
+      }
+,ProjectHelper.toMPSProject(projectFinal));
+    }
+  }
+,ModalityState.NON_MODAL);
+  MakeSession session=new MakeSession(new ProjectOperationContext(ProjectHelper.toMPSProject(project)),null,true);
+  if (IMakeService.INSTANCE.get().openNewSession(session)) {
+    Future<IResult> future=IMakeService.INSTANCE.get().make(session,new ModelsToResources(new ProjectOperationContext(ProjectHelper.toMPSProject(project)),Sequence.<SModel>singleton(deployScript.value._0())).resources(false));
+    IResult result=null;
+    try {
+      result=future.get();
+    }
+ catch (    CancellationException ignore) {
+    }
+catch (    InterruptedException ignore) {
+    }
+catch (    ExecutionException ignore) {
+    }
+    if (result == null || !(result.isSucessful())) {
+      return false;
+    }
+  }
+  final ConsoleView console=ConsoleCreator.createConsoleView(project,false);
+  console.addMessageFilter(new StandaloneMPSStackTraceFilter(project));
+  File deployScriptFile=deployScript.value._1();
+  final Wrappers._T<ProcessHandler> process=new Wrappers._T<ProcessHandler>();
+  try {
+    process.value=OutputRedirector.redirect(new Ant_Command().setTargetName_String("buildDependents assemble").createProcess(deployScriptFile.getAbsolutePath()),new ConsoleProcessListener(console));
+  }
+ catch (  com.intellij.execution.ExecutionException e) {
+    if (LOG.isEnabledFor(Priority.ERROR)) {
+      LOG.error("Can not deploy plugins",e);
+    }
+    return false;
+  }
+  ApplicationManager.getApplication().invokeAndWait(new Runnable(){
+    public void run(){
+      ExecutionManager.getInstance(projectFinal).getContentManager().showRunContent(DefaultRunExecutor.getRunExecutorInstance(),new RunContentDescriptor(console,process.value,console.getComponent(),"Deploy plugins"));
+    }
+  }
+,ModalityState.NON_MODAL);
+  int exitCode=ProcessHandlerBuilder.startAndWait(process.value);
+  if (exitCode != 0) {
+    return false;
+  }
+  FileUtil.copyDir(new File(deployScriptFile.getParentFile(),"build" + File.separator + "artifacts"+ File.separator+ "deploy"),myDeployLocation);
+  return true;
+}
