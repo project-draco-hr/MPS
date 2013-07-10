@@ -4,7 +4,7 @@
   myTable=new JBTable();
   myTable.setSelectionBackground(myTable.getSelectionBackground().darker());
   myTable.setAutoscrolls(true);
-  myTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+  myTable.getTableHeader().setReorderingAllowed(false);
   myPrioritiesTableModel=new GenPrioritiesTableModel();
   myTable.setModel(myPrioritiesTableModel);
   myTable.setDefaultRenderer(RuleType.class,new RuleTypeRenderer());
@@ -21,33 +21,72 @@
           myCurrentTree=new GeneratorPrioritiesTree((GeneratorDescriptor)myModuleDescriptor,mapping,column == 0);
           myMappings.put(mapping,myCurrentTree);
         }
-        table.setRowHeight(row,Math.max(myCurrentTree.getTree().getPreferredSize().height + 10,table.getRowHeight(row)));
-        TableColumn tableColumn=table.getColumnModel().getColumn(column);
-        tableColumn.setResizable(true);
-        tableColumn.setPreferredWidth(Math.max(table.getColumnModel().getColumn(column).getWidth(),myCurrentTree.getTree().getPreferredSize().width));
-        tableColumn.setResizable(false);
-        myCurrentTree.getTree().setBackground(isSelected ? table.getSelectionBackground() : table.getBackground());
-        if (hasFocus && table.isRowSelected(row)) {
-          SwingUtilities.invokeLater(new Runnable(){
-            @Override public void run(){
-              table.editCellAt(row,column);
-            }
-          }
-);
-        }
-        return myCurrentTree.getTreePanel();
+        final CheckedTreeNode rootNode=(CheckedTreeNode)myCurrentTree.getTree().getModel().getRoot();
+        noCheckedChildren(rootNode);
+        CheckboxTree checkboxTree=new CheckboxTree(GeneratorPrioritiesTree.getCheckboxTreeCellRenderer(),rootNode,new CheckPolicy(true,true,false,true));
+        checkboxTree.setRootVisible(true);
+        GeneratorPrioritiesTree.expandAllRows(checkboxTree);
+        table.setRowHeight(row,Math.max(checkboxTree.getPreferredSize().height + 10,table.getRowHeight(row)));
+        checkboxTree.setBackground(hasFocus ? table.getSelectionBackground().darker() : isSelected ? table.getSelectionBackground() : table.getBackground());
+        return checkboxTree;
       }
       return null;
+    }
+    private boolean noCheckedChildren(    CheckedTreeNode node){
+      List<CheckedTreeNode> children=Collections.list(node.children());
+      for (int i=0; i < children.size(); i++) {
+        CheckedTreeNode child=children.get(i);
+        if (noCheckedChildren(child) && !child.isChecked()) {
+          node.remove(child);
+          child.removeFromParent();
+        }
+      }
+      return node.isLeaf();
     }
   }
 );
   myTable.setDefaultEditor(MappingConfig_AbstractRef.class,new AbstractTableCellEditor(){
     private GeneratorPrioritiesTree myCurrentTree=null;
-    @Override public Component getTableCellEditorComponent(    JTable table,    Object value,    boolean isSelected,    int row,    int column){
+    @Override public boolean isCellEditable(    EventObject e){
+      return e != null && e instanceof MouseEvent && ((MouseEvent)e).getClickCount() >= 2;
+    }
+    @Override public Component getTableCellEditorComponent(    final JTable table,    Object value,    boolean isSelected,    int row,    int column){
       if (value instanceof MappingConfig_AbstractRef) {
         MappingConfig_AbstractRef mapping=(MappingConfig_AbstractRef)value;
         myCurrentTree=new GeneratorPrioritiesTree((GeneratorDescriptor)myModuleDescriptor,mapping,column == 0);
-        return myCurrentTree.getTreePanel();
+        final DialogWrapper dialogWrapper=new DialogWrapper(ProjectHelper.toIdeaProject(myProject)){
+{
+            init();
+          }
+          @Nullable @Override protected JComponent createCenterPanel(){
+            final JScrollPane scrollPane=ScrollPaneFactory.createScrollPane(myCurrentTree.getTreePanel(),true);
+            final Dimension preferredSize=myCurrentTree.getTreePanel().getPreferredSize();
+            if (preferredSize.getHeight() > 600)             preferredSize.setSize(preferredSize.getWidth(),600);
+            scrollPane.setPreferredSize(preferredSize);
+            return scrollPane;
+          }
+          @Nullable @Override public JComponent getPreferredFocusedComponent(){
+            return myCurrentTree.getTreePanel();
+          }
+          @Override protected void doOKAction(){
+            table.editingStopped(new ChangeEvent(this));
+            table.revalidate();
+            table.repaint();
+            super.doOKAction();
+          }
+          @Override public void doCancelAction(){
+            table.editingCanceled(new ChangeEvent(this));
+            super.doCancelAction();
+          }
+        }
+;
+        SwingUtilities.invokeLater(new Runnable(){
+          @Override public void run(){
+            dialogWrapper.show();
+          }
+        }
+);
+        return myTable.getCellRenderer(row,column).getTableCellRendererComponent(table,value,isSelected,true,row,column);
       }
       return null;
     }
@@ -60,6 +99,7 @@
 );
   TableColumn column=myTable.getColumnModel().getColumn(1);
   column.setMaxWidth(50);
+  column.setMinWidth(column.getMaxWidth());
   column.setResizable(false);
   ToolbarDecorator decorator=ToolbarDecorator.createDecorator(myTable);
   decorator.setAddAction(new AnActionButtonRunnable(){
