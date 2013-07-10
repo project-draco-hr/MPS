@@ -4,7 +4,14 @@ synchronized (LOCK) {
     for (    SNode root : model.getRootNodes()) {
       String rootName=null;
       rootName=extractName(root);
-      MPSPsiRootNode rootNode=new MPSPsiRootNode(root.getNodeId(),rootName,getManager());
+      MPSPsiRootNode rootNode=null;
+      if (model.getSource() instanceof FilePerRootDataSource) {
+        final VirtualFile virtualFile=VirtualFileUtils.getVirtualFile(((FilePerRootDataSource)model.getSource()).getFile(rootName + MPSExtentions.DOT_MODEL_ROOT));
+        rootNode=new MPSPsiRootNode(root.getNodeId(),rootName,getManager(),virtualFile);
+      }
+ else {
+        rootNode=new MPSPsiRootNode(root.getNodeId(),rootName,getManager());
+      }
       addChildLast(rootNode);
       rootNode.addChildLast(convert(root));
     }
@@ -14,6 +21,9 @@ synchronized (LOCK) {
       File file=new File(((FileDataSource)source).getFile().getPath());
       VirtualFile vfile=LocalFileSystem.getInstance().findFileByIoFile(file);
       this.mySourceVirtualFile=vfile;
+    }
+ else     if (source instanceof FilePerRootDataSource) {
+      this.mySourceVirtualFile=VirtualFileUtils.getVirtualFile(((FilePerRootDataSource)source).getFolder()).findChild(MPSExtentions.DOT_MODEL_HEADER);
     }
   }
 }

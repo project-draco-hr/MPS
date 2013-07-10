@@ -1,4 +1,29 @@
 {
+  if (myModelDescriptor == null && myNewModel) {
+    final VirtualFile[] virtualFiles=e.getData(PlatformDataKeys.VIRTUAL_FILE_ARRAY);
+    if (virtualFiles.length != 1 || !virtualFiles[0].isDirectory())     return;
+    myModelDescriptor=(EditableSModelDescriptor)ModelAccess.instance().runWriteActionInCommand(new Computable<SModel>(){
+      @Override public SModel compute(){
+        ModelRoot useModelRoot=null;
+        for (        ModelRoot root : myOperationContext.getModule().getModelRoots()) {
+          if (!(root instanceof DefaultModelRoot))           continue;
+          DefaultModelRoot modelRoot=(DefaultModelRoot)root;
+          for (          String sourceRoot : modelRoot.getFiles(DefaultModelRoot.SOURCE_ROOTS)) {
+            if (virtualFiles[0].getPath().startsWith(sourceRoot)) {
+              useModelRoot=root;
+              break;
+            }
+          }
+        }
+        if (useModelRoot == null)         return null;
+        EditableSModel descriptor=SModuleOperations.createModelWithAdjustments(virtualFiles[0].getName(),useModelRoot,PersistenceRegistry.getInstance().getFolderModelFactory("file-per-root"));
+        descriptor.save();
+        return descriptor;
+      }
+    }
+,ProjectHelper.toMPSProject(myProject));
+  }
+  if (myModelDescriptor == null)   return;
   if (myConceptFqNameToNodePointerMap.isEmpty()) {
     ImportHelper.addLanguageImport(myProject,myModelDescriptor.getModule(),myModelDescriptor.getModule().getModel(myModelDescriptor.getModelId()),null);
     return;
