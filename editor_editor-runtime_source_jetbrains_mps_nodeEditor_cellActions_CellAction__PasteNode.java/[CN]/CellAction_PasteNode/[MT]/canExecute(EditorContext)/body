@@ -1,19 +1,31 @@
 {
-  EditorCell selectedCell=getCellToPasteTo(context.getSelectedCell());
-  if (selectedCell == null) {
-    return false;
+  Selection selection=context.getSelectionManager().getSelection();
+  List<SNode> pasteNodes=CopyPasteUtil.getNodesFromClipboard(selection.getSelectedNodes().get(0).getModel());
+  boolean disposed=false;
+  for (  SNode node : selection.getSelectedNodes()) {
+    if (jetbrains.mps.util.SNodeOperations.isDisposed(node)) {
+      disposed=true;
+      break;
+    }
   }
-  SNode selectedNode=selectedCell.getSNode();
-  if (selectedNode == null || jetbrains.mps.util.SNodeOperations.isDisposed(selectedNode)) {
-    return false;
+  boolean needToConvert=pasteNodes == null || pasteNodes.isEmpty();
+  boolean canPasteWithRemove=!needToConvert && !disposed && canPasteViaNodePasterWithRemove(selection.getSelectedNodes(),pasteNodes);
+  if (selection instanceof SingularSelection && (selection instanceof EditorCellLabelSelection || (selection instanceof EditorCellSelection && !canPasteWithRemove))) {
+    EditorCell selectedCell=getCellToPasteTo(context.getSelectedCell());
+    if (selectedCell == null) {
+      return false;
+    }
+    SNode selectedNode=selectedCell.getSNode();
+    if (selectedNode == null || jetbrains.mps.util.SNodeOperations.isDisposed(selectedNode)) {
+      return false;
+    }
+    if (needToConvert) {
+      return CopyPasteUtil.isConversionAvailable(selectedNode.getModel(),selectedNode);
+    }
+    return canPasteViaNodePaster(selectedCell,pasteNodes);
   }
-  List<SNode> pasteNodes=CopyPasteUtil.getNodesFromClipboard(selectedNode.getModel());
-  if (pasteNodes == null || pasteNodes.isEmpty()) {
-    return CopyPasteUtil.isConversionAvailable(selectedNode.getModel(),selectedNode);
+ else   if ((selection instanceof MultipleSelection || selection instanceof EditorCellSelection) && canPasteWithRemove) {
+    return true;
   }
-  if (!new NodePaster(pasteNodes).canPaste(selectedCell)) {
-    LOG.debug("Couldn't paste node here");
-    return false;
-  }
-  return true;
+  return false;
 }

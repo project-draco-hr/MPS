@@ -12,6 +12,39 @@
         updatedChildren.remove(idx);
         updatedChildren.add(idx,new MPSPsiModelTreeNode(treeNode.getProject(),psiModel,settings));
       }
+ else       if (value instanceof MPSPsiRootNode) {
+        if (updatedChildren == null)         updatedChildren=new ArrayList<AbstractTreeNode>(children);
+        int idx=updatedChildren.indexOf(child);
+        updatedChildren.remove(idx);
+        updatedChildren.add(idx,new MPSPsiElementTreeNode(treeNode.getProject(),(MPSPsiRootNode)value,settings));
+      }
+    }
+ else     if (child instanceof PsiDirectoryNode) {
+      final SModel perRootModel=SModelFileTracker.getInstance().findModel(VirtualFileUtils.toIFile(((PsiDirectoryNode)child).getVirtualFile()));
+      if (perRootModel != null) {
+        if (updatedChildren == null)         updatedChildren=new ArrayList<AbstractTreeNode>(children);
+        int idx=updatedChildren.indexOf(child);
+        updatedChildren.remove(idx);
+        updatedChildren.add(idx,new PsiDirectoryNode(treeNode.getProject(),((PsiDirectoryNode)child).getValue(),settings){
+          @Override public boolean canNavigate(){
+            return true;
+          }
+          @Override public String getNavigateActionText(          boolean focusEditor){
+            return MPSBundle.message("open.model.properties.action");
+          }
+          @Override public void navigate(          boolean requestFocus){
+            MPSPropertiesConfigurable configurable=new ModelPropertiesConfigurable(perRootModel,ProjectHelper.toMPSProject(myProject),true);
+            final SingleConfigurableEditor dialog=new SingleConfigurableEditor(myProject,configurable);
+            SwingUtilities.invokeLater(new Runnable(){
+              @Override public void run(){
+                dialog.show();
+              }
+            }
+);
+          }
+        }
+);
+      }
     }
   }
   return updatedChildren != null ? updatedChildren : children;
