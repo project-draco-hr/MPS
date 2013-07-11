@@ -15,9 +15,11 @@
     }
   }
 ,ModalityState.NON_MODAL);
+  File deployScriptFile=deployScript.value._1();
+  SModel deployScriptModel=deployScript.value._0();
   MakeSession session=new MakeSession(new ProjectOperationContext(ProjectHelper.toMPSProject(project)),null,true);
   if (IMakeService.INSTANCE.get().openNewSession(session)) {
-    Future<IResult> future=IMakeService.INSTANCE.get().make(session,new ModelsToResources(new ProjectOperationContext(ProjectHelper.toMPSProject(project)),Sequence.<SModel>singleton(deployScript.value._0())).resources(false));
+    Future<IResult> future=IMakeService.INSTANCE.get().make(session,new ModelsToResources(new ProjectOperationContext(ProjectHelper.toMPSProject(project)),Sequence.<SModel>singleton(deployScriptModel)).resources(false));
     IResult result=null;
     try {
       result=future.get();
@@ -29,12 +31,12 @@ catch (    InterruptedException ignore) {
 catch (    ExecutionException ignore) {
     }
     if (result == null || !(result.isSucessful())) {
+      FileUtil.delete(deployScriptFile.getParentFile());
       return false;
     }
   }
   final ConsoleView console=ConsoleCreator.createConsoleView(project,false);
   console.addMessageFilter(new StandaloneMPSStackTraceFilter(project));
-  File deployScriptFile=deployScript.value._1();
   final Wrappers._T<ProcessHandler> process=new Wrappers._T<ProcessHandler>();
   try {
     process.value=OutputRedirector.redirect(new Ant_Command().setTargetName_String("buildDependents assemble").createProcess(deployScriptFile.getAbsolutePath()),new ConsoleProcessListener(console));
@@ -43,6 +45,7 @@ catch (    ExecutionException ignore) {
     if (LOG.isEnabledFor(Priority.ERROR)) {
       LOG.error("Can not deploy plugins",e);
     }
+    FileUtil.delete(deployScriptFile.getParentFile());
     return false;
   }
   ApplicationManager.getApplication().invokeAndWait(new Runnable(){
@@ -67,8 +70,10 @@ catch (    ExecutionException ignore) {
 ,ModalityState.NON_MODAL);
   int exitCode=ProcessHandlerBuilder.startAndWait(process.value);
   if (exitCode != 0) {
+    FileUtil.delete(deployScriptFile.getParentFile());
     return false;
   }
   FileUtil.copyDir(new File(deployScriptFile.getParentFile(),"build" + File.separator + "artifacts"+ File.separator+ "deploy"),myDeployLocation);
+  FileUtil.delete(deployScriptFile.getParentFile());
   return true;
 }
