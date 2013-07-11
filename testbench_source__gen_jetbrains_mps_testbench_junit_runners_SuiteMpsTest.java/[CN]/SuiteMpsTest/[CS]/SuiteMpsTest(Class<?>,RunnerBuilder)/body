@@ -1,12 +1,11 @@
 {
   super(klass);
-  createdEnv=MpsTestsSupport.initEnv(klass.getAnnotation(SuiteMpsTest.WithIdeaInstance.class) != null);
-  if (klass.getAnnotation(SuiteMpsTest.PreloadAllModules.class) != null) {
-    MpsTestsSupport.loadAllModulesIntoRepository();
-  }
+  createdEnv=MpsTestsSupport.initEnv(true);
+  MpsTestsSupport.loadAllModulesIntoRepository();
   children=builder.runners(klass,SuiteMpsTest.getAnnotatedClasses(klass));
-  if (klass.getAnnotation(SuiteMpsTest.WithMake.class) != null) {
-    children=MakeRunner.withMakeRunner(getTestClass(),children);
+  MPSCompilationResult compilationResult=MpsTestsSupport.makeAllInCreatedEnvironment();
+  if (compilationResult != null && compilationResult.getErrors() > 0) {
+    throw new Exception("Compilation errors: " + compilationResult);
   }
-  withWatching=klass.getAnnotation(SuiteMpsTest.WithoutWatching.class) == null;
+  MpsTestsSupport.reloadAllAfterMake();
 }
