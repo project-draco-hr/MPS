@@ -18,7 +18,8 @@
   File deployScriptFile=deployScript.value._1();
   SModel deployScriptModel=deployScript.value._0();
   MakeSession session=new MakeSession(new ProjectOperationContext(ProjectHelper.toMPSProject(project)),null,true);
-  if (IMakeService.INSTANCE.get().openNewSession(session)) {
+  boolean generationSuccessful=IMakeService.INSTANCE.get().openNewSession(session);
+  if (generationSuccessful) {
     Future<IResult> future=IMakeService.INSTANCE.get().make(session,new ModelsToResources(new ProjectOperationContext(ProjectHelper.toMPSProject(project)),Sequence.<SModel>singleton(deployScriptModel)).resources(false));
     IResult result=null;
     try {
@@ -30,10 +31,20 @@ catch (    InterruptedException ignore) {
     }
 catch (    ExecutionException ignore) {
     }
-    if (result == null || !(result.isSucessful())) {
-      FileUtil.delete(deployScriptFile.getParentFile());
-      return false;
+    generationSuccessful&=(result != null) && result.isSucessful();
+  }
+  final SModule deployScriptModule=deployScriptModel.getModule();
+  FileUtil.delete(new File(((AbstractModule)deployScriptModule).getOutputPath().getPath().replace("/",File.separator)));
+  FileUtil.delete(new File(FileGenerationUtil.getCachesDir(((AbstractModule)deployScriptModule).getOutputPath()).getPath().replace("/",File.separator)));
+  ModelAccess.instance().runWriteAction(new Runnable(){
+    public void run(){
+      MPSModuleRepository.getInstance().unregisterModule(deployScriptModule,ProjectHelper.toMPSProject(projectFinal));
     }
+  }
+);
+  if (!(generationSuccessful)) {
+    FileUtil.delete(deployScriptFile.getParentFile());
+    return false;
   }
   final ConsoleView console=ConsoleCreator.createConsoleView(project,false);
   console.addMessageFilter(new StandaloneMPSStackTraceFilter(project));
