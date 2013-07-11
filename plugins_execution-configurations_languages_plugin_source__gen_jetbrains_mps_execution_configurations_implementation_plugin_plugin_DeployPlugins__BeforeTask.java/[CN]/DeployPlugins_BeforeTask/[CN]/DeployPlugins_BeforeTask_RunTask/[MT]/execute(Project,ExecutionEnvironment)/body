@@ -2,61 +2,35 @@
   if (ListSequence.fromList(myPlugins).isEmpty()) {
     return true;
   }
+  final Wrappers._T<DeployScript> script=new Wrappers._T<DeployScript>();
   final Project projectFinal=project;
-  final Wrappers._T<Tuples._2<SModel,File>> deployScript=new Wrappers._T<Tuples._2<SModel,File>>();
   ApplicationManager.getApplication().invokeAndWait(new Runnable(){
     public void run(){
       ModelAccess.instance().executeCommand(new Runnable(){
         public void run(){
-          deployScript.value=DeployScriptCreator.createDeployScript(projectFinal,myPlugins);
+          script.value=new DeployScript(projectFinal,myPlugins);
         }
       }
 ,ProjectHelper.toMPSProject(projectFinal));
     }
   }
 ,ModalityState.NON_MODAL);
-  File deployScriptFile=deployScript.value._1();
-  SModel deployScriptModel=deployScript.value._0();
-  MakeSession session=new MakeSession(new ProjectOperationContext(ProjectHelper.toMPSProject(project)),null,true);
-  boolean generationSuccessful=IMakeService.INSTANCE.get().openNewSession(session);
-  if (generationSuccessful) {
-    Future<IResult> future=IMakeService.INSTANCE.get().make(session,new ModelsToResources(new ProjectOperationContext(ProjectHelper.toMPSProject(project)),Sequence.<SModel>singleton(deployScriptModel)).resources(false));
-    IResult result=null;
-    try {
-      result=future.get();
-    }
- catch (    CancellationException ignore) {
-    }
-catch (    InterruptedException ignore) {
-    }
-catch (    ExecutionException ignore) {
-    }
-    generationSuccessful&=(result != null) && result.isSucessful();
-  }
-  final SModule deployScriptModule=deployScriptModel.getModule();
-  FileUtil.delete(new File(((AbstractModule)deployScriptModule).getOutputPath().getPath().replace("/",File.separator)));
-  FileUtil.delete(new File(FileGenerationUtil.getCachesDir(((AbstractModule)deployScriptModule).getOutputPath()).getPath().replace("/",File.separator)));
-  ModelAccess.instance().runWriteAction(new Runnable(){
-    public void run(){
-      MPSModuleRepository.getInstance().unregisterModule(deployScriptModule,ProjectHelper.toMPSProject(projectFinal));
-    }
-  }
-);
-  if (!(generationSuccessful)) {
-    FileUtil.delete(deployScriptFile.getParentFile());
+  String deployScriptLocation=script.value.make();
+  if ((deployScriptLocation == null || deployScriptLocation.length() == 0)) {
+    script.value.dispose();
     return false;
   }
   final ConsoleView console=ConsoleCreator.createConsoleView(project,false);
   console.addMessageFilter(new StandaloneMPSStackTraceFilter(project));
   final Wrappers._T<ProcessHandler> process=new Wrappers._T<ProcessHandler>();
   try {
-    process.value=OutputRedirector.redirect(new Ant_Command().setTargetName_String("buildDependents assemble").createProcess(deployScriptFile.getAbsolutePath()),new ConsoleProcessListener(console));
+    process.value=OutputRedirector.redirect(new Ant_Command().setTargetName_String("buildDependents assemble").createProcess(deployScriptLocation),new ConsoleProcessListener(console));
   }
- catch (  com.intellij.execution.ExecutionException e) {
+ catch (  ExecutionException e) {
     if (LOG.isEnabledFor(Priority.ERROR)) {
       LOG.error("Can not deploy plugins",e);
     }
-    FileUtil.delete(deployScriptFile.getParentFile());
+    script.value.dispose();
     return false;
   }
   ApplicationManager.getApplication().invokeAndWait(new Runnable(){
@@ -81,10 +55,10 @@ catch (    ExecutionException ignore) {
 ,ModalityState.NON_MODAL);
   int exitCode=ProcessHandlerBuilder.startAndWait(process.value);
   if (exitCode != 0) {
-    FileUtil.delete(deployScriptFile.getParentFile());
+    script.value.dispose();
     return false;
   }
-  FileUtil.copyDir(new File(deployScriptFile.getParentFile(),"build" + File.separator + "artifacts"+ File.separator+ "deploy"),myDeployLocation);
-  FileUtil.delete(deployScriptFile.getParentFile());
+  FileUtil.copyDir(script.value.getArtifactsDir(),myDeployLocation);
+  script.value.dispose();
   return true;
 }
