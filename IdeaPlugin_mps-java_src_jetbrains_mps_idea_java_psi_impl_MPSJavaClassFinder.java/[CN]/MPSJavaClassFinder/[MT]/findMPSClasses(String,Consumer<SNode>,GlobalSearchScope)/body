@@ -2,4 +2,19 @@
   final FileBasedIndex fileBasedIndex=FileBasedIndex.getInstance();
   List<Collection<SNodeDescriptor>> values=fileBasedIndex.getValues(MPSFQNameJavaClassIndex.ID,qname,scope);
   collectNodes(consumer,values);
+  SearchScope mpsSearchScope=new IdeaSearchScope(scope);
+  for (  SModel model : mpsSearchScope.getModels()) {
+    boolean changed=model instanceof EditableSModel && ((EditableSModel)model).isChanged();
+    if (!changed)     continue;
+    String packageName=model.getModelName();
+    if (!qname.startsWith(packageName + "."))     continue;
+    FastNodeFinder fastFinder=((SModelInternal)model).getFastNodeFinder();
+    List<SNode> classes=fastFinder.getNodes("jetbrains.mps.baseLanguage.structure.Classifier",true);
+    if (classes.isEmpty())     continue;
+    for (    SNode claz : classes) {
+      if (qname.equals(ClassUtil.getClassFQName(claz))) {
+        consumer.consume(claz);
+      }
+    }
+  }
 }
