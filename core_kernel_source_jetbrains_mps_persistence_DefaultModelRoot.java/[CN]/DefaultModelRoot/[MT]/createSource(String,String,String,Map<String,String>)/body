@@ -1,0 +1,42 @@
+{
+  options.put(ModelFactory.OPTION_MODELNAME,modelName);
+  SModule module=getModule();
+  if (module != null) {
+    options.put(ModelFactory.OPTION_MODULEREF,module.getModuleReference().toString());
+  }
+  int lastDot=modelName.lastIndexOf(".");
+  options.put(ModelFactory.OPTION_PACKAGE,lastDot == -1 ? "" : modelName.substring(0,lastDot));
+  Set<String> sourceRoots=new LinkedHashSet<String>(getFiles(SOURCE_ROOTS));
+  if (sourceRoots.isEmpty()) {
+    throw new IOException("empty list of source roots");
+  }
+  if (sourceRoot == null || !sourceRoots.contains(sourceRoot)) {
+    sourceRoot=null;
+    for (    String sr : sourceRoots) {
+      if (isLanguageAspectsSourceRoot(sr)) {
+        String prefix=getModule().getModuleName() + ".";
+        if (modelName.startsWith(prefix)) {
+          String aspectName=modelName.substring(prefix.length());
+          if (getAspect(aspectName) != null) {
+            sourceRoot=sr;
+            break;
+          }
+        }
+        continue;
+      }
+      sourceRoot=sr;
+      break;
+    }
+    if (sourceRoot == null) {
+      throw new IOException("no suitable source root found");
+    }
+  }
+  String filenameSuffix=modelName;
+  if (isLanguageAspect(modelName,sourceRoot) || isGeneratorTemplateModel(modelName)) {
+    filenameSuffix=NameUtil.shortNameFromLongName(filenameSuffix);
+  }
+  String relPath=NameUtil.pathFromNamespace(filenameSuffix) + "." + extension;
+  options.put(ModelFactory.OPTION_RELPATH,relPath);
+  IFile file=FileSystem.getInstance().getFileByPath(sourceRoot + File.separator + relPath);
+  return new FileDataSource(file,this);
+}
