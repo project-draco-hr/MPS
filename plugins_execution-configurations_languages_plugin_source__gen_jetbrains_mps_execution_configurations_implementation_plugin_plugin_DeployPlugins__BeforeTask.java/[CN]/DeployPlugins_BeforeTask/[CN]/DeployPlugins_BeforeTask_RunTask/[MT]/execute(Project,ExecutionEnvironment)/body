@@ -1,0 +1,64 @@
+{
+  if (ListSequence.fromList(myPlugins).isEmpty()) {
+    return true;
+  }
+  final Wrappers._T<DeployScript> script=new Wrappers._T<DeployScript>();
+  final Project projectFinal=project;
+  ApplicationManager.getApplication().invokeAndWait(new Runnable(){
+    public void run(){
+      ModelAccess.instance().executeCommand(new Runnable(){
+        public void run(){
+          script.value=new DeployScript(projectFinal,myPlugins);
+        }
+      }
+,ProjectHelper.toMPSProject(projectFinal));
+    }
+  }
+,ModalityState.NON_MODAL);
+  String deployScriptLocation=script.value.make();
+  if ((deployScriptLocation == null || deployScriptLocation.length() == 0)) {
+    script.value.dispose();
+    return false;
+  }
+  final ConsoleView console=ConsoleCreator.createConsoleView(project,false);
+  console.addMessageFilter(new StandaloneMPSStackTraceFilter(project));
+  final Wrappers._T<ProcessHandler> process=new Wrappers._T<ProcessHandler>();
+  try {
+    process.value=OutputRedirector.redirect(new Ant_Command().setTargetName_String("buildDependents assemble").createProcess(deployScriptLocation),new ConsoleProcessListener(console));
+  }
+ catch (  ExecutionException e) {
+    if (LOG.isEnabledFor(Priority.ERROR)) {
+      LOG.error("Can not deploy plugins",e);
+    }
+    script.value.dispose();
+    return false;
+  }
+  ApplicationManager.getApplication().invokeAndWait(new Runnable(){
+    public void run(){
+      Executor executor=DefaultRunExecutor.getRunExecutorInstance();
+      DefaultActionGroup group=new DefaultActionGroup();
+      JPanel consolePanel=new JPanel(new BorderLayout());
+      consolePanel.add(ActionManager.getInstance().createActionToolbar(ActionPlaces.UNKNOWN,group,false).getComponent(),BorderLayout.WEST);
+      consolePanel.add(console.getComponent(),BorderLayout.CENTER);
+      Icon icon=null;
+      String iconPath=MacrosFactory.forModule((AbstractModule)ModuleRepositoryFacade.getInstance().getModule(PersistenceFacade.getInstance().createModuleReference("798100da-4f0a-421a-b991-71f8c50ce5d2(jetbrains.mps.build)"))).expandPath("${language_descriptor}/icons/buildProject.png");
+      if ((iconPath != null && iconPath.length() > 0)) {
+        icon=IconManager.loadIcon(iconPath,false);
+      }
+      RunContentDescriptor descriptor=new RunContentDescriptor(console,process.value,consolePanel,"Deploy plugins",icon);
+      group.add(ActionManager.getInstance().getAction("Stop"));
+      group.addSeparator();
+      group.add(new CloseAction(executor,descriptor,projectFinal));
+      ExecutionManager.getInstance(projectFinal).getContentManager().showRunContent(executor,descriptor);
+    }
+  }
+,ModalityState.NON_MODAL);
+  int exitCode=ProcessHandlerBuilder.startAndWait(process.value);
+  if (exitCode != 0) {
+    script.value.dispose();
+    return false;
+  }
+  FileUtil.copyDir(new File(script.value.getArtifactsPath()),myDeployLocation);
+  script.value.dispose();
+  return true;
+}
