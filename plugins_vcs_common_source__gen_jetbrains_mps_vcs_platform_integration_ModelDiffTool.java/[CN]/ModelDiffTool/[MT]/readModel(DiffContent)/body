@@ -1,23 +1,20 @@
 {
-  if ((content instanceof DocumentContent || content instanceof FileContent) && content.getFile() != null) {
-    IFile file=VirtualFileUtils.toIFile(content.getFile());
-    SModel model=SModelFileTracker.getInstance().findModel(file);
-    if (model == null && FilePerRootDataSource.isPerRootPersistenceFile(file)) {
-      model=SModelFileTracker.getInstance().findModel(file.getParent());
-    }
-    if (model != null) {
-      return model;
-    }
-  }
   try {
     byte[] bytes=content.getBytes();
-    FileType contentType=content.getContentType();
     if (bytes.length == 0) {
       return new MergeTemporaryModel(new SModelReference("",""),true);
     }
-    return PersistenceUtil.loadModel(new String(bytes,FileUtil.DEFAULT_CHARSET),MPSExtentions.MODEL);
+    FileType contentType=content.getContentType();
+    String ext=MPSExtentions.MODEL;
+    if (contentType != null && !(contentType.equals(MPSFileTypeFactory.MPS_ROOT_FILE_TYPE) || contentType.equals(MPSFileTypeFactory.MPS_HEADER_FILE_TYPE))) {
+      contentType.getDefaultExtension();
+    }
+    return PersistenceUtil.loadModel(new String(bytes,FileUtil.DEFAULT_CHARSET),ext);
   }
  catch (  IOException ioe) {
-    throw new ModelReadException("Couldn't read content: " + ioe.getMessage(),ioe);
+    if (LOG.isEnabledFor(Priority.ERROR)) {
+      LOG.error("Couldn't read content: " + ioe.getMessage(),ioe);
+    }
   }
+  return null;
 }
