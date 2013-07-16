@@ -1,6 +1,9 @@
 {
   Selection selection=context.getSelectionManager().getSelection();
   List<SNode> pasteNodes=CopyPasteUtil.getNodesFromClipboard(selection.getSelectedNodes().get(0).getModel());
+  if (pasteNodes == null || pasteNodes.isEmpty()) {
+    return false;
+  }
   boolean disposed=false;
   for (  SNode node : selection.getSelectedNodes()) {
     if (jetbrains.mps.util.SNodeOperations.isDisposed(node)) {
@@ -8,8 +11,7 @@
       break;
     }
   }
-  boolean needToConvert=pasteNodes == null || pasteNodes.isEmpty();
-  boolean canPasteWithRemove=!needToConvert && !disposed && canPasteViaNodePasterWithRemove(selection.getSelectedNodes(),pasteNodes);
+  boolean canPasteWithRemove=!disposed && canPasteViaNodePasterWithRemove(selection.getSelectedNodes(),pasteNodes);
   if (selection instanceof SingularSelection && (selection instanceof EditorCellLabelSelection || (selection instanceof EditorCellSelection && !canPasteWithRemove))) {
     EditorCell selectedCell=getCellToPasteTo(context.getSelectedCell());
     if (selectedCell == null) {
@@ -18,9 +20,6 @@
     SNode selectedNode=selectedCell.getSNode();
     if (selectedNode == null || jetbrains.mps.util.SNodeOperations.isDisposed(selectedNode)) {
       return false;
-    }
-    if (needToConvert) {
-      return CopyPasteUtil.isConversionAvailable(selectedNode.getModel(),selectedNode);
     }
     return canPasteViaNodePaster(selectedCell,pasteNodes);
   }
