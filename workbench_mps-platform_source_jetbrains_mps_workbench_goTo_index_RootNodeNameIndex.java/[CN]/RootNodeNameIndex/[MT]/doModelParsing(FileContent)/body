@@ -2,11 +2,19 @@
   SModel model=inputData.getUserData(PARSED_MODEL);
   if (model == null) {
     String ext=FileUtil.getExtension(inputData.getFileName());
+    if (MPSFileTypeFactory.MPS_ROOT_FILE_TYPE.equals(inputData.getFile().getFileType())) {
+      ext=MPSFileTypeFactory.MPS_HEADER_FILE_TYPE.getDefaultExtension();
+    }
     ModelFactory factory=PersistenceFacade.getInstance().getModelFactory(ext);
     if (factory == null) {
       return null;
     }
-    model=factory.isBinary() ? PersistenceUtil.loadModel(inputData.getContent(),ext) : PersistenceUtil.loadModel(inputData.getContentAsText().toString(),ext);
+    if (factory instanceof FolderModelFactory) {
+      model=PersistenceUtil.loadModel(VirtualFileUtils.toIFile(MPSFileTypeFactory.MPS_ROOT_FILE_TYPE.equals(inputData.getFile().getFileType()) ? inputData.getFile().getParent().findChild(MPSExtentions.DOT_MODEL_HEADER) : inputData.getFile()));
+    }
+ else {
+      model=factory.isBinary() ? PersistenceUtil.loadModel(inputData.getContent(),ext) : PersistenceUtil.loadModel(inputData.getContentAsText().toString(),ext);
+    }
     if (model == null) {
       return null;
     }
