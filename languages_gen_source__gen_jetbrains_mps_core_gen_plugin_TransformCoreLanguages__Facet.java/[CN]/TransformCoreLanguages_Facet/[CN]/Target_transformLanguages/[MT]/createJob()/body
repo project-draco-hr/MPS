@@ -1,25 +1,26 @@
 {
   return new IJob.Stub(){
-    public IResult execute(    final Iterable<IResource> input,    final IJobMonitor monitor,    final IPropertiesAccessor pa){
+    @Override public IResult execute(    final Iterable<IResource> rawInput,    final IJobMonitor monitor,    final IPropertiesAccessor pa,    @NotNull final ProgressMonitor progressMonitor){
       final Wrappers._T<Iterable<IResource>> _output_kp7j54_a0a=new Wrappers._T<Iterable<IResource>>(null);
+      final Iterable<IMResource> input=(Iterable<IMResource>)(Iterable)rawInput;
 switch (0) {
 case 0:
-        final Wrappers._T<List<SModelDescriptor>> models=new Wrappers._T<List<SModelDescriptor>>();
+        final Wrappers._T<List<SModel>> models=new Wrappers._T<List<SModel>>();
       ModelAccess.instance().runReadAction(new Runnable(){
         public void run(){
-          models.value=Sequence.fromIterable(input).where(new IWhereFilter<IResource>(){
-            public boolean accept(            IResource it){
+          models.value=Sequence.fromIterable(input).where(new IWhereFilter<IMResource>(){
+            public boolean accept(            IMResource it){
               return ((MResource)it).module() instanceof Language;
             }
           }
-).translate(new ITranslator2<IResource,SModelDescriptor>(){
-            public Iterable<SModelDescriptor> translate(            IResource it){
+).translate(new ITranslator2<IMResource,SModel>(){
+            public Iterable<SModel> translate(            IMResource it){
               return ((MResource)it).models();
             }
           }
-).where(new IWhereFilter<SModelDescriptor>(){
-            public boolean accept(            SModelDescriptor it){
-              return ListSequence.fromList(SModelOperations.getRoots(((SModel)it.getSModel()),"jetbrains.mps.core.structure.structure.SStructureContainer")).isNotEmpty();
+).where(new IWhereFilter<SModel>(){
+            public boolean accept(            SModel it){
+              return ListSequence.fromList(SModelOperations.getRoots(((SModel)it),"jetbrains.mps.core.structure.structure.SStructureContainer")).isNotEmpty();
             }
           }
 ).toListSequence();
@@ -41,7 +42,7 @@ final List<LanguageModelsMerger> generated=ListSequence.fromList(new ArrayList<L
 IGenerationHandler gh=new MakeGenerationHandler(new _FunctionTypes._return_P1_E0<Boolean,GResource>(){
 public Boolean invoke(GResource data){
   monitor.currentProgress().advanceWork("Transforming",100);
-  monitor.reportFeedback(new IFeedback.MESSAGE(new Message(MessageKind.INFORMATION,"Generated " + data.model().getLongName())));
+  monitor.reportFeedback(new IFeedback.MESSAGE(new Message(MessageKind.INFORMATION,"Generated " + SNodeOperations.getModelLongName(data.model()))));
   ListSequence.fromList(generated).addElement(new LanguageModelsMerger((Language)data.module(),data.status().getOutputModel(),mh));
   return true;
 }
@@ -64,7 +65,7 @@ GenerationOptions options=pa.global().properties(new ITarget.Name("jetbrains.mps
 final GenerationOptions.OptionsBuilder builder=GenerationOptions.getDefaults().keepOutputModel(true).strictMode(options.isStrictMode()).reporting(options.isShowInfo(),options.isShowWarnings(),options.isKeepModelsWithWarnings(),options.getNumberOfModelsToKeep()).saveTransientModels(options.isSaveTransientModels());
 ModelAccess.instance().runReadAction(new Runnable(){
 public void run(){
-for (SModelDescriptor m : ListSequence.fromList(models.value)) {
+for (SModel m : ListSequence.fromList(models.value)) {
 builder.customPlan(m,TransformGenerationPlan.forLanguages("jetbrains.mps.core.gen.transform"));
 }
 }
