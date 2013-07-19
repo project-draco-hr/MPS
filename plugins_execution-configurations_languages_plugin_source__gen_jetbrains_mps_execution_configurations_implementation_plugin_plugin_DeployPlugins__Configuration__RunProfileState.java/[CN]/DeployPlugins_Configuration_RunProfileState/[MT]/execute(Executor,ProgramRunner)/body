@@ -1,0 +1,67 @@
+{
+  Project project=myEnvironment.getProject();
+  final DeployScript script=ScriptsHolder.get(myEnvironment);
+  if (script == null) {
+    throw new ExecutionException("Could not deploy plugins");
+  }
+  final Project projectFinal=project;
+  String deployScriptLocation=script.getDeployScriptLocation();
+  if ((deployScriptLocation == null || deployScriptLocation.length() == 0)) {
+    script.dispose();
+    ScriptsHolder.remove(myEnvironment);
+    throw new ExecutionException("Can not generate deploy script");
+  }
+  ConsoleView console=ConsoleCreator.createConsoleView(project,false);
+  console.addMessageFilter(new StandaloneMPSStackTraceFilter(project));
+  ProcessHandler process;
+  try {
+    process=OutputRedirector.redirect(new Ant_Command().setTargetName_String("buildDependents assemble").createProcess(deployScriptLocation),new ProcessAdapter(){
+      @Override public void processTerminated(      ProcessEvent event){
+        if (event.getExitCode() == 0) {
+          File artifacts=new File(script.getArtifactsPath());
+          if (myRunConfiguration.getSkipModulesLoading()) {
+            for (            File pluginDir : artifacts.listFiles()) {
+              File pluginXml=new File(new File(pluginDir,"META-INF"),"plugin.xml");
+              if (!(pluginXml.exists())) {
+                continue;
+              }
+              try {
+                Document document=JDOMUtil.loadDocument(pluginXml);
+                myRunConfiguration.removeLanguageLibraries(document.getRootElement(),projectFinal);
+                JDOMUtil.writeDocument(document,pluginXml);
+              }
+ catch (              JDOMException e) {
+              }
+catch (              IOException e) {
+              }
+            }
+          }
+          FileUtil.copyDir(artifacts,myRunConfiguration.getPluginsPath());
+          script.dispose();
+          ScriptsHolder.remove(myEnvironment);
+          if (myRunConfiguration.getRestartCurrentInstance()) {
+            ApplicationEx application=(ApplicationEx)ApplicationManager.getApplication();
+            application.restart(true);
+          }
+        }
+      }
+    }
+);
+  }
+ catch (  ExecutionException e) {
+    script.dispose();
+    ScriptsHolder.remove(myEnvironment);
+    throw new ExecutionException("Can not deploy plugins",e);
+  }
+{
+    ProcessHandler _processHandler=process;
+    final ConsoleView _consoleView=console;
+    _processHandler.addProcessListener(new ConsoleProcessListener(_consoleView));
+    return new DefaultExecutionResult(_processHandler,new DefaultExecutionConsole(_consoleView.getComponent(),new _FunctionTypes._void_P0_E0(){
+      public void invoke(){
+        _consoleView.dispose();
+      }
+    }
+));
+  }
+}
