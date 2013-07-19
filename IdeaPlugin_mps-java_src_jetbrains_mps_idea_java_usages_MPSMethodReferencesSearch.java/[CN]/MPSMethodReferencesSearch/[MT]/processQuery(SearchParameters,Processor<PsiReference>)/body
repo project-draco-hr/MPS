@@ -4,9 +4,6 @@
   }
   final GlobalSearchScope scope=(GlobalSearchScope)queryParameters.getScope();
   final PsiMethod method=queryParameters.getMethod();
-  if (DumbService.getInstance(method.getProject()).isDumb()) {
-    return;
-  }
   final GeneratedFinder finder=method.isConstructor() ? FindUtils.getFinderByClass(new ModuleClassReference<GeneratedFinder>(new ModuleReference("jetbrains.mps.baseLanguage"),"jetbrains.mps.baseLanguage.findUsages.ConstructorUsages_Finder")) : FindUtils.getFinderByClass(new ModuleClassReference<GeneratedFinder>(new ModuleReference("jetbrains.mps.baseLanguage"),"jetbrains.mps.baseLanguage.findUsages.BaseMethodUsages_Finder"));
   if (finder == null) {
     LOG.warning("MPS finder not found; MethodReferenceSearch will not work");
@@ -14,6 +11,9 @@
   }
   ModelAccess.instance().runReadAction(new Runnable(){
     @Override public void run(){
+      if (DumbService.getInstance(method.getProject()).isDumb()) {
+        return;
+      }
       final SNode methodNode=MPSReferenceSearch.getNodeForElement(method);
       if (methodNode == null) {
         return;
@@ -23,7 +23,7 @@
       try {
         results=FindUtils.makeProvider(finder).getResults(query,null);
       }
- catch (      ProcessCanceledException e) {
+ catch (      IndexNotReadyException e) {
         return;
       }
       for (      SearchResult<SNode> result : results.getSearchResults()) {
