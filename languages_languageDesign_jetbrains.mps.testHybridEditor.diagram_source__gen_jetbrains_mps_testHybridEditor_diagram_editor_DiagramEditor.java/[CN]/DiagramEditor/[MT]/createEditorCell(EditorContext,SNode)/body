@@ -1,14 +1,32 @@
 {
   GenericViewCell cell=GenericViewCell.createViewCell(context,node,myView);
-  EditorCell_Collection collection=createBlockCollection(context,node);
-  cell.addEditorCell(collection);
-  int i=40;
-  for (  EditorCell child : Sequence.fromIterable(collection)) {
+  EditorCell_Collection blockCollection=createBlockCollection(context,node);
+  cell.addEditorCell(blockCollection);
+  for (  EditorCell child : Sequence.fromIterable(blockCollection)) {
     if (child instanceof GenericViewCell) {
       View view=((GenericViewCell)child).getView();
       myView.itemsView.children().add(view);
-      view.moveTo(new Vector(i,i));
-      i+=40;
+      view.moveTo(new Vector(SPropertyOperations.getInteger(((SNode)child.getSNode()),"x"),SPropertyOperations.getInteger(((SNode)child.getSNode()),"y")));
+      MapSequence.fromMap(nodeToViewMap).put(child.getSNode(),view);
+    }
+  }
+  EditorCell_Collection connectorCollection=createConnectorCollection(context,node);
+  cell.addEditorCell(connectorCollection);
+  for (  EditorCell child : Sequence.fromIterable(connectorCollection)) {
+    if (child instanceof GenericViewCell) {
+      View view=((GenericViewCell)child).getView();
+      myView.itemsView.children().add(view);
+      if (child instanceof ConnectorViewCell) {
+        View fromView=MapSequence.fromMap(nodeToViewMap).get(SNodeOperations.getParent(SLinkOperations.getTarget(((SNode)child.getSNode()),"inputPort",false)));
+        View toView=MapSequence.fromMap(nodeToViewMap).get(SNodeOperations.getParent(SLinkOperations.getTarget(((SNode)child.getSNode()),"outputPort",false)));
+        PolylineConnection connection=((ConnectorViewCell)child).getConnection();
+        connection.toView().set(fromView);
+        connection.fromView().set(toView);
+        connection.update(fromView.bounds().get().center(),toView.bounds().get().center());
+        for (        LineView line : ListSequence.fromList(connection.getLines())) {
+          cell.addEditorCell(GenericViewCell.createViewCell(context,node,line));
+        }
+      }
     }
   }
   return cell;
