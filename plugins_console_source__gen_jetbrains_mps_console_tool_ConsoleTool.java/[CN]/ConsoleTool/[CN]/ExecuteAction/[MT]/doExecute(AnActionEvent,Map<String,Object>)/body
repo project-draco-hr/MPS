@@ -8,9 +8,10 @@
         return;
       }
       final SNode willBeLastHist=SNodeOperations.copyNode(myCommandRoot);
-      final SNode res=_quotation_createNode_xg3v07_a0g0a0a2ac();
+      final SNode res=SConceptOperations.createNewNode("jetbrains.mps.console.base.structure.CommandResult",null);
+      SLinkOperations.addNewChild(res,"line","jetbrains.mps.console.base.structure.CommandResultLine");
       final SearchScope scope=(myScopeCombo.getSelectedItem() == ConsoleTool.PROJECT_SCOPE ? new ProjectScope(myProject) : GlobalScope.getInstance());
-      BehaviorReflection.invokeVirtual(Void.class,SNodeOperations.cast(lastCmd,"jetbrains.mps.console.base.structure.Command"),"virtual_execute_757553790980855637",new Object[]{new ConsoleContext(){
+      BehaviorReflection.invokeVirtual(Void.class,SNodeOperations.cast(lastCmd,"jetbrains.mps.console.base.structure.Command"),"virtual_execute_6854397602732226506",new Object[]{new ConsoleContext(){
         public jetbrains.mps.project.Project getProject(){
           return myProject;
         }
@@ -21,31 +22,20 @@
 ,new ConsoleStream(){
         public void addText(        String text){
           checkResultAvailable();
-          String[] strings=text.split("\n");
-          for (int i=0; i < strings.length; i++) {
-            if (isNotEmpty_xg3v07_a0a0c0a0a1a3a8a0a0a0a0a2ac(strings[i])) {
-              ListSequence.fromList(SLinkOperations.getTargets(ListSequence.fromList(SLinkOperations.getTargets(res,"line",true)).last(),"part",true)).addElement(_quotation_createNode_xg3v07_a0a0a0a2a0a0b0a8a0a0c25(strings[i]));
+          Scanner scanner=new Scanner(text);
+          while (scanner.hasNextLine()) {
+            String line=scanner.nextLine();
+            if ((line != null && line.length() > 0)) {
+              ListSequence.fromList(SLinkOperations.getTargets(ListSequence.fromList(SLinkOperations.getTargets(res,"line",true)).last(),"part",true)).addElement(_quotation_createNode_xg3v07_a0a0a1a2a0a0b0a8a0a0c45(line));
             }
-            if (i < strings.length - 1 || text.charAt(text.length() - 1) == '\n') {
+            if (scanner.hasNextLine() || text.charAt(text.length() - 1) == '\n') {
               SLinkOperations.addNewChild(res,"line","jetbrains.mps.console.base.structure.CommandResultLine");
             }
           }
-          if (text.equals("\n")) {
-            SLinkOperations.addNewChild(res,"line","jetbrains.mps.console.base.structure.CommandResultLine");
-          }
-        }
-        public void addNodeReference(        SNode node){
-          checkResultAvailable();
-          SModuleReference usedLanguage=node.getConcept().getLanguage().getSourceModule().getModuleReference();
-          if (!(((SModelInternal)myModel).importedLanguages().contains(usedLanguage))) {
-            ((SModelInternal)myModel).addLanguage(usedLanguage);
-            ((AbstractModule)myModel.getModule()).addUsedLanguage(usedLanguage);
-          }
-          SLinkOperations.setTarget(SLinkOperations.addNewChild(ListSequence.fromList(SLinkOperations.getTargets(res,"line",true)).last(),"part","jetbrains.mps.console.base.structure.NodeReferenceResultPart"),"target",node,false);
         }
         public void addNode(        SNode node){
           checkResultAvailable();
-          for (          SNode subNode : ListSequence.fromList(SNodeOperations.getDescendants(((SNode)node),null,false,new String[]{})).concat(ListSequence.fromList((ListSequence.fromListAndArray(new ArrayList<SNode>(),node))))) {
+          for (          SNode subNode : ListSequence.fromList(SNodeOperations.getDescendants(node,null,true,new String[]{}))) {
             SModuleReference usedLanguage=subNode.getConcept().getLanguage().getSourceModule().getModuleReference();
             if (!(((SModelInternal)myModel).importedLanguages().contains(usedLanguage))) {
               ((SModelInternal)myModel).addLanguage(usedLanguage);
@@ -53,13 +43,6 @@
             }
           }
           SLinkOperations.setTarget(SLinkOperations.addNewChild(ListSequence.fromList(SLinkOperations.getTargets(res,"line",true)).last(),"part","jetbrains.mps.console.base.structure.NodeResultPart"),"node",node,true);
-        }
-        public void addAction(        String text,        _FunctionTypes._void_P0_E0 action){
-          checkResultAvailable();
-          SNode result=_quotation_createNode_xg3v07_a0b0d0a1a0i0a0a2ac();
-          SPropertyOperations.set(result,"text",text);
-          ClosureHoldingNodeUtil.getInstance().register(result,action);
-          ListSequence.fromList(SLinkOperations.getTargets(ListSequence.fromList(SLinkOperations.getTargets(res,"line",true)).last(),"part",true)).addElement(result);
         }
         private void checkResultAvailable(){
           if ((SNodeOperations.getNextSibling(willBeLastHist) == null)) {
@@ -70,10 +53,25 @@
 ,new Runnable(){
         public void run(){
           ListSequence.fromList(SLinkOperations.getTargets(myHistRoot,"item",true)).addElement(willBeLastHist);
-          SLinkOperations.setTarget(myCommandRoot,"command",null,true);
+          SNodeOperations.deleteNode(SLinkOperations.getTarget(myCommandRoot,"command",true));
           myCursor=null;
           myNewCommand=null;
-          myCommandEditor.scrollRectToVisible(myCommandEditor.getBounds());
+        }
+      }
+,new Runnable(){
+        public void run(){
+          ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+            public void run(){
+              TemporaryModels.getInstance().addMissingImports(myModel);
+            }
+          }
+);
+          SwingUtilities.invokeLater(new Runnable(){
+            public void run(){
+              myCommandEditor.scrollRectToVisible(myCommandEditor.getBounds());
+            }
+          }
+);
         }
       }
 });
