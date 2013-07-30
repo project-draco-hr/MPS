@@ -1,0 +1,29 @@
+{
+  FolderModelFactory factory=PersistenceRegistry.getInstance().getFolderModelFactory(PER_ROOT_PERSISTENCE_FACTORY);
+  if (factory == null || factory.isBinary()) {
+    return null;
+  }
+  try {
+    SModel model=factory.load(new MultiStreamDataSourceBase(){
+      @Override public Iterable<String> getAvailableStreams(){
+        return content.keySet();
+      }
+      @Override public InputStream openInputStream(      String name) throws IOException {
+        Object data=content.get(name);
+        if (data instanceof String) {
+          return new ByteArrayInputStream(((String)data).getBytes(FileUtil.DEFAULT_CHARSET));
+        }
+ else         if (data instanceof byte[]) {
+          return new ByteArrayInputStream((byte[])data);
+        }
+        throw new UnsupportedOperationException();
+      }
+    }
+,Collections.<String,String>emptyMap());
+    model.load();
+    return model;
+  }
+ catch (  IOException ex) {
+    return null;
+  }
+}
