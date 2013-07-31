@@ -1,12 +1,29 @@
 {
   final PsiElement element=e.getData(LangDataKeys.PSI_ELEMENT);
   final Module module=e.getData(LangDataKeys.MODULE);
+  final Project project=e.getData(PlatformDataKeys.PROJECT);
   MPSFacet facet=FacetManager.getInstance(module).getFacetByType(MPSFacetType.ID);
   SModule mpsModule=facet.getSolution();
   MPSProject mpsProject=e.getProject().getComponent(MPSProject.class);
+  List<PsiJavaFile> psiJavaFiles=new ArrayList<PsiJavaFile>();
+  collectPsiJavaFiles((PsiDirectory)element,psiJavaFiles);
+  Collection<Module> modulesWithoutFacet=JavaConverter.getModulesThatNeedMPSFacet(psiJavaFiles);
+  if (!modulesWithoutFacet.isEmpty()) {
+    final AddFacetToModulesDialog dialog=new AddFacetToModulesDialog(project,module.getName(),modulesWithoutFacet);
+    dialog.show();
+    if (dialog.getExitCode() == DialogWrapper.OK_EXIT_CODE) {
+      ApplicationManager.getApplication().runWriteAction(new Runnable(){
+        @Override public void run(){
+          for (          Module moduleToAddFacet : dialog.getResult()) {
+            FacetManager.getInstance(moduleToAddFacet).addFacet(FacetTypeRegistry.getInstance().findFacetType(MPSFacetType.ID),"",null);
+          }
+        }
+      }
+);
+    }
+  }
   final MultipleFilesParser parser=new MultipleFilesParser(mpsModule,mpsProject.getRepository(),true);
-  final List<IFile> javaFiles=new ArrayList<IFile>();
-  collectJavaFiles((PsiDirectory)element,javaFiles);
+  final List<IFile> javaFiles=toIFiles(psiJavaFiles);
   ProgressManager.getInstance().run(new Task.Modal(null,"Convert to MPS",false){
     @Override public void run(    @NotNull final ProgressIndicator progressIndicator){
       try {
