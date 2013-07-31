@@ -9,11 +9,17 @@
   collectPsiJavaFiles((PsiDirectory)element,psiJavaFiles);
   Collection<Module> modulesWithoutFacet=JavaConverter.getModulesThatNeedMPSFacet(psiJavaFiles);
   if (!modulesWithoutFacet.isEmpty()) {
-    AddFacetToModulesDialog dialog=new AddFacetToModulesDialog(project,module.getName(),modulesWithoutFacet);
+    final AddFacetToModulesDialog dialog=new AddFacetToModulesDialog(project,module.getName(),modulesWithoutFacet);
     dialog.show();
     if (dialog.getExitCode() == DialogWrapper.OK_EXIT_CODE) {
-      for (      Module modelToAddFacet : dialog.getResult()) {
+      ApplicationManager.getApplication().runWriteAction(new Runnable(){
+        @Override public void run(){
+          for (          Module moduleToAddFacet : dialog.getResult()) {
+            FacetManager.getInstance(moduleToAddFacet).addFacet(FacetTypeRegistry.getInstance().findFacetType(MPSFacetType.ID),"",null);
+          }
+        }
       }
+);
     }
   }
   final MultipleFilesParser parser=new MultipleFilesParser(mpsModule,mpsProject.getRepository(),true);
