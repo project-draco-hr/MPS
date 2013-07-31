@@ -10,12 +10,23 @@
   for (  String writtenFile : makeFacetConfiguration.getWrittenFiles()) {
     myContext.getCompileContext().processMessage(new FileGeneratedEvent());
     try {
-      FSOperations.markDirty(myContext.getCompileContext(),new File(writtenFile));
-      myRefreshComponent.refresh(writtenFile);
       SModel source=makeFacetConfiguration.getSource(writtenFile);
+      ModuleBuildTarget target=myToMake.get(source);
+      File file=new File(writtenFile);
       if (source != null && source.getSource() instanceof FileDataSource) {
-        myOutputConsumer.registerOutputFile(myToMake.get(source),new File(writtenFile),Collections.singletonList(((FileDataSource)source.getSource()).getLocation()));
+        myOutputConsumer.registerOutputFile(target,file,Collections.singletonList(((FileDataSource)source.getSource()).getLocation()));
       }
+      if (TraceInfoCache.TRACE_FILE_NAME.equals(file.getName())) {
+        try {
+          copyResource(target,file);
+        }
+ catch (        IOException e) {
+          myContext.getCompileContext().processMessage(new CompilerMessage("MPS resources",Kind.ERROR,e.getMessage(),FileUtil.toSystemIndependentName(file.getParent())));
+        }
+        success=false;
+      }
+      FSOperations.markDirty(myContext.getCompileContext(),file);
+      myRefreshComponent.refresh(writtenFile);
     }
  catch (    IOException e) {
       reportError(e);
