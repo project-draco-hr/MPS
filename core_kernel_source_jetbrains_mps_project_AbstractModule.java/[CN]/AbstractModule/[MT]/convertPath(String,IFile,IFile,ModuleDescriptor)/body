@@ -1,9 +1,19 @@
 {
   String packagedSourcesPath=getModuleSourceDir() != null ? getModuleSourceDir().getPath() : null;
   String canonicalPath=FileUtil.getCanonicalPath(originalPath).toLowerCase();
+  MacroHelper macroHelper=MacrosFactory.forModuleFile(sourcesDescriptorFile);
+  String suffix=descriptor.getCompileInMPS() ? CLASSES_GEN : CLASSES;
+  if (canonicalPath.endsWith(suffix)) {
+    String classes=macroHelper.expandPath("${module}/" + suffix);
+    if (FileUtil.getCanonicalPath(classes).equalsIgnoreCase(canonicalPath)) {
+      return bundleHome.getPath();
+    }
+  }
+ else   if (FileUtil.getCanonicalPath(bundleHome.getPath()).equalsIgnoreCase(canonicalPath)) {
+    return bundleHome.getPath();
+  }
   if (packagedSourcesPath == null || !canonicalPath.startsWith(packagedSourcesPath)) {
-    String shrinked=MacrosFactory.forModule(this).shrinkPath(originalPath);
-    if (MacrosFactory.containsNonMPSMacros(shrinked)) {
+    if (MacrosFactory.containsNonMPSMacros(macroHelper.shrinkPath(originalPath))) {
       return originalPath;
     }
   }
