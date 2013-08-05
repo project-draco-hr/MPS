@@ -1,24 +1,20 @@
 {
   if (!isPackaged())   return;
   ModuleDescriptor descriptor=getModuleDescriptor();
-  if (descriptor == null)   return;
+  DeploymentDescriptor dd=descriptor.getDeploymentDescriptor();
+  if (descriptor == null || dd == null)   return;
   final IFile bundleHomeFile=FileSystem.getInstance().getBundleHome(getDescriptorFile());
   if (bundleHomeFile == null)   return;
   IFile bundleParent=bundleHomeFile.getParent();
   if (bundleParent == null || !bundleParent.exists())   return;
   String packagedSourcesPath=getModuleSourceDir() != null ? getModuleSourceDir().getPath() : null;
   boolean addBundleAsModelRoot=false;
-  final DeploymentDescriptor dd=descriptor.getDeploymentDescriptor();
-  String libPath=dd == null ? FileUtil.getCanonicalPath(PathManager.getHomePath() + File.separator + "lib").toLowerCase() : null;
   List<String> toRemovePaths=new ArrayList<String>();
   for (  String path : descriptor.getAdditionalJavaStubPaths()) {
     String canonicalPath=FileUtil.getCanonicalPath(path).toLowerCase();
     if (packagedSourcesPath == null || !canonicalPath.startsWith(packagedSourcesPath)) {
       String shrinked=MacrosFactory.forModule(this).shrinkPath(path);
       if (MacrosFactory.containsNonMPSMacros(shrinked))       continue;
-    }
-    if (dd == null && canonicalPath.startsWith(libPath)) {
-      continue;
     }
     toRemovePaths.add(path);
   }
@@ -30,7 +26,7 @@
     String canonicalPath=FileUtil.getCanonicalPath(path).toLowerCase();
     String suffix=descriptor.getCompileInMPS() ? CLASSES_GEN : CLASSES;
     if (canonicalPath.endsWith(suffix)) {
-      IFile originalDescriptorFile=dd != null ? ModulesMiner.getRealDescriptorFile(getDescriptorFile().getPath(),dd) : null;
+      IFile originalDescriptorFile=ModulesMiner.getRealDescriptorFile(getDescriptorFile().getPath(),dd);
       MacroHelper macroHelper=MacrosFactory.forModuleFile(originalDescriptorFile != null ? originalDescriptorFile : getDescriptorFile());
       String classes=macroHelper.expandPath("${module}/" + suffix);
       addBundleAsModelRoot=FileUtil.getCanonicalPath(classes).equalsIgnoreCase(canonicalPath);
@@ -42,17 +38,11 @@
       String shrinked=MacrosFactory.forModule(this).shrinkPath(path);
       if (MacrosFactory.containsNonMPSMacros(shrinked))       continue;
     }
-    if (dd == null && canonicalPath.startsWith(libPath)) {
-      continue;
-    }
     toRemove.add(mrd);
   }
   descriptor.getModelRootDescriptors().removeAll(toRemove);
   if (addBundleAsModelRoot) {
     descriptor.getModelRootDescriptors().add(ModelRootDescriptor.getJavaStubsModelRoot(bundleHomeFile.getPath()));
-  }
-  if (dd == null) {
-    return;
   }
   for (  String jarFile : dd.getLibraries()) {
     IFile jar=jarFile.startsWith("/") ? FileSystem.getInstance().getFileByPath(PathManager.getHomePath() + jarFile) : bundleParent.getDescendant(jarFile);
