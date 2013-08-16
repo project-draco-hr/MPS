@@ -1,8 +1,51 @@
 {
-  myThis.apply(config,new _FunctionTypes._void_P6_E0<JUnitSettings_Configuration,Integer,ClonableList<String>,ClonableList<String>,String,String>(){
-    public void invoke(    JUnitSettings_Configuration c,    Integer configurationIndex,    ClonableList<String> testMethods,    ClonableList<String> testCases,    String model,    String module){
-      myThis.applyInternal(c,configurationIndex,testMethods,testCases,model,module);
-      return;
+  final List<ITestNodeWrapper> editorMethodList=myThis.getMethods();
+  final List<ITestNodeWrapper> editorTestCasesList=myThis.getNodes();
+  final SModel editorModel=myThis.getModel();
+  final SModule editorModule=myThis.getModule();
+  final int configTypeIndex=Sequence.fromIterable(Sequence.fromArray(myThis.getButtons())).indexOf(Sequence.fromIterable(Sequence.fromArray(myThis.getButtons())).findFirst(new IWhereFilter<JRadioButton>(){
+    public boolean accept(    JRadioButton it){
+      return it.isSelected();
+    }
+  }
+));
+  ApplicationManager.getApplication().executeOnPooledThread(new Runnable(){
+    @Override public void run(){
+      final ClonableList<String> testMethods=new ClonableList<String>();
+      final ClonableList<String> testCases=new ClonableList<String>();
+      final Wrappers._T<String> model=new Wrappers._T<String>();
+      final Wrappers._T<String> module=new Wrappers._T<String>();
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          for (          ITestNodeWrapper testMethod : editorMethodList) {
+            testMethods.add(PointerUtils.pointerToString(testMethod.getNodePointer()));
+          }
+          for (          ITestNodeWrapper testCase : editorTestCasesList) {
+            testCases.add(PointerUtils.pointerToString(testCase.getNodePointer()));
+          }
+          if (editorModel != null) {
+            model.value=editorModel.getModelName();
+          }
+          if (editorModule != null) {
+            module.value=editorModule.getModuleName();
+          }
+        }
+      }
+);
+      final String modelFinal=model.value;
+      final String moduleFinal=module.value;
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        public void run(){
+          if (configTypeIndex >= 0) {
+            configuration.setRunType(JUnitRunTypes2.values()[configTypeIndex]);
+          }
+          configuration.setTestMethods(testMethods);
+          configuration.setTestCases(testCases);
+          configuration.setModel(model.value);
+          configuration.setModule(module.value);
+        }
+      }
+);
     }
   }
 );
