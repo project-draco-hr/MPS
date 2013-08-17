@@ -1,0 +1,58 @@
+{
+  if (configuration.getRunType() != null) {
+    myRunKind=configuration.getRunType();
+  }
+ else {
+    myRunKind=JUnitRunTypes2.PROJECT;
+  }
+  myButtons[myRunKind.ordinal()].setSelected(true);
+  myClassesList.clear();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      Sequence.fromIterable(TestUtils.wrapPointerStrings(configuration.getTestCases())).visitAll(new IVisitor<ITestNodeWrapper>(){
+        public void visit(        ITestNodeWrapper it){
+          myClassesList.addItem(it);
+        }
+      }
+);
+    }
+  }
+);
+  myMethodsList.clear();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      Sequence.fromIterable(TestUtils.wrapPointerStrings(configuration.getTestMethods())).visitAll(new IVisitor<ITestNodeWrapper>(){
+        public void visit(        ITestNodeWrapper it){
+          myMethodsList.addItem(it);
+        }
+      }
+);
+    }
+  }
+);
+  if (configuration.getModel() != null) {
+    resetEditorModelWith(configuration.getModel());
+  }
+ else {
+    final Wrappers._T<ITestNodeWrapper> wrapperToTakeModelFrom=new Wrappers._T<ITestNodeWrapper>(null);
+    if (ListSequence.fromList(myClassesList.getItems()).isNotEmpty()) {
+      wrapperToTakeModelFrom.value=ListSequence.fromList(myClassesList.getItems()).first();
+    }
+ else     if (ListSequence.fromList(myMethodsList.getItems()).isNotEmpty()) {
+      wrapperToTakeModelFrom.value=ListSequence.fromList(myMethodsList.getItems()).first();
+    }
+    if (wrapperToTakeModelFrom.value != null) {
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          resetEditorModelWith(wrapperToTakeModelFrom.value.getNodePointer().getModelReference().getModelName());
+        }
+      }
+);
+    }
+  }
+  if (configuration.getModule() != null) {
+    setModuleValue(configuration.getModule());
+    myModuleChooser.setText(configuration.getModule());
+  }
+  updatePanels();
+}
