@@ -1,0 +1,59 @@
+{
+  progress.start("Converting...",31);
+  final ProgressMonitor parseProgress=progress.subTask(1);
+  parseProgress.start("Parsing...",ListSequence.fromList(files).count());
+  myModelAccess.runReadAction(new Runnable(){
+    public void run(){
+      for (      IFile file : ListSequence.fromList(files)) {
+        try {
+          parseFile(file);
+          parseProgress.advance(1);
+        }
+ catch (        JavaParseException e) {
+        }
+catch (        IOException e) {
+        }
+      }
+    }
+  }
+);
+  parseProgress.done();
+  int rootCount=0;
+  runCommand("roots creation pass",new Runnable(){
+    public void run(){
+      if (myModel == null) {
+        ((AbstractModule)myModule).addDependency(PersistenceFacade.getInstance().createModuleReference("6354ebe7-c22a-4a0f-ac54-50b52ab9b065(JDK)"),false);
+        for (        String pakage : SetSequence.fromSet(MapSequence.fromMap(classesPerPackage).keySet())) {
+          final SModel model=getModel(pakage,MapSequence.fromMap(packageDirs).get(pakage));
+          if (model == null) {
+            continue;
+          }
+          ((SModelBase)model).addLanguage(PersistenceFacade.getInstance().createModuleReference("f3061a53-9226-4cc5-a443-f952ceaf5816(jetbrains.mps.baseLanguage)"));
+          Set<SNode> roots=MapSequence.fromMap(classesPerPackage).get(pakage);
+          SetSequence.fromSet(roots).visitAll(new IVisitor<SNode>(){
+            public void visit(            SNode it){
+              model.addRootNode(it);
+            }
+          }
+);
+          ListSequence.fromList(mySuccessfulFiles).addSequence(ListSequence.fromList(MapSequence.fromMap(filesPerPackage).get(pakage)));
+          ListSequence.fromList(myAttachedRoots).addSequence(SetSequence.fromSet(roots));
+          ListSequence.fromList(myModels).addElement(model);
+        }
+      }
+ else {
+        for (        SNode root : ListSequence.fromList(myRoots)) {
+          myModel.addRootNode(root);
+        }
+        myAttachedRoots=myRoots;
+      }
+      ((AbstractModule)myModule).addUsedLanguage(PersistenceFacade.getInstance().createModuleReference("f3061a53-9226-4cc5-a443-f952ceaf5816(jetbrains.mps.baseLanguage)"));
+      JavaParser.tryResolveUnknowns(myAttachedRoots);
+    }
+  }
+);
+  myRootCount=myAttachedRoots.size();
+  ProgressMonitor resolveProgress=progress.subTask(30);
+  tryResolveRefs(myAttachedRoots,FeatureKind.CLASS,resolveProgress);
+  progress.done();
+}
