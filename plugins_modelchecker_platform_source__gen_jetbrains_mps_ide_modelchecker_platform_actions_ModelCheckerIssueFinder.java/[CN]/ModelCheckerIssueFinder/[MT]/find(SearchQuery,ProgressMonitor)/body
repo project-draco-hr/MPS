@@ -1,23 +1,28 @@
 {
   IHolder objectHolder=searchQuery.getObjectHolder();
   IOperationContext operationContext;
-  List<SModel> modelDescriptors;
+  List<SModel> models;
   List<SModule> modules=null;
   if (objectHolder instanceof ModelsHolder) {
     ModelsHolder modelsHolder=(ModelsHolder)objectHolder;
     operationContext=modelsHolder.getOperationContext();
-    modelDescriptors=modelsHolder.getObject();
+    models=Sequence.fromIterable(((Iterable<SModelReference>)modelsHolder.getObject())).select(new ISelector<SModelReference,SModel>(){
+      public SModel select(      SModelReference ref){
+        return SModelRepository.getInstance().getModelDescriptor(ref);
+      }
+    }
+).toListSequence();
   }
  else   if (objectHolder instanceof ModulesHolder) {
     ModulesHolder modulesHolder=(ModulesHolder)objectHolder;
     operationContext=modulesHolder.getOperationContext();
-    modelDescriptors=ModelCheckerUtils.getModelDescriptors(modulesHolder.getObject());
+    models=ModelCheckerUtils.getModelDescriptors(modulesHolder.getObject());
     modules=modulesHolder.getObject();
   }
  else {
     throw new IllegalArgumentException();
   }
-  int work=((modules != null ? ListSequence.fromList(modules).count() : 0)) + ListSequence.fromList(modelDescriptors).count() + 1;
+  int work=((modules != null ? ListSequence.fromList(modules).count() : 0)) + ListSequence.fromList(models).count() + 1;
   monitor.start("Checking",work);
   try {
     ModuleChecker moduleChecker=null;
@@ -40,7 +45,7 @@
     }
     modelChecker.setSpecificCheckers(getSpecificCheckers());
     monitor.advance(1);
-    for (    SModel modelDescriptor : ListSequence.fromList(modelDescriptors)) {
+    for (    SModel modelDescriptor : ListSequence.fromList(models)) {
       modelChecker.checkModel(modelDescriptor,monitor.subTask(1,SubProgressKind.REPLACING));
       if (monitor.isCanceled()) {
         break;
