@@ -1,0 +1,39 @@
+{
+  final AtomicReference<R> resultReference=new AtomicReference();
+  final ProgressWindowWithNotification progress=new ProgressWindowWithNotification(true,false,myProject,null,null);
+  progress.setTitle("Evaluating");
+  progress.addListener(new ProgressIndicatorListenerAdapter(){
+    @Override public void cancelled(){
+      progress.stop();
+    }
+  }
+);
+  ApplicationManager.getApplication().executeOnPooledThread(new Runnable(){
+    public void run(){
+      try {
+        ProgressManager.getInstance().runProcess(new Runnable(){
+          public void run(){
+            myContextManager.startEvaluation(threadToEvaluateIn);
+            try {
+              resultReference.set(evaluationCommand.invoke());
+            }
+  finally {
+              myContextManager.finishEvaluation(threadToEvaluateIn);
+            }
+          }
+        }
+,progress);
+      }
+ catch (      ProcessCanceledException e) {
+        progress.cancel();
+      }
+catch (      RuntimeException e) {
+        progress.cancel();
+        throw e;
+      }
+    }
+  }
+);
+  progress.startBlocking();
+  return resultReference.get();
+}
