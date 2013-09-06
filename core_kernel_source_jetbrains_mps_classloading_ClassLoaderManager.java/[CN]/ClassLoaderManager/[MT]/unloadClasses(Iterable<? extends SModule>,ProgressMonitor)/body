@@ -9,6 +9,20 @@
   long startTime=System.currentTimeMillis();
   monitor.start("Unloading classes...",2);
   try {
+    monitor.step("Disposing old classes...");
+    for (    MPSClassesListener listener : myClassesHandlers) {
+      try {
+        startTime=System.currentTimeMillis();
+        listener.beforeClassesUnloaded(toUnload);
+      }
+ catch (      Throwable t) {
+        LOG.error(t);
+      }
+ finally {
+        addStat("unload:" + listener.getClass().getName(),startTime);
+      }
+    }
+    monitor.advance(1);
     monitor.step("Invalidate classloaders...");
     toUnload=collectBackReferences(toUnload);
     for (    Set<SModule> backRefs : myBackRefs.values()) {
@@ -38,20 +52,6 @@
     }
     monitor.advance(1);
     addStat("unload:main",startTime);
-    monitor.step("Disposing old classes...");
-    for (    MPSClassesListener listener : myClassesHandlers) {
-      try {
-        startTime=System.currentTimeMillis();
-        listener.onClassesUnload(toUnload);
-      }
- catch (      Throwable t) {
-        LOG.error(t);
-      }
- finally {
-        addStat("unload:" + listener.getClass().getName(),startTime);
-      }
-    }
-    monitor.advance(1);
     return toUnload;
   }
   finally {
