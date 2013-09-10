@@ -1,11 +1,21 @@
 {
-  Set<ValueWrapperFactory> factories=getValueWrapperFactories(originalValue);
-  if (factories.isEmpty()) {
-    return null;
+  if (originalValue.getValue() instanceof ObjectReference) {
+    ValueWrapperFactory factory=null;
+    long uniqueID=getValueId(originalValue);
+    String factoryId=MapSequence.fromMap(myObjectIdToFactory).get(uniqueID);
+    if ((factoryId != null && factoryId.length() > 0)) {
+      factory=MapSequence.fromMap(myFactories).get(factoryId);
+    }
+    if (factory == null) {
+      Set<ValueWrapperFactory> factories=getValueWrapperFactories(originalValue);
+      if (factories.isEmpty()) {
+        return null;
+      }
+      factory=factories.iterator().next();
+      factoryId=factory.getClass().getName();
+      MapSequence.fromMap(myObjectIdToFactory).put(uniqueID,factoryId);
+    }
+    return factory.createValueWrapper(originalValue);
   }
-  if (factories.size() > 1) {
-    LOG.warn("several custom viewers found for value; using the random one");
-  }
-  ValueWrapperFactory factory=factories.iterator().next();
-  return factory.createValueWrapper(originalValue);
+  return null;
 }
