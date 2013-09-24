@@ -1,0 +1,27 @@
+{
+  if (proxy instanceof INullValueProxy) {
+    return MapSequence.fromMap(myFactories).get(ObjectWrapperFactory.class.getName()).createValueWrapper(proxy,threadReference);
+  }
+  ValueWrapperFactory factory=null;
+  DebugSession session=getSession(proxy);
+  if (proxy instanceof IObjectValueProxy) {
+    Map<Long,String> objectIdToFactory=MapSequence.fromMap(myObjectIdToFactory).get(session);
+    if (objectIdToFactory == null) {
+      objectIdToFactory=MapSequence.fromMap(new HashMap<Long,String>());
+      MapSequence.fromMap(myObjectIdToFactory).put(session,objectIdToFactory);
+    }
+    long uniqueID=getValueId(proxy);
+    String factoryId=MapSequence.fromMap(objectIdToFactory).get(uniqueID);
+    if ((factoryId != null && factoryId.length() > 0)) {
+      factory=MapSequence.fromMap(myFactories).get(factoryId);
+    }
+  }
+  if (factory == null) {
+    Set<ValueWrapperFactory> factories=getValueWrapperFactories(proxy);
+    if (factories.isEmpty()) {
+      return null;
+    }
+    factory=(factories.size() > 1 ? getBestFactory(factories,session) : factories.iterator().next());
+  }
+  return factory.createValueWrapper(proxy,threadReference);
+}
