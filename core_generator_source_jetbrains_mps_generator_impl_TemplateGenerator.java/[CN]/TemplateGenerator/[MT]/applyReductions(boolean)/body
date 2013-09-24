@@ -3,7 +3,7 @@
     ttrace.push("create roots",false);
     final QueryExecutionContext executionContext=getExecutionContext(null);
     if (executionContext != null) {
-      TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(this,new ReductionContext(executionContext),getOperationContext(),myGenerationTracer);
+      TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(this,new ReductionContext(executionContext));
       for (      TemplateCreateRootRule rule : myRuleManager.getCreateRootRules()) {
         checkMonitorCanceled();
         applyCreateRoot(rule,environment);
@@ -12,21 +12,23 @@
     ttrace.pop();
   }
   ttrace.push("root mappings",false);
+  ArrayList<SNode> rootsConsumed=new ArrayList<SNode>();
+  for (  TemplateRootMappingRule rule : myRuleManager.getRoot_MappingRules()) {
+    checkMonitorCanceled();
+    applyRootRule(rule,rootsConsumed);
+  }
   ArrayList<SNode> rootsToCopy=new ArrayList<SNode>();
   for (  SNode root : myInputModel.getRootNodes()) {
     rootsToCopy.add(root);
   }
-  for (  TemplateRootMappingRule rule : myRuleManager.getRoot_MappingRules()) {
-    checkMonitorCanceled();
-    applyRootRule(rule,rootsToCopy);
-  }
+  rootsToCopy.removeAll(rootsConsumed);
   ttrace.pop();
   checkMonitorCanceled();
   getGeneratorSessionContext().clearCopiedRootsSet();
   for (  SNode rootToCopy : rootsToCopy) {
     QueryExecutionContext context=getExecutionContext(rootToCopy);
     if (context != null) {
-      TemplateExecutionEnvironmentImpl rootenv=new TemplateExecutionEnvironmentImpl(this,new ReductionContext(context),getOperationContext(),myGenerationTracer);
+      TemplateExecutionEnvironmentImpl rootenv=new TemplateExecutionEnvironmentImpl(this,new ReductionContext(context));
       copyRootInputNode(rootToCopy,rootenv);
     }
   }
