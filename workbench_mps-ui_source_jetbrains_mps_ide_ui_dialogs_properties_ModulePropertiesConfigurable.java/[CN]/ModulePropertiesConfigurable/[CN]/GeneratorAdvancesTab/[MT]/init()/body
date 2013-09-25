@@ -13,13 +13,20 @@
     @Override public Component getTableCellRendererComponent(    final JTable table,    Object value,    boolean isSelected,    boolean hasFocus,    final int row,    final int column){
       if (value instanceof MappingConfig_AbstractRef) {
         MappingConfig_AbstractRef mapping=(MappingConfig_AbstractRef)value;
-        if (myMappings.containsKey(mapping)) {
-          myCurrentTree=myMappings.get(mapping);
+        final Set<SModuleReference> depGenerators=new LinkedHashSet<SModuleReference>(((GeneratorDescriptor)myModuleDescriptor).getDepGenerators());
+        for (int i=0; i < ModulePropertiesConfigurable.this.getTabsCount(); i++) {
+          if (!(ModulePropertiesConfigurable.this.getTab(i) instanceof ModuleDependenciesTab))           continue;
+          ModuleDependenciesTab moduleDependenciesTab=(ModuleDependenciesTab)ModulePropertiesConfigurable.this.getTab(i);
+          for (int j=0; j < moduleDependenciesTab.myDependTableModel.getRowCount(); j++) {
+            final DependenciesTableItem dependenciesTableItem=moduleDependenciesTab.myDependTableModel.getValueAt(j);
+            if (dependenciesTableItem.getModuleType() == ModuleType.GENERATOR && dependenciesTableItem.getRole() == SDependencyScope.EXTENDS) {
+              depGenerators.add((SModuleReference)dependenciesTableItem.getItem());
+            }
+          }
+          break;
         }
- else {
-          myCurrentTree=new GeneratorPrioritiesTree((GeneratorDescriptor)myModuleDescriptor,mapping,column == 0);
-          myMappings.put(mapping,myCurrentTree);
-        }
+        myCurrentTree=new GeneratorPrioritiesTree((GeneratorDescriptor)myModuleDescriptor,mapping,column == 0,depGenerators);
+        myMappings.put(mapping,myCurrentTree);
         CheckedTreeNode rootNode=(CheckedTreeNode)myCurrentTree.getTree().getModel().getRoot();
         rootNode=column == 0 ? (CheckedTreeNode)rootNode.getFirstChild() : rootNode;
         allChildrenChecked(rootNode);
@@ -72,7 +79,19 @@
     @Override public Component getTableCellEditorComponent(    final JTable table,    Object value,    boolean isSelected,    int row,    int column){
       if (value instanceof MappingConfig_AbstractRef) {
         MappingConfig_AbstractRef mapping=(MappingConfig_AbstractRef)value;
-        myCurrentTree=new GeneratorPrioritiesTree((GeneratorDescriptor)myModuleDescriptor,mapping,column == 0);
+        final Set<SModuleReference> depGenerators=new LinkedHashSet<SModuleReference>(((GeneratorDescriptor)myModuleDescriptor).getDepGenerators());
+        for (int i=0; i < ModulePropertiesConfigurable.this.getTabsCount(); i++) {
+          if (!(ModulePropertiesConfigurable.this.getTab(i) instanceof ModuleDependenciesTab))           continue;
+          ModuleDependenciesTab moduleDependenciesTab=(ModuleDependenciesTab)ModulePropertiesConfigurable.this.getTab(i);
+          for (int j=0; j < moduleDependenciesTab.myDependTableModel.getRowCount(); j++) {
+            final DependenciesTableItem dependenciesTableItem=moduleDependenciesTab.myDependTableModel.getValueAt(j);
+            if (dependenciesTableItem.getModuleType() == ModuleType.GENERATOR && dependenciesTableItem.getRole() == SDependencyScope.EXTENDS) {
+              depGenerators.add((SModuleReference)dependenciesTableItem.getItem());
+            }
+          }
+          break;
+        }
+        myCurrentTree=new GeneratorPrioritiesTree((GeneratorDescriptor)myModuleDescriptor,mapping,column == 0,depGenerators);
         final DialogWrapper dialogWrapper=new DialogWrapper(ProjectHelper.toIdeaProject(myProject)){
 {
             setModal(true);
@@ -100,13 +119,17 @@
           }
         }
 ;
-        SwingUtilities.invokeLater(new Runnable(){
-          @Override public void run(){
+        final Component tableCellRendererComponent=myTable.getCellRenderer(row,column).getTableCellRendererComponent(table,value,isSelected,true,row,column);
+        tableCellRendererComponent.addFocusListener(new FocusListener(){
+          @Override public void focusGained(          FocusEvent e){
             dialogWrapper.show();
+          }
+          @Override public void focusLost(          FocusEvent e){
+            tableCellRendererComponent.removeFocusListener(this);
           }
         }
 );
-        return myTable.getCellRenderer(row,column).getTableCellRendererComponent(table,value,isSelected,true,row,column);
+        return tableCellRendererComponent;
       }
       return null;
     }
