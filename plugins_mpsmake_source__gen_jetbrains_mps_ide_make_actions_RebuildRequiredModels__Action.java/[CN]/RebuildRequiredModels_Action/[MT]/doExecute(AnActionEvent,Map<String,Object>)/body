@@ -1,0 +1,29 @@
+{
+  try {
+    final Wrappers._T<List<SModel>> models=new Wrappers._T<List<SModel>>();
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        Iterable<SModel> allModels=Sequence.fromIterable(((Iterable<SModel>)SModelRepository.getInstance().getModelDescriptors())).select(new ISelector<SModel,SModel>(){
+          public SModel select(          SModel it){
+            return (SModel)it;
+          }
+        }
+);
+        final ModelGenerationStatusManager mgsm=ModelGenerationStatusManager.getInstance();
+        models.value=ListSequence.fromListWithValues(new ArrayList<SModel>(),Sequence.fromIterable(allModels).where(new IWhereFilter<SModel>(){
+          public boolean accept(          SModel it){
+            return mgsm.generationRequired(it);
+          }
+        }
+));
+      }
+    }
+);
+    new MakeActionImpl(((IOperationContext)MapSequence.fromMap(_params).get("context")),new MakeActionParameters(((IOperationContext)MapSequence.fromMap(_params).get("context")),models.value,null,null,null),true).executeAction();
+  }
+ catch (  Throwable t) {
+    if (LOG.isEnabledFor(Priority.ERROR)) {
+      LOG.error("User's action execute method failed. Action:" + "RebuildRequiredModels",t);
+    }
+  }
+}

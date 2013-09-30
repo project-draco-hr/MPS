@@ -1,0 +1,24 @@
+{
+  final Iterable<? extends IResource> inputRes=params.collectInput(!(this.cleanMake));
+  final Project project=context.getProject();
+  project.getRepository().getModelAccess().executeCommand(new Runnable(){
+    public void run(){
+      project.getRepository().saveAll();
+    }
+  }
+);
+  MakeSession session=new MakeSession(context,null,cleanMake){
+    @Override public void doExecute(    Runnable scriptRunnable){
+      if (GenerationCheckHelper.getInstance().checkModelsBeforeGenerationIfNeeded(project,MakeActionImpl.this.context,ListSequence.fromListWithValues(new ArrayList<SModel>(),MakeActionImpl.this.selectModels(inputRes)))) {
+        scriptRunnable.run();
+      }
+ else {
+        IMakeService.INSTANCE.get().closeSession(this);
+      }
+    }
+  }
+;
+  if (IMakeService.INSTANCE.get().openNewSession(session)) {
+    IMakeService.INSTANCE.get().make(session,inputRes);
+  }
+}
