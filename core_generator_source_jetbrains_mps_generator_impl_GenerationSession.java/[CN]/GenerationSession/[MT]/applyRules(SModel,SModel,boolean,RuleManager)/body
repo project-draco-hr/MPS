@@ -1,6 +1,7 @@
 {
   boolean hasChanges;
   myDependenciesBuilder.setOutputModel(currentOutputModel,myMajorStep,myMinorStep);
+  ttrace.push(String.format("Step %d.%d",myMajorStep + 1,myMinorStep),true);
   final TemplateGenerator tg=myGenerationOptions.isGenerateInParallel() ? new ParallelTemplateGenerator(myTaskPoolProvider,mySessionContext,myProgressMonitor,myLogger,ruleManager,currentInputModel,currentOutputModel,myGenerationOptions,myDependenciesBuilder,ttrace) : new TemplateGenerator(mySessionContext,myProgressMonitor,myLogger,ruleManager,currentInputModel,currentOutputModel,myGenerationOptions,myDependenciesBuilder,ttrace);
   if (tg instanceof ParallelTemplateGenerator) {
     hasChanges=GeneratorUtil.runReadInWrite(new GenerationComputable<Boolean>(){
@@ -13,12 +14,14 @@
  else {
     hasChanges=tg.apply(isPrimary);
   }
+  ttrace.pop();
+  SModel outputModel=tg.getOutputModel();
   if (myNewCache != null && (isPrimary || hasChanges)) {
     ttrace.push("saving cache",false);
-    TransientModelWithMetainfo modelWithMetaInfo=TransientModelWithMetainfo.create(currentOutputModel,myDependenciesBuilder);
+    TransientModelWithMetainfo modelWithMetaInfo=TransientModelWithMetainfo.create(outputModel,myDependenciesBuilder);
     tg.getMappings().export(modelWithMetaInfo,myDependenciesBuilder);
     myNewCache.store(myMajorStep,myMinorStep,modelWithMetaInfo);
     ttrace.pop();
   }
-  return hasChanges;
+  return new Pair<Boolean,SModel>(hasChanges,outputModel);
 }
