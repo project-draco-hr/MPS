@@ -1,0 +1,39 @@
+{
+  progress.start("Removing java imports",Sequence.fromIterable(nodes).count() + 1);
+  final Map<SNode,Iterable<SNode>> toRemove=MapSequence.fromMap(new HashMap<SNode,Iterable<SNode>>());
+  myRepository.getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      for (      SNode node : Sequence.fromIterable(nodes)) {
+        progress.advance(1);
+        if (!(SNodeOperations.isInstanceOf(node,"jetbrains.mps.baseLanguage.structure.Classifier"))) {
+          continue;
+        }
+        if ((AttributeOperations.getAttribute(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier"),new IAttributeDescriptor.NodeAttribute("jetbrains.mps.baseLanguage.structure.JavaImports")) == null)) {
+          continue;
+        }
+        MapSequence.fromMap(toRemove).put(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier"),getImportsToRemove(SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.Classifier")));
+      }
+    }
+  }
+);
+  runCommand("removing java imports",new Runnable(){
+    public void run(){
+      for (      SNode node : SetSequence.fromSet(MapSequence.fromMap(toRemove).keySet())) {
+        Iterable<SNode> imps=MapSequence.fromMap(toRemove).get(node);
+        Sequence.fromIterable(imps).visitAll(new IVisitor<SNode>(){
+          public void visit(          SNode it){
+            SNodeOperations.deleteNode(it);
+          }
+        }
+);
+        SNode importAnnotation=AttributeOperations.getAttribute(node,new IAttributeDescriptor.NodeAttribute("jetbrains.mps.baseLanguage.structure.JavaImports"));
+        if (ListSequence.fromList(SLinkOperations.getTargets(importAnnotation,"entries",true)).isEmpty()) {
+          SNodeOperations.deleteNode(importAnnotation);
+        }
+      }
+    }
+  }
+);
+  progress.advance(1);
+  progress.done();
+}

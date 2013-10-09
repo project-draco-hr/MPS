@@ -1,7 +1,6 @@
 {
   SNode cls;
   final Map<SNode,Integer> memberStartPositions=MapSequence.fromMap(new HashMap<SNode,Integer>());
-  SNode defaultConstructor=null;
   boolean isAnonymous=x.allocation != null;
   if (isAnonymous) {
     cls=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.AnonymousClass",null);
@@ -28,8 +27,11 @@ ASTConverter prefixedConverter=this;
 if (!(isAnonymous)) {
 SPropertyOperations.set(cls,"name",new String(x.name));
 SLinkOperations.setTarget(cls,"visibility",convertVisibility(x.modifiers),true);
-if (!(SNodeOperations.isInstanceOf(cls,"jetbrains.mps.baseLanguage.structure.Interface")) && flagSet(x.modifiers,ClassFileConstants.AccStatic)) {
-SPropertyOperations.set(cls,"nonStatic","" + (false));
+if (SNodeOperations.isInstanceOf(cls,"jetbrains.mps.baseLanguage.structure.ClassConcept")) {
+SPropertyOperations.set(SNodeOperations.cast(cls,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"isStatic","" + (flagSet(x.modifiers,ClassFileConstants.AccStatic)));
+}
+ else if (SNodeOperations.isInstanceOf(cls,"jetbrains.mps.baseLanguage.structure.Interface")) {
+SPropertyOperations.set(cls,"nonStatic","" + (true));
 }
 if (myOnlyStubs) {
 String nodeId=getState().getIdPrefix() + SPropertyOperations.getString(cls,"name");
@@ -100,16 +102,16 @@ MapSequence.fromMap(memberStartPositions).put(mem,f.sourceStart);
 }
 if (x.methods != null) {
 for (AbstractMethodDeclaration method : x.methods) {
+if (method.isDefaultConstructor()) {
+continue;
+}
 SNode mem=childConverter.convertMethod(cls,method,true);
 MapSequence.fromMap(memberStartPositions).put(SNodeOperations.cast(mem,"jetbrains.mps.baseLanguage.structure.ClassifierMember"),method.sourceStart);
-if (method instanceof ConstructorDeclaration && method.isDefaultConstructor()) {
-defaultConstructor=SNodeOperations.cast(mem,"jetbrains.mps.baseLanguage.structure.ClassifierMember");
-}
 }
 }
 if (x.javadoc != null) {
-AttributeOperations.createAndSetAttrbiute(cls,new IAttributeDescriptor.NodeAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.javadoc.structure.ClassifierDocComment")),"jetbrains.mps.baseLanguage.javadoc.structure.ClassifierDocComment");
-MapSequence.fromMap(myJavadocs).put(x.javadoc.sourceStart,AttributeOperations.getAttribute(cls,new IAttributeDescriptor.NodeAttribute(SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.javadoc.structure.ClassifierDocComment"))));
+AttributeOperations.createAndSetAttrbiute(cls,new IAttributeDescriptor.NodeAttribute("jetbrains.mps.baseLanguage.javadoc.structure.ClassifierDocComment"),"jetbrains.mps.baseLanguage.javadoc.structure.ClassifierDocComment");
+MapSequence.fromMap(myJavadocs).put(x.javadoc.sourceStart,AttributeOperations.getAttribute(cls,new IAttributeDescriptor.NodeAttribute("jetbrains.mps.baseLanguage.javadoc.structure.ClassifierDocComment")));
 }
 if (SNodeOperations.isInstanceOf(cls,"jetbrains.mps.baseLanguage.structure.Annotation")) {
 Iterable<SNode> annoMethods=ListSequence.fromList(SLinkOperations.getTargets(cls,"member",true)).where(new IWhereFilter<SNode>(){
@@ -137,22 +139,6 @@ return MapSequence.fromMap(memberStartPositions).get(it);
 }
 }
 ,true).toListSequence();
-if ((defaultConstructor != null)) {
-ListSequence.fromList(sortedMembers).removeElement(defaultConstructor);
-int firstNonField=0;
-{
-Iterator<SNode> m_it=ListSequence.fromList(sortedMembers).iterator();
-SNode m_var;
-while (m_it.hasNext()) {
-m_var=m_it.next();
-if (!(SNodeOperations.isInstanceOf(m_var,"jetbrains.mps.baseLanguage.structure.VariableDeclaration"))) {
-break;
-}
-firstNonField++;
-}
-}
-ListSequence.fromList(sortedMembers).insertElement(firstNonField,defaultConstructor);
-}
 ListSequence.fromList(SLinkOperations.getTargets(cls,"member",true)).clear();
 ListSequence.fromList(SLinkOperations.getTargets(cls,"member",true)).addSequence(ListSequence.fromList(sortedMembers));
 return cls;

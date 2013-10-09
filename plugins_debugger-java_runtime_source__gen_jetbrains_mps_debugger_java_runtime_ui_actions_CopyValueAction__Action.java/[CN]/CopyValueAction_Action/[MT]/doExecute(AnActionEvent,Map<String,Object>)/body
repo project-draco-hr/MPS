@@ -1,20 +1,27 @@
 {
   try {
-    IValue value=VariablesTree.MPS_DEBUGGER_VALUE.getData(event.getDataContext());
+    final IValue value=VariablesTree.MPS_DEBUGGER_VALUE.getData(event.getDataContext());
     if (value == null || !(value instanceof JavaValue)) {
       return;
     }
-    EvaluationProvider evaluationProvider=(EvaluationProvider)DebugActionsUtil.getEvaluationProvider(event);
-    if (evaluationProvider == null) {
+    AbstractUiState uiState=check_d54g7t_a0d0a(DebugActionsUtil.getDebugSession(event));
+    if (uiState == null || !(uiState instanceof JavaUiState)) {
       return;
     }
-    JavaUiState uiState=evaluationProvider.getDebugSession().getUiState();
-    ThreadReference thread=check_d54g7t_a0i0a(check_d54g7t_a0a8a0(uiState));
+    JavaUiState javaUiState=(JavaUiState)uiState;
+    final ThreadReference thread=check_d54g7t_a0h0a(javaUiState.getThread());
     if (thread == null) {
       return;
     }
-    Value jdiValue=((JavaValue)value).getValue();
-    CopyPasteUtil.copyTextToClipboard(EvaluationUtils.getInstance().getStringPresentation(jdiValue,thread));
+    String result=javaUiState.invokeEvaluationSynchronously(new _FunctionTypes._return_P0_E0<String>(){
+      public String invoke(){
+        return EvaluationUtils.getInstance().getStringPresentation(((JavaValue)value).getValue().getJDIValue(),thread);
+      }
+    }
+);
+    if ((result != null && result.length() > 0)) {
+      CopyPasteUtil.copyTextToClipboard(result);
+    }
   }
  catch (  Throwable t) {
     if (LOG.isEnabledFor(Priority.ERROR)) {

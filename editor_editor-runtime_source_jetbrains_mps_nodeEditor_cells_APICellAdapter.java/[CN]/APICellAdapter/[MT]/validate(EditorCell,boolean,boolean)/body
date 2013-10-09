@@ -1,14 +1,24 @@
 {
-  SubstituteInfo substituteInfo=cell.getSubstituteInfo();
+  final SubstituteInfo substituteInfo=cell.getSubstituteInfo();
   if (substituteInfo == null) {
     return false;
   }
   if (cell instanceof EditorCell_Collection) {
     return false;
   }
-  String pattern=cell.renderText().getText();
+  final String pattern=cell.renderText().getText();
   if (pattern.equals(""))   return false;
-  List<SubstituteAction> matchingActions=substituteInfo.getMatchingActions(pattern,strict);
+  List<SubstituteAction> matchingActions=ModelAccess.instance().runReadAction(new Computable<List<SubstituteAction>>(){
+    @Override public List<SubstituteAction> compute(){
+      return TypeContextManager.getInstance().runTypeCheckingComputation((ITypeContextOwner)cell.getEditorComponent(),cell.getEditorComponent().getEditedNode(),new Computation<List<SubstituteAction>>(){
+        @Override public List<SubstituteAction> compute(        TypeCheckingContext context){
+          return substituteInfo.getMatchingActions(pattern,strict);
+        }
+      }
+);
+    }
+  }
+);
   if (matchingActions.size() == 0 && canActivatePopup) {
     return false;
   }

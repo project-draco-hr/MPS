@@ -1,5 +1,5 @@
 {
-  SNode variable=SLinkOperations.getTarget(this.myReference,"variableDeclaration",false);
+  final SNode variable=SLinkOperations.getTarget(this.myReference,"variableDeclaration",false);
   SNode nodeToSelect;
   if (myAssignment == null) {
     nodeToSelect=SNodeOperations.copyNode(SLinkOperations.getTarget(SLinkOperations.getTarget(this.myReference,"variableDeclaration",false),"initializer",true));
@@ -9,10 +9,21 @@
     nodeToSelect=SNodeOperations.copyNode(SLinkOperations.getTarget(SNodeOperations.cast(myAssignment,"jetbrains.mps.baseLanguage.structure.VariableDeclaration"),"initializer",true));
     SNodeOperations.replaceWithAnother(this.myReference,nodeToSelect);
   }
- else {
+ else   if (SNodeOperations.isInstanceOf(myAssignment,"jetbrains.mps.baseLanguage.structure.AssignmentExpression")) {
+    if (ListSequence.fromList(SNodeOperations.getDescendants(SLinkOperations.getTarget(SNodeOperations.cast(myAssignment,"jetbrains.mps.baseLanguage.structure.AssignmentExpression"),"rValue",true),"jetbrains.mps.baseLanguage.structure.VariableReference",false,new String[]{})).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return eq_uj3i4l_a0a0a0a0a0a0a0a2a3(SLinkOperations.getTarget(it,"variableDeclaration",false),variable);
+      }
+    }
+).isNotEmpty()) {
+      return myAssignment;
+    }
     nodeToSelect=SNodeOperations.copyNode(SLinkOperations.getTarget(SNodeOperations.cast(myAssignment,"jetbrains.mps.baseLanguage.structure.AssignmentExpression"),"rValue",true));
     SNodeOperations.replaceWithAnother(this.myReference,nodeToSelect);
     this.optimizeAssignment(SNodeOperations.cast(myAssignment,"jetbrains.mps.baseLanguage.structure.AssignmentExpression"),variable);
+  }
+ else {
+    return myAssignment;
   }
   this.optimizeDeclaration(variable);
   return nodeToSelect;

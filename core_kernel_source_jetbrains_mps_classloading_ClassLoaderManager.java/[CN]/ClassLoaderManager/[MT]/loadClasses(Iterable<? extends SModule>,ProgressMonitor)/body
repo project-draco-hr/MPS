@@ -2,15 +2,18 @@
   long startTime=System.currentTimeMillis();
   Set<SModule> modulesToLoad=new HashSet<SModule>();
   for (  SModule module : modules) {
-    modulesToLoad.add(module);
-    if (module.getFacet(CustomClassLoadingFacet.class) != null) {
-      myLoadedNonReloadableModules.add(module);
+    if (ModuleClassLoaderSupport.canCreate(module)) {
+      if (getClassLoader(module) != null) {
+        LOG.warning("ModuleClassLoader should be unloaded before load for module " + module,new Throwable());
+      }
+      modulesToLoad.add(module);
     }
   }
   modulesToLoad=Collections.unmodifiableSet(modulesToLoad);
+  if (modulesToLoad.isEmpty())   return modulesToLoad;
   for (  SModule module : modules) {
     if (ModuleClassLoaderSupport.canCreate(module)) {
-      getClassLoader(module);
+      createClassLoader(module);
     }
   }
   addStat("load:main",startTime);
@@ -20,7 +23,7 @@
     for (    MPSClassesListener listener : myClassesHandlers) {
       startTime=System.currentTimeMillis();
       try {
-        listener.onClassesLoad(modulesToLoad);
+        listener.afterClassesLoaded(modulesToLoad);
       }
  catch (      Throwable t) {
         LOG.error(t);

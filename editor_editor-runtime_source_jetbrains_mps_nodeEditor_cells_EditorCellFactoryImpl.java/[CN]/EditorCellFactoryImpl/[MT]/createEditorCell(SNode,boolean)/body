@@ -1,6 +1,19 @@
 {
-  ConceptEditor editor=loadEditor(node);
-  EditorCell result=isInspector ? editor.createInspectedCell(myEditorContext,node) : editor.createEditorCell(myEditorContext,node);
+  ConceptDescriptor conceptDescriptor=ConceptRegistry.getInstance().getConceptDescriptor(node.getConcept().getQualifiedName());
+  ConceptEditor editor=myConceptEditorRegistry.getEditor(conceptDescriptor);
+  EditorCell result=null;
+  if (editor != null) {
+    try {
+      result=isInspector ? editor.createInspectedCell(myEditorContext,node) : editor.createEditorCell(myEditorContext,node);
+    }
+ catch (    RuntimeException e) {
+      LOG.warning("Failed to create cell for node: " + SNodeUtil.getDebugText(node) + " using default editor",e,node);
+    }
+  }
+  if (result == null) {
+    editor=conceptDescriptor.isInterfaceConcept() || conceptDescriptor.isAbstract() ? new DefaultInterfaceEditor() : new DefaultEditor();
+    result=isInspector ? editor.createInspectedCell(myEditorContext,node) : editor.createEditorCell(myEditorContext,node);
+  }
   result.setCellContext(getCellContext());
   return result;
 }
