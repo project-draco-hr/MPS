@@ -1,19 +1,8 @@
 {
-  List<TemplateMappingScript> preMappingScripts=ruleManager.getPreMappingScripts();
-  if (preMappingScripts.isEmpty()) {
+  if (!ruleManager.getScripts().preprocessing()) {
     return currentInputModel;
   }
-  boolean needToCloneInputModel=!myDiscardTransients;
-  if (!needToCloneInputModel) {
-    for (    TemplateMappingScript preMappingScript : preMappingScripts) {
-      if (preMappingScript.getKind() == TemplateMappingScript.PREPROCESS) {
-        if (preMappingScript.modifiesModel()) {
-          needToCloneInputModel=true;
-          break;
-        }
-      }
-    }
-  }
+  final boolean needToCloneInputModel=ruleManager.getScripts().needModelCloneToPreprocess(currentInputModel,!myDiscardTransients);
   SModel toRecycle=null;
   if (needToCloneInputModel) {
     ttrace.push("model clone",false);
@@ -23,19 +12,16 @@
     }
     CloneUtil.cloneModelWithImports(currentInputModel,currentInputModel_clone,currentInputModel == mySessionContext.getOriginalInputModel());
     ttrace.pop();
-    if (!myDiscardTransients) {
-      mySessionContext.getGenerationTracer().registerPreMappingScripts(currentInputModel,currentInputModel_clone,preMappingScripts);
-    }
+    mySessionContext.getGenerationTracer().registerPreMappingScripts(currentInputModel,currentInputModel_clone,ruleManager.getScripts().getPreMappingScripts());
     toRecycle=currentInputModel;
     currentInputModel=currentInputModel_clone;
     myDependenciesBuilder.scriptApplied(currentInputModel);
   }
+ else {
+    mySessionContext.getGenerationTracer().registerPreMappingScripts(currentInputModel,currentInputModel,ruleManager.getScripts().getPreMappingScripts());
+  }
   boolean preProcessed=false;
-  for (  TemplateMappingScript preMappingScript : preMappingScripts) {
-    if (preMappingScript.getKind() != TemplateMappingScript.PREPROCESS) {
-      myLogger.warning(preMappingScript.getScriptNode().resolve(MPSModuleRepository.getInstance()),"skip script " + preMappingScript.getLongName() + " - wrong script kind");
-      continue;
-    }
+  for (  TemplateMappingScript preMappingScript : ruleManager.getScripts().getPreMappingScripts()) {
     if (myLogger.needsInfo()) {
       myLogger.info(preMappingScript.getScriptNode().resolve(MPSModuleRepository.getInstance()),"pre-process " + preMappingScript.getLongName());
     }
