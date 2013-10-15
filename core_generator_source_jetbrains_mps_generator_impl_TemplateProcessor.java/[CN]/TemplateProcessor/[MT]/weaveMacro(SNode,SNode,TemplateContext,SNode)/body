@@ -8,13 +8,13 @@
     myGenerator.showErrorMessage(context.getInput(),template,macro,"nothing to weave: no template fragments found in template");
     return;
   }
-  TemplateWeavingRuleInterpreted.checkTemplateFragmentsForWeaving(template,templateFragments,myGenerator);
-  TemplateProcessor templateProcessor=new TemplateProcessor(myGenerator,myReductionContext);
+  TemplateWeavingRuleInterpreted.checkTemplateFragmentsForWeaving(template,templateFragments,myGenerator.getLogger());
+  TemplateProcessor templateProcessor=new TemplateProcessor(myEnv);
   for (  SNode templateFragment : templateFragments) {
     SNode templateFragmentNode=templateFragment.getParent();
     SNode contextParentNode=null;
     try {
-      contextParentNode=myReductionContext.getQueryExecutor().getContextNodeForTemplateFragment(templateFragmentNode,outputContextNode,context);
+      contextParentNode=myEnv.getQueryExecutor().getContextNodeForTemplateFragment(templateFragmentNode,outputContextNode,context);
     }
  catch (    Exception e) {
       myGenerator.getLogger().handleException(e);
@@ -23,9 +23,8 @@
       try {
         List<SNode> outputNodesToWeave=templateProcessor.apply(GeneratorUtilEx.getMappingName(templateFragment,null),templateFragmentNode,context);
         String childRole=templateFragmentNode.getRoleInParent();
-        TemplateExecutionEnvironment env=new TemplateExecutionEnvironmentImpl(myGenerator,myReductionContext,null,myTracer);
         for (        SNode outputNodeToWeave : outputNodesToWeave) {
-          env.weaveNode(contextParentNode,childRole,outputNodeToWeave,new jetbrains.mps.smodel.SNodePointer(templateFragment),context.getInput());
+          myEnv.weaveNode(contextParentNode,childRole,outputNodeToWeave,new jetbrains.mps.smodel.SNodePointer(templateFragment),context.getInput());
         }
       }
  catch (      DismissTopMappingRuleException e) {
