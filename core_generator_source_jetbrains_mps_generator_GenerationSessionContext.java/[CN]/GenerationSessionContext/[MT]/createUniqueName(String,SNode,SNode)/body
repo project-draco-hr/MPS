@@ -2,40 +2,52 @@
   if (useOldStyleUniqueName) {
     return createUniqueNameOldStyle(roughName,contextNode);
   }
-  String uniqueSuffix=null;
+  StringBuilder uniqueNameBuffer=new StringBuilder(50);
+  uniqueNameBuffer.append(roughName);
+  if (roughName.length() > 0 && roughName.charAt(roughName.length() - 1) == '_') {
+    uniqueNameBuffer.setLength(roughName.length() - 1);
+  }
   if (contextNode != null) {
     SNode topmostNamed=null;
     SNode node_=contextNode;
     while (node_ != null) {
-      if (node_.getConcept().isSubConceptOf(SConceptRepository.getInstance().getConcept(SNodeUtil.concept_INamedConcept))) {
+      if (node_.getConcept().isSubConceptOf(myNamedConcept)) {
         topmostNamed=node_;
       }
       node_=node_.getParent();
     }
     if (topmostNamed != null) {
-      String name=topmostNamed.getName();
-      if (name != null) {
-        uniqueSuffix=Integer.toString(name.hashCode() >>> 1,Character.MAX_RADIX);
+      String suffix=topToSuffix.get(topmostNamed);
+      if (suffix != null) {
+        uniqueNameBuffer.append('_');
+        uniqueNameBuffer.append(suffix);
+      }
+ else {
+        String name=topmostNamed.getName();
+        if (name != null) {
+          suffix=Integer.toString(name.hashCode() >>> 1,Character.MAX_RADIX);
+          topToSuffix.put(topmostNamed,suffix);
+          uniqueNameBuffer.append('_');
+          uniqueNameBuffer.append(suffix);
+        }
       }
     }
   }
   if (inputNode != null) {
-    if (uniqueSuffix == null) {
-      uniqueSuffix=nodeUniqueId(inputNode);
-    }
- else {
-      uniqueSuffix=uniqueSuffix + "_" + nodeUniqueId(inputNode);
-    }
+    final String nid=nodeUniqueId(inputNode);
+    uniqueNameBuffer.append('_');
+    uniqueNameBuffer.append(nid);
   }
-  if (uniqueSuffix != null) {
-    roughName=roughName.endsWith("_") ? roughName + uniqueSuffix : roughName + "_" + uniqueSuffix;
-  }
-  String uniqueName=roughName;
-  if (uniqueSuffix == null || myUsedNames.contains(uniqueName)) {
-    roughName+="_";
+  final boolean suffixAdded=roughName.length() < uniqueNameBuffer.length();
+  String uniqueName=uniqueNameBuffer.toString();
+  if (!suffixAdded || myUsedNames.contains(uniqueName)) {
+    uniqueNameBuffer.append('_');
+    final int trimPos=uniqueNameBuffer.length();
     for (int count=0; ; count++) {
-      uniqueName=roughName + count;
+      uniqueNameBuffer.append(count);
+      uniqueName=uniqueNameBuffer.toString();
       if (!myUsedNames.contains(uniqueName))       break;
+      uniqueNameBuffer.setLength(trimPos);
     }
   }
   myUsedNames.add(uniqueName);
