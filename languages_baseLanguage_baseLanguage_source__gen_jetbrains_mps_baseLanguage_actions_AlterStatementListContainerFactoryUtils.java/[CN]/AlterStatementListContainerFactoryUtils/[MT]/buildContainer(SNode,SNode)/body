@@ -11,4 +11,56 @@
       SNodeOperations.replaceWithAnother(getCondition(newNode),SNodeOperations.copyNode(originalCondition));
     }
   }
+  if (SNodeOperations.isInstanceOf(newNode,"jetbrains.mps.baseLanguage.structure.ForStatement")) {
+    SNode inputSequence;
+    final Wrappers._T<SNode> loopVariable=new Wrappers._T<SNode>();
+    if (SNodeOperations.isInstanceOf(sampleNode,"jetbrains.mps.baseLanguage.structure.ForeachStatement")) {
+      inputSequence=SNodeOperations.copyNode(SLinkOperations.getTarget(SNodeOperations.cast(sampleNode,"jetbrains.mps.baseLanguage.structure.ForeachStatement"),"iterable",true));
+      loopVariable.value=SLinkOperations.getTarget(SNodeOperations.cast(sampleNode,"jetbrains.mps.baseLanguage.structure.ForeachStatement"),"variable",true);
+    }
+ else     if (SNodeOperations.isInstanceOf(sampleNode,"jetbrains.mps.baseLanguage.collections.structure.ForEachStatement")) {
+      inputSequence=SNodeOperations.copyNode(SLinkOperations.getTarget(SNodeOperations.cast(sampleNode,"jetbrains.mps.baseLanguage.collections.structure.ForEachStatement"),"inputSequence",true));
+      loopVariable.value=SLinkOperations.getTarget(SNodeOperations.cast(sampleNode,"jetbrains.mps.baseLanguage.collections.structure.ForEachStatement"),"variable",true);
+    }
+ else {
+      return;
+    }
+    SNode forStatement=SNodeOperations.cast(newNode,"jetbrains.mps.baseLanguage.structure.ForStatement");
+    SNode var=SNodeFactoryOperations.createNewNode("jetbrains.mps.baseLanguage.structure.LocalVariableDeclaration",null);
+    SPropertyOperations.set(var,"name","forLoopIterator");
+    SLinkOperations.setTarget(var,"initializer",createDotExpression_kz5t2g_a0a6a2a2(),true);
+    SLinkOperations.setTarget(SNodeOperations.cast(SLinkOperations.getTarget(var,"initializer",true),"jetbrains.mps.baseLanguage.structure.DotExpression"),"operand",inputSequence,true);
+    SLinkOperations.setTarget(var,"type",createClassifierType_kz5t2g_a0a8a2a2(),true);
+    SLinkOperations.setTarget(forStatement,"variable",var,true);
+    SLinkOperations.setTarget(forStatement,"condition",createDotExpression_kz5t2g_a0a31a2a2(),true);
+    SLinkOperations.setTarget(SLinkOperations.setTarget(SNodeOperations.cast(SLinkOperations.getTarget(forStatement,"condition",true),"jetbrains.mps.baseLanguage.structure.DotExpression"),"operand",SNodeFactoryOperations.createNewNode("jetbrains.mps.baseLanguage.structure.VariableReference",null),true),"variableDeclaration",var,false);
+    final SNode vd=SNodeFactoryOperations.createNewNode("jetbrains.mps.baseLanguage.structure.LocalVariableDeclarationStatement",null);
+    SPropertyOperations.set(SLinkOperations.getTarget(vd,"localVariableDeclaration",true),"name","localLoopVariable");
+    SLinkOperations.setTarget(SLinkOperations.getTarget(vd,"localVariableDeclaration",true),"type",TypeChecker.getInstance().getTypeOf(loopVariable.value),true);
+    SLinkOperations.setTarget(SLinkOperations.getTarget(vd,"localVariableDeclaration",true),"initializer",createDotExpression_kz5t2g_a0a91a2a2(),true);
+    SLinkOperations.setTarget(SNodeOperations.cast(SLinkOperations.getTarget(SNodeOperations.cast(SLinkOperations.getTarget(SLinkOperations.getTarget(vd,"localVariableDeclaration",true),"initializer",true),"jetbrains.mps.baseLanguage.structure.DotExpression"),"operand",true),"jetbrains.mps.baseLanguage.structure.VariableReference"),"variableDeclaration",var,false);
+    ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(forStatement,"body",true),"statement",true)).insertElement(0,vd);
+    ListSequence.fromList(SNodeOperations.getDescendants(SLinkOperations.getTarget(forStatement,"body",true),"jetbrains.mps.baseLanguage.structure.VariableReference",false,new String[]{})).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return SLinkOperations.getTarget(it,"variableDeclaration",false) == loopVariable.value;
+      }
+    }
+).visitAll(new IVisitor<SNode>(){
+      public void visit(      SNode it){
+        SLinkOperations.setTarget(it,"variableDeclaration",SLinkOperations.getTarget(vd,"localVariableDeclaration",true),false);
+      }
+    }
+);
+    ListSequence.fromList(SNodeOperations.getDescendants(SLinkOperations.getTarget(forStatement,"body",true),"jetbrains.mps.baseLanguage.collections.structure.ForEachVariableReference",false,new String[]{})).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return SLinkOperations.getTarget(it,"variable",false) == loopVariable.value;
+      }
+    }
+).visitAll(new IVisitor<SNode>(){
+      public void visit(      SNode it){
+        SLinkOperations.setTarget(SNodeFactoryOperations.replaceWithNewChild(it,"jetbrains.mps.baseLanguage.structure.VariableReference"),"variableDeclaration",SLinkOperations.getTarget(vd,"localVariableDeclaration",true),false);
+      }
+    }
+);
+  }
 }
