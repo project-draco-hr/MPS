@@ -1,12 +1,11 @@
 {
   for (  CoherentSetData coherentSetData : coherentMappings) {
     Set<TemplateMappingConfiguration> coherentMappingSet=coherentSetData.myMappings;
-    Map<TemplateMappingConfiguration,PriorityData> joinedLocks=new HashMap<TemplateMappingConfiguration,PriorityData>();
+    PriorityDataMap joinedLocks=new PriorityDataMap();
     for (    TemplateMappingConfiguration coherentMapping : coherentMappingSet) {
-      Map<TemplateMappingConfiguration,PriorityData> locks=myPriorityMap.get(coherentMapping);
-      for (      Map.Entry<TemplateMappingConfiguration,PriorityData> entry : locks.entrySet()) {
-        TemplateMappingConfiguration lockMapping=entry.getKey();
-        PriorityData priorityData=entry.getValue();
+      PriorityDataMap locks=myPriorityMap.get(coherentMapping);
+      for (      TemplateMappingConfiguration lockMapping : locks.keys()) {
+        PriorityData priorityData=locks.priorityData(lockMapping);
         if (coherentMappingSet.contains(lockMapping)) {
           if (priorityData.isStrict()) {
             conflictingRules.addAll(priorityData.myCauseRules);
@@ -14,21 +13,11 @@
           }
           continue;
         }
-        PriorityData joinedPriorityData=joinedLocks.get(lockMapping);
-        if (joinedPriorityData != null) {
-          joinedPriorityData.update(priorityData);
-        }
- else {
-          joinedLocks.put(lockMapping,new PriorityData(priorityData));
-        }
+        joinedLocks.update(lockMapping,priorityData);
       }
     }
     for (    TemplateMappingConfiguration coherentMapping : coherentMappingSet) {
-      Map<TemplateMappingConfiguration,PriorityData> joinedLocks_1=new HashMap<TemplateMappingConfiguration,PriorityData>(joinedLocks.size());
-      for (      Map.Entry<TemplateMappingConfiguration,PriorityData> entry : joinedLocks.entrySet()) {
-        joinedLocks_1.put(entry.getKey(),new PriorityData(entry.getValue()));
-      }
-      myPriorityMap.put(coherentMapping,joinedLocks_1);
+      myPriorityMap.put(coherentMapping,joinedLocks.deepCopy());
     }
   }
 }
