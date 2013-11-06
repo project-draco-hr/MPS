@@ -4,29 +4,36 @@
   }
   Set<StyleAttribute> changedAttributes=new StyleAttributeSet();
   for (  StyleAttribute attribute : attributes) {
-    Collection<IntPair<Object>> parentValues=getParentStyle() == null ? new LinkedList<IntPair<Object>>() : getParentStyle().getAll(attribute);
-    Collection<IntPair<Object>> currentValues=getAttribute(attribute).getAll();
+    Collection<IntPair<Object>> parentValues=getParentStyle() == null ? null : getParentStyle().getAll(attribute);
+    AttributeValue<Object> currentValues=getAttribute(attribute);
     Object cachedValue=getAttribute(attribute).cached;
-    if (parentValues != null || currentValues != null || cachedValue != null) {
-      for (      Integer priority : parentValues.keySet()) {
-        if (currentValues.containsKey(priority)) {
-          Object parentValue=parentValues.get(priority);
-          Object currentValue=currentValues.get(priority);
-          Object newValue=attribute.combine(parentValue,currentValue);
-          getAttribute(attribute).setValue(priority,newValue);
-          if (!EqualUtil.equals(newValue,currentValue)) {
+    if (parentValues != null) {
+      if (currentValues == null || currentValues.values == null || currentValues.values.isEmpty()) {
+        getAttribute(attribute).addValues(parentValues);
+      }
+ else {
+        for (        IntPair<Object> pValue : parentValues) {
+          Pair<Boolean,ListIterator<IntPair<Object>>> searchResult=currentValues.search(pValue.index);
+          boolean found=searchResult.o1;
+          ListIterator<IntPair<Object>> iterator=searchResult.o2;
+          if (found) {
+            Object currentValue=iterator.next().value;
+            Object newValue=attribute.combine(pValue.value,currentValue);
+            iterator.previous().value=newValue;
+            if (!EqualUtil.equals(newValue,currentValue)) {
+              changedAttributes.add(attribute);
+            }
+          }
+ else {
+            iterator.add(new IntPair<Object>(pValue.index,pValue.value));
             changedAttributes.add(attribute);
           }
         }
- else {
-          getAttribute(attribute).setValue(priority,parentValues.get(priority));
-          changedAttributes.add(attribute);
-        }
       }
-      getAttribute(attribute).cached=getAttribute(attribute).getTop();
-      if (!EqualUtil.equals(getAttribute(attribute).cached,cachedValue)) {
-        changedAttributes.add(attribute);
-      }
+    }
+    getAttribute(attribute).cached=getAttribute(attribute).getTop();
+    if (!EqualUtil.equals(getAttribute(attribute).cached,cachedValue)) {
+      changedAttributes.add(attribute);
     }
   }
   if (!changedAttributes.isEmpty()) {
