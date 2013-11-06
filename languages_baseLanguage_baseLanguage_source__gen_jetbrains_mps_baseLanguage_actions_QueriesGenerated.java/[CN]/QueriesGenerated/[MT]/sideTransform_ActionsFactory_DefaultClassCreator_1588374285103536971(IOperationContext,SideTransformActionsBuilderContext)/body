@@ -1,0 +1,44 @@
+{
+  List<SubstituteAction> result=ListSequence.fromList(new ArrayList<SubstituteAction>());
+  ListSequence.fromList(result).addElement(new AbstractSideTransformHintSubstituteAction(SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.AnonymousClassCreator"),_context.getSourceNode()){
+    public SNode doSubstitute(    @Nullable final EditorContext editorContext,    String pattern){
+      SNode creator=SNodeFactoryOperations.createNewNode("jetbrains.mps.baseLanguage.structure.AnonymousClassCreator",null);
+      final SNode cls=SNodeFactoryOperations.createNewNode("jetbrains.mps.baseLanguage.structure.AnonymousClass",null);
+      ListSequence.fromList(SLinkOperations.getTargets(_context.getSourceNode(),"typeParameter",true)).visitAll(new IVisitor<SNode>(){
+        public void visit(        SNode it){
+          ListSequence.fromList(SLinkOperations.getTargets(cls,"typeParameter",true)).addElement(it);
+        }
+      }
+);
+      SNode constructor=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ConstructorDeclaration",null);
+      SLinkOperations.setNewChild(constructor,"returnType","jetbrains.mps.baseLanguage.structure.VoidType");
+      SLinkOperations.setNewChild(constructor,"body","jetbrains.mps.baseLanguage.structure.StubStatementList");
+      SLinkOperations.setNewChild(constructor,"visibility","jetbrains.mps.baseLanguage.structure.PublicVisibility");
+      SPropertyOperations.set(constructor,"name",SPropertyOperations.getString(SLinkOperations.getTarget(_context.getSourceNode(),"classifier",false),"name"));
+      SPropertyOperations.set(constructor,"nestedName",SPropertyOperations.getString(SLinkOperations.getTarget(_context.getSourceNode(),"classifier",false),"name"));
+      SNode dummyDeclaration=SNodeFactoryOperations.createNewNode("jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration",null);
+      SLinkOperations.setTarget(cls,"baseMethodDeclaration",dummyDeclaration,false);
+      SLinkOperations.setTarget(cls,"classifier",SLinkOperations.getTarget(_context.getSourceNode(),"classifier",false),false);
+      SLinkOperations.setTarget(creator,"cls",cls,true);
+      SNodeOperations.replaceWithAnother(_context.getSourceNode(),creator);
+      return creator;
+    }
+    public String getMatchingText(    String pattern){
+      return "{";
+    }
+    public String getVisibleMatchingText(    String pattern){
+      return getMatchingText(pattern);
+    }
+    public String getDescriptionText(    String pattern){
+      return "anonymous class";
+    }
+    @Override protected boolean isEnabled(){
+      SNode sourceNode=getSourceNode();
+      SNode parent=SNodeOperations.getParent(sourceNode);
+      SNode containingLink=SNodeOperations.getContainingLinkDeclaration(sourceNode);
+      return parent == null || containingLink == null || (ModelConstraints.canBeParent(parent,SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.AnonymousClassCreator"),containingLink,null,null) && ModelConstraints.canBeAncestor(parent,null,SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.AnonymousClassCreator"),null));
+    }
+  }
+);
+  return result;
+}
