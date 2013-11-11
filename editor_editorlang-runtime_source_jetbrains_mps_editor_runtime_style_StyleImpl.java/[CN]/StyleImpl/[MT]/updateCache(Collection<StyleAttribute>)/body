@@ -5,36 +5,30 @@
   Set<StyleAttribute> changedAttributes=new StyleAttributeSet();
   for (  StyleAttribute<Object> attribute : attributes) {
     Collection<IntPair<Object>> parentValues=getParentStyle() == null ? null : getParentStyle().getAll(attribute);
-    AttributeValue<Object> currentValues=ensureGetAttribute(attribute);
-    Object cachedValue=getCached(attribute);
+    IntMapPointer<IntObjectSortedListMap<Object>> currentValues=getAttribute(attribute);
+    IntMapPointer<IntObjectSortedListMap<Object>> cachedAttribute=getCachedAttribute(attribute);
+    Object cachedValue=cachedAttribute.isEmpty() ? null : cachedAttribute.get().getAll();
     if (parentValues != null) {
-      if (currentValues == null || currentValues.values == null || currentValues.values.isEmpty()) {
-        getAttribute(attribute).addValues(parentValues);
+      if (currentValues.isEmpty()) {
+        ensureGetAttribute(attribute).addValues(parentValues);
       }
  else {
-        for (        IntPair<Object> pValue : parentValues) {
-          Pair<Boolean,ListIterator<IntPair<Object>>> searchResult=currentValues.search(pValue.index);
-          boolean found=searchResult.o1;
-          ListIterator<IntPair<Object>> iterator=searchResult.o2;
-          if (found) {
-            IntPair<Object> next=iterator.next();
-            Object currentValue=next.value;
-            Object newValue=attribute.combine(pValue.value,currentValue);
-            next.value=newValue;
+        for (        IntPair<Object> parentValue : parentValues) {
+          IntMapPointer<Object> searchResult=currentValues.get().search(parentValue.index);
+          if (!searchResult.isEmpty()) {
+            Object currentValue=searchResult.get();
+            Object newValue=attribute.combine(parentValue.value,currentValue);
+            setCached(attribute,parentValue.index,newValue);
             if (!EqualUtil.equals(newValue,currentValue)) {
               changedAttributes.add(attribute);
             }
           }
  else {
-            iterator.add(new IntPair<Object>(pValue.index,pValue.value));
+            searchResult.set(parentValue.value);
             changedAttributes.add(attribute);
           }
         }
       }
-    }
-    getAttribute(attribute).cached=getTop(attribute);
-    if (!EqualUtil.equals(getCached(attribute),cachedValue)) {
-      changedAttributes.add(attribute);
     }
   }
   if (!changedAttributes.isEmpty()) {
