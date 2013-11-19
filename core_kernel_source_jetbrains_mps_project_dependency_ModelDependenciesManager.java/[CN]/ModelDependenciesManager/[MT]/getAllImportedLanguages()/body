@@ -1,34 +1,8 @@
 {
   if (myModel == null)   throw new IllegalStateException("access after disposal");
   if (myInvalidatedFlag.compareAndSet(true,false)) {
-    if (mySModelWatcher == null) {
-      mySModelWatcher=new MySModelWatcher(myModel);
-    }
-    myModuleWatcher.clear();
-    Set<SModuleReference> result=new LinkedHashSet<SModuleReference>();
-    for (    SModuleReference lang : ((jetbrains.mps.smodel.SModelInternal)myModel).importedLanguages()) {
-      result.add(lang);
-      Language module=ModuleRepositoryFacade.getInstance().getModule(lang,Language.class);
-      if (module != null) {
-        myModuleWatcher.watchLanguage(module);
-      }
- else {
-        LOG.error("cannot find used language in repository " + lang.toString());
-      }
-    }
-    for (    SModuleReference dk : ((jetbrains.mps.smodel.SModelInternal)myModel).importedDevkits()) {
-      DevKit devkit=ModuleRepositoryFacade.getInstance().getModule(dk,DevKit.class);
-      if (devkit == null)       continue;
-      myModuleWatcher.watchDevKit(devkit);
-      for (      Language dkLang : devkit.getAllExportedLanguages()) {
-        result.add(dkLang.getModuleReference());
-        myModuleWatcher.watchLanguage(dkLang);
-      }
-      for (      DevKit exDevKit : devkit.getAllExtendedDevkits()) {
-        myModuleWatcher.watchDevKit(exDevKit);
-      }
-    }
-    this.myCachedDeps=Collections.unmodifiableSet(result);
+    final Collection<SModuleReference> languages=buildAllLanguages(myModel,new LinkedHashSet<SModuleReference>());
+    myCachedDeps=Collections.unmodifiableCollection(languages);
     myCacheInitGuard.countDown();
   }
   while (true) {
