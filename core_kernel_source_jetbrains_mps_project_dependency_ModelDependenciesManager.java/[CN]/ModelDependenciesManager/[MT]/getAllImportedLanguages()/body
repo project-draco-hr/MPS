@@ -1,17 +1,10 @@
 {
-  if (myModel == null)   throw new IllegalStateException("access after disposal");
-  if (myInvalidatedFlag.compareAndSet(true,false)) {
-    final Collection<SModuleReference> languages=buildAllLanguages(myModel,new LinkedHashSet<SModuleReference>());
-    myCachedDeps=Collections.unmodifiableCollection(languages);
-    myCacheInitGuard.countDown();
+  final SModel model=myModel;
+  if (model == null)   throw new IllegalStateException("access after disposal");
+  Collection<SModuleReference> tlVal=myCachedDeps;
+  if (tlVal == null) {
+    tlVal=buildAllLanguages(model,new LinkedHashSet<SModuleReference>());
+    myCachedDeps=tlVal=Collections.unmodifiableCollection(tlVal);
   }
-  while (true) {
-    try {
-      myCacheInitGuard.await();
-      break;
-    }
- catch (    InterruptedException e) {
-    }
-  }
-  return myCachedDeps;
+  return tlVal;
 }
