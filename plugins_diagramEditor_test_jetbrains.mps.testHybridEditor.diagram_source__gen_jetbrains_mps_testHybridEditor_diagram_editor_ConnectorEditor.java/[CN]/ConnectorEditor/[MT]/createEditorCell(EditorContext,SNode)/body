@@ -1,24 +1,36 @@
 {
-  ConnectorCell cell=new ConnectorCell(context,node){
-    public boolean connectWithEnds(    DiagramCell diagramCell){
-      OutputPortCell outputPort=CellFinderUtil.findChildByConditionAndClass(diagramCell,new Condition<EditorCell>(){
-        public boolean met(        EditorCell cell){
-          return cell.isBig() && cell.getSNode().equals(SLinkOperations.getTarget(node,"outputPort",false));
+  final ConnectorCell cell=new ConnectorCell(context,node){
+    public Mapper<SNode,PolyLineConnection> getMapper(){
+      return new Mapper<SNode,PolyLineConnection>(node,new PolyLineConnection()){
+        @Override protected void registerSynchronizers(        Mapper.SynchronizersConfiguration configuration){
+          super.registerSynchronizers(configuration);
+          ReadableProperty<SNode> inputPort=modelProperty(new Computable<SNode>(){
+            public SNode compute(){
+              return SLinkOperations.getTarget(node,"inputPort",false);
+            }
+          }
+);
+          ReadableProperty<SNode> outputPort=modelProperty(new Computable<SNode>(){
+            public SNode compute(){
+              return SLinkOperations.getTarget(node,"outputPort",false);
+            }
+          }
+);
+          configuration.add(Synchronizers.forProperty(inputPort,new WritableProperty<SNode>(){
+            public void set(            SNode port){
+              getTarget().toView().set((port == null ? null : ((View)getParent().getDescendantMapper(port).getTarget())));
+            }
+          }
+));
+          configuration.add(Synchronizers.forProperty(outputPort,new WritableProperty<SNode>(){
+            public void set(            SNode port){
+              getTarget().fromView().set((port == null ? null : ((View)getParent().getDescendantMapper(port).getTarget())));
+            }
+          }
+));
         }
       }
-,OutputPortCell.class,true);
-      InputPortCell inputPort=CellFinderUtil.findChildByConditionAndClass(diagramCell,new Condition<EditorCell>(){
-        public boolean met(        EditorCell cell){
-          return cell.isBig() && cell.getSNode().equals(SLinkOperations.getTarget(node,"inputPort",false));
-        }
-      }
-,InputPortCell.class,true);
-      if (inputPort == null || outputPort == null) {
-        return false;
-      }
-      getConnector().input.set(inputPort.getPort());
-      getConnector().output.set(outputPort.getPort());
-      return true;
+;
     }
   }
 ;

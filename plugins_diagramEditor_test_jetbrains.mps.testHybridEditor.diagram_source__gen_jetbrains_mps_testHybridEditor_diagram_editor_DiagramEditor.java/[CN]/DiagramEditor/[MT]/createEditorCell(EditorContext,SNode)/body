@@ -1,7 +1,43 @@
 {
-  DiagramCell diagramCell=new DiagramCell(editorContext,diagramNode);
-  createBlockCells(editorContext,diagramNode,diagramCell);
-  createConnectorCollection(editorContext,diagramNode,diagramCell);
-  diagramCell.setBig(true);
+  ViewContainerComponent component;
+  component=new ViewContainerComponent();
+  ViewContainer container=new ViewContainer();
+  component.container(container);
+  component.container().root().addTrait(RootTrait.ROOT_TRAIT);
+  final DiagramCell diagramCell=new DiagramCell(editorContext,diagramNode,component){
+    public Mapper<SNode,DiagramView> getMapper(){
+      return new Mapper<SNode,DiagramView>(diagramNode,new ConnectionRoutingView(new OrthogonalRouter())){
+        @Override protected void registerSynchronizers(        Mapper.SynchronizersConfiguration configuration){
+          super.registerSynchronizers(configuration);
+          configuration.add(Synchronizers.<SNode,View>forSimpleRole(this,SLinkOperations.getTargets(diagramNode,"blocks",true),getTarget().itemsView.children(),new MapperFactory<SNode,View>(){
+            public Mapper<? extends SNode,? extends View> createMapper(            SNode node){
+              EditorCell blockCell=editorContext.createNodeCell(node);
+              if (blockCell instanceof BlockCell) {
+                addEditorCell(blockCell);
+                return ((BlockCell)blockCell).getMapper();
+              }
+              return null;
+            }
+          }
+));
+          configuration.add(Synchronizers.<SNode,Connection>forSimpleRole(this,SLinkOperations.getTargets(diagramNode,"connectors",true),getTarget().connections,new MapperFactory<SNode,Connection>(){
+            public Mapper<? extends SNode,? extends Connection> createMapper(            SNode node){
+              EditorCell connectorCell=editorContext.createNodeCell(node);
+              if (connectorCell instanceof ConnectorCell) {
+                addEditorCell(connectorCell);
+                return ((ConnectorCell)connectorCell).getMapper();
+              }
+              return null;
+            }
+          }
+));
+        }
+      }
+;
+    }
+  }
+;
+  RootMapper mapper=new RootMapper(diagramNode,diagramCell.getMapper(),container);
+  mapper.attachRoot();
   return diagramCell;
 }
