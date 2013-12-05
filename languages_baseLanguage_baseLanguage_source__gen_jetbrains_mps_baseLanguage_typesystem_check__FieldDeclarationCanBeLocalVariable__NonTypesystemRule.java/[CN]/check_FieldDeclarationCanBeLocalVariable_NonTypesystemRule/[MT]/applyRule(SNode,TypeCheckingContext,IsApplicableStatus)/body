@@ -39,14 +39,35 @@
     }
   }
 )) {
+    SNode method=Sequence.fromIterable(methods).first();
+    Iterable<SNode> returnStatements=RulesFunctions_BaseLanguage.collectReturnStatements(SLinkOperations.getTarget(method,"body",true));
+    final Program program=DataFlowManager.getInstance().buildProgramFor(SLinkOperations.getTarget(method,"body",true));
+    final AnalysisResult<Set<ReadInstruction>> reachingReads=program.analyze(new ReachingReadsAnalyzer());
+    boolean someReturnReachesVariable=Sequence.fromIterable(returnStatements).any(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        for (        Instruction instruction : ListSequence.fromList(program.getInstructionsFor(it))) {
+          for (          Instruction next : SetSequence.fromSet(instruction.pred())) {
+            for (            ReadInstruction read : reachingReads.get(next)) {
+              if (read.getVariable() == variableDeclaration) {
+                return true;
+              }
+            }
+          }
+        }
+        return false;
+      }
+    }
+);
+    if (!(someReturnReachesVariable)) {
 {
-      MessageTarget errorTarget=new NodeMessageTarget();
-      IErrorReporter _reporter_2309309498=typeCheckingContext.reportWarning(variableDeclaration,"Field can be converted into a local variable","r:00000000-0000-4000-0000-011c895902c5(jetbrains.mps.baseLanguage.typesystem)","6640766779592666289",null,errorTarget);
+        MessageTarget errorTarget=new NodeMessageTarget();
+        IErrorReporter _reporter_2309309498=typeCheckingContext.reportWarning(variableDeclaration,"Field can be converted into a local variable","r:00000000-0000-4000-0000-011c895902c5(jetbrains.mps.baseLanguage.typesystem)","6640766779592666289",null,errorTarget);
 {
-        BaseQuickFixProvider intentionProvider=new BaseQuickFixProvider("jetbrains.mps.baseLanguage.typesystem.ConvertFieldToLocalVariable_QuickFix",false);
-        intentionProvider.putArgument("method",Sequence.fromIterable(methods).first());
-        intentionProvider.putArgument("refs",refs);
-        _reporter_2309309498.addIntentionProvider(intentionProvider);
+          BaseQuickFixProvider intentionProvider=new BaseQuickFixProvider("jetbrains.mps.baseLanguage.typesystem.ConvertFieldToLocalVariable_QuickFix",false);
+          intentionProvider.putArgument("method",Sequence.fromIterable(methods).first());
+          intentionProvider.putArgument("refs",refs);
+          _reporter_2309309498.addIntentionProvider(intentionProvider);
+        }
       }
     }
   }
