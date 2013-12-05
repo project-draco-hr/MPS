@@ -40,25 +40,14 @@
   }
 )) {
     SNode method=Sequence.fromIterable(methods).first();
-    Iterable<SNode> returnStatements=RulesFunctions_BaseLanguage.collectReturnStatements(SLinkOperations.getTarget(method,"body",true));
-    final Program program=DataFlowManager.getInstance().buildProgramFor(SLinkOperations.getTarget(method,"body",true));
-    final AnalysisResult<Set<ReadInstruction>> reachingReads=program.analyze(new ReachingReadsAnalyzer());
-    boolean someReturnReachesVariable=Sequence.fromIterable(returnStatements).any(new IWhereFilter<SNode>(){
-      public boolean accept(      SNode it){
-        for (        Instruction instruction : ListSequence.fromList(program.getInstructionsFor(it))) {
-          for (          Instruction next : SetSequence.fromSet(instruction.pred())) {
-            for (            ReadInstruction read : reachingReads.get(next)) {
-              if (read.getVariable() == variableDeclaration) {
-                return true;
-              }
-            }
-          }
-        }
-        return false;
+    Program program=DataFlowManager.getInstance().buildProgramFor(SLinkOperations.getTarget(method,"body",true));
+    boolean uninitializedRead=ListSequence.fromList(ListSequence.fromListWithValues(new ArrayList<ReadInstruction>(),program.getUninitializedReads())).any(new IWhereFilter<ReadInstruction>(){
+      public boolean accept(      ReadInstruction it){
+        return eq_pk5n8v_a0a0a0a0a0a4a7a1(it.getVariable(),variableDeclaration);
       }
     }
 );
-    if (!(someReturnReachesVariable)) {
+    if (!(uninitializedRead)) {
 {
         MessageTarget errorTarget=new NodeMessageTarget();
         IErrorReporter _reporter_2309309498=typeCheckingContext.reportWarning(variableDeclaration,"Field can be converted into a local variable","r:00000000-0000-4000-0000-011c895902c5(jetbrains.mps.baseLanguage.typesystem)","6640766779592666289",null,errorTarget);
