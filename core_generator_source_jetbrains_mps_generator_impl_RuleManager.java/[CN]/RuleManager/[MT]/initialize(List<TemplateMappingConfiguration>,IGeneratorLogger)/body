@@ -1,0 +1,32 @@
+{
+  myCreateRootRules=new FlattenIterable(new ArrayList<List<TemplateCreateRootRule>>(list.size()));
+  myRoot_MappingRules=new FlattenIterable(new ArrayList<List<TemplateRootMappingRule>>(list.size()));
+  myWeaving_MappingRules=new FlattenIterable(new ArrayList<List<TemplateWeavingRule>>(list.size()));
+  myDropRootRules=new FlattenIterable(new ArrayList<List<TemplateDropRootRule>>(list.size()));
+  for (  TemplateMappingConfiguration mappingConfig : list) {
+    myCreateRootRules.add(mappingConfig.getCreateRules());
+    myRoot_MappingRules.add(mappingConfig.getRootRules());
+    myWeaving_MappingRules.add(mappingConfig.getWeavingRules());
+    myDropRootRules.add(mappingConfig.getDropRules());
+  }
+  LinkedList<TemplateMappingScript> postScripts=new LinkedList<TemplateMappingScript>();
+  LinkedList<TemplateMappingScript> preScripts=new LinkedList<TemplateMappingScript>();
+  String warnMsg="skip script %s - wrong script kind";
+  for (  TemplateMappingConfiguration mappingConfigs : list) {
+    for (    TemplateMappingScript postMappingScript : mappingConfigs.getPostScripts()) {
+      if (postMappingScript.getKind() != TemplateMappingScript.POSTPROCESS) {
+        logger.warning(postMappingScript.getScriptNode().resolve(MPSModuleRepository.getInstance()),String.format(warnMsg,postMappingScript.getLongName()));
+        continue;
+      }
+      postScripts.add(postMappingScript);
+    }
+    for (    TemplateMappingScript preMappingScript : mappingConfigs.getPreScripts()) {
+      if (preMappingScript.getKind() != TemplateMappingScript.PREPROCESS) {
+        logger.warning(preMappingScript.getScriptNode().resolve(MPSModuleRepository.getInstance()),String.format(warnMsg,preMappingScript.getLongName()));
+        continue;
+      }
+      preScripts.add(preMappingScript);
+    }
+  }
+  myScripts=new ScriptManager(new ArrayList<TemplateMappingScript>(preScripts),new ArrayList<TemplateMappingScript>(postScripts));
+}

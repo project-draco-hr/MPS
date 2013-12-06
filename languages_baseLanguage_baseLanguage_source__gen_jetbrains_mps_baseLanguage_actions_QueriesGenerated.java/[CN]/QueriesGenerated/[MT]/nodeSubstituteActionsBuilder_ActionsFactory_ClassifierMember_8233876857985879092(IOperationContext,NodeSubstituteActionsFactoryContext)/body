@@ -41,7 +41,7 @@
         }
         public String getMatchingText(        String pattern){
           SNode curr=SNodeOperations.cast(_context.getCurrentTargetNode(),"jetbrains.mps.baseLanguage.structure.IncompleteMemberDeclaration");
-          if (SPropertyOperations.getBoolean(curr,"volatile")) {
+          if (SPropertyOperations.getBoolean(curr,"volatile") || SPropertyOperations.getBoolean(curr,"transient")) {
             return null;
           }
           if (!((pattern == null || pattern.length() == 0))) {
@@ -79,12 +79,15 @@
           }
           SNode result;
           if (SPropertyOperations.getBoolean(current,"static")) {
-            result=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StaticFieldDeclaration",null);
+            SNode decl=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StaticFieldDeclaration",null);
+            SPropertyOperations.set(decl,"isVolatile","" + (SPropertyOperations.getBoolean(current,"volatile")));
+            SPropertyOperations.set(decl,"isTransient","" + (SPropertyOperations.getBoolean(current,"transient")));
+            result=decl;
           }
  else {
             SNode decl=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.FieldDeclaration",null);
             SPropertyOperations.set(decl,"isVolatile","" + (SPropertyOperations.getBoolean(current,"volatile")));
-            SPropertyOperations.set(decl,"isTransient","" + (false));
+            SPropertyOperations.set(decl,"isTransient","" + (SPropertyOperations.getBoolean(current,"transient")));
             result=decl;
           }
           SLinkOperations.setTarget(SNodeOperations.cast(result,"jetbrains.mps.baseLanguage.structure.ClassifierMember"),"visibility",SLinkOperations.getTarget(current,"visibility",true),true);
@@ -97,7 +100,12 @@
           return SNodeOperations.cast(result,"jetbrains.mps.baseLanguage.structure.ClassifierMember");
         }
         @Override protected SNode selectChildNode(        SNode createdNode,        SModel model,        String pattern,        EditorContext editorContext){
-          SelectionUtil.selectCell(editorContext,SLinkOperations.getTarget(SNodeOperations.cast(createdNode,"jetbrains.mps.baseLanguage.structure.VariableDeclaration"),"initializer",true),SelectionManager.FIRST_EDITABLE_CELL);
+          if ((SLinkOperations.getTarget(SNodeOperations.cast(createdNode,"jetbrains.mps.baseLanguage.structure.VariableDeclaration"),"initializer",true) == null)) {
+            SelectionUtil.selectCell(editorContext,SNodeOperations.cast(createdNode,"jetbrains.mps.baseLanguage.structure.VariableDeclaration"),SelectionManager.LAST_EDITABLE_CELL);
+          }
+ else {
+            SelectionUtil.selectCell(editorContext,SLinkOperations.getTarget(SNodeOperations.cast(createdNode,"jetbrains.mps.baseLanguage.structure.VariableDeclaration"),"initializer",true),SelectionManager.FIRST_EDITABLE_CELL);
+          }
           return null;
         }
         public String getDescriptionText(        String pattern){
@@ -145,7 +153,7 @@
         }
         public String getMatchingText(        String pattern){
           SNode curr=SNodeOperations.cast(_context.getCurrentTargetNode(),"jetbrains.mps.baseLanguage.structure.IncompleteMemberDeclaration");
-          if (SPropertyOperations.getBoolean(curr,"synchronized") || SPropertyOperations.getBoolean(curr,"volatile") || SLinkOperations.getTarget(curr,"type",true) != null) {
+          if (SPropertyOperations.getBoolean(curr,"synchronized") || SPropertyOperations.getBoolean(curr,"transient") || SPropertyOperations.getBoolean(curr,"volatile")|| SLinkOperations.getTarget(curr,"type",true) != null) {
             return null;
           }
           return "class";

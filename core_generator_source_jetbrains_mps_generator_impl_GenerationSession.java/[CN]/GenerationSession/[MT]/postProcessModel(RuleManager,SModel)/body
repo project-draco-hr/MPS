@@ -1,9 +1,8 @@
 {
-  List<TemplateMappingScript> postMappingScripts=ruleManager.getPostMappingScripts();
-  if (postMappingScripts.isEmpty()) {
+  if (!ruleManager.getScripts().postprocessing()) {
     return currentModel;
   }
-  boolean needToCloneModel=!myDiscardTransients;
+  boolean needToCloneModel=ruleManager.getScripts().needModelCloneToPostprocess(currentModel,!myDiscardTransients);
   SModel toRecycle=null;
   if (needToCloneModel) {
     ttrace.push("model clone",false);
@@ -11,31 +10,23 @@
     if (myLogger.needsInfo()) {
       myLogger.info("clone model '" + currentModel.getReference().getModelName() + "' --> '"+ currentOutputModel_clone.getReference().getModelName()+ "'");
     }
-    CloneUtil.cloneModelWithImports(currentModel,currentOutputModel_clone,false);
+    new CloneUtil(currentModel,currentOutputModel_clone).cloneModelWithImports();
     ttrace.pop();
-    mySessionContext.getGenerationTracer().registerPostMappingScripts(currentModel,currentOutputModel_clone,postMappingScripts);
+    mySessionContext.getGenerationTracer().registerPostMappingScripts(currentModel,currentOutputModel_clone,ruleManager.getScripts().getPostMappingScripts());
     toRecycle=currentModel;
     currentModel=currentOutputModel_clone;
     myDependenciesBuilder.scriptApplied(currentModel);
   }
+ else {
+    mySessionContext.getGenerationTracer().registerPostMappingScripts(currentModel,currentModel,ruleManager.getScripts().getPostMappingScripts());
+  }
   boolean postProcessed=false;
-  for (  TemplateMappingScript postMappingScript : postMappingScripts) {
-    if (postMappingScript.getKind() != TemplateMappingScript.POSTPROCESS) {
-      myLogger.warning(postMappingScript.getScriptNode().resolve(MPSModuleRepository.getInstance()),"skip script " + postMappingScript.getLongName() + " - wrong script kind");
-      continue;
-    }
+  TemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,myProgressMonitor,myLogger,ruleManager,currentModel,currentModel,myGenerationOptions,myDependenciesBuilder,ttrace);
+  for (  TemplateMappingScript postMappingScript : ruleManager.getScripts().getPostMappingScripts()) {
     if (myLogger.needsInfo()) {
       myLogger.info(postMappingScript.getScriptNode().resolve(MPSModuleRepository.getInstance()),"post-process " + postMappingScript.getLongName());
     }
-    TemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,myProgressMonitor,myLogger,ruleManager,currentModel,currentModel,myGenerationOptions,myDependenciesBuilder,ttrace);
-    try {
-      templateGenerator.getDefaultExecutionContext(null).executeScript(postMappingScript,currentModel);
-    }
- catch (    Exception t) {
-      myLogger.handleException(t);
-      myLogger.error(postMappingScript.getScriptNode().resolve(MPSModuleRepository.getInstance()),"error executing script " + postMappingScript.getLongName() + " (see exception)");
-      throw new GenerationFailureException(t);
-    }
+    templateGenerator.executeScript(postMappingScript);
     postProcessed=true;
   }
   if (needToCloneModel) {
@@ -44,7 +35,7 @@
       TransientModelWithMetainfo modelWithMetaInfo=TransientModelWithMetainfo.create(currentModel,myDependenciesBuilder);
       myNewCache.store(myMajorStep,myMinorStep,modelWithMetaInfo);
     }
-    recycleWasteModel(toRecycle);
+    recycleWasteModel(toRecycle,false);
   }
   if (myLogger.needsInfo() && postProcessed) {
     myLogger.info("post-processing finished");

@@ -1,0 +1,34 @@
+{
+  SNode newInputNode=getNewInputNode(macro,templateContext);
+  if (newInputNode == null) {
+    return Collections.emptyList();
+  }
+  SNode invokedTemplate=getInvokedTemplate(macro);
+  if (invokedTemplate == null) {
+    showErrorMessage(newInputNode,null,macro,String.format("error processing %s : no template to invoke",myName));
+    throw new TemplateProcessingFailureException();
+  }
+  TemplateContext newcontext=prepareContext(macro,invokedTemplate,templateContext,newInputNode);
+  if (newcontext == null) {
+    throw new TemplateProcessingFailureException();
+  }
+  TemplateContainer tc=new TemplateContainer(myTemplateProcessor,invokedTemplate);
+  if (!tc.initialize(newcontext,macro)) {
+    throw new TemplateProcessingFailureException();
+  }
+  boolean inputChanged=(newInputNode != templateContext.getInput());
+  if (inputChanged) {
+    myTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+  }
+  final SNodePointer invokedTemplateRef=new SNodePointer(invokedTemplate);
+  myTracer.pushTemplateNode(invokedTemplateRef);
+  try {
+    return tc.applyFailFast();
+  }
+  finally {
+    myTracer.closeTemplateNode(invokedTemplateRef);
+    if (inputChanged) {
+      myTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+    }
+  }
+}

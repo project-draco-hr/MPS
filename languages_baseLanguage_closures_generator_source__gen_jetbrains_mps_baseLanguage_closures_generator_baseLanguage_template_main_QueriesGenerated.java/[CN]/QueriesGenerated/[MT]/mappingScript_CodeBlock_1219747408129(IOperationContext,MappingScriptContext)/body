@@ -1,18 +1,40 @@
 {
-  List<SNode> ccs=SModelOperations.getNodes(_context.getModel(),"jetbrains.mps.baseLanguage.structure.ClassCreator");
-  for (  SNode cc : ccs) {
-    List<SNode> args=SLinkOperations.getTargets(cc,"actualArgument",true);
-    List<SNode> pdecls=SLinkOperations.getTargets(SLinkOperations.getTarget(cc,"baseMethodDeclaration",false),"parameter",true);
-    if ((SLinkOperations.getTarget(cc,"baseMethodDeclaration",false) != null) && ListSequence.fromList(args).count() != ListSequence.fromList(pdecls).count()) {
-      _context.showInformationMessage(cc,"Actual arguments count != parameter declarations count");
-    }
-    int idx=0;
-    for (    SNode pdecl : pdecls) {
-      if (idx < ListSequence.fromList(args).count()) {
-        SNode arg=ListSequence.fromList(args).getElement(idx);
-        FunctionTypeUtil.prepAdaptations(_context,BehaviorReflection.invokeVirtual((Class<SNode>)((Class)Object.class),cc,"virtual_deriveType_1213877435747",new Object[]{arg}),arg);
+  if (Constants.ONLY_CLOSURE_LITERAL_AS_FUNCTION_TYPE) {
+    for (    SNode cl : SModelOperations.getNodes(_context.getModel(),"jetbrains.mps.baseLanguage.closures.structure.ClosureLiteral")) {
+      if (!(SNodeOperations.isInstanceOf(SNodeOperations.getParent(cl),"jetbrains.mps.baseLanguage.structure.ClassCreator")) || !(SNodeOperations.getContainingLinkRole(cl).equals("actualArgument"))) {
+        continue;
       }
-      idx++;
+      SNode cc=SNodeOperations.cast(SNodeOperations.getParent(cl),"jetbrains.mps.baseLanguage.structure.ClassCreator");
+      List<SNode> args=SLinkOperations.getTargets(cc,"actualArgument",true);
+      List<SNode> pdecls=SLinkOperations.getTargets(SLinkOperations.getTarget(cc,"baseMethodDeclaration",false),"parameter",true);
+      if ((SLinkOperations.getTarget(cc,"baseMethodDeclaration",false) != null) && ListSequence.fromList(args).count() != ListSequence.fromList(pdecls).count()) {
+        _context.showInformationMessage(cc,"Actual arguments count != parameter declarations count");
+      }
+      Iterator<SNode> argsItr=ListSequence.fromList(args).iterator();
+      for (      SNode pdecl : pdecls) {
+        if (argsItr.hasNext()) {
+          SNode arg=argsItr.next();
+          FunctionTypeUtil.prepAdaptations(_context,BehaviorReflection.invokeVirtual((Class<SNode>)((Class)Object.class),cc,"virtual_deriveType_1213877435747",new Object[]{arg}),arg);
+        }
+      }
+    }
+  }
+ else {
+    List<SNode> ccs=SModelOperations.getNodes(_context.getModel(),"jetbrains.mps.baseLanguage.structure.ClassCreator");
+    for (    SNode cc : ccs) {
+      List<SNode> args=SLinkOperations.getTargets(cc,"actualArgument",true);
+      List<SNode> pdecls=SLinkOperations.getTargets(SLinkOperations.getTarget(cc,"baseMethodDeclaration",false),"parameter",true);
+      if ((SLinkOperations.getTarget(cc,"baseMethodDeclaration",false) != null) && ListSequence.fromList(args).count() != ListSequence.fromList(pdecls).count()) {
+        _context.showInformationMessage(cc,"Actual arguments count != parameter declarations count");
+      }
+      int idx=0;
+      for (      SNode pdecl : pdecls) {
+        if (idx < ListSequence.fromList(args).count()) {
+          SNode arg=ListSequence.fromList(args).getElement(idx);
+          FunctionTypeUtil.prepAdaptations(_context,BehaviorReflection.invokeVirtual((Class<SNode>)((Class)Object.class),cc,"virtual_deriveType_1213877435747",new Object[]{arg}),arg);
+        }
+        idx++;
+      }
     }
   }
 }

@@ -1,0 +1,36 @@
+{
+  SNode macro_mapperFunction=RuleUtil.getMapSrc_MapperFunction(macro);
+  List<SNode> newInputNodes=getNewInputNodes(macro,templateContext);
+  if (newInputNodes.isEmpty()) {
+    return Collections.emptyList();
+  }
+  ArrayList<SNode> outputNodes=new ArrayList<SNode>(newInputNodes.size());
+  for (  SNode newInputNode : newInputNodes) {
+    boolean inputChanged=(newInputNode != templateContext.getInput());
+    if (inputChanged) {
+      myTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+    }
+    try {
+      TemplateContext newcontext=templateContext.subContext(newInputNode);
+      if (macro_mapperFunction != null) {
+        SNode childToReplaceLater=myTemplateProcessor.myOutputModel.createNode(templateNode.getConcept());
+        myTracer.pushOutputNodeToReplaceLater(childToReplaceLater);
+        outputNodes.add(childToReplaceLater);
+        getGenerator().getDelayedChanges().addExecuteMapSrcNodeMacroChange(macro,childToReplaceLater,newcontext,getQueryExecutor());
+      }
+ else {
+        List<SNode> _outputNodes=myTemplateProcessor.applyTemplate(templateNode,newcontext,macro);
+        outputNodes.addAll(_outputNodes);
+        for (        SNode outputNode : _outputNodes) {
+          getGenerator().getDelayedChanges().addExecuteMapSrcNodeMacroPostProcChange(macro,outputNode,newcontext,getQueryExecutor());
+        }
+      }
+    }
+  finally {
+      if (inputChanged) {
+        myTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+      }
+    }
+  }
+  return outputNodes;
+}

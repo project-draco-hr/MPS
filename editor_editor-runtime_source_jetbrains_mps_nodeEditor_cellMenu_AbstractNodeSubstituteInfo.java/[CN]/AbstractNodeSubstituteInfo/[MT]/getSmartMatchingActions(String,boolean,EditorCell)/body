@@ -2,12 +2,22 @@
   InequalitySystem inequalitiesSystem=getInequalitiesSystem(contextCell);
   List<SubstituteAction> substituteActionList=getMatchingActions(pattern,strictMatching);
   if (inequalitiesSystem == null)   return substituteActionList;
+  ourModelForTypechecking=TemporaryModels.getInstance().create(false,false,TempModuleOptions.forDefaultModule());
+  for (  SModuleReference l : ((SModelDescriptor)getEditorContext().getModel()).getSModel().getModelDepsManager().getAllImportedLanguages()) {
+    ((SModelDescriptor)ourModelForTypechecking).getSModel().addLanguage(l);
+  }
   List<SubstituteAction> result=new ArrayList<SubstituteAction>();
-  for (  SubstituteAction nodeSubstituteAction : substituteActionList) {
-    SNode type=nodeSubstituteAction.getActionType(pattern,contextCell);
-    if (type != null && inequalitiesSystem.satisfies(type)) {
-      result.add(nodeSubstituteAction);
+  try {
+    for (    SubstituteAction nodeSubstituteAction : substituteActionList) {
+      SNode type=nodeSubstituteAction.getActionType(pattern,contextCell);
+      if (type != null && inequalitiesSystem.satisfies(type)) {
+        result.add(nodeSubstituteAction);
+      }
     }
+  }
+  finally {
+    TemporaryModels.getInstance().dispose(ourModelForTypechecking);
+    ourModelForTypechecking=null;
   }
   return result;
 }

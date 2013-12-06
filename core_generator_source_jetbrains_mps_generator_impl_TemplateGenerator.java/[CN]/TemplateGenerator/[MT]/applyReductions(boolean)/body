@@ -1,9 +1,9 @@
 {
   if (isPrimary) {
-    ttrace.push("create root",false);
+    ttrace.push("create roots",false);
     final QueryExecutionContext executionContext=getExecutionContext(null);
     if (executionContext != null) {
-      TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(this,new ReductionContext(executionContext),getOperationContext(),myGenerationTracer);
+      TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(this,executionContext,new ReductionContext());
       for (      TemplateCreateRootRule rule : myRuleManager.getCreateRootRules()) {
         checkMonitorCanceled();
         applyCreateRoot(rule,environment);
@@ -12,21 +12,35 @@
     ttrace.pop();
   }
   ttrace.push("root mappings",false);
-  ArrayList<SNode> rootsToCopy=new ArrayList<SNode>();
-  for (  SNode root : myInputModel.getRootNodes()) {
-    rootsToCopy.add(root);
-  }
+  ArrayList<SNode> rootsConsumed=new ArrayList<SNode>();
   for (  TemplateRootMappingRule rule : myRuleManager.getRoot_MappingRules()) {
     checkMonitorCanceled();
-    applyRootRule(rule,rootsToCopy);
+    applyRootRule(rule,rootsConsumed);
   }
   ttrace.pop();
+  if (myInplaceChangeEnabled) {
+    if (myWeavingProcessor.hasWeavingRulesToApply()) {
+      myLogger.info("Could have had delta builder here, but can't due to active weavings");
+    }
+ else {
+      myLogger.info("Active in-place model transformation");
+      myDeltaBuilder=createDeltaBuilder();
+    }
+  }
   checkMonitorCanceled();
   getGeneratorSessionContext().clearCopiedRootsSet();
-  for (  SNode rootToCopy : rootsToCopy) {
+  for (  SNode rootToCopy : myInputModel.getRootNodes()) {
+    if (rootsConsumed.contains(rootToCopy)) {
+      if (myDeltaBuilder != null) {
+        myDeltaBuilder.enterInputRoot(rootToCopy);
+        myDeltaBuilder.deleteInputRoot(rootToCopy);
+        myDeltaBuilder.leaveInputRoot(rootToCopy);
+      }
+      continue;
+    }
     QueryExecutionContext context=getExecutionContext(rootToCopy);
     if (context != null) {
-      TemplateExecutionEnvironmentImpl rootenv=new TemplateExecutionEnvironmentImpl(this,new ReductionContext(context),getOperationContext(),myGenerationTracer);
+      TemplateExecutionEnvironmentImpl rootenv=new TemplateExecutionEnvironmentImpl(this,context,new ReductionContext());
       copyRootInputNode(rootToCopy,rootenv);
     }
   }

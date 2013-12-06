@@ -1,0 +1,34 @@
+{
+  myReadyRules.clear();
+  final FastNodeFinder nodeFinder=((jetbrains.mps.smodel.SModelInternal)inputModel).getFastNodeFinder();
+  for (  TemplateWeavingRule rule : rules) {
+    String applicableConcept=rule.getApplicableConcept();
+    if (applicableConcept == null) {
+      myGenerator.showErrorMessage(null,null,rule.getRuleNode().resolve(MPSModuleRepository.getInstance()),"rule has no applicable concept defined");
+      continue;
+    }
+    boolean includeInheritors=rule.applyToInheritors();
+    for (    SNode applicableNode : nodeFinder.getNodes(applicableConcept,includeInheritors)) {
+      QueryExecutionContext executionContext=myGenerator.getExecutionContext(applicableNode);
+      if (executionContext == null) {
+        continue;
+      }
+      TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(myGenerator,executionContext);
+      try {
+        DefaultTemplateContext context=new DefaultTemplateContext(applicableNode);
+        if (executionContext.isApplicable(rule,environment,context)) {
+          myReadyRules.add(new ArmedWeavingRule(rule,environment,applicableNode));
+        }
+      }
+ catch (      GenerationCanceledException ex) {
+        throw ex;
+      }
+catch (      GenerationFailureException ex) {
+        throw ex;
+      }
+catch (      GenerationException ex) {
+        myGenerator.showErrorMessage(null,rule.getRuleNode().resolve(MPSModuleRepository.getInstance()),"internal error: " + ex.toString());
+      }
+    }
+  }
+}

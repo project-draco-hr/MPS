@@ -1,22 +1,45 @@
 {
   checkMonitorCanceled();
   myAreMappingsReady=false;
+  ttrace.push("weavings",false);
+  myWeavingProcessor=new WeavingProcessor(this);
+  myWeavingProcessor.prepareWeavingRules(getInputModel(),myRuleManager.getWeaving_MappingRules());
+  ttrace.pop();
   ttrace.push("reductions",false);
   applyReductions(isPrimary);
   ttrace.pop();
+  if (myDeltaBuilder != null) {
+    ttrace.push("apply delta changes",false);
+    myInplaceModelChange=true;
+    if (myDeltaBuilder.hasChanges()) {
+      myDeltaBuilder.applyInplace(getInputModel(),this);
+    }
+    if (myNewAddedRoots != null) {
+      for (      SNode newRoot : myNewAddedRoots) {
+        getInputModel().addRootNode(newRoot);
+      }
+      myNewAddedRoots.clear();
+    }
+    myOutputRoots.clear();
+    myDeltaBuilder=null;
+    ttrace.pop();
+  }
   myAreMappingsReady=true;
   myChanged|=myDependenciesBuilder.isStepRequired();
   if (!isPrimary && !myChanged && myDelayedChanges.isEmpty()&& !myRuleManager.hasWeavings()) {
     return false;
   }
-  for (  SNode outputRoot : myOutputRoots) {
-    myOutputModel.addRootNode(outputRoot);
+  if (!myInplaceModelChange) {
+    for (    SNode outputRoot : myOutputRoots) {
+      myOutputModel.addRootNode(outputRoot);
+    }
+    ttrace.push("reloading roots from cache",false);
+    myDependenciesBuilder.reloadRequired(getMappings());
+    ttrace.pop();
   }
-  ttrace.push("reloading roots from cache",false);
-  myDependenciesBuilder.reloadRequired(myMappings);
-  ttrace.pop();
   ttrace.push("weavings",false);
-  applyWeaving_MappingRules();
+  myWeavingProcessor.apply();
+  myWeavingProcessor=null;
   ttrace.pop();
   if (!isPrimary && !myChanged && myDelayedChanges.isEmpty()) {
     return false;

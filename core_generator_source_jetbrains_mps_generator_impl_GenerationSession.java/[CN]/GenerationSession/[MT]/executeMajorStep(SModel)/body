@@ -7,17 +7,19 @@
     }
     return inputModel;
   }
-  if (myGenerationTracer.isTracing() && myLogger.needsInfo()) {
+  if (myLogger.needsInfo()) {
     printGenerationStepData(inputModel);
   }
-  mySessionContext=new GenerationSessionContext(myInvocationContext,myGenerationTracer,myTransientModelsModule,inputModel,myGenerationPlan,myParameters,mySessionContext);
+  mySessionContext=new GenerationSessionContext(mySessionContext);
   myLogger.setOperationContext(mySessionContext);
   Iterator<TemplateMappingConfiguration> it=mappingConfigurations.iterator();
   TemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,myProgressMonitor,myLogger,null,inputModel,null,myGenerationOptions,myDependenciesBuilder,ttrace);
+  LinkedList<TemplateMappingConfiguration> drop=new LinkedList<TemplateMappingConfiguration>();
   while (it.hasNext()) {
     TemplateMappingConfiguration c=it.next();
     try {
       if (!c.isApplicable(templateGenerator)) {
+        drop.add(c);
         it.remove();
       }
     }
@@ -29,6 +31,9 @@
       }
       throw (GenerationFailureException)e;
     }
+  }
+  if (!drop.isEmpty()) {
+    printMappingConfigurations("drop mapping configurations (not applicable):",drop);
   }
   if (mappingConfigurations.isEmpty()) {
     return inputModel;
@@ -45,7 +50,7 @@
     }
   }
 );
-  RuleManager ruleManager=new RuleManager(myGenerationPlan,mappingConfigurations);
+  RuleManager ruleManager=new RuleManager(myGenerationPlan,mappingConfigurations,myLogger);
   SModel outputModel=executeMajorStepInternal(inputModel,ruleManager);
   if (myLogger.getErrorCount() > 0) {
     myLogger.warning("model \"" + inputModel.getReference().getModelName() + "\" has been generated with errors");

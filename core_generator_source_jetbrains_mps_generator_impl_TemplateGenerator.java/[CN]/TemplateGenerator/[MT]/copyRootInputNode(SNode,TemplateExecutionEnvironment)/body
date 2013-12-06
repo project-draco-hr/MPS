@@ -1,19 +1,17 @@
 {
-  for (  TemplateDropRootRule dropRootRule : myRuleManager.getDropRootRules()) {
-    if (isApplicableDropRootRule(inputRootNode,dropRootRule,environment)) {
-      return;
-    }
+  NodeCopyFacility copyProcessor;
+  if (myDeltaBuilder == null) {
+    copyProcessor=new FullCopyFacility(this,environment);
   }
-  myGenerationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(inputRootNode));
-  try {
-    boolean[] changed=new boolean[]{false};
-    SNode root=copyInputNode(inputRootNode,environment.getReductionContext(),changed);
-    registerRoot(root,inputRootNode,null,true);
-    if (changed[0]) {
-      setChanged();
-    }
+ else {
+    copyProcessor=new PartialCopyFacility(this,environment,myDeltaBuilder);
   }
-  finally {
-    myGenerationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(inputRootNode));
+  if (copyProcessor.checkDropRules(inputRootNode,myRuleManager.getDropRootRules())) {
+    setChanged();
+    return;
+  }
+  copyProcessor.copyRootInputNode(inputRootNode);
+  if (copyProcessor.hasChanges()) {
+    setChanged();
   }
 }

@@ -1,28 +1,27 @@
 {
-  for (  TemplateMappingConfiguration mapping : myPriorityMap.keySet()) {
+  for (  TemplateMappingConfiguration mapping : myPriorityMap.keys()) {
     checkSelfLocking(mapping);
   }
   PriorityMapUtil.joinIntersectingCoherentMappings(myCoherentMappings);
-  PriorityMapUtil.makeLockedByAllCoherentIfLockedByOne(myCoherentMappings,myPriorityMap);
-  PriorityMapUtil.makeLocksEqualsForCoherentMappings(myCoherentMappings,myPriorityMap,myConflictingRules);
+  myPriorityMap.makeLockedByAllCoherentIfLockedByOne(myCoherentMappings);
+  myPriorityMap.makeLocksEqualsForCoherentMappings(myCoherentMappings,myConflicts);
   boolean need_more_passes=true;
   while (need_more_passes) {
     need_more_passes=false;
-    iterate_all_mappings:     for (    TemplateMappingConfiguration lockedMapping : myPriorityMap.keySet()) {
+    iterate_all_mappings:     for (    TemplateMappingConfiguration lockedMapping : myPriorityMap.keys()) {
       while (true) {
-        List<TemplateMappingConfiguration> weakLockMappings=PriorityMapUtil.getWeakLockMappingsForLockedMapping(lockedMapping,myPriorityMap);
+        List<TemplateMappingConfiguration> weakLockMappings=myPriorityMap.getWeakLockMappingsForLockedMapping(lockedMapping);
         if (weakLockMappings.isEmpty())         break;
         for (        TemplateMappingConfiguration weakLockMapping : weakLockMappings) {
-          PriorityMapUtil.replaceWeakLock(lockedMapping,weakLockMapping,myPriorityMap);
+          myPriorityMap.replaceWeakLock(lockedMapping,weakLockMapping);
           checkSelfLocking(lockedMapping);
-          List<TemplateMappingConfiguration> lockedMappings_1=PriorityMapUtil.getLockedMappingsForLockMapping(lockedMapping,myPriorityMap);
+          List<TemplateMappingConfiguration> lockedMappings_1=myPriorityMap.getLockedMappingsForLockMapping(lockedMapping);
           for (          TemplateMappingConfiguration lockedMapping_1 : lockedMappings_1) {
-            Map<TemplateMappingConfiguration,PriorityData> locks_1=myPriorityMap.get(lockedMapping_1);
-            PriorityData priorityDataToApply=locks_1.get(lockedMapping);
-            boolean newLockAdded=PriorityMapUtil.addLock(lockedMapping_1,weakLockMapping,priorityDataToApply,myPriorityMap);
+            PriorityData priorityDataToApply=myPriorityMap.priorityData(lockedMapping_1,lockedMapping);
+            boolean newLockAdded=myPriorityMap.updateLock(lockedMapping_1,weakLockMapping,priorityDataToApply);
             checkSelfLocking(lockedMapping_1);
             if (newLockAdded) {
-              PriorityData priorityData=myPriorityMap.get(lockedMapping_1).get(weakLockMapping);
+              PriorityData priorityData=myPriorityMap.priorityData(lockedMapping_1,weakLockMapping);
               if (priorityData != null && priorityData.isWeak()) {
                 need_more_passes=true;
                 break iterate_all_mappings;
@@ -33,18 +32,15 @@
       }
     }
   }
-  for (  Map<TemplateMappingConfiguration,PriorityData> locks : myPriorityMap.values()) {
-    for (    PriorityData priorityData : locks.values()) {
-      if (!priorityData.isStrict()) {
-        throw new RuntimeException("Unexpected weak priority");
-      }
+  for (  PriorityData priorityData : myPriorityMap.priorityData()) {
+    if (!priorityData.isStrict()) {
+      throw new RuntimeException("Unexpected weak priority");
     }
   }
+  myPriorityMap.checkTopPriMappingsAreNotLockedByNonTopPri(myConflicts);
   List<List<TemplateMappingConfiguration>> mappingSets=createMappingSets();
-  for (  Map<TemplateMappingConfiguration,PriorityData> grtPriMappings : myPriorityMap.values()) {
-    for (    PriorityData priorityData : grtPriMappings.values()) {
-      myConflictingRules.addAll(priorityData.myCauseRules);
-    }
+  for (  PriorityData priorityData : myPriorityMap.priorityData()) {
+    myConflicts.register(Kind.PastTopPri,priorityData.myCauseRules);
   }
   return mappingSets;
 }

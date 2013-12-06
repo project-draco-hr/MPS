@@ -1,23 +1,23 @@
 {
   try {
-    Collection<SNode> outputNodes=environment.getReductionContext().getQueryExecutor().applyRule(rule,environment,new DefaultTemplateContext(inputNode));
+    Collection<SNode> outputNodes=environment.getQueryExecutor().applyRule(rule,environment,new DefaultTemplateContext(inputNode));
     if (outputNodes == null) {
       return;
     }
+    registerAddedRoots(outputNodes);
     for (    SNode outputNode : outputNodes) {
       registerRoot(outputNode,inputNode,rule.getRuleNode(),false);
       setChanged();
       jetbrains.mps.util.SNodeOperations.copyUserObjects(inputNode,outputNode);
     }
-    if (inputNode.getModel() == getGeneratorSessionContext().getOriginalInputModel()) {
-      for (      SNode outputNode : outputNodes) {
-        TracingUtil.putInputNode(outputNode,inputNode);
-      }
-    }
   }
  catch (  DismissTopMappingRuleException e) {
     if (copyRootOnFailure && inputNode.getModel() != null && inputNode.getParent() == null) {
-      copyRootInputNode(inputNode,environment);
+      final FullCopyFacility copyFacility=new FullCopyFacility(this,environment);
+      copyFacility.copyRootInputNode(inputNode);
+      if (copyFacility.hasChanges()) {
+        setChanged();
+      }
     }
   }
 catch (  TemplateProcessingFailureException e) {
