@@ -1,52 +1,29 @@
 {
-  Set<String> facetsTypes=new HashSet<String>();
+  final HashMap<String,ModuleFacetBase> facetsTypes=new HashMap<String,ModuleFacetBase>();
+  for (  final SModuleFacet moduleFacet : myModule.getFacets()) {
+    if (!(moduleFacet instanceof ModuleFacetBase))     continue;
+    facetsTypes.put(((ModuleFacetBase)moduleFacet).getFacetType(),(ModuleFacetBase)moduleFacet);
+  }
   Set<String> usedLangs=new HashSet<String>();
   for (  SModuleReference reference : myModuleDescriptor.getUsedLanguages()) {
     usedLangs.add(reference.getModuleName());
   }
   Set<String> applicableFacetTypes=FacetsFacade.getInstance().getApplicableFacetTypes(usedLangs);
-  int recommended=0;
-  for (  final SModuleFacet moduleFacet : myModule.getFacets()) {
-    if (!(moduleFacet instanceof ModuleFacetBase))     continue;
-    facetsTypes.add(((ModuleFacetBase)moduleFacet).getFacetType());
-    if (applicableFacetTypes.contains(((ModuleFacetBase)moduleFacet).getFacetType()))     recommended++;
-    final JBCheckBox checkBox=new JBCheckBox(((ModuleFacetBase)moduleFacet).getFacetPresentation(),true);
-    checkBox.addItemListener(new FacetCheckBoxItemListener(checkBox,moduleFacet));
-    myCheckBoxMap.put(checkBox,moduleFacet);
-  }
   for (  String facet : FacetsFacade.getInstance().getFacetTypes()) {
-    final SModuleFacet sModuleFacet=FacetsFacade.getInstance().getFacetFactory(facet).create();
-    if (!(sModuleFacet instanceof ModuleFacetBase) || facetsTypes.contains(facet))     continue;
-    if (applicableFacetTypes.contains(facet))     recommended++;
-    final JBCheckBox checkBox=new JBCheckBox(((ModuleFacetBase)sModuleFacet).getFacetPresentation(),false);
-    checkBox.addItemListener(new FacetCheckBoxItemListener(checkBox,sModuleFacet));
-    myCheckBoxMap.put(checkBox,sModuleFacet);
+    final SModuleFacet sModuleFacet=facetsTypes.keySet().contains(facet) ? facetsTypes.get(facet) : FacetsFacade.getInstance().getFacetFactory(facet).create();
+    if (!(sModuleFacet instanceof ModuleFacetBase))     continue;
+    final String facetPresentation=applicableFacetTypes.contains(facet) ? ((ModuleFacetBase)sModuleFacet).getFacetPresentation() + " (recommended)" : ((ModuleFacetBase)sModuleFacet).getFacetPresentation();
+    final JBCheckBox checkBox=new JBCheckBox(facetPresentation,facetsTypes.keySet().contains(facet));
+    checkBox.putClientProperty(CHECKBOX_PROPERTY_KEY,sModuleFacet);
+    myCheckBoxes.add(checkBox);
+    checkBox.addItemListener(new FacetCheckBoxItemListener(checkBox));
   }
-  JPanel panel=new JPanel(new GridLayoutManager(recommended != 0 ? 2 : 1,1));
-  int row=0;
-  final GridConstraints constraints=new GridConstraints(0,0,1,1,GridConstraints.ANCHOR_NORTHWEST,GridConstraints.FILL_HORIZONTAL,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,GridConstraints.SIZEPOLICY_FIXED,null,null,null);
-  if (recommended > 0) {
-    JPanel recomendedPanel=new JPanel(new GridLayoutManager(recommended,1));
-    recomendedPanel.setBorder(IdeBorderFactory.createTitledBorder("Recommended facets",false,INSETS));
-    for (    JBCheckBox jbCheckBox : myCheckBoxMap.keySet()) {
-      if (applicableFacetTypes.contains(((ModuleFacetBase)myCheckBoxMap.get(jbCheckBox)).getFacetType())) {
-        constraints.setRow(row++);
-        recomendedPanel.add(jbCheckBox,constraints);
-      }
-    }
-    row=0;
-    constraints.setRow(row);
-    panel.add(recomendedPanel,constraints);
+  final JPanel panel=new JPanel();
+  panel.setLayout(new BoxLayout(panel,BoxLayout.Y_AXIS));
+  final int i=5;
+  panel.setBorder(BorderFactory.createEmptyBorder(i,i,i,i));
+  for (  JCheckBox checkBox : myCheckBoxes) {
+    panel.add(checkBox);
   }
-  JPanel other=new JPanel(new GridLayoutManager(myCheckBoxMap.size() - recommended,1));
-  other.setBorder(IdeBorderFactory.createTitledBorder("Available facets",false,INSETS));
-  for (  JBCheckBox jbCheckBox : myCheckBoxMap.keySet()) {
-    if (!applicableFacetTypes.contains(((ModuleFacetBase)myCheckBoxMap.get(jbCheckBox)).getFacetType())) {
-      constraints.setRow(row++);
-      other.add(jbCheckBox,constraints);
-    }
-  }
-  constraints.setRow(recommended > 0 ? 1 : 0);
-  panel.add(other,constraints);
   setTabComponent(panel);
 }

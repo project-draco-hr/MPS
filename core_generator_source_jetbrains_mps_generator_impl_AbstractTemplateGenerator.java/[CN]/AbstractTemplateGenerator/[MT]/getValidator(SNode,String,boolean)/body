@@ -1,34 +1,36 @@
 {
   if (child && GeneratorUtilEx.link_BaseConcept_attrs.equals(role)) {
-    return successValidator;
+    return successValidatorMany;
   }
-  String conceptFQName=sourceNode.getConcept().getQualifiedName();
+  final SConcept concept=sourceNode.getConcept();
+  String conceptFQName=concept.getQualifiedName();
   Map<String,RoleValidator> vmap=validators.get(conceptFQName);
   if (vmap == null) {
-    SNode concept=((jetbrains.mps.smodel.SNode)sourceNode).getConceptDeclarationNode();
-    if (concept == null) {
-      return new RoleValidator(new RoleValidationStatus(myLogger,String.format("cannot find concept '%s'",conceptFQName)));
-    }
-    vmap=new HashMap<String,RoleValidator>();
+    validators.put(conceptFQName,vmap=new HashMap<String,RoleValidator>());
   }
   RoleValidator validator=vmap.get(role);
   if (validator != null) {
     return validator;
   }
-  SNode concept=((jetbrains.mps.smodel.SNode)sourceNode).getConceptDeclarationNode();
-  SNode link=SModelSearchUtil.findMostSpecificLinkDeclaration(concept,role);
-  if (link == null) {
+  SAbstractLink link=concept.getLink(role);
+  if (link == null || link.isReference() == child) {
     String relationKind=child ? "child" : "referent";
-    String msg=String.format("concept '%s' cannot have %s with role '%s'",concept.getName(),relationKind,role);
+    String msg;
+    if (link == null) {
+      msg=String.format("concept '%s' cannot have %s with role '%s'",concept.getQualifiedName(),relationKind,role);
+    }
+ else {
+      msg=String.format("%s '%s' in concept '%s' doesn't match declared kind:%s",relationKind,role,concept.getQualifiedName(),link.isReference() ? "referent" : "child");
+    }
     RoleValidationStatus s=new RoleValidationStatus(myLogger,msg);
     validator=new RoleValidator(s);
   }
  else {
     if (!myShowBadChildWarning) {
-      validator=successValidator;
+      validator=(!link.isReference() && ((SContainmentLink)link).isMultiple()) ? successValidatorMany : successValidatorOne;
     }
  else {
-      validator=new AcceptableTargetValidator(myLogger,role,link,child);
+      validator=new AcceptableTargetValidator(myLogger,link);
     }
   }
   vmap.put(role,validator);

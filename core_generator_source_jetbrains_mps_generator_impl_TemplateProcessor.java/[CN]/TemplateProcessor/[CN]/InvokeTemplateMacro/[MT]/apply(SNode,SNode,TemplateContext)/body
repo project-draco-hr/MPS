@@ -12,29 +12,23 @@
   if (newcontext == null) {
     throw new TemplateProcessingFailureException();
   }
-  List<SNode> fragments=GeneratorUtilEx.getTemplateFragments(invokedTemplate);
-  if (!GeneratorUtilEx.checkIfOneOrMaryAdjacentFragments(fragments,invokedTemplate,newInputNode,macro,getGenerator())) {
-    showErrorMessage(newInputNode,null,macro,String.format("error processing %s",myName));
+  TemplateContainer tc=new TemplateContainer(myTemplateProcessor,invokedTemplate);
+  if (!tc.initialize(newcontext,macro)) {
     throw new TemplateProcessingFailureException();
   }
   boolean inputChanged=(newInputNode != templateContext.getInput());
   if (inputChanged) {
     myTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
   }
-  myTracer.pushTemplateNode(new jetbrains.mps.smodel.SNodePointer(invokedTemplate));
-  ArrayList<SNode> outputNodes=new ArrayList<SNode>();
+  final SNodePointer invokedTemplateRef=new SNodePointer(invokedTemplate);
+  myTracer.pushTemplateNode(invokedTemplateRef);
   try {
-    for (    SNode fragment : fragments) {
-      SNode templateForInclude=fragment.getParent();
-      String mappingName=GeneratorUtilEx.getMappingName_TemplateFragment(fragment,null);
-      List<SNode> _outputNodes=myTemplateProcessor.applyTemplate(templateForInclude,newcontext.subContext(mappingName),null);
-      if (_outputNodes != null)       outputNodes.addAll(_outputNodes);
-    }
+    return tc.applyFailFast();
   }
   finally {
+    myTracer.closeTemplateNode(invokedTemplateRef);
     if (inputChanged) {
       myTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
     }
   }
-  return outputNodes;
 }
