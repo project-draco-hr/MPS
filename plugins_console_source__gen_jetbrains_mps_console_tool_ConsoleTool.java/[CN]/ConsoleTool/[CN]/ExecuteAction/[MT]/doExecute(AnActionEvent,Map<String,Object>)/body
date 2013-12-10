@@ -40,6 +40,13 @@
               ((SModelInternal)myModel).addLanguage(usedLanguage);
               ((AbstractModule)myModel.getModule()).addUsedLanguage(usedLanguage);
             }
+            for (            SReference ref : Sequence.fromIterable(SNodeOperations.getReferences(subNode))) {
+              SModelReference usedModel=ref.getTargetSModelReference();
+              if (usedModel != null && !(((SModelInternal)myModel).importedModels().contains(usedModel))) {
+                ((SModelInternal)myModel).addModelImport(usedModel,false);
+                ((AbstractModule)myModel.getModule()).addDependency(SNodeOperations.getModel(SLinkOperations.getTargetNode(ref)).getModule().getModuleReference(),false);
+              }
+            }
           }
           SLinkOperations.setTarget(SLinkOperations.addNewChild(ListSequence.fromList(SLinkOperations.getTargets(res,"line",true)).last(),"part","jetbrains.mps.console.base.structure.NodeResultPart"),"node",node,true);
         }
@@ -59,12 +66,6 @@
       }
 ,new Runnable(){
         public void run(){
-          ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-            public void run(){
-              TemporaryModels.getInstance().addMissingImports(myModel);
-            }
-          }
-);
           SwingUtilities.invokeLater(new Runnable(){
             public void run(){
               ProjectHelper.toIdeaProject(myProject).getComponent(ConsoleTool.class).getToolWindow().activate(new Runnable(){
