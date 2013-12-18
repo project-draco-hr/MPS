@@ -3,12 +3,17 @@
     public List<SubstituteAction> createActions(    CellContext cellContext,    final EditorContext editorContext){
       return Collections.<SubstituteAction>singletonList(new AbstractNodeSubstituteAction(childNodeConcept,childNodeConcept,container){
         @Override public boolean canSubstitute(        String string){
-          return hasConnectionDragFeedback() && super.canSubstitute(string) && canCreateConnector.invoke(myCurrentFrom,myCurrentFromId,myCurrentTo,myCurrentToId);
+          if (!(hasConnectionDragFeedback()) || !(super.canSubstitute(string))) {
+            return false;
+          }
+          DiagramCell.ConnectionInfo connectionInfo=new DiagramCell.ConnectionInfo();
+          return connectionInfo.isValid() && canCreateConnector.invoke(connectionInfo.getFromNode(),connectionInfo.getFromId(),connectionInfo.getToNode(),connectionInfo.getToId());
         }
         @Override protected SNode doSubstitute(        @Nullable EditorContext context,        String string){
           SNode result=NodeFactoryManager.createNode(childNodeConcept,null,container,SNodeOperations.getModel(container),editorContext.getOperationContext().getScope());
           ListSequence.fromList(SNodeOperations.getChildren(container,containingLink)).addElement(result);
-          setConnectorCallback.invoke(result,myCurrentFrom,myCurrentFromId,myCurrentTo,myCurrentToId);
+          DiagramCell.ConnectionInfo connectionInfo=new DiagramCell.ConnectionInfo();
+          setConnectorCallback.invoke(result,connectionInfo.getFromNode(),connectionInfo.getFromId(),connectionInfo.getToNode(),connectionInfo.getToId());
           return result;
         }
       }
