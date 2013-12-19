@@ -1,0 +1,49 @@
+{
+  final BlockView blockView=new BlockView();
+  blockView.rect.background().set(Color.TRANSPARENT);
+  blockView.padding().set(0);
+  blockView.moveTo(new Vector(blockCell.getXProperty().get(),blockCell.getYProperty().get()));
+  blockView.rect.prop(RootTrait.MOVE_HANDLER).set(new MoveHandler(){
+    public void move(    final Vector delta){
+      String groupId=ModelAccess.instance().runReadAction(new Computable<String>(){
+        public String compute(){
+          return blockCell.getCellId() + "_" + node.getNodeId().toString();
+        }
+      }
+);
+      editorContext.flushEvents();
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+        }
+      }
+,null,groupId,false,editorContext.getOperationContext().getProject());
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          SPropertyOperations.set(node,"y","" + (SPropertyOperations.getInteger(node,"y") + delta.y));
+        }
+      }
+,null,groupId,false,editorContext.getOperationContext().getProject());
+      blockView.moveTo(new Vector(blockCell.getXProperty().get(),blockCell.getYProperty().get()));
+      blockView.invalidate();
+    }
+  }
+);
+  blockView.focusable().set(true);
+  blockView.prop(RootTrait.DELETE_HANDLER).set(new DeleteHandler(){
+    public boolean canDelete(){
+      return true;
+    }
+    public void delete(){
+      editorContext.getRepository().getModelAccess().executeCommand(new Runnable(){
+        public void run(){
+          SNodeOperations.deleteNode(node);
+        }
+      }
+);
+    }
+  }
+);
+  blockView.prop(JetpadUtils.CONNECTABLE).set(Boolean.TRUE);
+  blockView.rect.prop(JetpadUtils.SOURCE).set(node);
+  return blockView;
+}
