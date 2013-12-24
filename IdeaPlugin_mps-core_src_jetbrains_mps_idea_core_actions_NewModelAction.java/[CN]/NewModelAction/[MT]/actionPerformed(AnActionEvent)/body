@@ -6,16 +6,26 @@
       if (!isModelNameValid(modelName)) {
         return;
       }
-      SModel newModelDescriptor=ModelAccess.instance().runWriteActionInCommand(new Computable<SModel>(){
+      SModel newModel=ModelAccess.instance().runWriteActionInCommand(new Computable<SModel>(){
         @Override public SModel compute(){
-          EditableSModel descriptor=SModuleOperations.createModelWithAdjustments(modelName,myModelRoot);
-          template.preConfigure(descriptor,mySolution);
-          descriptor.save();
-          return descriptor;
+          final String path=((PsiDirectory)anActionEvent.getData(LangDataKeys.PSI_ELEMENT)).getVirtualFile().getPath();
+          EditableSModel model=null;
+          try {
+            model=(EditableSModel)((DefaultModelRoot)myModelRoot).createModel(modelName,path,PersistenceFacade.getInstance().getModelFactory(MPSExtentions.MODEL));
+          }
+ catch (          IOException e) {
+            e.printStackTrace();
+          }
+          template.preConfigure(model,mySolution);
+          model.setChanged(true);
+          model.save();
+          ModelsAutoImportsManager.doAutoImport(myModelRoot.getModule(),model);
+          MissingDependenciesFixer.fixDependencies(model);
+          return model;
         }
       }
 ,ProjectHelper.toMPSProject(myProject));
-      if (newModelDescriptor == null) {
+      if (newModel == null) {
         return;
       }
       processDoNotAskOnOk(OK_EXIT_CODE);

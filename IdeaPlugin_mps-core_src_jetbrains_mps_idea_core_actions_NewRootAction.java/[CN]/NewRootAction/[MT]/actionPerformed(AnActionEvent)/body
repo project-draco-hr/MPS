@@ -1,7 +1,10 @@
 {
   if (myModelDescriptor == null && myNewModel) {
-    final VirtualFile[] virtualFiles=e.getData(PlatformDataKeys.VIRTUAL_FILE_ARRAY);
-    if (virtualFiles.length != 1 || !virtualFiles[0].isDirectory())     return;
+    PsiElement psiElement=e.getData(LangDataKeys.PSI_ELEMENT);
+    if (psiElement == null || !(psiElement instanceof PsiDirectory)) {
+      return;
+    }
+    final VirtualFile targetDir=((PsiDirectory)psiElement).getVirtualFile();
     myModelDescriptor=(EditableSModelDescriptor)ModelAccess.instance().runWriteActionInCommand(new Computable<SModel>(){
       @Override public SModel compute(){
         ModelRoot useModelRoot=null;
@@ -10,18 +13,29 @@
           if (!(root instanceof DefaultModelRoot))           continue;
           DefaultModelRoot modelRoot=(DefaultModelRoot)root;
           for (          String sourceRoot : modelRoot.getFiles(DefaultModelRoot.SOURCE_ROOTS)) {
-            if (virtualFiles[0].getPath().startsWith(sourceRoot)) {
+            final String prefix=sourceRoot.endsWith(File.separator) ? sourceRoot : (sourceRoot + File.separator);
+            if (targetDir.getPath().startsWith(prefix)) {
               useModelRoot=root;
-              useSourceRoot=sourceRoot.endsWith("/") ? sourceRoot : sourceRoot + "/";
+              useSourceRoot=sourceRoot;
               break;
             }
           }
         }
         if (useModelRoot == null)         return null;
-        final String modelName=virtualFiles[0].getPath().replace(useSourceRoot,"").replace("/",".");
-        EditableSModel descriptor=SModuleOperations.createModelWithAdjustments(modelName,useModelRoot,PersistenceRegistry.getInstance().getFolderModelFactory("file-per-root"));
-        descriptor.save();
-        return descriptor;
+        final String prefix=useSourceRoot.endsWith(File.separator) ? useSourceRoot : (useSourceRoot + File.separator);
+        final String modelName=targetDir.getPath().replace(prefix,"").replace("/",".");
+        EditableSModel model=null;
+        try {
+          model=(EditableSModel)((DefaultModelRoot)useModelRoot).createModel(modelName,useSourceRoot,PersistenceRegistry.getInstance().getFolderModelFactory("file-per-root"));
+        }
+ catch (        IOException e1) {
+          e1.printStackTrace();
+        }
+        model.setChanged(true);
+        model.save();
+        ModelsAutoImportsManager.doAutoImport(useModelRoot.getModule(),model);
+        MissingDependenciesFixer.fixDependencies(model);
+        return model;
       }
     }
 ,ProjectHelper.toMPSProject(myProject));
