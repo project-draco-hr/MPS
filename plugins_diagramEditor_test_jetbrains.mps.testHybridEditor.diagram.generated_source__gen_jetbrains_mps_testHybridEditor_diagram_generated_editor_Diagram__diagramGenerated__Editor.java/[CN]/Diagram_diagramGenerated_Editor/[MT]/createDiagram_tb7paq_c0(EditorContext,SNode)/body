@@ -1,8 +1,8 @@
 {
-  final List<SNode> blocks=ListSequence.fromList(new ArrayList<SNode>());
-  final List<SNode> connectors=ListSequence.fromList(new ArrayList<SNode>());
-  createChildCells_tb7paq_c0(SLinkOperations.getTargets(node,"blocks",true),editorContext,blocks,connectors);
-  createChildCells_tb7paq_c0(SLinkOperations.getTargets(node,"connectors",true),editorContext,blocks,connectors);
+  final Map<SNode,BlockCell> blockToCellMap=MapSequence.fromMap(new LinkedHashMap<SNode,BlockCell>(16,(float)0.75,false));
+  final Map<SNode,ConnectorCell> connectorToCellMap=MapSequence.fromMap(new LinkedHashMap<SNode,ConnectorCell>(16,(float)0.75,false));
+  createChildCells_tb7paq_c0(SLinkOperations.getTargets(node,"blocks",true),editorContext,blockToCellMap,connectorToCellMap);
+  createChildCells_tb7paq_c0(SLinkOperations.getTargets(node,"connectors",true),editorContext,blockToCellMap,connectorToCellMap);
   jetbrains.mps.openapi.editor.cells.EditorCell_Collection wrappingCollection=EditorCell_Collection.createHorizontal(editorContext,node);
   wrappingCollection.setSelectable(false);
   final DiagramCell editorCell=new DiagramCell(editorContext,node){
@@ -10,25 +10,15 @@
       return new Mapper<SNode,DiagramView>(node,new ConnectionRoutingView(new OrthogonalRouter())){
         @Override protected void registerSynchronizers(        Mapper.SynchronizersConfiguration configuration){
           super.registerSynchronizers(configuration);
-          configuration.add(Synchronizers.<SNode,View>forSimpleRole(this,blocks,getTarget().itemsView.children(),new MapperFactory<SNode,View>(){
+          configuration.add(Synchronizers.<SNode,View>forSimpleRole(this,ListSequence.fromListWithValues(new ArrayList<SNode>(),MapSequence.fromMap(blockToCellMap).keySet()),getTarget().itemsView.children(),new MapperFactory<SNode,View>(){
             public Mapper<? extends SNode,? extends View> createMapper(            SNode node){
-              EditorCell blockCell=editorContext.createNodeCell(node);
-              if (blockCell instanceof BlockCell) {
-                addEditorCell(blockCell);
-                return ((BlockCell)blockCell).createMapper();
-              }
-              return null;
+              return MapSequence.fromMap(blockToCellMap).get(node).createMapper();
             }
           }
 ));
-          configuration.add(Synchronizers.<SNode,Connection>forSimpleRole(this,connectors,getTarget().connections,new MapperFactory<SNode,Connection>(){
+          configuration.add(Synchronizers.<SNode,Connection>forSimpleRole(this,ListSequence.fromListWithValues(new ArrayList<SNode>(),MapSequence.fromMap(connectorToCellMap).keySet()),getTarget().connections,new MapperFactory<SNode,Connection>(){
             public Mapper<? extends SNode,? extends Connection> createMapper(            SNode node){
-              EditorCell connectorCell=editorContext.createNodeCell(node);
-              if (connectorCell instanceof ConnectorCell) {
-                addEditorCell(connectorCell);
-                return ((ConnectorCell)connectorCell).createMapper();
-              }
-              return null;
+              return MapSequence.fromMap(connectorToCellMap).get(node).createMapper();
             }
           }
 ));
@@ -46,6 +36,12 @@
     }
   }
 ;
+  for (  BlockCell cell : Sequence.fromIterable(MapSequence.fromMap(blockToCellMap).values())) {
+    editorCell.addEditorCell(cell);
+  }
+  for (  ConnectorCell cell : Sequence.fromIterable(MapSequence.fromMap(connectorToCellMap).values())) {
+    editorCell.addEditorCell(cell);
+  }
   editorCell.setSubstituteInfo(new CompositeSubstituteInfo(editorContext,new BasicCellContext(node),new SubstituteInfoPartExt[]{editorCell.createNewDiagramNodeActions(node,SConceptOperations.findConceptDeclaration("jetbrains.mps.testHybridEditor.structure.Block"),SLinkOperations.findLinkDeclaration("jetbrains.mps.testHybridEditor.structure.Diagram","blocks"),new _FunctionTypes._void_P3_E0<SNode,Integer,Integer>(){
     public void invoke(    SNode node,    Integer x,    Integer y){
       SNode a=SNodeOperations.cast(node,"jetbrains.mps.testHybridEditor.structure.Block");

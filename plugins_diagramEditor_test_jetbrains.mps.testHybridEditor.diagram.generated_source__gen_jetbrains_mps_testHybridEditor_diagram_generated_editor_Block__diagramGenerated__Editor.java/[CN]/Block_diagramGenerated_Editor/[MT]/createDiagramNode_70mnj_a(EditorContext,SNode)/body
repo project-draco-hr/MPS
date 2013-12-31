@@ -17,6 +17,10 @@
     }
   }
 ;
+  final Map<SNode,PortCell> inputPortToCellMap=MapSequence.fromMap(new LinkedHashMap<SNode,PortCell>(16,(float)0.75,false));
+  final Map<SNode,PortCell> outputPortToCellMap=MapSequence.fromMap(new LinkedHashMap<SNode,PortCell>(16,(float)0.75,false));
+  createPortCells(SLinkOperations.getTargets(node,"inputPorts",true),editorContext,inputPortToCellMap);
+  createPortCells(SLinkOperations.getTargets(node,"outputPorts",true),editorContext,outputPortToCellMap);
   BlockCell editorCell=new BlockCell(editorContext,node){
     protected Integer getXPositionFromModel(){
       return SNodeOperations.getIndexInParent(node) / 2 * 150 + 10;
@@ -31,25 +35,15 @@
       final Mapper<SNode,DiagramNodeView> mapper=new Mapper<SNode,DiagramNodeView>(node,createDiagramNodeView_70mnj_a(editorContext,node,this)){
         @Override protected void registerSynchronizers(        Mapper.SynchronizersConfiguration configuration){
           super.registerSynchronizers(configuration);
-          configuration.add(Synchronizers.forSimpleRole(this,SLinkOperations.getTargets(node,"inputPorts",true),getTarget().inputs.children(),new MapperFactory<SNode,View>(){
+          configuration.add(Synchronizers.forSimpleRole(this,ListSequence.fromListWithValues(new ArrayList<SNode>(),MapSequence.fromMap(inputPortToCellMap).keySet()),getTarget().inputs.children(),new MapperFactory<SNode,View>(){
             public Mapper<? extends SNode,? extends View> createMapper(            SNode mapperNode){
-              EditorCell portCell=editorContext.createNodeCell(mapperNode);
-              if (portCell instanceof PortCell) {
-                addEditorCell(portCell);
-                return ((PortCell)portCell).createMapper();
-              }
-              return null;
+              return MapSequence.fromMap(inputPortToCellMap).get(mapperNode).createMapper();
             }
           }
 ));
-          configuration.add(Synchronizers.forSimpleRole(this,SLinkOperations.getTargets(node,"outputPorts",true),getTarget().outputs.children(),new MapperFactory<SNode,View>(){
+          configuration.add(Synchronizers.forSimpleRole(this,ListSequence.fromListWithValues(new ArrayList<SNode>(),MapSequence.fromMap(outputPortToCellMap).keySet()),getTarget().outputs.children(),new MapperFactory<SNode,View>(){
             public Mapper<? extends SNode,? extends View> createMapper(            SNode mapperNode){
-              EditorCell portCell=editorContext.createNodeCell(mapperNode);
-              if (portCell instanceof PortCell) {
-                addEditorCell(portCell);
-                return ((PortCell)portCell).createMapper();
-              }
-              return null;
+              return MapSequence.fromMap(outputPortToCellMap).get(mapperNode).createMapper();
             }
           }
 ));
@@ -75,6 +69,12 @@
 ;
   editorCell.addEditorCell(parameterPropertyCell_70mnj_a0a);
   editorCell.addEditorCell(parameterPropertyCell_70mnj_a1a);
+  for (  PortCell cell : Sequence.fromIterable(MapSequence.fromMap(outputPortToCellMap).values())) {
+    editorCell.addEditorCell(cell);
+  }
+  for (  PortCell cell : Sequence.fromIterable(MapSequence.fromMap(inputPortToCellMap).values())) {
+    editorCell.addEditorCell(cell);
+  }
   parameterPropertyCell_70mnj_a0a.getEditor().addCellDependentOnNodeProperty(parameterPropertyCell_70mnj_a0a,new Pair<SNodeReference,String>(new SNodePointer(node),"name"));
   parameterPropertyCell_70mnj_a1a.getEditor().addCellDependentOnNodeProperty(parameterPropertyCell_70mnj_a1a,new Pair<SNodeReference,String>(new SNodePointer(node),"myBooleanProperty"));
   editorCell.getEditor().addCellDependentOnNodeProperty(editorCell,new Pair<SNodeReference,String>(new SNodePointer(node),"y"));
