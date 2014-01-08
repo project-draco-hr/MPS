@@ -1,2 +1,26 @@
 {
+  final Iterator<SNode> it=inputNodes.iterator();
+  if (!it.hasNext()) {
+    return Collections.emptyList();
+  }
+  ArrayList<SNode> outputNodes=new ArrayList<SNode>();
+  while (it.hasNext()) {
+    SNode newInputNode=it.next();
+    if (templateId == null) {
+      SNode template=templateNode.resolve(MPSModuleRepository.getInstance());
+      templateId=GeneratorUtil.getTemplateNodeId(template);
+    }
+    Collection<SNode> _outputNodes=generator.copySrc(mappingName,templateId,newInputNode,this);
+    for (    SNode outputNode : _outputNodes) {
+      Language outputNodeLang=jetbrains.mps.util.SNodeOperations.getLanguage(outputNode);
+      if (!generator.getGeneratorSessionContext().getGenerationPlan().isCountedLanguage(outputNodeLang)) {
+        if (!outputNodeLang.getGenerators().isEmpty()) {
+          SNode tNode=templateNode.resolve(MPSModuleRepository.getInstance());
+          getLogger().error(outputNode.getReference(),"language of output node is '" + outputNodeLang.getModuleName() + "' - this language did not show up when computing generation steps!",GeneratorUtil.describe(tNode,"template"),GeneratorUtil.describe(templateContext.getInput(),"input"),new ProblemDescription("workaround: add the language '" + outputNodeLang.getModuleName() + "' to list of 'Languages Engaged On Generation' in model '"+ generator.getGeneratorSessionContext().getOriginalInputModel().getReference().getModelName()+ "'"));
+        }
+      }
+    }
+    outputNodes.addAll(_outputNodes);
+  }
+  return outputNodes;
 }
