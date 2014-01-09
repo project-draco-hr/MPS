@@ -1,0 +1,40 @@
+{
+  return new Mapper<SNode,RectView>(getSNode(),createPortView()){
+    @Override protected void registerSynchronizers(    Mapper.SynchronizersConfiguration configuration){
+      super.registerSynchronizers(configuration);
+      getTarget().background().set(Color.GRAY);
+      getTarget().dimension().set(new Vector(10,10));
+      getTarget().addTrait(new ViewTraitBuilder().on(ViewEvents.MOUSE_DRAGGED,new ViewEventHandler<MouseEvent>(){
+        @Override public void handle(        View view,        MouseEvent e){
+          DiagramCell diagramCell=getDiagramCell();
+          if (diagramCell == null) {
+            return;
+          }
+          if (!(diagramCell.hasConnectionDragFeedback())) {
+            diagramCell.showConnectionDragFeedback(getTarget());
+          }
+          diagramCell.updateConnectionDragFeedback(e.location());
+        }
+      }
+).on(ViewEvents.MOUSE_RELEASED,new ViewEventHandler<MouseEvent>(){
+        @Override public void handle(        View view,        MouseEvent e){
+          DiagramCell diagramCell=getDiagramCell();
+          if (diagramCell == null || !(diagramCell.hasConnectionDragFeedback())) {
+            return;
+          }
+          diagramCell.updateConnectionDragFeedback(e.location());
+          diagramCell.createNewDiagramElement(e.location().x,e.location().y);
+        }
+      }
+).build());
+      getTarget().prop(JetpadUtils.CONNECTABLE).set(Boolean.TRUE);
+      configuration.add(Synchronizers.forProperty(getTarget().focused(),new Runnable(){
+        public void run(){
+          SelectionUtil.selectCell(getContext(),getSNode(),getCellId());
+        }
+      }
+));
+    }
+  }
+;
+}
