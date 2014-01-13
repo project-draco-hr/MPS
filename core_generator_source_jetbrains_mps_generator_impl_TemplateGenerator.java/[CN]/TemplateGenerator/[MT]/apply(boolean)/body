@@ -9,23 +9,10 @@
   ttrace.push("reductions",false);
   applyReductions(isPrimary);
   ttrace.pop();
-  if (myDeltaBuilder != null) {
-    ttrace.push("apply delta changes",false);
-    myInplaceModelChange=true;
-    if (myDeltaBuilder.hasChanges()) {
-      myDeltaBuilder.prepareReferences(getInputModel(),this);
-      myDeltaBuilder.applyInplace(getInputModel(),this);
-    }
-    myOutputRoots.clear();
-    myDeltaBuilder=null;
-    ttrace.pop();
-  }
+  myInplaceModelChange=myDeltaBuilder != null;
   myAreMappingsReady=true;
   myChanged|=myDependenciesBuilder.isStepRequired();
-  if (!isPrimary && !myChanged && myDelayedChanges.isEmpty()&& !myWeavingProcessor.hasWeavingRulesToApply()) {
-    return false;
-  }
-  if (!myInplaceModelChange) {
+  if (myDeltaBuilder == null) {
     for (    SNode outputRoot : myOutputRoots) {
       myOutputModel.addRootNode(outputRoot);
     }
@@ -33,17 +20,29 @@
     myDependenciesBuilder.reloadRequired(getMappings());
     ttrace.pop();
   }
-  checkMonitorCanceled();
   if (myWeavingProcessor.hasWeavingRulesToApply()) {
+    checkMonitorCanceled();
     ttrace.push("weavings",false);
     myWeavingProcessor.apply();
     myWeavingProcessor=null;
     ttrace.pop();
   }
-  ttrace.push("delayed mappings",false);
-  myDelayedChanges.doAllChanges(this);
-  ttrace.pop();
-  checkMonitorCanceled();
+  if (!myDelayedChanges.isEmpty()) {
+    checkMonitorCanceled();
+    ttrace.push("delayed mappings",false);
+    myDelayedChanges.doAllChanges(this);
+    ttrace.pop();
+  }
+  if (myDeltaBuilder != null) {
+    ttrace.push("apply delta changes",false);
+    if (myDeltaBuilder.hasChanges()) {
+      myDeltaBuilder.prepareReferences(getInputModel(),this);
+      myDeltaBuilder.applyInplace(getInputModel());
+    }
+    myOutputRoots.clear();
+    myDeltaBuilder=null;
+    ttrace.pop();
+  }
   if (!myPostponedRefs.isEmpty()) {
     ttrace.push("restoring references",false);
     myPostponedRefs.prepare();
