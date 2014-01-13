@@ -14,12 +14,6 @@
     if (myDeltaBuilder.hasChanges()) {
       myDeltaBuilder.applyInplace(getInputModel(),this);
     }
-    if (myNewAddedRoots != null) {
-      for (      SNode newRoot : myNewAddedRoots) {
-        getInputModel().addRootNode(newRoot);
-      }
-      myNewAddedRoots.clear();
-    }
     myOutputRoots.clear();
     myDeltaBuilder=null;
     ttrace.pop();
@@ -37,6 +31,7 @@
     myDependenciesBuilder.reloadRequired(getMappings());
     ttrace.pop();
   }
+  checkMonitorCanceled();
   ttrace.push("weavings",false);
   myWeavingProcessor.apply();
   myWeavingProcessor=null;
@@ -45,14 +40,16 @@
     return false;
   }
   ttrace.push("delayed mappings",false);
-  myDelayedChanges.doAllChanges();
+  myDelayedChanges.doAllChanges(this);
   ttrace.pop();
+  checkMonitorCanceled();
   if (myChanged || isPrimary) {
     ttrace.push("restoring references",false);
-    revalidateAllReferences();
+    myPostponedRefs.prepare();
+    myPostponedRefs.replace();
     ttrace.pop();
-    checkMonitorCanceled();
     getBlockedReductionsData().advanceStep();
+    checkMonitorCanceled();
   }
   return myChanged;
 }
