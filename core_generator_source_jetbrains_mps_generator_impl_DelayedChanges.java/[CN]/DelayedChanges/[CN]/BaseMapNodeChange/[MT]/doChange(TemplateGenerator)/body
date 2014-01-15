@@ -4,24 +4,10 @@
     if (child == null) {
       return;
     }
-    child=new TemplateExecutionEnvironmentImpl(generator,myExecContext).insertNode(child,getMapSrcMacro(),myContext);
-    SNode parent=myChildToReplace.getParent();
-    if (parent == null) {
-      if (myChildToReplace.getModel() != null && myChildToReplace.getParent() == null) {
-        myChildToReplace.getModel().addRootNode(child);
-        myChildToReplace.getModel().removeRootNode(myChildToReplace);
-        generator.rootReplaced(myChildToReplace,child);
-      }
-    }
- else {
-      String childRole=myChildToReplace.getRoleInParent();
-      final Status status=generator.getChildRoleValidator(parent,childRole).validate(child);
-      if (status != null) {
-        status.reportProblem(false,parent,"",GeneratorUtil.describe(myContext.getInput(),"input"),GeneratorUtil.describe(getMapSrcMacro(),"template"));
-      }
-      org.jetbrains.mps.openapi.model.SNodeUtil.replaceWithAnother(myChildToReplace,child);
-    }
-    generator.getGenerationTracer().replaceOutputNode(myChildToReplace,child);
+    ChildAdopter ca=new ChildAdopter(generator);
+    ca.checkIsExpectedLanguage(child,getMapSrcMacro(),myContext);
+    child=ca.adopt(child,myContext);
+    generator.replacePlaceholderNode(myChildToReplace,child,myContext,getMapSrcMacro());
     postProcess(child);
   }
  catch (  Throwable t) {
