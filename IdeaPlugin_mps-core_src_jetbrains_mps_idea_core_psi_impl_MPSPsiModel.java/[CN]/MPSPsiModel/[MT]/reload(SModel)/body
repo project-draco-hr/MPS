@@ -1,39 +1,37 @@
 {
-synchronized (LOCK) {
-    clearChildren();
-    for (    SNode root : model.getRootNodes()) {
-      String rootName=null;
-      rootName=extractName(root);
-      MPSPsiRootNode rootNode=null;
-      if (model.getSource() instanceof FilePerRootDataSource) {
-        final IFile iFile=((FilePerRootDataSource)model.getSource()).getFile(rootName + MPSExtentions.DOT_MODEL_ROOT);
-        VirtualFile virtualFile=VirtualFileUtils.getVirtualFile(iFile);
-        if (virtualFile == null)         virtualFile=VirtualFileUtils.getVirtualFile(iFile.getPath());
-        PsiFile psiFile=virtualFile != null ? getManager().findFile(virtualFile) : null;
-        rootNode=psiFile != null && psiFile instanceof MPSPsiRootNode ? (MPSPsiRootNode)psiFile : new MPSPsiRootNode(root.getNodeId(),rootName,getManager(),virtualFile);
-      }
+  clearChildren();
+  for (  SNode root : model.getRootNodes()) {
+    String rootName=null;
+    rootName=extractName(root);
+    MPSPsiRootNode rootNode=null;
+    if (model.getSource() instanceof FilePerRootDataSource) {
+      final IFile iFile=((FilePerRootDataSource)model.getSource()).getFile(rootName + MPSExtentions.DOT_MODEL_ROOT);
+      VirtualFile virtualFile=VirtualFileUtils.getVirtualFile(iFile);
+      if (virtualFile == null)       virtualFile=VirtualFileUtils.getVirtualFile(iFile.getPath());
+      PsiFile psiFile=virtualFile != null ? tryReuseRootPsiFile(virtualFile) : null;
+      rootNode=psiFile != null && psiFile instanceof MPSPsiRootNode ? (MPSPsiRootNode)psiFile : new MPSPsiRootNode(root.getNodeId(),rootName,getManager(),virtualFile);
+    }
  else {
-        rootNode=new MPSPsiRootNode(root.getNodeId(),rootName,getManager());
-      }
-      rootNode.setModel(this);
-      addChildLast(rootNode);
-      if (rootNode.getChildren().length == 0)       rootNode.addChildLast(convert(root));
+      rootNode=new MPSPsiRootNode(root.getNodeId(),rootName,getManager());
+    }
+    rootNode.setModel(this);
+    addChildLast(rootNode);
+    if (rootNode.getChildren().length == 0)     rootNode.addChildLast(convert(root));
  else {
-        rootNode.updateChildren();
-        fillNodes(rootNode);
-      }
+      rootNode.updateChildren();
+      fillNodes(rootNode);
     }
-    enumerateNodes();
-    DataSource source=model.getSource();
-    if (source instanceof FileDataSource) {
-      File file=new File(((FileDataSource)source).getFile().getPath());
-      VirtualFile vfile=LocalFileSystem.getInstance().findFileByIoFile(file);
-      this.mySourceVirtualFile=vfile;
-    }
- else     if (source instanceof FilePerRootDataSource) {
-      this.mySourceVirtualFile=VirtualFileUtils.getVirtualFile(((FilePerRootDataSource)source).getFolder()).findChild(MPSExtentions.DOT_MODEL_HEADER);
-    }
-    if (getSourceVirtualFile() == null || getSourceVirtualFile().getParent() == null)     myPsiDirectory=null;
- else     myPsiDirectory=new PsiDirectoryImpl((PsiManagerImpl)myManager,getSourceVirtualFile().getParent());
   }
+  enumerateNodes();
+  DataSource source=model.getSource();
+  if (source instanceof FileDataSource) {
+    File file=new File(((FileDataSource)source).getFile().getPath());
+    VirtualFile vfile=LocalFileSystem.getInstance().findFileByIoFile(file);
+    this.mySourceVirtualFile=vfile;
+  }
+ else   if (source instanceof FilePerRootDataSource) {
+    this.mySourceVirtualFile=VirtualFileUtils.getVirtualFile(((FilePerRootDataSource)source).getFolder()).findChild(MPSExtentions.DOT_MODEL_HEADER);
+  }
+  if (getSourceVirtualFile() == null || getSourceVirtualFile().getParent() == null)   myPsiDirectory=null;
+ else   myPsiDirectory=new PsiDirectoryImpl((PsiManagerImpl)myManager,getSourceVirtualFile().getParent());
 }
