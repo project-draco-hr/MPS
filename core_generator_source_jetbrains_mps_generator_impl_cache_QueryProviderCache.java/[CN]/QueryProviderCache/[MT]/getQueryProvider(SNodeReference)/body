@@ -1,0 +1,31 @@
+{
+  final SModelReference mr=ruleNode.getModelReference();
+  if (myReflectionQueries.contains(mr)) {
+    return new ReflectiveQueryProvider(ruleNode);
+  }
+  if (myDirectQueries.containsKey(mr)) {
+    return myDirectQueries.get(mr);
+  }
+  try {
+    Class<?> qg=QueryMethodGenerated.getQueriesGeneratedClassFor(mr,true);
+    if (GeneratorQueryProvider.class.isAssignableFrom(qg)) {
+      @SuppressWarnings("unchecked") Class<GeneratorQueryProvider> providerClass=(Class<GeneratorQueryProvider>)qg;
+      GeneratorQueryProvider p=providerClass.newInstance();
+      myDirectQueries.put(mr,p);
+      return p;
+    }
+  }
+ catch (  ClassNotFoundException e) {
+    myLog.error(ruleNode,e.getMessage());
+  }
+catch (  InstantiationException e) {
+    myLog.handleException(e);
+    myLog.error(ruleNode,e.toString());
+  }
+catch (  IllegalAccessException e) {
+    myLog.handleException(e);
+    myLog.error(ruleNode,e.toString());
+  }
+  myReflectionQueries.add(mr);
+  return new ReflectiveQueryProvider(ruleNode);
+}
