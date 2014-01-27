@@ -27,17 +27,29 @@
         }
       }
 ));
-      configuration.add(Synchronizers.forObservableRole(this,myErrorItem,getDiagramCell().getRootMapper().getTarget().decorationRoot().children(),new MapperFactory<Boolean,View>(){
-        public Mapper<? extends Boolean,? extends View> createMapper(        Boolean source){
+      configuration.add(Synchronizers.forConstantRole(this,new Object(),getDiagramCell().getRootMapper().getTarget().decorationRoot().children(),new MapperFactory<Object,View>(){
+        public Mapper<? extends Object,? extends View> createMapper(        Object source){
           final ReadableProperty<Rectangle> bounds=getTarget().rect.bounds();
-          PolyLineView errorView=createErrorView(getTarget().rect.dimension().get());
-          return new Mapper<Boolean,View>(source,errorView){
+          return new Mapper<Object,View>(source,new GroupView()){
             @Override protected void registerSynchronizers(            Mapper.SynchronizersConfiguration configuration){
               super.registerSynchronizers(configuration);
-              configuration.add(Synchronizers.forProperty(bounds,new WritableProperty<Rectangle>(){
-                public void set(                Rectangle bounds){
-                  getTarget().moveTo(new Vector(bounds.origin.x,bounds.origin.y));
-                  getTarget().invalidate();
+              configuration.add(Synchronizers.forObservableRole(this,myErrorItem,getTarget().children(),new MapperFactory<Boolean,View>(){
+                public Mapper<? extends Boolean,? extends View> createMapper(                Boolean source){
+                  PolyLineView errorView=createErrorView(bounds.get());
+                  return new Mapper<Boolean,PolyLineView>(source,errorView){
+                    @Override protected void registerSynchronizers(                    Mapper.SynchronizersConfiguration configuration){
+                      super.registerSynchronizers(configuration);
+                      configuration.add(Synchronizers.forProperty(bounds,new WritableProperty<Rectangle>(){
+                        public void set(                        Rectangle bounds){
+                          getTarget().points.clear();
+                          getTarget().points.addAll(ListSequence.fromListAndArray(new ArrayList<Vector>(),new Vector(bounds.origin.x,bounds.origin.y),new Vector(bounds.origin.x + bounds.dimension.x,bounds.origin.y),new Vector(bounds.origin.x + bounds.dimension.x,bounds.origin.y + bounds.dimension.y),new Vector(bounds.origin.x,bounds.origin.y + bounds.dimension.y),new Vector(bounds.origin.x,bounds.origin.y)));
+                          getTarget().invalidate();
+                        }
+                      }
+));
+                    }
+                  }
+;
                 }
               }
 ));
