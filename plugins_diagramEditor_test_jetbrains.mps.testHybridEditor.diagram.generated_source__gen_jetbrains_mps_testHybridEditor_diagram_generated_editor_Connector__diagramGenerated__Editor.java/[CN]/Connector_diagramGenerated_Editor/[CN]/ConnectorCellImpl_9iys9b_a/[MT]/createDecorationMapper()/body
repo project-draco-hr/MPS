@@ -1,0 +1,63 @@
+{
+  return new Mapper<SNode,View>(getSNode(),new GroupView()){
+    @Override protected void registerSynchronizers(    Mapper.SynchronizersConfiguration configuration){
+      super.registerSynchronizers(configuration);
+      DiagramCell diagramCell=getDiagramCell();
+      if (diagramCell == null) {
+        return;
+      }
+      final Mapper<? super SNode,?> descendantMapper=getDiagramCell().getRootMapper().getDescendantMapper(getSNode());
+      if (descendantMapper == null) {
+        return;
+      }
+      ReadableProperty<Boolean> isValid=((PolyLineConnection)descendantMapper.getTarget()).view().valid();
+      final GroupView errorView=createErrorView();
+      configuration.add(Synchronizers.forProperty(myErrorItem,new WritableProperty<Boolean>(){
+        public void set(        Boolean source){
+          if (source) {
+            getTarget().children().add(errorView);
+          }
+ else {
+            getTarget().children().remove(errorView);
+          }
+        }
+      }
+));
+      configuration.add(Synchronizers.forProperty(isValid,new WritableProperty<Boolean>(){
+        public void set(        Boolean isValid){
+          if (isValid) {
+            List<Segment> segmentList=((PolyLineConnection)descendantMapper.getTarget()).getSegments();
+            if (segmentList.isEmpty()) {
+              return;
+            }
+            Vector errorPoint=getErrorPoint(segmentList);
+            updateErrorView(errorPoint,errorView);
+          }
+        }
+      }
+));
+      final GroupView selectionView=new GroupView();
+      configuration.add(Synchronizers.forProperty(((PolyLineConnection)descendantMapper.getTarget()).view().focused(),new WritableProperty<Boolean>(){
+        public void set(        Boolean source){
+          if (source) {
+            getTarget().children().add(selectionView);
+          }
+ else {
+            getTarget().children().remove(selectionView);
+          }
+        }
+      }
+));
+      configuration.add(Synchronizers.forProperty(isValid,new WritableProperty<Boolean>(){
+        public void set(        Boolean isValid){
+          if (isValid) {
+            List<Segment> segments=((PolyLineConnection)descendantMapper.getTarget()).getSegments();
+            updateSelectionView(segments,selectionView);
+          }
+        }
+      }
+));
+    }
+  }
+;
+}

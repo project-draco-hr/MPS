@@ -1,0 +1,61 @@
+{
+  return new Mapper<SNode,View>(getSNode(),new GroupView()){
+    @Override protected void registerSynchronizers(    Mapper.SynchronizersConfiguration configuration){
+      super.registerSynchronizers(configuration);
+      DiagramCell diagramCell=getDiagramCell();
+      if (diagramCell == null) {
+        return;
+      }
+      final Mapper<? super SNode,?> descendantMapper=getDiagramCell().getRootMapper().getDescendantMapper(getSNode());
+      if (descendantMapper == null) {
+        return;
+      }
+      final PolyLineView errorView=createErrorView();
+      configuration.add(Synchronizers.forProperty(myErrorItem,new WritableProperty<Boolean>(){
+        public void set(        Boolean source){
+          if (source) {
+            getTarget().children().add(errorView);
+          }
+ else {
+            getTarget().children().remove(errorView);
+          }
+        }
+      }
+));
+      ReadableProperty<Boolean> isValid=((DiagramNodeView)descendantMapper.getTarget()).rect.valid();
+      configuration.add(Synchronizers.forProperty(isValid,new WritableProperty<Boolean>(){
+        public void set(        Boolean isValid){
+          if (isValid) {
+            Rectangle bounds=((DiagramNodeView)descendantMapper.getTarget()).rect.bounds().get();
+            errorView.points.clear();
+            errorView.points.addAll(ListSequence.fromListAndArray(new ArrayList<Vector>(),new Vector(bounds.origin.x,bounds.origin.y),new Vector(bounds.origin.x + bounds.dimension.x,bounds.origin.y),new Vector(bounds.origin.x + bounds.dimension.x,bounds.origin.y + bounds.dimension.y),new Vector(bounds.origin.x,bounds.origin.y + bounds.dimension.y),new Vector(bounds.origin.x,bounds.origin.y)));
+            errorView.invalidate();
+          }
+        }
+      }
+));
+      final GroupView selectionView=new GroupView();
+      configuration.add(Synchronizers.forProperty(((DiagramNodeView)descendantMapper.getTarget()).focused(),new WritableProperty<Boolean>(){
+        public void set(        Boolean source){
+          if (source) {
+            getTarget().children().add(selectionView);
+          }
+ else {
+            getTarget().children().remove(selectionView);
+          }
+        }
+      }
+));
+      configuration.add(Synchronizers.forProperty(isValid,new WritableProperty<Boolean>(){
+        public void set(        Boolean isValid){
+          if (isValid) {
+            Rectangle bounds=((DiagramNodeView)descendantMapper.getTarget()).rect.bounds().get();
+            updateSelectionView(bounds,selectionView);
+          }
+        }
+      }
+));
+    }
+  }
+;
+}
