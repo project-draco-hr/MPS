@@ -13,27 +13,27 @@
   mySessionContext=new GenerationSessionContext(mySessionContext);
   myLogger.setOperationContext(mySessionContext);
   Iterator<TemplateMappingConfiguration> it=mappingConfigurations.iterator();
-  TemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,myProgressMonitor,myLogger,null,inputModel,null,myGenerationOptions,myDependenciesBuilder,ttrace);
-  LinkedList<TemplateMappingConfiguration> drop=new LinkedList<TemplateMappingConfiguration>();
-  while (it.hasNext()) {
-    TemplateMappingConfiguration c=it.next();
-    try {
+  TemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,myProgressMonitor,null,inputModel,null,myDependenciesBuilder);
+  try {
+    LinkedList<TemplateMappingConfiguration> drop=new LinkedList<TemplateMappingConfiguration>();
+    while (it.hasNext()) {
+      TemplateMappingConfiguration c=it.next();
       if (!c.isApplicable(templateGenerator)) {
         drop.add(c);
         it.remove();
       }
     }
- catch (    GenerationException e) {
-      if (!(e instanceof GenerationFailureException)) {
-        myLogger.handleException(e);
-        myLogger.error("mapping configuration's isApplicable block threw an exception");
-        throw new GenerationFailureException(e);
-      }
-      throw (GenerationFailureException)e;
+    if (!drop.isEmpty()) {
+      printMappingConfigurations("drop mapping configurations (not applicable):",drop);
     }
   }
-  if (!drop.isEmpty()) {
-    printMappingConfigurations("drop mapping configurations (not applicable):",drop);
+ catch (  GenerationFailureException ex) {
+    throw ex;
+  }
+catch (  GenerationException ex) {
+    myLogger.handleException(ex);
+    myLogger.error("Failed to evaluate MappingConfiguration.isApplicable");
+    throw new GenerationFailureException(ex);
   }
   if (mappingConfigurations.isEmpty()) {
     return inputModel;

@@ -1,5 +1,6 @@
 {
   checkMonitorCanceled();
+  final IPerformanceTracer ttrace=getGeneratorSessionContext().getPerformanceTracer();
   myAreMappingsReady=false;
   ttrace.push("weavings",false);
   myWeavingProcessor=new WeavingProcessor(this);
@@ -8,28 +9,10 @@
   ttrace.push("reductions",false);
   applyReductions(isPrimary);
   ttrace.pop();
-  if (myDeltaBuilder != null) {
-    ttrace.push("apply delta changes",false);
-    myInplaceModelChange=true;
-    if (myDeltaBuilder.hasChanges()) {
-      myDeltaBuilder.applyInplace(getInputModel(),this);
-    }
-    if (myNewAddedRoots != null) {
-      for (      SNode newRoot : myNewAddedRoots) {
-        getInputModel().addRootNode(newRoot);
-      }
-      myNewAddedRoots.clear();
-    }
-    myOutputRoots.clear();
-    myDeltaBuilder=null;
-    ttrace.pop();
-  }
+  myInplaceModelChange=myDeltaBuilder != null;
   myAreMappingsReady=true;
   myChanged|=myDependenciesBuilder.isStepRequired();
-  if (!isPrimary && !myChanged && myDelayedChanges.isEmpty()&& !myRuleManager.hasWeavings()) {
-    return false;
-  }
-  if (!myInplaceModelChange) {
+  if (myDeltaBuilder == null) {
     for (    SNode outputRoot : myOutputRoots) {
       myOutputModel.addRootNode(outputRoot);
     }
@@ -37,22 +20,44 @@
     myDependenciesBuilder.reloadRequired(getMappings());
     ttrace.pop();
   }
-  ttrace.push("weavings",false);
-  myWeavingProcessor.apply();
-  myWeavingProcessor=null;
-  ttrace.pop();
-  if (!isPrimary && !myChanged && myDelayedChanges.isEmpty()) {
-    return false;
-  }
-  ttrace.push("delayed mappings",false);
-  myDelayedChanges.doAllChanges();
-  ttrace.pop();
-  if (myChanged || isPrimary) {
-    ttrace.push("restoring references",false);
-    revalidateAllReferences();
-    ttrace.pop();
+  if (myWeavingProcessor.hasWeavingRulesToApply()) {
     checkMonitorCanceled();
+    ttrace.push("weavings",false);
+    myWeavingProcessor.apply();
+    myWeavingProcessor=null;
+    ttrace.pop();
+  }
+  if (!myDelayedChanges.isEmpty()) {
+    checkMonitorCanceled();
+    ttrace.push("delayed mappings",false);
+    myDelayedChanges.doAllChanges(this);
+    ttrace.pop();
+  }
+  if (myDeltaBuilder != null && myDeltaBuilder.hasChanges()) {
+    ttrace.push("apply delta changes",false);
+    myDeltaBuilder.prepareReferences(getInputModel(),this);
+    ttrace.pop();
+  }
+  if (!myPostponedRefs.isEmpty()) {
+    ttrace.push("restoring references",false);
+    myPostponedRefs.prepare();
+    ttrace.pop();
+  }
+  if (myDeltaBuilder != null && myDeltaBuilder.hasChanges()) {
+    ttrace.push("apply delta changes",false);
+    myDeltaBuilder.applyInplace(getInputModel());
+    ttrace.pop();
+  }
+  if (!myPostponedRefs.isEmpty()) {
+    ttrace.push("restoring references",false);
+    myPostponedRefs.replace();
+    ttrace.pop();
+  }
+  myOutputRoots.clear();
+  myDeltaBuilder=null;
+  if (myChanged || isPrimary) {
     getBlockedReductionsData().advanceStep();
+    checkMonitorCanceled();
   }
   return myChanged;
 }
