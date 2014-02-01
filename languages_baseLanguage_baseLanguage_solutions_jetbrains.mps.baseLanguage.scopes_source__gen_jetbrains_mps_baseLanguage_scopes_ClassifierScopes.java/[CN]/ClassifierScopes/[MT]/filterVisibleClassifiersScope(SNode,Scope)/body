@@ -1,10 +1,27 @@
 {
   return new FilteringScope(inner){
-    @Override public boolean isExcluded(    SNode node){
+    @Override public boolean isExcluded(    final SNode node){
       if ((node == null)) {
         return true;
       }
-      return !(VisibilityUtil.isVisible(contextNode,SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.IVisible")));
+      if (!(VisibilityUtil.isVisible(contextNode,SNodeOperations.cast(node,"jetbrains.mps.baseLanguage.structure.IVisible")))) {
+        return true;
+      }
+      if (SNodeOperations.isInstanceOf(node,"jetbrains.mps.lang.core.structure.INamedConcept")) {
+        Iterable<SNode> vars=ListSequence.fromList(SNodeOperations.getAncestors(contextNode,"jetbrains.mps.baseLanguage.structure.GenericDeclaration",true)).translate(new ITranslator2<SNode,SNode>(){
+          public Iterable<SNode> translate(          SNode it){
+            return SLinkOperations.getTargets(it,"typeVariableDeclaration",true);
+          }
+        }
+);
+        return Sequence.fromIterable(vars).any(new IWhereFilter<SNode>(){
+          public boolean accept(          SNode it){
+            return eq_g9g9i8_a0a0a0a0a0b0d0a0a0a0b(SPropertyOperations.getString(it,"name"),SPropertyOperations.getString(SNodeOperations.cast(node,"jetbrains.mps.lang.core.structure.INamedConcept"),"name"));
+          }
+        }
+);
+      }
+      return false;
     }
   }
 ;
