@@ -3,6 +3,7 @@
   if (model == null || model == null || model.getModule() == null) {
     return results;
   }
+  final IScope scope=((AbstractModule)model.getModule()).getScope();
   monitor.start("unresolved references",1);
   for (  SNode node : ListSequence.fromList(SModelOperations.getNodes(model,null))) {
     if (monitor.isCanceled()) {
@@ -20,39 +21,32 @@
         }
 );
       }
-      final SModelReference mref=ref.getTargetSModelReference();
-      if (mref == null) {
+      final SModelReference uid=ref.getTargetSModelReference();
+      if (uid == null) {
         continue;
       }
-      SModel m=mref.resolve(MPSModuleRepository.getInstance());
-      if (m == null) {
-        continue;
-      }
-      if (VisibilityUtil.isVisible(model,m)) {
-        continue;
-      }
-      SpecificChecker.addIssue(results,node,"Target module " + m.getModule() + " should be imported",ModelChecker.SEVERITY_ERROR,"target module not imported",new IModelCheckerFix(){
-        public boolean doFix(){
-          SModel m2=mref.resolve(MPSModuleRepository.getInstance());
-          if (m2 == null) {
+      SModel descriptor=SModelRepository.getInstance().getModelDescriptor(uid);
+      if (scope.getModelDescriptor(uid) == null && descriptor != null) {
+        SpecificChecker.addIssue(results,node,"Target module " + descriptor.getModule() + " should be imported",ModelChecker.SEVERITY_ERROR,"target module not imported",new IModelCheckerFix(){
+          public boolean doFix(){
+            if (scope.getModelDescriptor(uid) == null && SModelRepository.getInstance().getModelDescriptor(uid) != null) {
+              SModel sm=SModelRepository.getInstance().getModelDescriptor(uid);
+              SModuleReference moduleReference=check_xiru3y_a0b0a0f0a0f0c0f0b(check_xiru3y_a0a1a0a5a0a5a2a5a1(sm));
+              if (moduleReference == null) {
+                return false;
+              }
+              SModule module=check_xiru3y_a0d0a0f0a0f0c0f0b(model);
+              if (module == null) {
+                return false;
+              }
+              ((AbstractModule)((AbstractModule)module)).addDependency(moduleReference,false);
+              return true;
+            }
             return false;
           }
-          if (VisibilityUtil.isVisible(model,m2)) {
-            return false;
-          }
-          SModuleReference moduleReference=check_xiru3y_a0f0f0i0c0e0b(check_xiru3y_a0a5a5a8a2a4a1(m2));
-          if (moduleReference == null) {
-            return false;
-          }
-          SModule module=check_xiru3y_a0i0f0i0c0e0b(model);
-          if (module == null) {
-            return false;
-          }
-          ((AbstractModule)module).addDependency(moduleReference,false);
-          return true;
         }
-      }
 );
+      }
     }
   }
   monitor.done();
