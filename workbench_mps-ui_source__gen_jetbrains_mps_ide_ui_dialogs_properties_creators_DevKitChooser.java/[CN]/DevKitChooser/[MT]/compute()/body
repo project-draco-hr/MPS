@@ -1,16 +1,15 @@
 {
-  final Wrappers._T<List<SModuleReference>> dkRefs=new Wrappers._T<List<SModuleReference>>();
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      Iterable<DevKit> devkits=new FilteredGlobalScope().getVisibleDevkits();
-      dkRefs.value=Sequence.fromIterable(devkits).select(new ISelector<DevKit,SModuleReference>(){
-        public SModuleReference select(        DevKit it){
-          return it.getModuleReference();
-        }
-      }
-).toListSequence();
+  Iterable<Language> langs=ModuleRepositoryFacade.getInstance().getAllModules(Language.class);
+  List<SModuleReference> refs=Sequence.fromIterable(langs).where(new IWhereFilter<Language>(){
+    public boolean accept(    Language it){
+      return VisibleModuleRegistry.getInstance().isVisible(it);
     }
   }
-);
-  return CommonChoosers.showDialogModuleCollectionChooser(null,"devkit",dkRefs.value,null);
+).select(new ISelector<Language,SModuleReference>(){
+    public SModuleReference select(    Language lang){
+      return lang.getModuleReference();
+    }
+  }
+).toListSequence();
+  return CommonChoosers.showDialogModuleCollectionChooser(null,"devkit",refs,null);
 }
