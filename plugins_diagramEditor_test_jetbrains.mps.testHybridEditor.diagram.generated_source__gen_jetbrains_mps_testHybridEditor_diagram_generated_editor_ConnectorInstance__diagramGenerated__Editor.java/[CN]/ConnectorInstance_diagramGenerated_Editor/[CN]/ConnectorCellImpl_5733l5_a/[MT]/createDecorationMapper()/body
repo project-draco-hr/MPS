@@ -1,5 +1,5 @@
 {
-  return new Mapper<SNode,View>(getSNode(),new GroupView()){
+  return new Mapper<SNode,ConnectorDecoratorView>(getSNode(),new ConnectorDecoratorView()){
     @Override protected void registerSynchronizers(    Mapper.SynchronizersConfiguration configuration){
       super.registerSynchronizers(configuration);
       DiagramCell diagramCell=getDiagramCell();
@@ -10,19 +10,19 @@
       if (descendantMapper == null) {
         return;
       }
-      ReadableProperty<Boolean> isValid=((PolyLineConnection)descendantMapper.getTarget()).view().valid();
-      final GroupView errorView=createErrorView();
       configuration.add(Synchronizers.forProperty(myErrorItem,new WritableProperty<Boolean>(){
-        public void set(        Boolean source){
-          if (source) {
-            getTarget().children().add(errorView);
-          }
- else {
-            getTarget().children().remove(errorView);
-          }
+        public void set(        Boolean isError){
+          getTarget().setError(isError);
         }
       }
 ));
+      configuration.add(Synchronizers.forProperty(((PolyLineConnection)descendantMapper.getTarget()).view().focused(),new WritableProperty<Boolean>(){
+        public void set(        Boolean isSelected){
+          getTarget().setSelected(isSelected);
+        }
+      }
+));
+      ReadableProperty<Boolean> isValid=((PolyLineConnection)descendantMapper.getTarget()).view().valid();
       configuration.add(Synchronizers.forProperty(isValid,new WritableProperty<Boolean>(){
         public void set(        Boolean isValid){
           if (isValid) {
@@ -30,29 +30,8 @@
             if (segmentList.isEmpty()) {
               return;
             }
-            Vector errorPoint=getErrorPoint(segmentList);
-            updateErrorView(errorPoint,errorView);
-          }
-        }
-      }
-));
-      final GroupView selectionView=new GroupView();
-      configuration.add(Synchronizers.forProperty(((PolyLineConnection)descendantMapper.getTarget()).view().focused(),new WritableProperty<Boolean>(){
-        public void set(        Boolean source){
-          if (source) {
-            getTarget().children().add(selectionView);
-          }
- else {
-            getTarget().children().remove(selectionView);
-          }
-        }
-      }
-));
-      configuration.add(Synchronizers.forProperty(isValid,new WritableProperty<Boolean>(){
-        public void set(        Boolean isValid){
-          if (isValid) {
-            List<Segment> segments=((PolyLineConnection)descendantMapper.getTarget()).getSegments();
-            updateSelectionView(segments,selectionView);
+            getTarget().updateErrorView(segmentList);
+            getTarget().updateSelectionView(segmentList);
           }
         }
       }

@@ -1,5 +1,5 @@
 {
-  return new Mapper<SNode,View>(getSNode(),new GroupView()){
+  return new Mapper<SNode,NodeDecoratorView>(getSNode(),new NodeDecoratorView()){
     @Override protected void registerSynchronizers(    Mapper.SynchronizersConfiguration configuration){
       super.registerSynchronizers(configuration);
       DiagramCell diagramCell=getDiagramCell();
@@ -10,48 +10,35 @@
       if (descendantMapper == null) {
         return;
       }
-      final PolyLineView errorView=createErrorView();
       configuration.add(Synchronizers.forProperty(myErrorItem,new WritableProperty<Boolean>(){
-        public void set(        Boolean source){
-          if (source) {
-            getTarget().children().add(errorView);
-          }
- else {
-            getTarget().children().remove(errorView);
-          }
+        public void set(        Boolean isError){
+          getTarget().setError(isError);
         }
       }
 ));
-      ReadableProperty<Boolean> isValid=((DiagramNodeView)descendantMapper.getTarget()).rect.valid();
-      configuration.add(Synchronizers.forProperty(isValid,new WritableProperty<Boolean>(){
-        public void set(        Boolean isValid){
-          if (isValid) {
-            Rectangle bounds=((DiagramNodeView)descendantMapper.getTarget()).rect.bounds().get();
-            errorView.points.clear();
-            errorView.points.addAll(ListSequence.fromListAndArray(new ArrayList<Vector>(),new Vector(bounds.origin.x,bounds.origin.y),new Vector(bounds.origin.x + bounds.dimension.x,bounds.origin.y),new Vector(bounds.origin.x + bounds.dimension.x,bounds.origin.y + bounds.dimension.y),new Vector(bounds.origin.x,bounds.origin.y + bounds.dimension.y),new Vector(bounds.origin.x,bounds.origin.y)));
-            errorView.invalidate();
-          }
-        }
-      }
-));
-      final GroupView selectionView=new GroupView();
       configuration.add(Synchronizers.forProperty(((DiagramNodeView)descendantMapper.getTarget()).focused(),new WritableProperty<Boolean>(){
-        public void set(        Boolean source){
-          if (source) {
-            getTarget().children().add(selectionView);
-          }
- else {
-            getTarget().children().remove(selectionView);
-          }
+        public void set(        Boolean isSelected){
+          getTarget().setSelected(isSelected);
         }
       }
 ));
-      configuration.add(Synchronizers.forProperty(isValid,new WritableProperty<Boolean>(){
-        public void set(        Boolean isValid){
-          if (isValid) {
-            Rectangle bounds=((DiagramNodeView)descendantMapper.getTarget()).rect.bounds().get();
-            updateSelectionView(bounds,selectionView);
-          }
+      ReadableProperty<Rectangle> bounds=((DiagramNodeView)descendantMapper.getTarget()).rect.bounds();
+      configuration.add(Synchronizers.forProperty(bounds,new WritableProperty<Rectangle>(){
+        public void set(        Rectangle bounds){
+          getTarget().updateErrorDecorator(bounds);
+          getTarget().updateSelectionDecorator(bounds);
+        }
+      }
+));
+      configuration.add(Synchronizers.forObservableRole(this,myInputPorts,getTarget().inputPortDecotatorView.children(),new MapperFactory<SNode,PortDecoratorView>(){
+        public Mapper<? extends SNode,? extends PortDecoratorView> createMapper(        SNode portNode){
+          return ((PortCell)getDirectChildCell(portNode)).createDecorationMapper();
+        }
+      }
+));
+      configuration.add(Synchronizers.forObservableRole(this,myOutputPorts,getTarget().outputPortDecotatorView.children(),new MapperFactory<SNode,PortDecoratorView>(){
+        public Mapper<? extends SNode,? extends PortDecoratorView> createMapper(        SNode portNode){
+          return ((PortCell)getDirectChildCell(portNode)).createDecorationMapper();
         }
       }
 ));
