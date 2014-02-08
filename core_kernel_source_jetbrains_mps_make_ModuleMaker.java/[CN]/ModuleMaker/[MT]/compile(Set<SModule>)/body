@@ -1,6 +1,6 @@
 {
   boolean hasAnythingToCompile=false;
-  List<MyMessage> messages=new ArrayList<MyMessage>();
+  List<IMessage> messages=new ArrayList<IMessage>();
   for (  SModule m : modules) {
     if (isExcluded(m))     continue;
     hasAnythingToCompile=true;
@@ -17,8 +17,8 @@
     if (areClassesUpToDate(m))     continue;
     if (!getJavaFacet(m).isCompileInMps()) {
       String text="Module which compiled in IDEA depend on module which has to be compiled in MPS:" + m.getModuleName();
-      messages.add(new MyMessage(MessageKind.WARNING,text,m));
-      LOG.debug(text,m);
+      messages.add(createMessage(MessageKind.WARNING,text,m));
+      handler.handle(createMessage(MessageKind.INFORMATION,text,m));
       continue;
     }
     ModuleSources sources=getModuleSources(m);
@@ -81,14 +81,14 @@
   ttrace.pop();
   for (  SModule module : modulesWithRemovals) {
     if (!changedModules.contains(module)) {
-      LOG.warning("Module with removals not in changed modules: " + module);
+      handler.handle(createMessage(MessageKind.WARNING,"Module with removals not in changed modules: " + module,module));
     }
   }
   if (hasJavaToCompile && changedModules.isEmpty()) {
-    LOG.error("has java to compile but changed modules is empty");
+    handler.handle(createMessage(MessageKind.ERROR,"has java to compile but changed modules is empty",null));
   }
   if (!hasJavaToCompile && !changedModules.isEmpty()) {
-    LOG.error("has not java to compile but changed modules is not empty");
+    handler.handle(createMessage(MessageKind.ERROR,"has not java to compile but changed modules is not empty",null));
   }
   return new MPSCompilationResult(listener == null ? 0 : listener.getErrorCount(),0,false,changedModules,messages);
 }
