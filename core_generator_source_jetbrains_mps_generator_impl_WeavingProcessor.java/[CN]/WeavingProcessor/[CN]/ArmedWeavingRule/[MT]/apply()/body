@@ -1,0 +1,40 @@
+{
+  final IGenerationTracer tracer=myEnv.getTracer();
+  try {
+    DefaultTemplateContext context=new DefaultTemplateContext(myApplicableNode);
+    SNode outputContextNode=myEnv.getQueryExecutor().getContextNode(myRule,myEnv,context);
+    if (!checkContext(outputContextNode)) {
+      return false;
+    }
+    boolean someOutputGenerated=true;
+    tracer.pushInputNode(GenerationTracerUtil.getSNodePointer(myApplicableNode));
+    tracer.pushRule(myRule.getRuleNode());
+    try {
+      someOutputGenerated=myRule.apply(myEnv,context,outputContextNode);
+    }
+ catch (    DismissTopMappingRuleException e) {
+      myEnv.getLogger().error(myRule.getRuleNode(),"wrong template: dismiss in weaving rule is not supported",GeneratorUtil.describeIfExists(context.getInput(),"input node"));
+    }
+catch (    TemplateProcessingFailureException e) {
+      myEnv.getGenerator().showErrorMessage(context.getInput(),null,myRule.getRuleNode().resolve(MPSModuleRepository.getInstance()),"weaving rule: error processing template fragment");
+    }
+ finally {
+      if (someOutputGenerated) {
+        tracer.closeInputNode(GenerationTracerUtil.getSNodePointer(myApplicableNode));
+      }
+ else {
+        tracer.popInputNode(GenerationTracerUtil.getSNodePointer(myApplicableNode));
+      }
+    }
+  }
+ catch (  GenerationCanceledException ex) {
+    throw ex;
+  }
+catch (  GenerationFailureException ex) {
+    throw ex;
+  }
+catch (  GenerationException e) {
+    myEnv.getGenerator().showErrorMessage(null,myRule.getRuleNode().resolve(MPSModuleRepository.getInstance()),"internal error: " + e.toString());
+  }
+  return true;
+}
