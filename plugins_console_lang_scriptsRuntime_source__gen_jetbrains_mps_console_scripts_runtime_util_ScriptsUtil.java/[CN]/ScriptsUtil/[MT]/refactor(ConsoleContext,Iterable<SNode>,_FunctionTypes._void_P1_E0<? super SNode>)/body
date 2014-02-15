@@ -1,0 +1,35 @@
+{
+  Project project=ProjectHelper.toIdeaProject(context.getProject());
+  SearchResults sr=nodesToRefactoringResult(nodes);
+  RefactoringAccess.getInstance().showRefactoringView(project,new RefactoringViewAction(){
+    public void performAction(    final RefactoringViewItem refactoringViewItem){
+      ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        public void run(){
+          Iterable<SNode> includedNodes;
+          if (refactoringViewItem instanceof RefactoringViewItemImpl) {
+            List<SNodeReference> nodeRefs=as_bb8vid_a0a0a0a1a0a0a0a0a0a0b0a2a5(refactoringViewItem,RefactoringViewItemImpl.class).getUsagesView().getIncludedResultNodes();
+            includedNodes=ListSequence.fromList(nodeRefs).select(new ISelector<SNodeReference,SNode>(){
+              public SNode select(              SNodeReference it){
+                return it.resolve(MPSModuleRepository.getInstance());
+              }
+            }
+);
+          }
+ else {
+            includedNodes=nodes;
+          }
+          for (          SNode resultNode : Sequence.fromIterable(includedNodes)) {
+            if (resultNode != null) {
+              toExecuteWithEachNode.invoke(resultNode);
+            }
+          }
+        }
+      }
+);
+      refactoringViewItem.close();
+      context.getConsoleTab().getConsoleTool().getToolWindow().activate(null);
+      context.getConsoleTab().getConsoleTool().selectTab(context.getConsoleTab());
+    }
+  }
+,sr,false,"refactor");
+}

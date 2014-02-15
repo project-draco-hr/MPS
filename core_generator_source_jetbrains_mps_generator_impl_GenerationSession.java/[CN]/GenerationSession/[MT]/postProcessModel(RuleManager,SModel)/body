@@ -1,8 +1,8 @@
 {
-  if (!ruleManager.getScripts().postprocessing()) {
+  if (ruleManager.getPostProcessScripts().isEmpty()) {
     return currentModel;
   }
-  boolean needToCloneModel=ruleManager.getScripts().needModelCloneToPostprocess(currentModel,!myDiscardTransients);
+  final boolean needToCloneModel=!myDiscardTransients;
   SModel toRecycle=null;
   if (needToCloneModel) {
     ttrace.push("model clone",false);
@@ -12,33 +12,32 @@
     }
     new CloneUtil(currentModel,currentOutputModel_clone).cloneModelWithImports();
     ttrace.pop();
-    mySessionContext.getGenerationTracer().registerPostMappingScripts(currentModel,currentOutputModel_clone,ruleManager.getScripts().getPostMappingScripts());
+    mySessionContext.getGenerationTracer().registerPostMappingScripts(currentModel,currentOutputModel_clone,ruleManager.getPostProcessScripts().getScripts());
     toRecycle=currentModel;
     currentModel=currentOutputModel_clone;
     myDependenciesBuilder.scriptApplied(currentModel);
   }
  else {
-    mySessionContext.getGenerationTracer().registerPostMappingScripts(currentModel,currentModel,ruleManager.getScripts().getPostMappingScripts());
+    mySessionContext.getGenerationTracer().registerPostMappingScripts(currentModel,currentModel,ruleManager.getPostProcessScripts().getScripts());
+    if (currentModel instanceof SModelInternal) {
+      ((SModelInternal)currentModel).disposeFastNodeFinder();
+    }
   }
-  boolean postProcessed=false;
   TemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,myProgressMonitor,ruleManager,currentModel,currentModel,myDependenciesBuilder);
-  for (  TemplateMappingScript postMappingScript : ruleManager.getScripts().getPostMappingScripts()) {
+  for (  TemplateMappingScript postMappingScript : ruleManager.getPostProcessScripts().getScripts()) {
     if (myLogger.needsInfo()) {
       myLogger.info(postMappingScript.getScriptNode().resolve(MPSModuleRepository.getInstance()),"post-process " + postMappingScript.getLongName());
     }
     templateGenerator.executeScript(postMappingScript);
-    postProcessed=true;
   }
+  myDependenciesBuilder.scriptApplied(currentModel);
   if (needToCloneModel) {
-    myDependenciesBuilder.scriptApplied(currentModel);
     if (myNewCache != null) {
       TransientModelWithMetainfo modelWithMetaInfo=TransientModelWithMetainfo.create(currentModel,myDependenciesBuilder);
       myNewCache.store(myMajorStep,myMinorStep,modelWithMetaInfo);
     }
     recycleWasteModel(toRecycle,false);
   }
-  if (myLogger.needsInfo() && postProcessed) {
-    myLogger.info("post-processing finished");
-  }
+  myLogger.info("post-processing finished");
   return currentModel;
 }
