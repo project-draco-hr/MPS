@@ -2,7 +2,7 @@
   boolean result_14532009=true;
 {
     SNode classifier=SLinkOperations.getTarget(supertype,"classifier",false);
-    String errorMsg;
+    String errorMsg=null;
     Iterable<SNode> methods=Classifier_Behavior.call_methods_5292274854859311639(classifier);
     Iterable<SNode> cands=Sequence.fromIterable(methods).where(new IWhereFilter<SNode>(){
       public boolean accept(      SNode m){
@@ -16,15 +16,17 @@
       errorMsg=": more than one abstract method";
     }
  else     if (mtd != null) {
-      SNode md=Sequence.fromIterable(methods).first();
-      if ((int)ListSequence.fromList(SLinkOperations.getTargets(subtype,"parameterType",true)).count() == (int)ListSequence.fromList(SLinkOperations.getTargets(md,"parameter",true)).count()) {
-        SNode retType=ClassifierTypeUtil.resolveType(SLinkOperations.getTarget(md,"returnType",true),supertype);
+      if ((int)ListSequence.fromList(SLinkOperations.getTargets(subtype,"parameterType",true)).count() == (int)ListSequence.fromList(SLinkOperations.getTargets(mtd,"parameter",true)).count()) {
+        SNode retType=ClassifierTypeUtil.resolveType(SLinkOperations.getTarget(mtd,"returnType",true),supertype);
         if (!(SNodeOperations.isInstanceOf(retType,"jetbrains.mps.baseLanguage.structure.VoidType"))) {
+          if (SNodeOperations.isInstanceOf(SLinkOperations.getTarget(subtype,"resultType",true),"jetbrains.mps.baseLanguage.structure.VoidType")) {
+            errorMsg=": no result type in function type";
+          }
           result_14532009=result_14532009 && TypeChecker.getInstance().getSubtypingManager().isSubtype((SNode)SLinkOperations.getTarget(subtype,"resultType",true),(SNode)retType,true);
         }
 {
           Iterator<SNode> fpt_it=ListSequence.fromList(SLinkOperations.getTargets(subtype,"parameterType",true)).iterator();
-          Iterator<SNode> mpt_it=ListSequence.fromList(SLinkOperations.getTargets(md,"parameter",true)).iterator();
+          Iterator<SNode> mpt_it=ListSequence.fromList(SLinkOperations.getTargets(mtd,"parameter",true)).iterator();
           SNode fpt_var;
           SNode mpt_var;
           while (fpt_it.hasNext() && mpt_it.hasNext()) {
@@ -33,7 +35,9 @@
             result_14532009=result_14532009 && TypeChecker.getInstance().getSubtypingManager().isSubtype((SNode)ClassifierTypeUtil.resolveType(SLinkOperations.getTarget(mpt_var,"type",true),supertype),(SNode)fpt_var,true);
           }
         }
-        return result_14532009;
+        if (errorMsg == null) {
+          return result_14532009;
+        }
       }
  else {
         errorMsg=": wrong parameter number";
