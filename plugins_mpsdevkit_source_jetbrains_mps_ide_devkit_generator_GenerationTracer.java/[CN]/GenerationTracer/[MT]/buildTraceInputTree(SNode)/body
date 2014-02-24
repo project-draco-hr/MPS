@@ -5,13 +5,31 @@
   for (  TracerNode rootTracerNode : rootTracerNodes) {
     rootTracerNode.findAllTopmost(Kind.INPUT,nodeRef,tracerNodes);
   }
+  final TraceNodeUI newTracer;
+  if (myNewTrace != null) {
+    newTracer=new TraceNodeUI("New gen tracer",Icons.COLLECTION);
+    for (    TraceNodeUI n : myNewTrace.buildTrace(node)) {
+      newTracer.addChild(n);
+    }
+  }
+ else {
+    newTracer=null;
+  }
   if (!tracerNodes.isEmpty()) {
-    TracerNode resultTracerNode=new TracerNode(tracerNodes.get(0));
+    TraceNodeUI resultTracerNode;
+    if (tracerNodes.size() == 1 && newTracer == null) {
+      TracerNode theOne=tracerNodes.get(0);
+      resultTracerNode=new TraceNodeUI(theOne);
+      tracerNodes=theOne.getChildren();
+    }
+ else {
+      resultTracerNode=new TraceNodeUI("Multiple use of same input node",Icons.COLLECTION);
+    }
     for (    TracerNode tracerNode : tracerNodes) {
-      List<TracerNode> childrensCopy=tracerNode.getChildrenCopy();
-      for (      TracerNode childCopy : childrensCopy) {
-        resultTracerNode.addChild(childCopy);
-      }
+      resultTracerNode.addChild(create(tracerNode));
+    }
+    if (newTracer != null) {
+      resultTracerNode.addChild(newTracer);
     }
     return resultTracerNode;
   }
@@ -28,20 +46,21 @@
     if (outputNode != null)     break;
     inputNode=inputNode.getParent();
   }
-  TracerNode inputTracerNode=new TracerNode(Kind.INPUT,new jetbrains.mps.smodel.SNodePointer(node));
-  TracerNode tracerNode=inputTracerNode;
+  final TraceNodeUI traceNode=new TraceNodeUI(Kind.INPUT,new jetbrains.mps.smodel.SNodePointer(node));
   for (  TemplateMappingScript mappingScript : mappingScripts) {
-    TracerNode childTracerNode=new TracerNode(Kind.MAPPING_SCRIPT,mappingScript.getScriptNode());
-    tracerNode.addChild(childTracerNode);
-    tracerNode=childTracerNode;
+    TraceNodeUI childTracerNode=new TraceNodeUI(Kind.MAPPING_SCRIPT,mappingScript.getScriptNode());
+    traceNode.addChild(childTracerNode);
   }
   if (outputNode != null) {
     if (inputNode == node) {
-      tracerNode.addChild(new TracerNode(Kind.OUTPUT,new jetbrains.mps.smodel.SNodePointer(outputNode)));
+      traceNode.addChild(new TraceNodeUI(Kind.OUTPUT,new jetbrains.mps.smodel.SNodePointer(outputNode)));
     }
  else {
-      tracerNode.addChild(new TracerNode(Kind.APPROXIMATE_OUTPUT,new jetbrains.mps.smodel.SNodePointer(outputNode)));
+      traceNode.addChild(new TraceNodeUI(Kind.APPROXIMATE_OUTPUT,new jetbrains.mps.smodel.SNodePointer(outputNode)));
     }
   }
-  return inputTracerNode;
+  if (newTracer != null) {
+    traceNode.addChild(newTracer);
+  }
+  return traceNode;
 }
