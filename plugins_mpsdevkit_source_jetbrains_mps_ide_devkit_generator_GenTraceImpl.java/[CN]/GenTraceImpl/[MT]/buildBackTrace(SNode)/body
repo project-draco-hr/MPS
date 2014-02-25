@@ -1,3 +1,32 @@
 {
-  return Collections.emptyList();
+  Phase ph=findPhaseForOutput(node);
+  if (ph == null) {
+    return Collections.emptyList();
+  }
+  ArrayList<TraceNodeUI> rv=new ArrayList<TraceNodeUI>();
+  TraceNodeUI phaseNode=new TraceNodeUI(String.format("Phase %s->%s",ph.input.getModelName(),ph.output.getModelName()),Icons.COLLECTION,null);
+  SNode outNode=node;
+  do {
+    Element[] changes=ph.findByOutputAncestors(outNode);
+    if (changes != null) {
+      MultiMap<SNodeId,TraceNodeUI> byInput=new MultiMap<SNodeId,TraceNodeUI>();
+      for (      Element e : changes) {
+        byInput.putValue(e.input,new TraceNodeUI(Kind.TEMPLATE,e.template));
+      }
+      for (      SNodeId input : byInput.keySet()) {
+        TraceNodeUI child=new TraceNodeUI(Kind.INPUT,new SNodePointer(ph.input,input));
+        for (        TraceNodeUI n : byInput.get(input)) {
+          child.addChild(n);
+        }
+        phaseNode.addChild(child);
+      }
+      break;
+    }
+    outNode=outNode.getParent();
+  }
+ while (outNode != null);
+  if (phaseNode.getChildren().iterator().hasNext()) {
+    rv.add(phaseNode);
+  }
+  return rv;
 }

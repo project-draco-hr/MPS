@@ -1,6 +1,16 @@
 {
   final SNodeReference nodeRef=node.getReference();
   List<TracerNode> rootTracerNodes=getRootsOfOutputModel(nodeRef.getModelReference());
+  final TraceNodeUI newTracer;
+  if (myNewTrace != null) {
+    newTracer=new TraceNodeUI("New gen tracer",Icons.COLLECTION,nodeRef);
+    for (    TraceNodeUI n : myNewTrace.buildBackTrace(node)) {
+      newTracer.addChild(n);
+    }
+  }
+ else {
+    newTracer=null;
+  }
   TracerNode tracerNode=null;
   for (  TracerNode rootTracerNode : rootTracerNodes) {
     tracerNode=rootTracerNode.find(Kind.OUTPUT,nodeRef);
@@ -9,7 +19,8 @@
     }
   }
   if (tracerNode != null) {
-    return buildTracebackTree(tracerNode,0);
+    final TraceNodeUI tbt=buildTracebackTree(tracerNode,0);
+    return newTracer == null ? tbt : group(tbt,newTracer);
   }
   List<TemplateMappingScript> mappingScripts=myModelsProcessedByScripts.getScriptsForOutput(node.getModel());
   if (mappingScripts == null)   return null;
@@ -38,6 +49,9 @@
  else {
       outputTracerNode.addChild(new TraceNodeUI(Kind.APPROXIMATE_INPUT,new jetbrains.mps.smodel.SNodePointer(inputNode)));
     }
+  }
+  if (newTracer != null) {
+    return group(outputTracerNode,newTracer);
   }
   return outputTracerNode;
 }
