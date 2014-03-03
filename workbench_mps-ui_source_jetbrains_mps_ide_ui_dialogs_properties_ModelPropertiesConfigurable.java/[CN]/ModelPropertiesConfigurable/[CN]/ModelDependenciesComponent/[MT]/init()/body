@@ -9,16 +9,23 @@
   importedModelsTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
   importedModelsTable.setModel(myImportedModels);
   importedModelsTable.setDefaultRenderer(SModelReference.class,new ModelTableCellRender(){
-    @Override protected DependencyCellState getDependencyCellState(    org.jetbrains.mps.openapi.model.SModelReference modelReference){
-      if (!StateUtil.isAvailable(modelReference)) {
-        return DependencyCellState.NOT_AVALIABLE;
+    @Override protected DependencyCellState getDependencyCellState(    final org.jetbrains.mps.openapi.model.SModelReference modelReference){
+      DependencyCellState res=ModelAccess.instance().runReadAction(new Computable<DependencyCellState>(){
+        @Override public DependencyCellState compute(){
+          if (!StateUtil.isAvailable(modelReference)) {
+            return DependencyCellState.NOT_AVALIABLE;
+          }
+          if (!VisibilityUtil.isVisible(myModelDescriptor.getModule(),modelReference.resolve(MPSModuleRepository.getInstance()))) {
+            return DependencyCellState.NOT_IN_SCOPE;
+          }
+          if ((myModelProperties.getImportedModelsRemoveCondition().met(modelReference))) {
+            return DependencyCellState.UNUSED;
+          }
+          return null;
+        }
       }
-      if (!VisibilityUtil.isVisible(myModelDescriptor.getModule(),modelReference.resolve(MPSModuleRepository.getInstance()))) {
-        return DependencyCellState.NOT_IN_SCOPE;
-      }
-      if ((myModelProperties.getImportedModelsRemoveCondition().met(modelReference))) {
-        return DependencyCellState.UNUSED;
-      }
+);
+      if (res != null)       return res;
       return super.getDependencyCellState(modelReference);
     }
   }

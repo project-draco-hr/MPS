@@ -1,0 +1,28 @@
+{
+  final Executor ex=myExecutor;
+  if (ex == null) {
+    return;
+  }
+  ex.execute(new Runnable(){
+    @Override public void run(){
+      boolean disposed=ModelAccess.instance().runReadAction(new Computable<Boolean>(){
+        @Override public Boolean compute(){
+          return !TreeNodeUpdater.checkDisposed(node);
+        }
+      }
+);
+      if (disposed)       return;
+      Project project=ProjectHelper.toIdeaProject(node.getOperationContext().getProject());
+      if (project != null) {
+        DumbService.getInstance(project).waitForSmartMode();
+      }
+      ModelAccess.instance().runReadAction(new Runnable(){
+        @Override public void run(){
+          TreeUpdateVisitor.super.doDispatch(node);
+        }
+      }
+);
+    }
+  }
+);
+}
