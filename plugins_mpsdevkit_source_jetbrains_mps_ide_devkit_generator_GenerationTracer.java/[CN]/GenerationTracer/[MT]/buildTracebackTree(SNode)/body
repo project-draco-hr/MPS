@@ -1,6 +1,16 @@
 {
   final SNodeReference nodeRef=node.getReference();
   List<TracerNode> rootTracerNodes=getRootsOfOutputModel(nodeRef.getModelReference());
+  final TraceNodeUI newTracer;
+  if (myNewTrace != null) {
+    newTracer=new TraceNodeUI("New gen tracer",Icons.COLLECTION,nodeRef);
+    for (    TraceNodeUI n : myNewTrace.buildBackTrace(node)) {
+      newTracer.addChild(n);
+    }
+  }
+ else {
+    newTracer=null;
+  }
   TracerNode tracerNode=null;
   for (  TracerNode rootTracerNode : rootTracerNodes) {
     tracerNode=rootTracerNode.find(Kind.OUTPUT,nodeRef);
@@ -9,7 +19,8 @@
     }
   }
   if (tracerNode != null) {
-    return buildTracebackTree(tracerNode,0);
+    final TraceNodeUI tbt=buildTracebackTree(tracerNode,0);
+    return newTracer == null ? tbt : group(tbt,newTracer);
   }
   List<TemplateMappingScript> mappingScripts=myModelsProcessedByScripts.getScriptsForOutput(node.getModel());
   if (mappingScripts == null)   return null;
@@ -24,22 +35,23 @@
     if (inputNode != null)     break;
     outputNode=outputNode.getParent();
   }
-  TracerNode outputTracerNode=new TracerNode(Kind.OUTPUT,new jetbrains.mps.smodel.SNodePointer(node));
-  tracerNode=outputTracerNode;
+  TraceNodeUI outputTracerNode=new TraceNodeUI(Kind.OUTPUT,new jetbrains.mps.smodel.SNodePointer(node));
   List<TemplateMappingScript> mappingScripts_reversed=new ArrayList<TemplateMappingScript>(mappingScripts);
   Collections.reverse(mappingScripts_reversed);
   for (  TemplateMappingScript mappingScript : mappingScripts_reversed) {
-    TracerNode childTracerNode=new TracerNode(Kind.MAPPING_SCRIPT,mappingScript.getScriptNode());
-    tracerNode.addChild(childTracerNode);
-    tracerNode=childTracerNode;
+    TraceNodeUI childTracerNode=new TraceNodeUI(Kind.MAPPING_SCRIPT,mappingScript.getScriptNode());
+    outputTracerNode.addChild(childTracerNode);
   }
   if (inputNode != null) {
     if (outputNode == node) {
-      tracerNode.addChild(new TracerNode(Kind.INPUT,new jetbrains.mps.smodel.SNodePointer(inputNode)));
+      outputTracerNode.addChild(new TraceNodeUI(Kind.INPUT,new jetbrains.mps.smodel.SNodePointer(inputNode)));
     }
  else {
-      tracerNode.addChild(new TracerNode(Kind.APPROXIMATE_INPUT,new jetbrains.mps.smodel.SNodePointer(inputNode)));
+      outputTracerNode.addChild(new TraceNodeUI(Kind.APPROXIMATE_INPUT,new jetbrains.mps.smodel.SNodePointer(inputNode)));
     }
+  }
+  if (newTracer != null) {
+    return group(outputTracerNode,newTracer);
   }
   return outputTracerNode;
 }

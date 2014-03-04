@@ -19,31 +19,14 @@
   }
 );
   if (needToRegenerate) {
-    final Set<Language> langs=new LinkedHashSet<Language>();
+    final Map<SModule,List<SModel>> langs=new LinkedHashMap<SModule,List<SModel>>();
     modelAccess.runReadAction(new Runnable(){
       public void run(){
-        langs.add(myLanguage);
-        langs.addAll(ModuleRepositoryFacade.getInstance().getAllExtendingLanguages(myLanguage));
+        RefactoringUtil.fillLanguageAndItsExtendingLanguageModels(myLanguage,langs);
       }
     }
 );
-    for (    final Language l : langs) {
-      final List<SModel> models=ListSequence.fromList(new ArrayList<SModel>());
-      modelAccess.runReadAction(new Runnable(){
-        public void run(){
-          ListSequence.fromList(models).addSequence(Sequence.fromIterable(Sequence.fromArray(l.getModels().toArray(new SModel[0]))).where(new IWhereFilter<SModel>(){
-            public boolean accept(            SModel it){
-              return it instanceof GeneratableSModel && ((GeneratableSModel)it).isGeneratable();
-            }
-          }
-));
-        }
-      }
-);
-      if (models == null) {
-        setErrorText("Rebuild configuration is invalid");
-        return;
-      }
+    for (    final List<SModel> models : langs.values()) {
       ModuleContext context=new ModuleContext(myLanguage,myProject);
       MakeSession sess=new MakeSession(context);
       if (IMakeService.INSTANCE.get().openNewSession(sess)) {
