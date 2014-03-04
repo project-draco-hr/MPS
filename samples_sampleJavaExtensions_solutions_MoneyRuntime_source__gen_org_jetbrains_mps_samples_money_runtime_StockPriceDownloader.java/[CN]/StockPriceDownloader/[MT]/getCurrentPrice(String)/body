@@ -1,0 +1,49 @@
+{
+  if ((symbol != null && symbol.length() > 0)) {
+    try {
+      List<DailyStockPrice> prices=MapSequence.fromMap(priceCache).get(symbol);
+      if (prices == null) {
+        prices=ListSequence.fromList(new ArrayList<DailyStockPrice>());
+        URL url=new URL("http://ichart.finance.yahoo.com/table.csv?s=" + symbol);
+        InputStream stream=URLUtil.openStream(url);
+        BufferedReader reader=new BufferedReader(new InputStreamReader(stream));
+        String line;
+        boolean header=true;
+        SimpleDateFormat dateFormat=new SimpleDateFormat("yyyy-MM-dd");
+        while ((line=reader.readLine()) != null) {
+          if (!(header)) {
+            String[] item=new String[7];
+            StringTokenizer tokenizer=new StringTokenizer(line,",");
+            try {
+              for (int i=0; i < 7; i++) {
+                item[i]=trim_54jj5w_a0a0a0a2a0a7a1a0a0a21(tokenizer.nextToken());
+              }
+              DailyStockPrice price=new DailyStockPrice(dateFormat.parse(item[0]),item[1],item[2],item[3],item[4],item[5],item[6]);
+              ListSequence.fromList(prices).addElement(price);
+            }
+ catch (            ParseException e) {
+              return null;
+            }
+catch (            IndexOutOfBoundsException e) {
+              return null;
+            }
+          }
+ else {
+            header=false;
+          }
+        }
+        MapSequence.fromMap(priceCache).put(symbol,prices);
+      }
+      return new Money(ListSequence.fromList(prices).getElement(0).getAdjustedClose(),"USD");
+    }
+ catch (    MalformedURLException e) {
+      return null;
+    }
+catch (    IOException e) {
+      return null;
+    }
+  }
+ else {
+    return null;
+  }
+}
