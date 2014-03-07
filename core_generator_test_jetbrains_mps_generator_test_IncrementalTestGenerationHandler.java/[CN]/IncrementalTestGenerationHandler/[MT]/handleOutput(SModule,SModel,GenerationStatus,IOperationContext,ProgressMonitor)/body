@@ -21,11 +21,14 @@
   if (status.isOk()) {
     myLastDependencies=status.getDependencies();
     myFilesDir=FileGenerationUtil.getDefaultOutputDir(inputModel,targetDir);
-    IFile cachesDir=FileGenerationUtil.getDefaultOutputDir(inputModel,FileGenerationUtil.getCachesDir(targetDir));
-    StreamHandler streamHandler=new CollectingStreamHandler(cachesDir);
+    StreamHandler streamHandler=new CollectingStreamHandler(generatedContent,getExistingContent());
     try {
-      boolean result=new TextGenerator(streamHandler,BLDependenciesCache.getInstance().getGenerator(),GenerationDependenciesCache.getInstance().getGenerator()).handleOutput(invocationContext,status);
-      Assert.assertTrue(result);
+      TextFacility tf=new TextFacility(status);
+      tf.failNoTextGen(false).generateDebug(false);
+      tf.toTextModel();
+      tf.updateBaseLangDeps(streamHandler);
+      tf.serializeOutcome(streamHandler);
+      Assert.assertTrue(tf.getErrors().isEmpty());
     }
   finally {
       streamHandler.dispose();

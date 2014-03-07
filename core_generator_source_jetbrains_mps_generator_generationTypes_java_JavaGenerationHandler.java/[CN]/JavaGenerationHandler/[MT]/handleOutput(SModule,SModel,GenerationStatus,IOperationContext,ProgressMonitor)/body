@@ -4,19 +4,27 @@
     info("handling output...");
     IFile targetDir=FileSystem.getInstance().getFileByPath(SModuleOperations.getOutputPathFor(inputModel));
     long startJobTime=System.currentTimeMillis();
-    boolean result=false;
     if (status.isOk()) {
       JavaStreamHandler javaStreamHandler=new JavaStreamHandler(inputModel,targetDir,myProcessor);
       try {
-        result=new TextGenerator(javaStreamHandler,BLDependenciesCache.getInstance().getGenerator(),TraceInfoCache.getInstance().getGenerator(),GenerationDependenciesCache.getInstance().getGenerator()).handleOutput(invocationContext,status);
+        TextFacility tf=new TextFacility(status);
+        tf.generateDebug(true).failNoTextGen(false);
+        tf.toTextModel();
+        tf.updateBaseLangDeps(javaStreamHandler);
+        tf.updateDebugInfo();
+        tf.serializeOutcome(javaStreamHandler);
+        tf.serializeCaches(javaStreamHandler,BLDependenciesCache.getInstance().getGenerator(),TraceInfoCache.getInstance().getGenerator(),GenerationDependenciesCache.getInstance().getGenerator());
+        if (!tf.getErrors().isEmpty()) {
+          info("there were errors:");
+          for (          IMessage m : tf.getErrors()) {
+            myLogger.info(m.getText());
+          }
+          return false;
+        }
       }
   finally {
         javaStreamHandler.dispose();
       }
-    }
-    if (!result) {
-      info("there were errors.");
-      return false;
     }
     if (myLogger.needsInfo()) {
       myLogger.info("output generated in " + (System.currentTimeMillis() - startJobTime) + " ms");
