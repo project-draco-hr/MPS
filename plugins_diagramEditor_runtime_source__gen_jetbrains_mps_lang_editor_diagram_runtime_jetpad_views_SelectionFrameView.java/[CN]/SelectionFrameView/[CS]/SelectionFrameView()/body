@@ -1,16 +1,32 @@
 {
-  children().add(myBorderView);
   new Mapper<SelectionFrameView,SelectionFrameView>(this,this){
     @Override protected void registerSynchronizers(    Mapper.SynchronizersConfiguration configuration){
       super.registerSynchronizers(configuration);
-      configuration.add(Synchronizers.forProperty(color,myBorderView.color()));
-      configuration.add(Synchronizers.forProperty(bounds,new Runnable(){
-        public void run(){
-          updateBorderView(bounds.get(),lineWidth.get());
+      configuration.add(Synchronizers.forConstantRole(this,SelectionFrameView.this,children(),new MapperFactory<SelectionFrameView,View>(){
+        public Mapper<? extends SelectionFrameView,? extends View> createMapper(        SelectionFrameView selectionView){
+          return new Mapper<SelectionFrameView,PolyLineView>(selectionView,new NonFocusablePolyLineView()){
+            @Override protected void registerSynchronizers(            Mapper.SynchronizersConfiguration configuration){
+              super.registerSynchronizers(configuration);
+              configuration.add(Synchronizers.forProperty(color,getTarget().color()));
+              configuration.add(Synchronizers.forProperties(lineWidth,getTarget().width()));
+              configuration.add(Synchronizers.forProperty(frameRectangle,new Runnable(){
+                public void run(){
+                  updateBorderView(getTarget(),frameRectangle.get());
+                }
+              }
+));
+            }
+          }
+;
         }
       }
 ));
-      configuration.add(Synchronizers.forProperties(lineWidth,myBorderView.width()));
+      configuration.add(Synchronizers.forProperty(lineWidth,new Runnable(){
+        public void run(){
+          frameWidth.set(AbstractExternalFrameView.getHalfWidth(lineWidth.get()));
+        }
+      }
+));
     }
   }
 .attachRoot();
