@@ -21,18 +21,15 @@
   if (status.isOk()) {
     myLastDependencies=status.getDependencies();
     myFilesDir=FileGenerationUtil.getDefaultOutputDir(inputModel,targetDir);
-    StreamHandler streamHandler=new CollectingStreamHandler(generatedContent,getExistingContent());
-    try {
-      TextFacility tf=new TextFacility(status);
-      tf.failNoTextGen(false).generateDebug(false);
-      tf.toTextModel();
-      tf.updateBaseLangDeps(streamHandler);
-      tf.serializeOutcome(streamHandler);
-      Assert.assertTrue(tf.getErrors().isEmpty());
-    }
-  finally {
-      streamHandler.dispose();
-    }
+    CollectingStreamHandler toStringHandler=new CollectingStreamHandler(generatedContent);
+    TouchHandler touchOnlyHandler=new TouchHandler(getExistingContent());
+    TextFacility tf=new TextFacility(status);
+    tf.failNoTextGen(false).generateDebug(false).generateBaseLangDeps(true);
+    tf.produceTextModel();
+    tf.serializeOutcome(toStringHandler);
+    tf.serializeCaches(new CacheGenLayout().register(touchOnlyHandler,BLDependenciesCache.getInstance().getGenerator()));
+    generatedContent.putAll(touchOnlyHandler.getTouched());
+    Assert.assertTrue(tf.getErrors().isEmpty());
   }
   return true;
 }
