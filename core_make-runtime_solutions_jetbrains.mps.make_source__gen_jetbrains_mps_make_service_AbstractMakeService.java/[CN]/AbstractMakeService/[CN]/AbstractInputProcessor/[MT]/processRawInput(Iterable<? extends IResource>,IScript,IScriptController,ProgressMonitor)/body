@@ -1,60 +1,19 @@
 {
-  final Wrappers._T<Iterable<? extends Iterable<? extends IResource>>> clInput=new Wrappers._T<Iterable<? extends Iterable<? extends IResource>>>();
-  final Wrappers._T<Iterable<? extends Iterable<String>>> usedLangs=new Wrappers._T<Iterable<? extends Iterable<String>>>();
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      final ModulesClusterizer mcr=new ModulesClusterizer();
-      clInput.value=mcr.clusterize(Sequence.fromIterable(inputRes).select(new ISelector<IResource,IResource>(){
-        public IResource select(        IResource r){
-          return r;
-        }
-      }
-));
-      usedLangs.value=Sequence.fromIterable(clInput.value).select(new ISelector<Iterable<? extends IResource>,Iterable<String>>(){
-        public Iterable<String> select(        Iterable<? extends IResource> it){
-          return mcr.allUsedLangNamespaces(it);
-        }
-      }
-).toListSequence();
+  MakeSequence makeSeq=new MakeSequence();
+  makeSeq.prepareClusters(inputRes);
+  makeSeq.prepareScipts(defaultScript,null);
+  Iterable<Cluster> clInput=makeSeq.getClusters();
+  Iterable<IScript> scripts=Sequence.fromIterable(clInput).select(new ISelector<Cluster,IScript>(){
+    public IScript select(    Cluster cluster){
+      return cluster.getScript();
     }
   }
 );
-  Iterable<ScriptBuilder> scriptBuilders=Sequence.fromIterable(usedLangs.value).select(new ISelector<Iterable<String>,ScriptBuilder>(){
-    public ScriptBuilder select(    Iterable<String> langs){
-      final ScriptBuilder scb=new ScriptBuilder();
-      Sequence.fromIterable(langs).visitAll(new IVisitor<String>(){
-        public void visit(        String ns){
-          LanguageRuntime lr=LanguageRegistry.getInstance().getLanguage(ns);
-          Iterable<IFacet> fcts=lr.getFacetProvider().getDescriptor(null).getManifest().facets();
-          scb.withFacetNames(Sequence.fromIterable(fcts).select(new ISelector<IFacet,IFacet.Name>(){
-            public IFacet.Name select(            IFacet fct){
-              return fct.getName();
-            }
-          }
-));
-          scb.withFacetNames(Sequence.fromIterable(FacetRegistry.getInstance().getFacetsForLanguage(ns)).select(new ISelector<IFacet,IFacet.Name>(){
-            public IFacet.Name select(            IFacet fct){
-              return fct.getName();
-            }
-          }
-));
-        }
-      }
-);
-      return scb.withFinalTarget(new ITarget.Name("jetbrains.mps.make.facets.Make.make"));
-    }
+  List<List<IResource>> clusteredInput=ListSequence.fromList(new ArrayList<List<IResource>>());
+  for (  Cluster cc : clInput) {
+    List<IResource> l=ListSequence.fromList(new ArrayList<IResource>());
+    ListSequence.fromList(l).addSequence(Sequence.fromIterable(cc.getResources()));
+    ListSequence.fromList(clusteredInput).addElement(l);
   }
-).toListSequence();
-  Iterable<IScript> scripts=((defaultScript != null ? Sequence.fromIterable(scriptBuilders).select(new ISelector<ScriptBuilder,IScript>(){
-    public IScript select(    ScriptBuilder it){
-      return defaultScript;
-    }
-  }
-) : Sequence.fromIterable(scriptBuilders).select(new ISelector<ScriptBuilder,IScript>(){
-    public IScript select(    ScriptBuilder scb){
-      return toScript(scb);
-    }
-  }
-)));
-  return processClusteredInput((Iterable<? extends Iterable<IResource>>)clInput.value,scripts,controller,monitor);
+  return processClusteredInput(clusteredInput,scripts,controller,monitor);
 }
