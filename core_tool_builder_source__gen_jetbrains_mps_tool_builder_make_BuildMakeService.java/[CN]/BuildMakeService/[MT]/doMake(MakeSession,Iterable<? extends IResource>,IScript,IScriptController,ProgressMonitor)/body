@@ -3,7 +3,13 @@
   if (Sequence.fromIterable(inputRes).isEmpty()) {
     String msg=scrName + " aborted: nothing to do";
     makeSession.getMessageHandler().handle(new Message(MessageKind.ERROR,msg));
-    return new FutureValue(new IResult.FAILURE(null));
+    return new FutureValue<IResult>(new IResult.FAILURE(null));
   }
-  return new BuildMakeService.TaskRunner(scrName,makeSession).runTask(inputRes,defaultScript,controller,monitor);
+  MakeSequence makeSeq=new MakeSequence();
+  makeSeq.prepareClusters(inputRes);
+  makeSeq.prepareScipts(defaultScript,makeSession);
+  IScriptController ctl=this.completeController(makeSession,controller);
+  CoreMakeTask task=new CoreMakeTask(scrName,makeSeq,ctl,makeSession.getMessageHandler());
+  task.run(monitor);
+  return new FutureValue<IResult>(task.getResult());
 }
