@@ -1,14 +1,27 @@
 {
   myInputName=jetbrains.mps.util.SNodeOperations.getModelLongName(inputModel);
   try {
-    myGenerators=GenerationPartitioningUtil.getTemplateModules(inputModel,additionalLanguages);
-    initTemplateModels();
-    GenerationPartitioner partitioner=new GenerationPartitioner(myGenerators);
-    myPlan=partitioner.createMappingSets();
+    EngagedGeneratorCollector c=new EngagedGeneratorCollector(inputModel,additionalLanguages);
+    GenerationPartitioner partitioner=new GenerationPartitioner(c.getAccessibleGenerators());
+    final List<List<TemplateMappingConfiguration>> mappingSets=partitioner.createMappingSets();
+    myGenerators=c.getDirectlyEngagedGenerators();
+    myPlan=new ArrayList<List<TemplateMappingConfiguration>>();
+    for (    List<TemplateMappingConfiguration> l : mappingSets) {
+      for (Iterator<TemplateMappingConfiguration> it=l.iterator(); it.hasNext(); ) {
+        final TemplateMappingConfiguration tmc=it.next();
+        if (!myGenerators.contains(tmc.getModel().getModule())) {
+          it.remove();
+        }
+      }
+      if (!l.isEmpty()) {
+        myPlan.add(l);
+      }
+    }
     if (myPlan.isEmpty()) {
-      myPlan.add(new ArrayList<TemplateMappingConfiguration>());
+      myPlan.add(Collections.<TemplateMappingConfiguration>emptyList());
     }
     myConflictingPriorityRules=partitioner.getConflictingPriorityRules();
+    initTemplateModels();
   }
  catch (  Throwable t) {
     LOG.error(null,t);
