@@ -4,9 +4,16 @@
       return new Mapper<Boolean,ResizableSelectionFrameView>(selected,new ResizableSelectionFrameView()){
         @Override protected void registerSynchronizers(        Mapper.SynchronizersConfiguration configuration){
           super.registerSynchronizers(configuration);
-          configuration.add(Synchronizers.forProperty(myInternalsBounds,getTarget().internalsBounds));
+          configuration.add(Synchronizers.forProperty(new DependentProperty<Rectangle>(myInternalsBounds,preferredLocation,preferredSize),getTarget().internalsBounds));
+          configuration.add(Synchronizers.forProperty(myInternalsBounds,getTarget().preferredInternalsBounds));
+          configuration.add(Synchronizers.forProperty(getTarget().preferredInternalsBounds,new Runnable(){
+            public void run(){
+              preferredLocation.set(getTarget().preferredInternalsBounds.get().origin);
+              preferredSize.set(getTarget().preferredInternalsBounds.get().dimension);
+            }
+          }
+));
           configuration.add(Synchronizers.forProperty(resizable,getTarget().resizable));
-          configuration.add(Synchronizers.forProperty(getTarget().preferredInternalsBounds,myInternalsBounds));
           configuration.add(Synchronizers.forProperty(Properties.ifProp(hasError,AbstractExternalFrameView.getHalfWidth(ERROR_FRAME_WIDTH),AbstractExternalFrameView.getHalfWidth(getTarget().selectionLineWidth.get())),getTarget().frameWidth));
         }
       }
