@@ -8,22 +8,6 @@
   if (isParallel) {
     optBuilder.strictMode(true).generateInParallel(isParallel,8);
   }
-  final IScriptController ctl=new IScriptController.Stub(){
-    @Override public void setup(    IPropertiesPool ppool){
-      TextGenFacetInitializer tgfi=new TextGenFacetInitializer();
-      tgfi.failNoTextGen(false).generateDebugInfo(true).populate(ppool);
-      Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>> makeparams=(Tuples._1<_FunctionTypes._return_P1_E0<? extends IFile,? super String>>)ppool.properties(new ITarget.Name("jetbrains.mps.make.facets.Make.make"),Object.class);
-      makeparams._0(new _FunctionTypes._return_P1_E0<IFile,String>(){
-        public IFile invoke(        String path){
-          return tmpFile(path);
-        }
-      }
-);
-      Tuples._2<Boolean,GenerationOptions.OptionsBuilder> params=(Tuples._2<Boolean,GenerationOptions.OptionsBuilder>)ppool.properties(new ITarget.Name("jetbrains.mps.lang.core.Generate.configure"),Object.class);
-      params._1(optBuilder);
-    }
-  }
-;
   final Wrappers._T<IResult> result=new Wrappers._T<IResult>();
   ModelAccess.instance().flushEventQueue();
   ThreadUtils.runInUIThreadAndWait(new Runnable(){
@@ -31,7 +15,20 @@
       IOperationContext context=new ProjectOperationContext(project);
       IScript scr=ModuleGenerationHolder.defaultScriptBuilder().toScript();
       try {
-        MakeSession session=new MakeSession(context,myMessageHandler,true);
+        final MakeSession session=new MakeSession(context,myMessageHandler,true);
+        IScriptController ctl=new IScriptController.Stub(){
+          @Override public void setup(          IPropertiesPool ppool){
+            new TextGenFacetInitializer().failNoTextGen(false).generateDebugInfo(true).populate(ppool);
+            new MakeFacetInitializer().setPathToFile(new _FunctionTypes._return_P1_E0<IFile,String>(){
+              public IFile invoke(              String path){
+                return tmpFile(path);
+              }
+            }
+).populate(ppool);
+            new GenerateFacetInitializer(session).setGenerationOptions(optBuilder).populate(ppool);
+          }
+        }
+;
         result.value=new TestMakeService().make(session,ModuleGenerationHolder.collectResources(context,module),scr,ctl,new EmptyProgressMonitor()).get();
       }
  catch (      InterruptedException ignore) {
