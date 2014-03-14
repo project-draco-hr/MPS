@@ -3,7 +3,9 @@
   IPerformanceTracer ttrace=myOptions.getTracingMode() != GenerationOptions.TRACE_OFF ? new PerformanceTracer("model " + NameUtil.shortNameFromLongName(inputModel.getModelName())) : new NullPerformanceTracer();
   boolean traceTypes=myOptions.getTracingMode() == GenerationOptions.TRACE_TYPES;
   TypeChecker.getInstance().generationStarted(traceTypes ? ttrace : null);
-  final GenerationSession generationSession=new GenerationSession(inputModel,invocationContext,this,myCancellationMonitor,myLogger,myTransientModelsProvider.getModule(module),ttrace,myOptions);
+  final GenerationTrace genTrace=myOptions.isSaveTransientModels() ? new GenTraceImpl() : new GenerationTrace.NoOp();
+  final TransientModelsModule transientModule=myTransientModelsProvider.getModule(module);
+  final GenerationSession generationSession=new GenerationSession(inputModel,invocationContext,this,myCancellationMonitor,myLogger,transientModule,ttrace,myOptions,genTrace);
   monitor.start(inputModel.getModelName(),10);
   try {
     generationSession.getLoggingHandler().register();
@@ -20,6 +22,9 @@
     status.setOriginalInputModel(inputModel);
     currentGenerationOK=status.isOk();
     checkMonitorCanceled(monitor);
+    if (myOptions.isSaveTransientModels()) {
+      transientModule.publishTrace(inputModel.getReference(),genTrace);
+    }
     currentGenerationOK=currentGenerationOK && myGenerationHandler.handleOutput(module,inputModel,status,invocationContext,monitor.subTask(1));
     monitor.advance(0);
   }
