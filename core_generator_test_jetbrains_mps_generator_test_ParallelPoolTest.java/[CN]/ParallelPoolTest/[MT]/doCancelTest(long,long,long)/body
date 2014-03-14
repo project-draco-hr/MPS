@@ -1,0 +1,30 @@
+{
+  final long start=System.currentTimeMillis();
+  GenerationTaskPool pool=new GenerationTaskPool(4);
+  final CustomTask[] generationTasks=createTasks(taskWork,4);
+  pool.addTask(new CancelTask(cancelDelayWork));
+  for (  GenerationTask t : generationTasks) {
+    pool.addTask(t);
+  }
+  boolean canceledExc=false;
+  try {
+    if (msPoolWaitDelay > 0) {
+      Thread.sleep(msPoolWaitDelay);
+    }
+    pool.waitForCompletion();
+  }
+ catch (  GenerationCanceledException e) {
+    canceledExc=true;
+  }
+catch (  GenerationFailureException e) {
+  }
+catch (  InterruptedException ex) {
+  }
+  pool.dispose();
+  Assert.assertTrue(canceledExc);
+  long end=System.currentTimeMillis();
+  for (  CustomTask t : generationTasks) {
+    Assert.assertFalse("task should not be finished",t.isFinished());
+  }
+  return end - start;
+}

@@ -4,33 +4,7 @@
     return;
   }
   long amountFor2secs=get2SecsOperation();
-  final long start=System.currentTimeMillis();
-  GenerationTaskPool pool=new GenerationTaskPool(new EmptyProgressMonitor(){
-    @Override public boolean isCanceled(){
-      return (System.currentTimeMillis() - start > 1600);
-    }
-  }
-,4);
-  final CustomTask[] generationTasks=createTasks(amountFor2secs * 4,4,pool);
-  for (  GenerationTask t : generationTasks) {
-    pool.addTask(t);
-  }
-  boolean canceledExc=false;
-  try {
-    pool.waitForCompletion();
-  }
- catch (  GenerationCanceledException e) {
-    canceledExc=true;
-  }
-catch (  GenerationFailureException e) {
-  }
-  Assert.assertTrue(canceledExc);
-  long end=System.currentTimeMillis();
-  for (  CustomTask t : generationTasks) {
-    Assert.assertTrue("task should be cancelled",t.isCancelled());
-    Assert.assertFalse("task should not be finished",t.isFinished());
-  }
-  LOG.info("Total " + (end - start) / 1000. + " seconds (should be 2 secs), when cancelled after 1.6 secs");
-  Assert.assertTrue((end - start) < 2300 && (end - start) > 1700);
-  pool.dispose();
+  long duration=doCancelTest(amountFor2secs * 4,Math.round(amountFor2secs * 0.8),0);
+  LOG.info("Total " + duration / 1000. + " seconds (should be 2 secs), when cancelled after 1.6 secs");
+  Assert.assertTrue(duration < 2300 && duration > 1700);
 }
