@@ -7,17 +7,23 @@
   ArrayList<RelationDescriptor> tabs=new ArrayList<RelationDescriptor>(myPossibleTabs);
   Collections.sort(tabs,new RelationComparator());
   Map<RelationDescriptor,List<SNode>> newContent=updateDocumentsAndNodes();
-  for (  RelationDescriptor tab : tabs) {
-    List<SNode> nodes=newContent.get(tab);
-    if (nodes != null) {
-      myRealTabs.add(new ButtonEditorTab(this,new NodeChangeCallback(){
-        @Override public void changeNode(        SNode newNode){
-          onNodeChange(newNode);
-        }
-      }
-,myRealTabs.size(),tab,myBaseNode,getColorProvider(),myEditor));
+  final NodeChangeCallback callback=new NodeChangeCallback(){
+    @Override public void changeNode(    SNode newNode){
+      onNodeChange(newNode);
     }
   }
+;
+  for (  RelationDescriptor tabDescriptor : tabs) {
+    List<SNode> nodes=newContent.get(tabDescriptor);
+    if (nodes != null) {
+      final ButtonEditorTab tab=new ButtonEditorTab(this,myRealTabs.size(),tabDescriptor,myBaseNode,getColorProvider());
+      final SelectTabAction action=new SelectTabAction(tab,callback);
+      tab.setSelectTabAction(action);
+      action.registerShortcut(myEditor);
+      myRealTabs.add(tab);
+    }
+  }
+  updateTabColors();
   DefaultActionGroup group=new DefaultActionGroup();
   for (  ButtonEditorTab tab : myRealTabs) {
     group.add(tab.getSelectTabAction());
