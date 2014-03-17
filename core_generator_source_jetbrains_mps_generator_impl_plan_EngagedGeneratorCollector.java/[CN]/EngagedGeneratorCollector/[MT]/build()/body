@@ -1,0 +1,48 @@
+{
+  Queue<String> queue=new LinkedList<String>(getDirectlyUsedLanguages());
+  queue.addAll(myAdditionalLanguages);
+  Set<String> processed=new HashSet<String>(queue);
+  Map<String,List<TemplateModule>> result=new HashMap<String,List<TemplateModule>>();
+  Set<String> badLanguages=new HashSet<String>();
+  while (!queue.isEmpty()) {
+    String next=queue.remove();
+    LanguageRuntime language=LanguageRegistry.getInstance().getLanguage(next);
+    if (language == null) {
+      LOG.error(String.format("Model %s uses language %s which is missing (likely is not yet generated or is a bootstrap dependency)",myModel.getModelName(),next));
+      badLanguages.add(next);
+      continue;
+    }
+    Collection<TemplateModule> generators=language.getGenerators();
+    if (generators == null) {
+      result.put(next,Collections.<TemplateModule>emptyList());
+      continue;
+    }
+    ArrayList<TemplateModule> langGenerators=new ArrayList<TemplateModule>(generators.size());
+    result.put(next,langGenerators);
+    for (    TemplateModule generator : generators) {
+      if (generator == null) {
+        continue;
+      }
+      langGenerators.add(generator);
+      HashSet<String> otherLanguages=new HashSet<String>();
+      otherLanguages.addAll(generator.getUsedLanguages());
+      final Collection<String> refGenLangs=getLanguagesFromReferencedModules(generator);
+      if (!myUseLanguagesFromExtendedGenerators) {
+        refGenLangs.retainAll(getDirectlyUsedLanguages());
+      }
+      otherLanguages.addAll(refGenLangs);
+      otherLanguages.removeAll(processed);
+      for (      String lang : otherLanguages) {
+        processed.add(lang);
+        queue.add(lang);
+      }
+    }
+  }
+  ArrayList<TemplateModule> all=new ArrayList<TemplateModule>();
+  for (  Collection<TemplateModule> m : result.values()) {
+    all.addAll(m);
+  }
+  myAccessibleGenerators=Collections.unmodifiableList(all);
+  buildLangExtendClosure(Collections.<String>emptyList(),Collections.<String>emptyList());
+  myEngagedGenerators=myAccessibleGenerators;
+}

@@ -13,20 +13,22 @@
     new CloneUtil(currentModel,currentOutputModel_clone).cloneModelWithImports();
     ttrace.pop();
     mySessionContext.getGenerationTracer().registerPostMappingScripts(currentModel,currentOutputModel_clone,ruleManager.getPostProcessScripts().getScripts());
+    myNewTrace.nextStep(currentModel.getReference(),currentOutputModel_clone.getReference());
     toRecycle=currentModel;
     currentModel=currentOutputModel_clone;
     myDependenciesBuilder.scriptApplied(currentModel);
   }
  else {
     mySessionContext.getGenerationTracer().registerPostMappingScripts(currentModel,currentModel,ruleManager.getPostProcessScripts().getScripts());
+    myNewTrace.nextStep(currentModel.getReference(),currentModel.getReference());
     if (currentModel instanceof SModelInternal) {
       ((SModelInternal)currentModel).disposeFastNodeFinder();
     }
   }
-  TemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,myProgressMonitor,ruleManager,currentModel,currentModel,myDependenciesBuilder);
+  TemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,new StepArguments(ruleManager,currentModel,currentModel,myDependenciesBuilder,myNewTrace));
   for (  TemplateMappingScript postMappingScript : ruleManager.getPostProcessScripts().getScripts()) {
     if (myLogger.needsInfo()) {
-      myLogger.info(postMappingScript.getScriptNode().resolve(MPSModuleRepository.getInstance()),"post-process " + postMappingScript.getLongName());
+      myLogger.info(postMappingScript.getScriptNode(),"post-process " + postMappingScript.getLongName());
     }
     templateGenerator.executeScript(postMappingScript);
   }

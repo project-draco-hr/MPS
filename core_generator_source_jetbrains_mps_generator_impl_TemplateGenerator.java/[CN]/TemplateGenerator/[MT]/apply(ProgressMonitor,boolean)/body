@@ -1,0 +1,64 @@
+{
+  myProgressMonitor=progressMonitor;
+  checkMonitorCanceled();
+  final IPerformanceTracer ttrace=getGeneratorSessionContext().getPerformanceTracer();
+  myAreMappingsReady=false;
+  ttrace.push("weavings",false);
+  myWeavingProcessor=new WeavingProcessor(this);
+  myWeavingProcessor.prepareWeavingRules(getInputModel(),myRuleManager.getWeaving_MappingRules());
+  ttrace.pop();
+  ttrace.push("reductions",false);
+  applyReductions(isPrimary);
+  ttrace.pop();
+  myInplaceModelChange=myDeltaBuilder != null;
+  myAreMappingsReady=true;
+  myChanged|=myDependenciesBuilder.isStepRequired();
+  if (myDeltaBuilder == null) {
+    for (    SNode outputRoot : myOutputRoots) {
+      myOutputModel.addRootNode(outputRoot);
+    }
+    ttrace.push("reloading roots from cache",false);
+    myDependenciesBuilder.reloadRequired(getMappings());
+    ttrace.pop();
+  }
+  if (myWeavingProcessor.hasWeavingRulesToApply()) {
+    checkMonitorCanceled();
+    ttrace.push("weavings",false);
+    myWeavingProcessor.apply();
+    myWeavingProcessor=null;
+    ttrace.pop();
+  }
+  if (!myDelayedChanges.isEmpty()) {
+    checkMonitorCanceled();
+    ttrace.push("delayed mappings",false);
+    myDelayedChanges.doAllChanges(this);
+    ttrace.pop();
+  }
+  if (myDeltaBuilder != null && myDeltaBuilder.hasChanges()) {
+    ttrace.push("apply delta changes",false);
+    myDeltaBuilder.prepareReferences(getInputModel(),this);
+    ttrace.pop();
+  }
+  if (!myPostponedRefs.isEmpty()) {
+    ttrace.push("restoring references",false);
+    myPostponedRefs.prepare();
+    ttrace.pop();
+  }
+  if (myDeltaBuilder != null && myDeltaBuilder.hasChanges()) {
+    ttrace.push("apply delta changes",false);
+    myDeltaBuilder.applyInplace(getInputModel());
+    ttrace.pop();
+  }
+  if (!myPostponedRefs.isEmpty()) {
+    ttrace.push("restoring references",false);
+    myPostponedRefs.replace();
+    ttrace.pop();
+  }
+  myOutputRoots.clear();
+  myDeltaBuilder=null;
+  if (myChanged || isPrimary) {
+    getBlockedReductionsData().advanceStep();
+    checkMonitorCanceled();
+  }
+  return myChanged;
+}

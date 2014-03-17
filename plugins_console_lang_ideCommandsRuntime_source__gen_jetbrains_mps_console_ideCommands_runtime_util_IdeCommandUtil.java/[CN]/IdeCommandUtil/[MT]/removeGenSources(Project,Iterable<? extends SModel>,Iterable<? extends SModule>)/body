@@ -1,0 +1,66 @@
+{
+  final Wrappers._T<Iterable<? extends SModule>> _modules=new Wrappers._T<Iterable<? extends SModule>>(modules);
+  if (Sequence.fromIterable(models).isEmpty() && Sequence.fromIterable(_modules.value).isEmpty()) {
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        _modules.value=project.getModulesWithGenerators();
+      }
+    }
+);
+  }
+  Sequence.fromIterable(models).where(new IWhereFilter<SModel>(){
+    public boolean accept(    SModel it){
+      return SNodeOperations.isGeneratable(it);
+    }
+  }
+).visitAll(new IVisitor<SModel>(){
+    public void visit(    SModel model){
+      String outputPath=SModuleOperations.getOutputPathFor(model);
+      String cachePath=FileGenerationUtil.getCachesPath(outputPath);
+      IFile outputDir=FileGenerationUtil.getDefaultOutputDir(model,FileSystem.getInstance().getFileByPath(outputPath));
+      IFile cachesDir=FileGenerationUtil.getDefaultOutputDir(model,FileSystem.getInstance().getFileByPath(cachePath));
+      Iterable<IFile> outputItems=outputDir.getChildren();
+      Sequence.fromIterable(outputItems).where(new IWhereFilter<IFile>(){
+        public boolean accept(        IFile it){
+          return !(it.isDirectory());
+        }
+      }
+).visitAll(new IVisitor<IFile>(){
+        public void visit(        IFile it){
+          it.delete();
+        }
+      }
+);
+      Iterable<IFile> cachedItems=cachesDir.getChildren();
+      Sequence.fromIterable(cachedItems).where(new IWhereFilter<IFile>(){
+        public boolean accept(        IFile it){
+          return !(it.isDirectory());
+        }
+      }
+).visitAll(new IVisitor<IFile>(){
+        public void visit(        IFile it){
+          it.delete();
+        }
+      }
+);
+    }
+  }
+);
+  Sequence.fromIterable(_modules.value).ofType(AbstractModule.class).visitAll(new IVisitor<AbstractModule>(){
+    public void visit(    AbstractModule it){
+      IFile outputDir=it.getOutputPath();
+      IFile testDir=check_nf7729_a0b0a0a2a4(it.getFacet(TestsFacet.class));
+      if (outputDir != null) {
+        IFile cacheDir=FileGenerationUtil.getCachesDir(outputDir);
+        outputDir.delete();
+        cacheDir.delete();
+      }
+      if (testDir != null) {
+        IFile testCacheDir=FileGenerationUtil.getCachesDir(testDir);
+        testDir.delete();
+        testCacheDir.delete();
+      }
+    }
+  }
+);
+}
