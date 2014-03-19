@@ -9,6 +9,9 @@
   ThreadUtils.runInUIThreadAndWait(new Runnable(){
     public void run(){
       try {
+        if (LOG.isInfoEnabled()) {
+          LOG.info("Load and open the project with path " + filePath);
+        }
         project[0]=projectManager.loadAndOpenProject(filePath);
       }
  catch (      Throwable e) {
@@ -22,7 +25,11 @@
   }
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
-      new ModuleMaker().make(new LinkedHashSet<SModule>(MPSModuleRepository.getInstance().getAllModules()),new EmptyProgressMonitor());
+      Set<SModule> moduleSet=SetSequence.fromSet(new HashSet<SModule>());
+      SetSequence.fromSet(moduleSet).addSequence(Sequence.fromIterable(MPSModuleRepository.getInstance().getModules()));
+      final IMessageHandler logHandler=new IMessageHandler.LogHandler(Logger.wrap(LogManager.getLogger(IdeaEnvironment.class)));
+      final ModuleMaker maker=new ModuleMaker(logHandler,MessageKind.INFORMATION);
+      maker.make(moduleSet,new EmptyProgressMonitor());
     }
   }
 );
