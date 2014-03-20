@@ -1,2 +1,35 @@
 {
+  List<SNode> _outputNodes=myTemplateProcessor.applyTemplate(templateNode,templateContext,macro);
+  if (_outputNodes.isEmpty()) {
+    return Collections.emptyList();
+  }
+  if (_outputNodes.size() > 1) {
+    getLogger().error(macro.getReference(),"cannot apply $WEAVE$ to a list of nodes",GeneratorUtil.describe(templateContext.getInput(),"input"));
+    return _outputNodes;
+  }
+  SNode consequence=RuleUtil.getWeaveMacro_Consequence(macro);
+  if (consequence == null) {
+    getLogger().error(macro.getReference(),"couldn't evaluate weave macro: no consequence",GeneratorUtil.describeIfExists(templateContext.getInput(),"input"));
+    return _outputNodes;
+  }
+  SNode template=RuleUtil.getTemplateDeclarationReference_Template(consequence);
+  if (template == null) {
+    getLogger().error(macro.getReference(),"couldn't evaluate weave macro: no template",GeneratorUtil.describeIfExists(templateContext.getInput(),"input"));
+    return _outputNodes;
+  }
+  WeaveTemplateContainer wtc=new WeaveTemplateContainer(template);
+  wtc.initialize(getLogger());
+  SNode contextNode=_outputNodes.get(0);
+  List<SNode> nodesToWeave=getNewInputNodes(macro,templateContext);
+  for (  SNode node : nodesToWeave) {
+    try {
+      myTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(node));
+      myTracer.pushRuleConsequence(new jetbrains.mps.smodel.SNodePointer(macro));
+      wtc.apply(contextNode,templateContext.subContext(node),myTemplateProcessor.getEnvironment());
+    }
+  finally {
+      myTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(node));
+    }
+  }
+  return _outputNodes;
 }

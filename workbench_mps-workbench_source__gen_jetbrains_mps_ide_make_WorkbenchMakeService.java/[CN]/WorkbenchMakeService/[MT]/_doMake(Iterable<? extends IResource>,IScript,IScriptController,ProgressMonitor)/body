@@ -10,12 +10,57 @@
       String msg=scrName + " aborted: nothing to do";
       mh.handle(new Message(MessageKind.ERROR,msg));
       this.displayInfo(msg);
-      return new FutureValue(new IResult.FAILURE(null));
+      return new FutureValue<IResult>(new IResult.FAILURE(null));
     }
  else {
       this.displayInfo("Everything up to date");
-      return new FutureValue(new IResult.SUCCESS(null));
+      return new FutureValue<IResult>(new IResult.SUCCESS(null));
     }
   }
-  return new WorkbenchMakeService.TaskRunner(scrName,mh).runTask(inputRes,defaultScript,controller,monitor);
+  MakeSequence makeSeq=new MakeSequence();
+  makeSeq.prepareClusters(inputRes);
+  final MakeSession session=getSession();
+  makeSeq.prepareScipts(defaultScript,session);
+  Project ideaPrj=ProjectHelper.toIdeaProject(session.getContext().getProject());
+  final MakeTask task=new MakeTask(ideaPrj,scrName,makeSeq,new WorkbenchMakeService.Controller(controller,mh),mh,PerformInBackgroundOption.DEAF){
+    @Override protected void aboutToStart(){
+      notifyListeners(new MakeNotification(WorkbenchMakeService.this,MakeNotification.Kind.SCRIPT_ABOUT_TO_START));
+    }
+    @Override protected void done(){
+      currentProcess.compareAndSet(this,null);
+      attemptCloseSession();
+      notifyListeners(new MakeNotification(WorkbenchMakeService.this,MakeNotification.Kind.SCRIPT_FINISHED));
+    }
+    @Override protected void displayInfo(    String info){
+      WorkbenchMakeService.this.displayInfo(info);
+    }
+  }
+;
+  try {
+    getSession().doExecute(new Runnable(){
+      public void run(){
+        SwingUtilities.invokeLater(new Runnable(){
+          public void run(){
+            IdeEventQueue.getInstance().flushQueue();
+            if (currentProcess.compareAndSet(null,task)) {
+              ProgressManager.getInstance().run(task);
+            }
+ else {
+              throw new IllegalStateException("unexpected: make process already running");
+            }
+            IdeEventQueue.getInstance().flushQueue();
+          }
+        }
+);
+      }
+    }
+);
+  }
+ catch (  RuntimeException rex) {
+    if (currentProcess.get() == null) {
+      abortSession();
+    }
+    throw rex;
+  }
+  return task;
 }

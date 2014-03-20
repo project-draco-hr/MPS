@@ -3,17 +3,22 @@
   if (sourceNode == null) {
     return null;
   }
-  String propertyName=QueriesUtil.getEditedPropertyName(editorContext.getSelectedCell());
+  final String propertyName=EditingUtil.getEditedPropertyName(editorContext.getSelectedCell());
   if (propertyName == null) {
     return null;
   }
   List<SNode> result=ListSequence.fromList(new ArrayList<SNode>());
-  for (  SNode propertySource : AbstractConceptDeclaration_Behavior.call_getPropertyDeclarations_1213877394546(sourceNode)) {
-    SNode propertyDeclaration=SNodeOperations.cast(((jetbrains.mps.smodel.SNode)node).getPropertyDeclaration(propertyName),"jetbrains.mps.lang.structure.structure.PropertyDeclaration");
-    if (propertyDeclaration == null) {
-      continue;
+  SNode propertyDeclaration=ListSequence.fromList(SLinkOperations.getTargets(SNodeOperations.getConceptDeclaration(node),"propertyDeclaration",true)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return propertyName.equals(SPropertyOperations.getString(it,"name"));
     }
-    SNode property=SLinkOperations.getTarget(propertyDeclaration,"dataType",false);
+  }
+).first();
+  if (propertyDeclaration == null) {
+    return result;
+  }
+  SNode property=SLinkOperations.getTarget(propertyDeclaration,"dataType",false);
+  for (  SNode propertySource : SLinkOperations.getTargets(sourceNode,"propertyDeclaration",true)) {
     if (property == SLinkOperations.getTarget(propertySource,"dataType",false)) {
       ListSequence.fromList(result).addElement(propertySource);
     }

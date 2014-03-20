@@ -1,0 +1,41 @@
+{
+  final PsiElement psiElement=e.getData(LangDataKeys.PSI_ELEMENT);
+  if (psiElement == null || !(psiElement instanceof PsiJavaDirectoryImpl)) {
+    return true;
+  }
+  final VirtualFile targetDir=((PsiDirectory)psiElement).getVirtualFile();
+  myModelDescriptor=(EditableSModelDescriptor)ModelAccess.instance().runWriteActionInCommand(new Computable<SModel>(){
+    @Override public SModel compute(){
+      ModelRoot useModelRoot=null;
+      String useSourceRoot=null;
+      for (      ModelRoot root : myOperationContext.getModule().getModelRoots()) {
+        if (!(root instanceof DefaultModelRoot))         continue;
+        DefaultModelRoot modelRoot=(DefaultModelRoot)root;
+        for (        String sourceRoot : modelRoot.getFiles(DefaultModelRoot.SOURCE_ROOTS)) {
+          if (FileUtil.isSubPath(sourceRoot,targetDir.getPath())) {
+            useModelRoot=root;
+            useSourceRoot=sourceRoot;
+            break;
+          }
+        }
+      }
+      if (useModelRoot == null)       return null;
+      final String modelName=((PsiJavaDirectoryImpl)psiElement).getPresentation().getLocationString();
+      EditableSModel model=null;
+      try {
+        model=(EditableSModel)((DefaultModelRoot)useModelRoot).createModel(modelName,useSourceRoot,PersistenceRegistry.getInstance().getFolderModelFactory("file-per-root"));
+      }
+ catch (      IOException ioException) {
+        LOG.error("Can't create per-root model " + modelName + " under "+ useSourceRoot,ioException);
+      }
+      model.setChanged(true);
+      model.load();
+      model.save();
+      ModelsAutoImportsManager.doAutoImport(useModelRoot.getModule(),model);
+      MissingDependenciesFixer.fixDependencies(model);
+      return model;
+    }
+  }
+,ProjectHelper.toMPSProject(myProject));
+  return false;
+}

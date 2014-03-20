@@ -1,51 +1,30 @@
 {
-  for (  CopyRoot root : roots) {
-    char c=root.deleted ? '-' : (root.mySubTrees.length > 0 ? '+' : '~');
-    System.out.printf("%c%s\n",c,SNodeUtil.getDebugText(root.myRoot));
-    for (    SubTree tree : root.mySubTrees) {
-      if (tree.isCopySrcRoot()) {
-        System.out.printf("    copysrc %s\n",tree.myInputNode);
-      }
+  for (  DeltaRoot dr : myDelta) {
+    if (dr instanceof NewRoot) {
+      System.out.printf("+%s\n",SNodeUtil.getDebugText(((NewRoot)dr).myRoot));
+    }
+ else     if (dr instanceof ReplacedRoot) {
+      ReplacedRoot rr=(ReplacedRoot)dr;
+      System.out.printf("R%s - %d\n",SNodeUtil.getDebugText(rr.myReplacedRoot),rr.myReplacements.size());
+    }
+ else     if (dr instanceof DeletedRoot) {
+      System.out.printf("-%s\n",SNodeUtil.getDebugText(((DeletedRoot)dr).myRoot));
+    }
  else {
-        System.out.printf("    %s - %d - %s\n",tree.myRoleInParent,tree.mySubTree.size(),tree.myInputNode);
-      }
-    }
-  }
-  if (hasChanges()) {
-    HashSet<SNode> allReplacedNodes=new HashSet<SNode>();
-    for (    CopyRoot root : roots) {
-      if (!root.deleted) {
-        allReplacedNodes.addAll(root.getReplacedNodes());
-      }
-    }
-    for (    CopyRoot root : roots) {
-      if (root.deleted) {
-        continue;
-      }
-      final SModelReference inputModelRef=root.myRoot.getModel().getReference();
-      final Set<SNode> replacedNodes=root.getReplacedNodes();
-      TreeIterator<SNode> it=(TreeIterator<SNode>)SNodeUtil.getDescendants(root.myRoot).iterator();
-      while (it.hasNext()) {
-        SNode next=it.next();
-        if (replacedNodes.contains(next)) {
-          it.skipChildren();
-          continue;
+      CopyRoot root=(CopyRoot)dr;
+      char c=root.mySubTrees.length > 0 ? '*' : '~';
+      System.out.printf("%c%s\n",c,SNodeUtil.getDebugText(root.myRoot));
+      for (      SubTree tree : root.mySubTrees) {
+        if (tree.isSourceCopy()) {
+          System.out.printf("    copysrc %s\n",tree.myInputNode);
         }
-        for (        SReference reference : next.getReferences()) {
-          if (reference instanceof PostponedReference) {
-            System.out.println("!!! unexpected PostponedReference in the input model");
+ else {
+          StringBuilder sb=new StringBuilder();
+          for (          SNode r : tree.myReplacement) {
+            sb.append(r.toString());
+            sb.append(',');
           }
-          if (!inputModelRef.equals(reference.getTargetSModelReference())) {
-            continue;
-          }
-          SNode target=reference.getTargetNode();
-          while (target != null) {
-            if (allReplacedNodes.contains(target)) {
-              System.out.printf("--> Reference in '%s' needs update, its target %s is among replaced nodes\n",reference.getRole(),target.getName());
-              break;
-            }
-            target=target.getParent();
-          }
+          System.out.printf("    %s - %d - %s -> (%s)\n",tree.myRoleInParent,tree.myReplacement.size(),tree.myInputNode,sb);
         }
       }
     }

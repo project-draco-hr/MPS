@@ -1,14 +1,18 @@
 {
   myReadyRules.clear();
+  final BlockedReductionsData ruleBlocks=myGenerator.getBlockedReductionsData();
   final FastNodeFinder nodeFinder=((jetbrains.mps.smodel.SModelInternal)inputModel).getFastNodeFinder();
   for (  TemplateWeavingRule rule : rules) {
     String applicableConcept=rule.getApplicableConcept();
     if (applicableConcept == null) {
-      myGenerator.showErrorMessage(null,null,rule.getRuleNode().resolve(MPSModuleRepository.getInstance()),"rule has no applicable concept defined");
+      myGenerator.getLogger().error(rule.getRuleNode(),"rule has no applicable concept defined");
       continue;
     }
     boolean includeInheritors=rule.applyToInheritors();
     for (    SNode applicableNode : nodeFinder.getNodes(applicableConcept,includeInheritors)) {
+      if (ruleBlocks.isWeavingBlocked(applicableNode,rule)) {
+        continue;
+      }
       QueryExecutionContext executionContext=myGenerator.getExecutionContext(applicableNode);
       if (executionContext == null) {
         continue;
@@ -18,6 +22,7 @@
         DefaultTemplateContext context=new DefaultTemplateContext(applicableNode);
         if (executionContext.isApplicable(rule,environment,context)) {
           myReadyRules.add(new ArmedWeavingRule(rule,environment,applicableNode));
+          ruleBlocks.blockWeaving(applicableNode,rule);
         }
       }
  catch (      GenerationCanceledException ex) {
@@ -27,7 +32,7 @@ catch (      GenerationFailureException ex) {
         throw ex;
       }
 catch (      GenerationException ex) {
-        myGenerator.showErrorMessage(null,rule.getRuleNode().resolve(MPSModuleRepository.getInstance()),"internal error: " + ex.toString());
+        myGenerator.getLogger().error(rule.getRuleNode(),"internal error: " + ex.toString());
       }
     }
   }

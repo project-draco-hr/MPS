@@ -1,0 +1,40 @@
+{
+  if (Constants.ONLY_CLOSURE_LITERAL_AS_FUNCTION_TYPE) {
+    for (    SNode cl : SModelOperations.getNodes(_context.getModel(),"jetbrains.mps.baseLanguage.closures.structure.ClosureLiteral")) {
+      if (!(SNodeOperations.isInstanceOf(SNodeOperations.getParent(cl),"jetbrains.mps.baseLanguage.structure.BaseMethodCall")) || !(SNodeOperations.getContainingLinkRole(cl).equals("actualArgument"))) {
+        continue;
+      }
+      SNode bmc=SNodeOperations.cast(SNodeOperations.getParent(cl),"jetbrains.mps.baseLanguage.structure.BaseMethodCall");
+      List<SNode> args=SLinkOperations.getTargets(bmc,"actualArgument",true);
+      List<SNode> pdecls=SLinkOperations.getTargets(SLinkOperations.getTarget(bmc,"baseMethodDeclaration",false),"parameter",true);
+      if ((SLinkOperations.getTarget(bmc,"baseMethodDeclaration",false) != null) && ListSequence.fromList(args).count() != ListSequence.fromList(pdecls).count()) {
+        _context.showInformationMessage(bmc,"Actual arguments count != parameter declarations count");
+      }
+      Iterator<SNode> argsItr=ListSequence.fromList(args).iterator();
+      for (      SNode pdecl : pdecls) {
+        if (argsItr.hasNext()) {
+          SNode arg=argsItr.next();
+          FunctionTypeUtil.prepAdaptations(_context,BehaviorReflection.invokeVirtual((Class<SNode>)((Class)Object.class),bmc,"virtual_deriveType_1213877435747",new Object[]{arg}),arg);
+        }
+      }
+    }
+  }
+ else {
+    List<SNode> bmcs=SModelOperations.getNodes(_context.getModel(),"jetbrains.mps.baseLanguage.structure.BaseMethodCall");
+    for (    SNode bmc : bmcs) {
+      List<SNode> args=SLinkOperations.getTargets(bmc,"actualArgument",true);
+      List<SNode> pdecls=SLinkOperations.getTargets(SLinkOperations.getTarget(bmc,"baseMethodDeclaration",false),"parameter",true);
+      if ((SLinkOperations.getTarget(bmc,"baseMethodDeclaration",false) != null) && ListSequence.fromList(args).count() != ListSequence.fromList(pdecls).count()) {
+        _context.showInformationMessage(bmc,"Actual arguments count != parameter declarations count");
+      }
+      int idx=0;
+      for (      SNode pdecl : pdecls) {
+        if (idx < ListSequence.fromList(args).count()) {
+          SNode arg=ListSequence.fromList(args).getElement(idx);
+          FunctionTypeUtil.prepAdaptations(_context,BehaviorReflection.invokeVirtual((Class<SNode>)((Class)Object.class),bmc,"virtual_deriveType_1213877435747",new Object[]{arg}),arg);
+        }
+        idx++;
+      }
+    }
+  }
+}

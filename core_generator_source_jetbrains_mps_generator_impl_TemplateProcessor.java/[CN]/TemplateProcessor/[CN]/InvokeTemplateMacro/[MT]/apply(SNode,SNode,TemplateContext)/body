@@ -5,36 +5,27 @@
   }
   SNode invokedTemplate=getInvokedTemplate(macro);
   if (invokedTemplate == null) {
-    showErrorMessage(newInputNode,null,macro,String.format("error processing %s : no template to invoke",myName));
-    throw new TemplateProcessingFailureException();
+    throw new TemplateProcessingFailureException(macro,String.format("error processing %s : no template to invoke",myName));
   }
   TemplateContext newcontext=prepareContext(macro,invokedTemplate,templateContext,newInputNode);
   if (newcontext == null) {
-    throw new TemplateProcessingFailureException();
+    throw new TemplateProcessingFailureException(macro,String.format("error processing %s : failed to prepare new context",myName),GeneratorUtil.describe(invokedTemplate,"invoked template"));
   }
-  List<SNode> fragments=GeneratorUtilEx.getTemplateFragments(invokedTemplate);
-  if (!GeneratorUtilEx.checkIfOneOrMaryAdjacentFragments(fragments,invokedTemplate,newInputNode,macro,getGenerator())) {
-    showErrorMessage(newInputNode,null,macro,String.format("error processing %s",myName));
-    throw new TemplateProcessingFailureException();
-  }
+  TemplateContainer tc=new TemplateContainer(myTemplateProcessor,invokedTemplate);
+  tc.initialize();
   boolean inputChanged=(newInputNode != templateContext.getInput());
   if (inputChanged) {
     myTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
   }
-  myTracer.pushTemplateNode(new jetbrains.mps.smodel.SNodePointer(invokedTemplate));
-  ArrayList<SNode> outputNodes=new ArrayList<SNode>();
+  final SNodePointer invokedTemplateRef=new SNodePointer(invokedTemplate);
+  myTracer.pushTemplateNode(invokedTemplateRef);
   try {
-    for (    SNode fragment : fragments) {
-      SNode templateForInclude=fragment.getParent();
-      String mappingName=GeneratorUtilEx.getMappingName_TemplateFragment(fragment,null);
-      List<SNode> _outputNodes=myTemplateProcessor.applyTemplate(templateForInclude,newcontext.subContext(mappingName),null);
-      if (_outputNodes != null)       outputNodes.addAll(_outputNodes);
-    }
+    return tc.apply(newcontext);
   }
   finally {
+    myTracer.closeTemplateNode(invokedTemplateRef);
     if (inputChanged) {
       myTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
     }
   }
-  return outputNodes;
 }

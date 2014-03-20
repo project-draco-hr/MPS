@@ -1,0 +1,51 @@
+{
+  SNode sn=_context.getNode();
+  Integer[] labels=(Integer[])Values.CLOSURE_DATA.get(_context,sn);
+  int BEGIN=labels[0];
+  int END=labels[1];
+  List<SNode> results=ListSequence.fromList(new ArrayList<SNode>());
+  List<SNode> stmts=StatementListUtil.selectStatementsUntilControlStatement(_context.getNode());
+  do {
+    int beginLabel=BEGIN;
+    int endLabel=END;
+    SNode lastStmt=null;
+    SNode slist=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StatementList",null);
+    List<SNode> chunk=ListSequence.fromList(new ArrayList<SNode>());
+    Values.CHUNK_OF_STATEMENTS.set(_context,slist,chunk);
+    for (    SNode stmt : stmts) {
+      ListSequence.fromList(chunk).addElement(stmt);
+      lastStmt=stmt;
+    }
+    SNode cstmt;
+    if ((lastStmt != null)) {
+      cstmt=StatementListUtil.nextSibling(lastStmt);
+    }
+ else {
+      List<SNode> allstmts=(List<SNode>)SLinkOperations.getTargets(_context.getNode(),"statement",true);
+      cstmt=(ListSequence.fromList(allstmts).isNotEmpty() ? ListSequence.fromList(allstmts).getElement(0) : null);
+    }
+    stmts=null;
+    if ((cstmt != null)) {
+      labels=(Integer[])Values.CLOSURE_DATA.get(_context,cstmt);
+      endLabel=(labels != null ? labels[0] : -1);
+      lastStmt=StatementListUtil.nextSibling(cstmt);
+      while ((lastStmt != null)) {
+        stmts=StatementListUtil.selectStatementsUntilControlStatement(_context.getNode(),lastStmt);
+        if (ListSequence.fromList(stmts).isEmpty()) {
+          cstmt=lastStmt;
+          lastStmt=StatementListUtil.nextSibling(lastStmt);
+        }
+ else {
+          labels=(Integer[])Values.CLOSURE_DATA.get(_context,cstmt);
+          BEGIN=(labels != null ? labels[labels.length - 1] : -1);
+          break;
+        }
+      }
+    }
+    ListSequence.fromList(results).addElement(slist);
+    Object data=new Integer[]{beginLabel,endLabel};
+    Values.CLOSURE_DATA.set(_context,slist,data);
+  }
+ while (stmts != null && ListSequence.fromList(stmts).isNotEmpty());
+  return results;
+}

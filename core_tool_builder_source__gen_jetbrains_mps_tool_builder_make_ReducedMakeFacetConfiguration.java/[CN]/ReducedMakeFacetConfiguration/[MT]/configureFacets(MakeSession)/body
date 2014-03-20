@@ -1,0 +1,34 @@
+{
+  IModifiableGenerationSettings settings=GenerationSettingsProvider.getInstance().getGenerationSettings();
+  settings.setIncremental(true);
+  settings.setIncrementalUseCache(false);
+  final GenerationOptions.OptionsBuilder optBuilder=GenerationOptions.fromSettings(settings);
+  return new IScriptController.Stub(cmon,jmon){
+    @Override public void setup(    IPropertiesPool pp,    Iterable<ITarget> toExecute,    Iterable<? extends IResource> input){
+      super.setup(pp,toExecute,input);
+      new GenerateFacetInitializer(makeSession).cleanMake(rebuild).setGenerationOptions(optBuilder).populate(pp);
+      Tuples._1<Boolean> skipCopyTraceinfo=(Tuples._1<Boolean>)pp.properties(new ITarget.Name("jetbrains.mps.lang.traceable.CopyTraceInfo.copyTraceInfo"),Object.class);
+      if (skipCopyTraceinfo != null) {
+        skipCopyTraceinfo._0(true);
+      }
+      new JavaCompileFacetInitializer().skipCompilation(true).populate(pp);
+      Tuples._4<List<String>,List<String>,List<String>,Map<String,SModel>> report=(Tuples._4<List<String>,List<String>,List<String>,Map<String,SModel>>)pp.properties(new ITarget.Name("jetbrains.mps.make.reduced.ReportFiles.report"),Object.class);
+      report._0(writtenFiles);
+      report._1(deletedFiles);
+      report._2(keptFiles);
+      report._3(sources);
+      Tuples._1<Map<String,String>> hashes=(Tuples._1<Map<String,String>>)pp.properties(new ITarget.Name("jetbrains.mps.make.reduced.CollectHashes.collect"),Object.class);
+      hashes._0(fileHashes);
+      MakeFacetInitializer makeFacetInit=new MakeFacetInitializer();
+      makeFacetInit.skipReconcile(true);
+      makeFacetInit.setPathToFile(new _FunctionTypes._return_P1_E0<IFile,String>(){
+        public IFile invoke(        String path){
+          return outputPathRedirects.getRedirect(path);
+        }
+      }
+);
+      makeFacetInit.populate(pp);
+    }
+  }
+;
+}

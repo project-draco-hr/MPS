@@ -16,13 +16,34 @@
   }
   final SNodePointer templateNodeReference=new SNodePointer(templateNode);
   myTracer.pushTemplateNode(templateNodeReference);
-  jetbrains.mps.smodel.SNode outputNode=new jetbrains.mps.smodel.SNode(templateNode.getConcept().getQualifiedName());
+  SNode outputNode=myOutputModel.createNode(templateNode.getConcept());
   myEnv.nodeCopied(context,outputNode,GeneratorUtil.getTemplateNodeId(templateNode));
   myGenerator.registerMappingLabel(context.getInput(),context.getInputName(),outputNode);
   jetbrains.mps.util.SNodeOperations.copyProperties(templateNode,outputNode);
+  final ArrayList<String> linksHandledWithMacro=new ArrayList<String>();
+  List<SNode> templateChildNodes=new ArrayList<SNode>();
+  for (  SNode templateChildNode : templateNode.getChildren()) {
+    String templateChildNodeConcept=templateChildNode.getConcept().getQualifiedName();
+    if (GeneratorUtilEx.isTemplateLanguageElement(templateChildNodeConcept)) {
+      if (templateChildNodeConcept.equals(RuleUtil.concept_PropertyMacro)) {
+        myEnv.getQueryExecutor().expandPropertyMacro(templateChildNode,context.getInput(),templateNode,outputNode,context);
+      }
+ else       if (templateChildNodeConcept.equals(RuleUtil.concept_ReferenceMacro)) {
+        final String refMacroRole=AttributeOperations.getLinkRole(templateChildNode);
+        linksHandledWithMacro.add(refMacroRole);
+        MacroResolver mr=new MacroResolver(myEnv.getQueryExecutor(),templateChildNode,templateNode.getReferenceTarget(refMacroRole));
+        ReferenceInfo_Macro refInfo=new ReferenceInfo_Macro(mr,outputNode,refMacroRole,context);
+        PostponedReference postponedReference=myGenerator.register(new PostponedReference(refInfo));
+        postponedReference.setReferenceInOutputSourceNode();
+      }
+    }
+ else {
+      templateChildNodes.add(templateChildNode);
+    }
+  }
   SModel templateModel=templateNode.getModel();
   for (  SReference reference : templateNode.getReferences()) {
-    if (GeneratorUtilEx.getReferenceMacro(templateNode,reference.getRole()) != null) {
+    if (linksHandledWithMacro.contains(reference.getRole())) {
       continue;
     }
     if (reference instanceof StaticReference) {
@@ -35,53 +56,35 @@
     }
     SNode templateReferentNode=reference.getTargetNode();
     if (templateReferentNode == null) {
-      myGenerator.getLogger().error(templateNode,"cannot resolve reference in template model; role: " + reference.getRole() + " in "+ org.jetbrains.mps.openapi.model.SNodeUtil.getDebugText(templateNode));
+      myGenerator.getLogger().error(templateNode.getReference(),"cannot resolve reference in template model; role: " + reference.getRole() + " in "+ org.jetbrains.mps.openapi.model.SNodeUtil.getDebugText(templateNode));
       continue;
     }
     if (templateReferentNode.getModel() == templateModel) {
-      ReferenceInfo_Template refInfo=new ReferenceInfo_Template(outputNode,reference.getRole(),templateNodeReference,GeneratorUtil.getTemplateNodeId(templateReferentNode),jetbrains.mps.util.SNodeOperations.getResolveInfo(templateReferentNode),context);
-      PostponedReference postponedReference=new PostponedReference(refInfo,myGenerator);
-      outputNode.setReference(postponedReference.getRole(),postponedReference);
+      String resolveInfo=SNodeOperations.getResolveInfo(templateReferentNode);
+      ReferenceInfo_Template refInfo=new ReferenceInfo_Template(outputNode,reference.getRole(),templateNodeReference,GeneratorUtil.getTemplateNodeId(templateReferentNode),resolveInfo,context);
+      PostponedReference postponedReference=myGenerator.register(new PostponedReference(refInfo));
+      postponedReference.setReferenceInOutputSourceNode();
     }
  else {
       outputNode.setReferenceTarget(reference.getRole(),templateReferentNode);
-    }
-  }
-  List<SNode> templateChildNodes=new ArrayList<SNode>();
-  for (  SNode templateChildNode : templateNode.getChildren()) {
-    if (GeneratorUtilEx.isTemplateLanguageElement(templateChildNode)) {
-      String templateChildNodeConcept=templateChildNode.getConcept().getQualifiedName();
-      if (templateChildNodeConcept.equals(RuleUtil.concept_PropertyMacro)) {
-        myEnv.getQueryExecutor().expandPropertyMacro(templateChildNode,context.getInput(),templateNode,outputNode,context);
-      }
- else       if (templateChildNodeConcept.equals(RuleUtil.concept_ReferenceMacro)) {
-        ReferenceInfo_Macro refInfo=new ReferenceInfo_MacroNode(outputNode,templateChildNode,templateNode,context,myEnv.getQueryExecutor());
-        PostponedReference postponedReference=new PostponedReference(refInfo,myGenerator);
-        outputNode.setReference(postponedReference.getRole(),postponedReference);
-      }
-    }
- else {
-      templateChildNodes.add(templateChildNode);
     }
   }
   context=context.subContext();
   try {
     for (    SNode templateChildNode : templateChildNodes) {
       List<SNode> outputChildNodes=applyTemplate(templateChildNode,context,null);
-      if (outputChildNodes != null) {
-        SConcept originalConcept=templateChildNode.getConcept();
-        String role=templateChildNode.getRoleInParent();
-        RoleValidator validator=myGenerator.getChildRoleValidator(outputNode,role);
-        for (        SNode outputChildNode : outputChildNodes) {
-          final boolean notSubConcept=!(outputChildNode.getConcept().isSubConceptOf(originalConcept));
-          if (notSubConcept) {
-            RoleValidationStatus status=validator.validate(outputChildNode);
-            if (status != null) {
-              status.reportProblem(false,outputNode,"",GeneratorUtil.describe(context.getInput(),"input"),GeneratorUtil.describe(templateNode,"parent in template"),GeneratorUtil.describe(templateChildNode,"child in template"));
-            }
+      SConcept originalConcept=templateChildNode.getConcept();
+      String role=templateChildNode.getRoleInParent();
+      RoleValidator validator=myGenerator.getChildRoleValidator(outputNode,role);
+      for (      SNode outputChildNode : outputChildNodes) {
+        final boolean notSubConcept=!(outputChildNode.getConcept().isSubConceptOf(originalConcept));
+        if (notSubConcept) {
+          Status status=validator.validate(outputChildNode);
+          if (status != null) {
+            myGenerator.getLogger().warning(templateChildNode.getReference(),status.getMessage("apply template"),status.describe(GeneratorUtil.describe(context.getInput(),"input"),GeneratorUtil.describe(outputNode,"output"),GeneratorUtil.describe(templateNode,"template node")));
           }
-          outputNode.addChild(role,outputChildNode);
         }
+        outputNode.addChild(role,outputChildNode);
       }
     }
   }
@@ -89,5 +92,5 @@
     myTracer.pushOutputNode(GenerationTracerUtil.getSNodePointer(myOutputModel,outputNode));
     myTracer.closeTemplateNode(templateNodeReference);
   }
-  return Collections.singletonList(((SNode)outputNode));
+  return Collections.singletonList(outputNode);
 }

@@ -4,8 +4,11 @@
     if (outputNodes == null) {
       return;
     }
+    environment.getTrace().trace(inputNode.getNodeId(),GenerationTracerUtil.translateOutput(outputNodes),rule.getRuleNode());
+    final boolean inputIsRoot=inputNode.getParent() == null;
+    final boolean preserveInputRoot=inputIsRoot && rule.keepSourceRoot();
     for (    SNode outputNode : outputNodes) {
-      registerRoot(outputNode,inputNode,rule.getRuleNode(),false);
+      registerRoot(new GeneratedRootDescriptor(outputNode,inputNode,preserveInputRoot,rule.getRuleNode()));
       setChanged();
       jetbrains.mps.util.SNodeOperations.copyUserObjects(inputNode,outputNode);
     }
@@ -19,12 +22,12 @@
       }
     }
   }
-catch (  TemplateProcessingFailureException e) {
-    showErrorMessage(inputNode,rule.getRuleNode().resolve(MPSModuleRepository.getInstance()),"couldn't create root node");
+catch (  TemplateProcessingFailureException ex) {
+    getLogger().error(rule.getRuleNode(),String.format("couldn't create root node: %s",ex.getMessage()),ex.asProblemDescription());
   }
 catch (  GenerationException e) {
     if (e instanceof GenerationCanceledException)     throw (GenerationCanceledException)e;
     if (e instanceof GenerationFailureException)     throw (GenerationFailureException)e;
-    showErrorMessage(inputNode,rule.getRuleNode().resolve(MPSModuleRepository.getInstance()),"internal error: " + e.toString());
+    getLogger().error(rule.getRuleNode(),"internal error: " + e.toString(),GeneratorUtil.describe(inputNode,"input node"));
   }
 }

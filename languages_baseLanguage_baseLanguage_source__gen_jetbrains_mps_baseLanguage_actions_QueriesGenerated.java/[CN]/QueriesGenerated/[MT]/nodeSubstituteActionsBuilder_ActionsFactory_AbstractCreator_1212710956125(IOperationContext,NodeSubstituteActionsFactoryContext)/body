@@ -6,9 +6,9 @@
     if (SConceptOperations.isSuperConceptOf(childConcept,NameUtil.nodeFQName(outputConcept))) {
       Iterable<SNode> queryResult=new Computable<Iterable<SNode>>(){
         public Iterable<SNode> compute(){
-          VisibleClassifiersScope searchScope=new VisibleClassifiersScope(_context.getParentNode(),IClassifiersSearchScope.ANYTHING,operationContext.getScope());
-          List<SNode> list=(List<SNode>)searchScope.getClassifierNodes();
-          return ListSequence.fromList(list).where(new IWhereFilter<SNode>(){
+          Scope scope=ClassifierScopes.getVisibleClassifiersScope(_context.getParentNode(),false);
+          Iterable<SNode> list=SNodeOperations.ofConcept(scope.getAvailableElements(null),"jetbrains.mps.baseLanguage.structure.Classifier");
+          return Sequence.fromIterable(list).where(new IWhereFilter<SNode>(){
             public boolean accept(            SNode it){
               return SNodeOperations.isInstanceOf(it,"jetbrains.mps.baseLanguage.structure.Interface") || (SNodeOperations.isInstanceOf(it,"jetbrains.mps.baseLanguage.structure.ClassConcept") && SPropertyOperations.getBoolean(SNodeOperations.cast(it,"jetbrains.mps.baseLanguage.structure.ClassConcept"),"abstractClass"));
             }
@@ -19,7 +19,7 @@
 .compute();
       if (queryResult != null) {
         for (        final SNode item : queryResult) {
-          ListSequence.fromList(result).addElement(new DefaultChildNodeSubstituteAction(outputConcept,item,_context.getParentNode(),_context.getCurrentTargetNode(),_context.getChildSetter(),operationContext.getScope()){
+          ListSequence.fromList(result).addElement(new DefaultChildNodeSubstituteAction(outputConcept,item,_context.getParentNode(),_context.getCurrentTargetNode(),_context.getChildSetter()){
             public SNode createChildNode(            Object parameterObject,            SModel model,            String pattern){
               final SNode creator=SNodeFactoryOperations.createNewNode("jetbrains.mps.baseLanguage.structure.AnonymousClassCreator",null);
               SLinkOperations.setTarget(creator,"cls",SNodeFactoryOperations.createNewNode("jetbrains.mps.baseLanguage.structure.AnonymousClass",null),true);
@@ -57,9 +57,20 @@
               }
               ListSequence.fromList(SLinkOperations.getTargets((item),"typeVariableDeclaration",true)).visitAll(new IVisitor<SNode>(){
                 public void visit(                final SNode originalVar){
-                  SNode newTypeParam;
+                  SNode newTypeParam=null;
                   if (ListSequence.fromList(expectedTypeParams).isNotEmpty()) {
                     newTypeParam=SNodeOperations.copyNode(ListSequence.fromList(expectedTypeParams).removeElementAt(0));
+                    if (SNodeOperations.isInstanceOf(newTypeParam,"jetbrains.mps.baseLanguage.structure.WildCardType")) {
+                      newTypeParam=null;
+                    }
+ else                     if (SNodeOperations.isInstanceOf(newTypeParam,"jetbrains.mps.baseLanguage.structure.LowerBoundType")) {
+                      newTypeParam=SLinkOperations.getTarget(SNodeOperations.cast(newTypeParam,"jetbrains.mps.baseLanguage.structure.LowerBoundType"),"bound",true);
+                    }
+ else                     if (SNodeOperations.isInstanceOf(newTypeParam,"jetbrains.mps.baseLanguage.structure.UpperBoundType")) {
+                      newTypeParam=SLinkOperations.getTarget(SNodeOperations.cast(newTypeParam,"jetbrains.mps.baseLanguage.structure.UpperBoundType"),"bound",true);
+                    }
+                  }
+                  if ((newTypeParam != null)) {
                     ListSequence.fromList(SLinkOperations.getTargets(SLinkOperations.getTarget(creator,"cls",true),"typeParameter",true)).addElement(newTypeParam);
                   }
  else {
@@ -68,7 +79,7 @@
                   }
                   Iterable<SNode> typeVarRefs=ListSequence.fromList(SNodeOperations.getDescendants(SLinkOperations.getTarget(creator,"cls",true),"jetbrains.mps.baseLanguage.structure.TypeVariableReference",false,new String[]{})).where(new IWhereFilter<SNode>(){
                     public boolean accept(                    SNode it){
-                      return eq_x583g4_a0a0a0a0a0a3a0a0a0a01a0a0a0a0a0a1a2a0a1a25(SLinkOperations.getTarget(it,"typeVariableDeclaration",false),originalVar);
+                      return eq_x583g4_a0a0a0a0a0a4a0a0a0a01a0a0a0a0a0a1a2a0a1a25(SLinkOperations.getTarget(it,"typeVariableDeclaration",false),originalVar);
                     }
                   }
 );
@@ -99,15 +110,15 @@
     if (SConceptOperations.isSuperConceptOf(childConcept,NameUtil.nodeFQName(outputConcept))) {
       Iterable<SNode> queryResult=new Computable<Iterable<SNode>>(){
         public Iterable<SNode> compute(){
-          VisibleClassifiersScope searchScope=new VisibleClassifiersScope(_context.getParentNode(),IClassifiersSearchScope.ANYTHING,operationContext.getScope());
-          List<SNode> list=(List<SNode>)searchScope.getClassifierNodes();
+          Scope scope=ClassifierScopes.getVisibleClassifiersScope(_context.getParentNode(),false);
+          Iterable<SNode> list=SNodeOperations.ofConcept(scope.getAvailableElements(null),"jetbrains.mps.baseLanguage.structure.Classifier");
           List<SNode> types=new ArrayList<SNode>();
-          for (          SNode classifier : ListSequence.fromList(list)) {
+          for (          SNode classifier : Sequence.fromIterable(list)) {
             SNode type=SNodeFactoryOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ClassifierType",null);
             SLinkOperations.setTarget(type,"classifier",classifier,false);
             ListSequence.fromList(types).addElement(type);
           }
-          for (          SNode typeConcept : ListSequence.fromList(SConceptOperations.getAllSubConcepts(SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.Type"),_context.getModel(),operationContext.getScope()))) {
+          for (          SNode typeConcept : ListSequence.fromList(SConceptOperations.getAllSubConcepts(SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.Type"),_context.getModel()))) {
             if (!(SPropertyOperations.getBoolean(typeConcept,"abstract"))) {
               ListSequence.fromList(types).addElement(SNodeFactoryOperations.createNewNode(NameUtil.nodeFQName(typeConcept),null));
             }
@@ -118,7 +129,7 @@
 .compute();
       if (queryResult != null) {
         for (        final SNode item : queryResult) {
-          ListSequence.fromList(result).addElement(new DefaultChildNodeSubstituteAction(outputConcept,item,_context.getParentNode(),_context.getCurrentTargetNode(),_context.getChildSetter(),operationContext.getScope()){
+          ListSequence.fromList(result).addElement(new DefaultChildNodeSubstituteAction(outputConcept,item,_context.getParentNode(),_context.getCurrentTargetNode(),_context.getChildSetter()){
             public SNode createChildNode(            Object parameterObject,            SModel model,            String pattern){
               SNode creator=SNodeFactoryOperations.createNewNode("jetbrains.mps.baseLanguage.structure.ArrayCreator",null);
               SLinkOperations.setTarget(creator,"componentType",(item),true);

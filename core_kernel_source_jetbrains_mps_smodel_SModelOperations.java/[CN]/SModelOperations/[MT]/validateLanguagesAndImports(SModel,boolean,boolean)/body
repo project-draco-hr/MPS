@@ -1,14 +1,14 @@
 {
   ModelChange.assertLegalChange(model);
-  GlobalScope scope=GlobalScope.getInstance();
   final SModule module=model == null ? null : model.getModule();
   final Collection<SModule> declaredDependencies=module != null ? new GlobalModuleDependenciesManager(module).getModules(Deptype.VISIBLE) : null;
   final Collection<Language> declaredUsedLanguages=module != null ? new GlobalModuleDependenciesManager(module).getUsedLanguages() : null;
   Set<SModuleReference> usedLanguages=getAllImportedLanguages(model);
   Set<SModelReference> importedModels=new HashSet<SModelReference>();
-  for (  SModel sm : allImportedModels(model,scope)) {
+  for (  SModel sm : allImportedModels(model)) {
     importedModels.add(sm.getReference());
   }
+  final SModelReference sourceModelRef=model.getReference();
   for (  SNode node : SNodeUtil.getDescendants(model)) {
     Language lang=jetbrains.mps.util.SNodeOperations.getLanguage(node);
     if (lang == null) {
@@ -26,20 +26,20 @@
       ((jetbrains.mps.smodel.SModelInternal)model).addLanguage(ref);
     }
     for (    SReference reference : node.getReferences()) {
-      boolean internal=model.getReference().equals(reference.getTargetSModelReference());
-      if (internal)       continue;
-      SModelReference targetModelReference=reference.getTargetSModelReference();
-      if (targetModelReference != null && !importedModels.contains(targetModelReference)) {
-        if (respectModulesScopes && module != null) {
-          SModel targetModelDescriptor=SModelRepository.getInstance().getModelDescriptor(targetModelReference);
-          SModule targetModule=targetModelDescriptor == null ? null : targetModelDescriptor.getModule();
-          if (targetModule != null && !declaredDependencies.contains(targetModule)) {
-            ((AbstractModule)module).addDependency(targetModule.getModuleReference(),false);
-          }
-        }
-        ((jetbrains.mps.smodel.SModelInternal)model).addModelImport(targetModelReference,firstVersion);
-        importedModels.add(targetModelReference);
+      final SModelReference targetModelReference=reference.getTargetSModelReference();
+      boolean internal=sourceModelRef.equals(targetModelReference);
+      if (internal || targetModelReference == null || importedModels.contains(targetModelReference)) {
+        continue;
       }
+      if (respectModulesScopes && module != null) {
+        SModel targetModelDescriptor=SModelRepository.getInstance().getModelDescriptor(targetModelReference);
+        SModule targetModule=targetModelDescriptor == null ? null : targetModelDescriptor.getModule();
+        if (targetModule != null && !declaredDependencies.contains(targetModule)) {
+          ((AbstractModule)module).addDependency(targetModule.getModuleReference(),false);
+        }
+      }
+      ((jetbrains.mps.smodel.SModelInternal)model).addModelImport(targetModelReference,firstVersion);
+      importedModels.add(targetModelReference);
     }
   }
   importedModels.clear();

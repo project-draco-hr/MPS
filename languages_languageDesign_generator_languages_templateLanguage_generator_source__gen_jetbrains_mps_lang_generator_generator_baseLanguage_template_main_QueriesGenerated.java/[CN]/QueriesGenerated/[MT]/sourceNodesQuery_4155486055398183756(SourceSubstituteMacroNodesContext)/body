@@ -1,0 +1,31 @@
+{
+  List<SNode> result=new ArrayList<SNode>();
+  for (  SReference reference : _context.getNode().getReferences()) {
+    if (AttributeOperations.getAttribute(_context.getNode(),new IAttributeDescriptor.LinkAttribute("jetbrains.mps.lang.generator.structure.ReferenceMacro",reference.getRole())) != null) {
+      continue;
+    }
+    SNode targetNode=jetbrains.mps.util.SNodeOperations.getTargetNodeSilently(reference);
+    if (targetNode == null) {
+      _context.showErrorMessage(_context.getNode(),"cannot resolve reference in template model; role: " + reference.getRole());
+      continue;
+    }
+    SNode referenceNode=SModelOperations.createNewNode(_context.getInputModel(),null,"jetbrains.mps.lang.core.structure.BaseConcept");
+    referenceNode.setProperty("role",reference.getRole());
+    if (SNodeOperations.getModel(targetNode) == SNodeOperations.getModel(_context.getNode())) {
+      referenceNode.setProperty("kind","internal");
+      referenceNode.setProperty("templateNodeId",GeneratorUtil.getTemplateNodeId(_context.getOriginalCopiedInputNode(targetNode)));
+      String resolveInfo=jetbrains.mps.util.SNodeOperations.getResolveInfo(targetNode);
+      if (resolveInfo == null) {
+        resolveInfo=((jetbrains.mps.smodel.SReference)reference).getResolveInfo();
+      }
+      referenceNode.setProperty("resolveInfo",resolveInfo);
+    }
+ else {
+      referenceNode.setProperty("kind","normal");
+      referenceNode.setProperty("targetModel",reference.getTargetSModelReference().toString());
+      referenceNode.setProperty("targetNodeId",targetNode.getNodeId().toString());
+    }
+    ListSequence.fromList(result).addElement(referenceNode);
+  }
+  return result;
+}
