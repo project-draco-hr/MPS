@@ -3,60 +3,9 @@
   ActiveEnvironment.activateEnvironment(this);
   IdeMain.setTestMode(IdeMain.TestMode.CORE_TEST);
   EnvironmentUtils.setSystemProperties(true);
-  String mpsInternal=System.getProperty("mps.internal");
-  System.setProperty("idea.is.internal",(mpsInternal == null ? "false" : mpsInternal));
-  System.setProperty("idea.no.jre.check","true");
-  System.setProperty("idea.platform.prefix","Idea");
-  if (isEmptyString(System.getProperty("plugin.path"))) {
-    StringBuffer pluginPath=new StringBuffer();
-    File pluginDir=new File(PathManager.getPreInstalledPluginsPath());
-    if (pluginDir.listFiles() != null) {
-      for (      File pluginFolder : pluginDir.listFiles()) {
-        if (pluginPath.length() > 0) {
-          pluginPath.append(File.pathSeparator);
-        }
-        pluginPath.append(pluginFolder.getPath());
-      }
-    }
-    System.setProperty("plugin.path",pluginPath.toString());
-    if (System.getProperty("idea.load.plugins") == null || System.getProperty("idea.load.plugins").equals("false")) {
-      System.setProperty("idea.load.plugins.id",IterableUtils.join(config.plugins(),","));
-    }
-  }
-  if (!(cachesInvalidated)) {
-    FSRecords.invalidateCaches();
-    cachesInvalidated=true;
-  }
-  if (LOG.isInfoEnabled()) {
-    LOG.info("Creating IdeaTestApplication");
-  }
-  try {
-    IdeaTestApplication.getInstance(null);
-  }
- catch (  Exception e) {
-    throw new RuntimeException(e);
-  }
-  if (LOG.isInfoEnabled()) {
-    LOG.info("Initializing libraries");
-  }
-  LibraryInitializer.getInstance().addContributor(EnvironmentUtils.createLibContributor(false,config.libs()));
-  try {
-    SwingUtilities.invokeAndWait(new Runnable(){
-      @Override public void run(){
-        ModelAccess.instance().runWriteAction(new Runnable(){
-          public void run(){
-            LibraryInitializer.getInstance().update();
-          }
-        }
-);
-      }
-    }
-);
-  }
- catch (  Exception e) {
-    throw new RuntimeException(e);
-  }
-  for (  String macro : MapSequence.fromMap(config.macros()).keySet()) {
-    setMacro(macro,MapSequence.fromMap(config.macros()).get(macro));
-  }
+  setIdeaPluginsToLoad(config);
+  invalidateIdeaCaches();
+  createIdeaTestApp();
+  initLibraries();
+  initMacros(config);
 }
