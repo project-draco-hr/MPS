@@ -1,8 +1,9 @@
 {
-  this.config=config;
+  if (LOG.isInfoEnabled()) {
+    LOG.info("Creating MPS environment");
+  }
   ActiveEnvironment.activateEnvironment(this);
   MpsPlatform.init();
-  MPSCore.getInstance().setTestMode();
   GenerationSettingsProvider.getInstance().setGenerationSettings(new DefaultModifiableGenerationSettings());
   try {
     EnvironmentUtils.setSystemProperties(false);
@@ -11,20 +12,6 @@
  catch (  Exception ex) {
     throw new RuntimeException(ex);
   }
-  Map<String,String> macros=MapSequence.fromMap(new HashMap<String,String>());
-  for (  String name : MapSequence.fromMap(config.macros()).keySet()) {
-    MapSequence.fromMap(macros).put(name,MapSequence.fromMap(config.macros()).get(name).getAbsolutePath());
-  }
-  macroProvider=EnvironmentUtils.createMapMacrosProvider(macros);
-  PathMacros.getInstance().addMacrosProvider(macroProvider);
-  libContributors=SetSequence.fromSetWithValues(new HashSet<LibraryContributor>(),createLibContributors(config));
-  for (  LibraryContributor libContributor : Sequence.fromIterable(libContributors)) {
-    LibraryInitializer.getInstance().addContributor(libContributor);
-  }
-  ModelAccess.instance().runWriteAction(new Runnable(){
-    @Override public void run(){
-      LibraryInitializer.getInstance().update();
-    }
-  }
-);
+  libContributors=initLibs(config);
+  macrosProvider=initMacros(config);
 }
