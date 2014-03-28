@@ -1,14 +1,18 @@
 {
-  String methodName=TemplateFunctionMethodName.sourceSubstituteMacro_SourceNodeQuery(query);
   try {
-    return (SNode)QueryMethodGenerated.invoke(methodName,myGenerator.getGeneratorSessionContext(),new SourceSubstituteMacroNodeContext(context,templateNode.getReference(),myGenerator),query.getModel());
+    final SNodeReference qr=query.getReference();
+    SourceNodeQuery q=myNodeQueries.get(qr);
+    if (q == null) {
+      q=myGenerator.getGeneratorSessionContext().getQueryProvider(qr).getSourceNodeQuery(query);
+      myNodeQueries.put(qr,q);
+    }
+    return q.evaluate(new SourceSubstituteMacroNodeContext(context,templateNode.getReference(),myGenerator));
   }
- catch (  NoSuchMethodException e) {
-    getLog().warning(templateNode.getReference(),String.format("cannot find nodes query '%s' : evaluate to null",methodName));
-    return null;
+ catch (  GenerationFailureException ex) {
+    throw ex;
   }
-catch (  Exception e) {
-    getLog().handleException(e);
+catch (  Throwable th) {
+    getLog().handleException(th);
     getLog().error(query.getReference(),"cannot evaluate query, exception was thrown",GeneratorUtil.describeInput(context));
     return null;
   }
