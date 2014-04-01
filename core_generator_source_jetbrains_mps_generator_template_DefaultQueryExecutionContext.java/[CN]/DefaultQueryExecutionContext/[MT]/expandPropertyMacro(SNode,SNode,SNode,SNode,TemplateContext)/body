@@ -1,18 +1,35 @@
 {
-  String propertyName=AttributeOperations.getPropertyName(propertyMacro);
-  SNode function=RuleUtil.getPropertyMacro_ValueFunction(propertyMacro);
-  if (propertyName == null || function == null) {
-    getLog().error(propertyMacro.getReference(),"cannot evaluate property macro",GeneratorUtil.describeInput(context));
-    throw new GenerationFailureException("cannot evaluate property macro");
-  }
-  String templateValue=SNodeAccessUtil.getProperty(templateNode,propertyName);
-  String methodName=TemplateFunctionMethodName.propertyMacro_GetPropertyValue(function);
   try {
-    Object macroValue=QueryMethodGenerated.invoke(methodName,myGenerator.getGeneratorSessionContext(),new PropertyMacroContext(context,templateValue,propertyMacro.getReference(),myGenerator),propertyMacro.getModel());
+    final SNodeReference qr=propertyMacro.getReference();
+    PropertyValueQuery pvq=myPropertyQueries.get(qr);
+    if (pvq == null) {
+      pvq=myGenerator.getGeneratorSessionContext().getQueryProvider(qr).getPropertyValueQuery(propertyMacro);
+      myPropertyQueries.put(qr,pvq);
+    }
+    final String propertyName;
+    final String templateValue;
+    Pair<String,String> propNameValue=myPropertyNameValue.get(pvq);
+    if (propNameValue == null) {
+      propertyName=AttributeOperations.getPropertyName(propertyMacro);
+      if (propertyName == null) {
+        getLog().error(qr,"cannot evaluate property macro: no property name",GeneratorUtil.describeInput(context));
+        throw new GenerationFailureException("cannot evaluate property macro: no property name");
+      }
+      templateValue=SNodeAccessUtil.getProperty(templateNode,propertyName);
+      myPropertyNameValue.put(pvq,new Pair<String,String>(propertyName,templateValue));
+    }
+ else {
+      propertyName=propNameValue.o1;
+      templateValue=propNameValue.o2;
+    }
+    Object macroValue=pvq.evaluate(new PropertyMacroContext(context,templateValue,qr,myGenerator));
     String propertyValue=macroValue == null ? null : String.valueOf(macroValue);
     SNodeAccessUtil.setProperty(outputNode,propertyName,propertyValue);
   }
- catch (  Throwable t) {
+ catch (  GenerationFailureException ex) {
+    throw ex;
+  }
+catch (  Throwable t) {
     getLog().handleException(t);
     getLog().error(propertyMacro.getReference(),"cannot evaluate property macro, exception was thrown",GeneratorUtil.describeInput(context));
     throw new GenerationFailureException(t);
