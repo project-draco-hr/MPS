@@ -1,0 +1,48 @@
+{
+  myGenerator=generator;
+  final ArrayList<String> propsHandledWithMacro=new ArrayList<String>();
+  final ArrayList<SNode> templateChildNodes=new ArrayList<SNode>();
+  final ArrayList<PropertyMacro> propertyMacros=new ArrayList<PropertyMacro>();
+  final HashMap<String,MacroResolver> refMacros=new HashMap<String,MacroResolver>();
+  for (  SNode templateChildNode : templateNode.getChildren()) {
+    String templateChildNodeConcept=templateChildNode.getConcept().getQualifiedName();
+    if (GeneratorUtilEx.isTemplateLanguageElement(templateChildNodeConcept)) {
+      if (templateChildNodeConcept.equals(RuleUtil.concept_PropertyMacro)) {
+        final String propertyName=AttributeOperations.getPropertyName(templateChildNode);
+        propsHandledWithMacro.add(propertyName);
+        final PropertyMacro pm=queryExecutor.getPropertyMacro(templateChildNode);
+        propertyMacros.add(pm);
+      }
+ else       if (templateChildNodeConcept.equals(RuleUtil.concept_ReferenceMacro)) {
+        final String refMacroRole=AttributeOperations.getLinkRole(templateChildNode);
+        MacroResolver mr=new MacroResolver(queryExecutor,templateChildNode,templateNode.getReferenceTarget(refMacroRole));
+        refMacros.put(refMacroRole,mr);
+      }
+    }
+ else {
+      templateChildNodes.add(templateChildNode);
+    }
+  }
+  myChildTemplates=templateChildNodes.isEmpty() ? Collections.<SNode>emptyList() : Arrays.asList(templateChildNodes.toArray(new SNode[templateChildNodes.size()]));
+  ArrayList<SReference> nonMacroRefs=new ArrayList<SReference>();
+  for (  SReference reference : templateNode.getReferences()) {
+    if (refMacros.containsKey(reference.getRole())) {
+      continue;
+    }
+    nonMacroRefs.add(reference);
+  }
+  myNonMacroRefs=nonMacroRefs.isEmpty() ? Collections.<SReference>emptyList() : Arrays.asList(nonMacroRefs.toArray(new SReference[nonMacroRefs.size()]));
+  myMacroRefs=refMacros.isEmpty() ? Collections.<String,MacroResolver>emptyMap() : refMacros;
+  myMacroProperties=propertyMacros.toArray(new PropertyMacro[propertyMacros.size()]);
+  final ArrayList<String> templateProps=new ArrayList<String>();
+  for (  String name : templateNode.getPropertyNames()) {
+    if (propsHandledWithMacro.contains(name)) {
+      continue;
+    }
+    templateProps.add(name);
+    templateProps.add(templateNode.getProperty(name));
+  }
+  myTemplateProperties=templateProps.toArray(new String[templateProps.size()]);
+  myTemplateNodeReference=new SNodePointer(templateNode);
+  myTemplateNodeId=GeneratorUtil.getTemplateNodeId(templateNode);
+}
