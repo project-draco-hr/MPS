@@ -11,28 +11,21 @@
     final QueryExecutionContext executionContext=getExecutionContext(inputNode);
     if (executionContext != null) {
       TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(myTemplateProcessor,executionContext);
-      try {
-        final DefaultTemplateContext templateContext=new DefaultTemplateContext(environment,inputNode,null);
-        if (executionContext.isApplicable(rule,environment,templateContext)) {
-          myGenerationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(inputNode));
-          myGenerationTracer.pushRule(rule.getRuleNode());
-          try {
-            boolean copyRootOnFailure=false;
-            if (inputNode.getModel() != null && inputNode.getParent() == null && !rule.keepSourceRoot()) {
-              rootsConsumed.add(inputNode);
-              copyRootOnFailure=true;
-            }
-            createRootNodeByRule(rule,templateContext,copyRootOnFailure);
+      final DefaultTemplateContext templateContext=new DefaultTemplateContext(environment,inputNode,null);
+      if (executionContext.isApplicable(rule,templateContext)) {
+        myGenerationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(inputNode));
+        myGenerationTracer.pushRule(rule.getRuleNode());
+        try {
+          boolean copyRootOnFailure=false;
+          if (inputNode.getModel() != null && inputNode.getParent() == null && !rule.keepSourceRoot()) {
+            rootsConsumed.add(inputNode);
+            copyRootOnFailure=true;
           }
-  finally {
-            myGenerationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(inputNode));
-          }
+          createRootNodeByRule(rule,templateContext,copyRootOnFailure);
         }
-      }
- catch (      GenerationException e) {
-        if (e instanceof GenerationCanceledException)         throw (GenerationCanceledException)e;
-        if (e instanceof GenerationFailureException)         throw (GenerationFailureException)e;
-        getLogger().error(rule.getRuleNode(),"internal error: " + e.toString());
+  finally {
+          myGenerationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(inputNode));
+        }
       }
     }
   }
