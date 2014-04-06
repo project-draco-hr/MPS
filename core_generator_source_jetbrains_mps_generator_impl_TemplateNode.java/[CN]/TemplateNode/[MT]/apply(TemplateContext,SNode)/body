@@ -3,7 +3,7 @@
   if (myMold == null) {
 synchronized (this) {
       if (myMold == null) {
-        myMold=new Mold(myNode,env.getQueryExecutor(),env.getLogger());
+        myMold=new Mold(myNode,env.getQueryExecutor(),env.getGenerator().getGeneratorSessionContext(),env.getLogger());
       }
     }
   }
@@ -11,8 +11,10 @@ synchronized (this) {
   for (int i=0; i < myMold.myTemplateProperties.length; ) {
     outputNode.setProperty(myMold.myTemplateProperties[i++],myMold.myTemplateProperties[i++]);
   }
-  for (  PropertyMacro pm : myMold.myMacroProperties) {
-    pm.expand(context,outputNode);
+  for (  PropertyValueQuery pvq : myMold.myMacroProperties) {
+    Object macroValue=env.getQueryExecutor().evaluate(pvq,context);
+    String propertyValue=macroValue == null ? null : String.valueOf(macroValue);
+    SNodeAccessUtil.setProperty(outputNode,pvq.getPropertyName(),propertyValue);
   }
   for (  Map.Entry<String,MacroResolver> e : myMold.myMacroRefs.entrySet()) {
     final String refMacroRole=e.getKey();
