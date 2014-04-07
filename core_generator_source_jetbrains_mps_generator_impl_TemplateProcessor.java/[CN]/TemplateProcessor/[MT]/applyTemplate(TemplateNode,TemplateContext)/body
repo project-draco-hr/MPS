@@ -1,14 +1,4 @@
 {
-  MacroNode nextMacro=prevMacro == null ? rtTemplateNode.getFirstMacro() : prevMacro.getNextMacro();
-  if (nextMacro != null) {
-    myTracer.pushMacro(nextMacro.getMacroNodeRef());
-    try {
-      return nextMacro.apply(context.subContext(nextMacro.getMappingLabel()));
-    }
-  finally {
-      myTracer.closeMacro(nextMacro.getMacroNodeRef());
-    }
-  }
   myTracer.pushTemplateNode(rtTemplateNode.getTemplateNodeReference());
   SNode outputNode=myOutputModel.createNode(rtTemplateNode.getConcept());
   context.getEnvironment().nodeCopied(context,outputNode,rtTemplateNode.getTemplateNodeId());
@@ -18,7 +8,13 @@
   try {
     for (    SNode templateChildNode : rtTemplateNode.getChildTemplates()) {
       TemplateNode rtTemplateChildNode=getTemplateNodeRuntime(templateChildNode);
-      List<SNode> outputChildNodes=applyTemplate(rtTemplateChildNode,context,null);
+      final List<SNode> outputChildNodes;
+      if (rtTemplateChildNode.getFirstMacro() != null) {
+        outputChildNodes=applyMacro(rtTemplateChildNode.getFirstMacro(),context);
+      }
+ else {
+        outputChildNodes=applyTemplate(rtTemplateChildNode,context);
+      }
       SConcept originalConcept=rtTemplateChildNode.getConcept();
       String role=rtTemplateChildNode.getRoleInParent();
       RoleValidator validator=myGenerator.getChildRoleValidator(outputNode,role);
