@@ -10,28 +10,22 @@
     if (getGeneratorSessionContext().isCopiedRoot(inputNode))     continue;
     final QueryExecutionContext executionContext=getExecutionContext(inputNode);
     if (executionContext != null) {
-      TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(this,executionContext);
-      try {
-        if (executionContext.isApplicable(rule,environment,new DefaultTemplateContext(inputNode))) {
-          myGenerationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(inputNode));
-          myGenerationTracer.pushRule(rule.getRuleNode());
-          try {
-            boolean copyRootOnFailure=false;
-            if (inputNode.getModel() != null && inputNode.getParent() == null && !rule.keepSourceRoot()) {
-              rootsConsumed.add(inputNode);
-              copyRootOnFailure=true;
-            }
-            createRootNodeByRule(rule,inputNode,copyRootOnFailure,environment);
+      TemplateExecutionEnvironmentImpl environment=new TemplateExecutionEnvironmentImpl(myTemplateProcessor,executionContext);
+      final DefaultTemplateContext templateContext=new DefaultTemplateContext(environment,inputNode,null);
+      if (executionContext.isApplicable(rule,templateContext)) {
+        myGenerationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(inputNode));
+        myGenerationTracer.pushRule(rule.getRuleNode());
+        try {
+          boolean copyRootOnFailure=false;
+          if (inputNode.getModel() != null && inputNode.getParent() == null && !rule.keepSourceRoot()) {
+            rootsConsumed.add(inputNode);
+            copyRootOnFailure=true;
           }
-  finally {
-            myGenerationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(inputNode));
-          }
+          createRootNodeByRule(rule,templateContext,copyRootOnFailure,environment.getReductionTrack());
         }
-      }
- catch (      GenerationException e) {
-        if (e instanceof GenerationCanceledException)         throw (GenerationCanceledException)e;
-        if (e instanceof GenerationFailureException)         throw (GenerationFailureException)e;
-        getLogger().error(rule.getRuleNode(),"internal error: " + e.toString());
+  finally {
+          myGenerationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(inputNode));
+        }
       }
     }
   }

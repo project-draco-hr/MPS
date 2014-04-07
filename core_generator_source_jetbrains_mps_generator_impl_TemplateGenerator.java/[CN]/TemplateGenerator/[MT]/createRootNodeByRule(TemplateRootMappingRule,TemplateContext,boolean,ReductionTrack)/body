@@ -1,0 +1,35 @@
+{
+  final SNode inputNode=templateContext.getInput();
+  final TemplateExecutionEnvironment environment=templateContext.getEnvironment();
+  try {
+    Collection<SNode> outputNodes=environment.getQueryExecutor().applyRule(rule,environment,templateContext);
+    if (outputNodes == null) {
+      return;
+    }
+    environment.getTrace().trace(inputNode.getNodeId(),GenerationTracerUtil.translateOutput(outputNodes),rule.getRuleNode());
+    final boolean inputIsRoot=inputNode.getParent() == null;
+    final boolean preserveInputRoot=inputIsRoot && rule.keepSourceRoot();
+    for (    SNode outputNode : outputNodes) {
+      registerRoot(new GeneratedRootDescriptor(outputNode,inputNode,preserveInputRoot,rule.getRuleNode()));
+      setChanged();
+      jetbrains.mps.util.SNodeOperations.copyUserObjects(inputNode,outputNode);
+    }
+  }
+ catch (  DismissTopMappingRuleException e) {
+    if (copyRootOnFailure && inputNode.getModel() != null && inputNode.getParent() == null) {
+      final FullCopyFacility copyFacility=new FullCopyFacility(this,rtrack);
+      copyFacility.copyRootInputNode(inputNode);
+      if (copyFacility.hasChanges()) {
+        setChanged();
+      }
+    }
+  }
+catch (  TemplateProcessingFailureException ex) {
+    getLogger().error(rule.getRuleNode(),String.format("couldn't create root node: %s",ex.getMessage()),ex.asProblemDescription());
+  }
+catch (  GenerationException e) {
+    if (e instanceof GenerationCanceledException)     throw (GenerationCanceledException)e;
+    if (e instanceof GenerationFailureException)     throw (GenerationFailureException)e;
+    getLogger().error(rule.getRuleNode(),"internal error: " + e.toString(),GeneratorUtil.describe(inputNode,"input node"));
+  }
+}
