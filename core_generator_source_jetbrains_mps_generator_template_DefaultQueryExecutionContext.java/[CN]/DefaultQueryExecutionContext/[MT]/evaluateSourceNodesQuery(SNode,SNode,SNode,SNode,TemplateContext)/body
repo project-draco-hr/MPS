@@ -1,5 +1,18 @@
 {
-  Collection<SNode> result=getSourceNodes(ruleNode == null ? macroNode : ruleNode,query,context.subContext(inputNode));
-  @SuppressWarnings("unchecked") List<SNode> resultList=(result instanceof List) ? (List<SNode>)result : new ArrayList<SNode>(result);
-  return resultList;
+  try {
+    final SNodeReference qr=query.getReference();
+    SourceNodesQuery q=myQuerySource.getQueryProvider(qr).getSourceNodesQuery(query);
+    final Collection<SNode> result=q.evaluate(new SourceSubstituteMacroNodesContext(context,macroNode.getReference()));
+    CollectionUtil.checkForNulls(result,"null values in source nodes");
+    @SuppressWarnings("unchecked") List<SNode> resultList=(result instanceof List) ? (List<SNode>)result : new ArrayList<SNode>(result);
+    return resultList;
+  }
+ catch (  GenerationFailureException ex) {
+    throw ex;
+  }
+catch (  Throwable e) {
+    getLog().handleException(e);
+    getLog().error(query.getReference(),"cannot evaluate query, exception was thrown",GeneratorUtil.describeInput(context));
+    return Collections.emptyList();
+  }
 }
