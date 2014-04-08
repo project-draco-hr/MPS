@@ -1,0 +1,43 @@
+{
+  schedule(modelNode,new Runnable(){
+    @Override public void run(){
+      if (isTimeToRelax()) {
+        return;
+      }
+      SModel md=modelNode.getModel();
+      if (!(md instanceof EditableSModel))       return;
+      if (!(md instanceof GeneratableSModel) || !(((GeneratableSModel)md).isGeneratable()))       return;
+      if (md.getModule() == null)       return;
+      final ProjectModuleTreeNode moduleNode=getContainingModuleNode(modelNode);
+      boolean wasChanged=((EditableSModel)md).isChanged();
+      if (moduleNode.getModule().isReadOnly()) {
+        addUpdate(modelNode,new AdditionalTextNodeUpdate(GenerationStatus.READONLY.getMessage()));
+        addUpdate(moduleNode,new AdditionalTextNodeUpdate(GenerationStatus.READONLY.getMessage()));
+        return;
+      }
+      if (wasChanged) {
+        addUpdate(modelNode,new AdditionalTextNodeUpdate(GenerationStatus.REQUIRED.getMessage()));
+        addUpdate(moduleNode,new AdditionalTextNodeUpdate(GenerationStatus.REQUIRED.getMessage()));
+        if (moduleNode.getModule() instanceof Generator) {
+          addUpdate(getContainingModuleNode(moduleNode),new AdditionalTextNodeUpdate(GenerationStatus.REQUIRED.getMessage()));
+        }
+        return;
+      }
+      GenerationStatus modelStatus=ModelAccess.instance().runReadAction(new Computable<GenerationStatus>(){
+        @Override public GenerationStatus compute(){
+          if (modelNode.getModel().getModule() == null) {
+            return GenerationStatus.NOT_REQUIRED;
+          }
+          return getGenerationStatus(modelNode);
+        }
+      }
+);
+      updateModuleStatus(moduleNode);
+      if (moduleNode.getModule() instanceof Generator) {
+        updateModuleStatus(getContainingModuleNode(moduleNode));
+      }
+      addUpdate(modelNode,new AdditionalTextNodeUpdate(modelStatus.getMessage()));
+    }
+  }
+);
+}
