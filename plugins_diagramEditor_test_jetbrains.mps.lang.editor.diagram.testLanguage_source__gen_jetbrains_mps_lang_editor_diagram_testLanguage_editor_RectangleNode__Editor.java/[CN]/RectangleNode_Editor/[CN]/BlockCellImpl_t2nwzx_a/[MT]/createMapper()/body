@@ -1,0 +1,41 @@
+{
+  return new Mapper<SNode,DiagramNodeView>(getSNode(),createDiagramNodeView()){
+    @Override protected void registerSynchronizers(    Mapper.SynchronizersConfiguration configuration){
+      super.registerSynchronizers(configuration);
+      final DiagramNodeView diagramNodeView=getTarget();
+      configuration.add(Synchronizers.forConstantRole(this,getContentViewMapperSource(),getTarget().contentView.children(),new MapperFactory<String,MPSRectView>(){
+        public Mapper<? extends String,? extends MPSRectView> createMapper(        String block){
+          return new Mapper<String,MPSRectView>(block,new MPSRectView()){
+            @Override protected void registerSynchronizers(            Mapper.SynchronizersConfiguration configuration){
+              super.registerSynchronizers(configuration);
+            }
+          }
+;
+        }
+      }
+));
+      configuration.add(Synchronizers.forProperty(getTarget().bounds(),new WritableProperty<Rectangle>(){
+        public void set(        Rectangle rect){
+          DiagramCell diagramCell=getDiagramCell();
+          if (diagramCell == null) {
+            return;
+          }
+          setX(rect.origin.x + diagramCell.getX());
+          setY(rect.origin.y + diagramCell.getY());
+          setWidth(rect.dimension.x);
+          setHeight(rect.dimension.y);
+        }
+      }
+));
+      configuration.add(Synchronizers.forProperty(getTarget().focused(),new Runnable(){
+        public void run(){
+          if (getTarget().focused().get()) {
+            SelectionUtil.selectCell(getContext(),getSNode(),getCellId());
+          }
+        }
+      }
+));
+    }
+  }
+;
+}
