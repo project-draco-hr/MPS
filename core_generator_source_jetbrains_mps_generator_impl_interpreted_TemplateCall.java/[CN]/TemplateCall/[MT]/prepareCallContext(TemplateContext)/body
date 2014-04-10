@@ -1,18 +1,11 @@
 {
-  final SNode[] arguments=getArguments(templateCall);
-  final IGeneratorLogger log=outerContext.getEnvironment().getLogger();
-  final String[] parameters=getParameters(templateCall,log);
-  if (arguments == null && parameters == null) {
-    return outerContext.subContext(newInputNode);
+  if (myNoArgs) {
+    return outerContext;
   }
-  if (arguments == null || parameters == null || arguments.length != parameters.length) {
-    log.error(templateCall.getReference(),"number of arguments doesn't match template",GeneratorUtil.describeInput(outerContext));
-    return outerContext.subContext(newInputNode);
-  }
-  final Map<String,Object> vars=new HashMap<String,Object>(arguments.length);
-  for (int i=0; i < arguments.length; i++) {
-    SNode exprNode=arguments[i];
-    String name=parameters[i];
+  IGeneratorLogger log=outerContext.getEnvironment().getLogger();
+  final Map<String,Object> vars=new HashMap<String,Object>(myArguments.length * 2);
+  for (int i=0; i < myArguments.length; i++) {
+    SNode exprNode=myArguments[i];
     Object value=null;
     if (exprNode.getConcept().isSubConceptOf(SConceptRepository.getInstance().getConcept(RuleUtil.concept_TemplateArgumentParameterExpression))) {
       SNode parameter=RuleUtil.getTemplateArgumentParameterExpression_Parameter(exprNode);
@@ -45,10 +38,10 @@
         value=RuleUtil.evaluateBaseLanguageExpression(exprNode);
       }
  catch (      IllegalArgumentException ex) {
-        log.error(templateCall.getReference(),String.format("cannot evaluate template argument #%d: %s",i + 1,ex.toString()),GeneratorUtil.describeInput(outerContext));
+        log.error(myTemplateCall.getReference(),String.format("cannot evaluate template argument #%d: %s",i + 1,ex.toString()),GeneratorUtil.describeInput(outerContext));
       }
     }
-    vars.put(name,value);
+    vars.put(myParameters[i],value);
   }
-  return outerContext.subContext(vars).subContext(outerContext.getInputName(),newInputNode);
+  return outerContext.subContext(vars).subContext(outerContext.getInputName());
 }
