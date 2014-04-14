@@ -1,11 +1,34 @@
 {
-  if (environment.getQueryExecutor().isApplicable(rule,new DefaultTemplateContext(environment,null,null))) {
-    myGenerationTracer.pushRule(rule.getRuleNode());
-    try {
-      createRootNodeByRule(rule,environment);
+  if (!environment.getQueryExecutor().isApplicable(rule,new DefaultTemplateContext(environment,null,null))) {
+    return;
+  }
+  myGenerationTracer.pushRule(rule.getRuleNode());
+  try {
+    Collection<SNode> outputNodes=environment.getQueryExecutor().applyRule(rule,environment);
+    if (outputNodes == null) {
+      return;
     }
-  finally {
-      myGenerationTracer.closeRule(rule.getRuleNode());
+    environment.getTrace().trace(null,GenerationTracerUtil.translateOutput(outputNodes),rule.getRuleNode());
+    for (    SNode outputNode : outputNodes) {
+      registerRoot(new GeneratedRootDescriptor(outputNode,rule.getRuleNode()));
+      setChanged();
     }
+  }
+ catch (  DismissTopMappingRuleException ex) {
+  }
+catch (  TemplateProcessingFailureException ex) {
+    getLogger().error(rule.getRuleNode(),String.format("couldn't create root node: %s",ex.getMessage()),ex.asProblemDescription());
+  }
+catch (  GenerationCanceledException ex) {
+    throw ex;
+  }
+catch (  GenerationFailureException ex) {
+    throw ex;
+  }
+catch (  GenerationException e) {
+    getLogger().error(rule.getRuleNode(),"internal error: " + e.toString());
+  }
+ finally {
+    myGenerationTracer.closeRule(rule.getRuleNode());
   }
 }

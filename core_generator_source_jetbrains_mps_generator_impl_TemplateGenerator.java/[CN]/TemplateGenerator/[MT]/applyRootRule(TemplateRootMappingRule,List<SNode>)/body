@@ -10,22 +10,23 @@
     if (getGeneratorSessionContext().isCopiedRoot(inputNode))     continue;
     final QueryExecutionContext executionContext=getExecutionContext(inputNode);
     if (executionContext != null) {
-      TemplateExecutionEnvironmentImpl environment=new TemplateExecutionEnvironmentImpl(myTemplateProcessor,executionContext);
+      TemplateExecutionEnvironmentImpl environment=new TemplateExecutionEnvironmentImpl(myTemplateProcessor,executionContext,new ReductionTrack(getBlockedReductionsData()));
       final DefaultTemplateContext templateContext=new DefaultTemplateContext(environment,inputNode,null);
-      if (executionContext.isApplicable(rule,templateContext)) {
-        myGenerationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(inputNode));
-        myGenerationTracer.pushRule(rule.getRuleNode());
-        try {
-          boolean copyRootOnFailure=false;
-          if (inputNode.getModel() != null && inputNode.getParent() == null && !rule.keepSourceRoot()) {
-            rootsConsumed.add(inputNode);
-            copyRootOnFailure=true;
-          }
-          createRootNodeByRule(rule,templateContext,copyRootOnFailure);
+      if (!executionContext.isApplicable(rule,templateContext)) {
+        continue;
+      }
+      myGenerationTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(inputNode));
+      myGenerationTracer.pushRule(rule.getRuleNode());
+      try {
+        boolean copyRootOnFailure=false;
+        if (inputNode.getModel() != null && inputNode.getParent() == null && !rule.keepSourceRoot()) {
+          rootsConsumed.add(inputNode);
+          copyRootOnFailure=true;
         }
+        createRootNodeByRule(rule,inputNode,environment,copyRootOnFailure);
+      }
   finally {
-          myGenerationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(inputNode));
-        }
+        myGenerationTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(inputNode));
       }
     }
   }
