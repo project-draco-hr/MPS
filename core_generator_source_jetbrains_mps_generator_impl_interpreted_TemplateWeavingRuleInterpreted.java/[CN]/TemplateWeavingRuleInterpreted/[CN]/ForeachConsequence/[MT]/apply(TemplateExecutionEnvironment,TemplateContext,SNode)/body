@@ -3,13 +3,14 @@
     environment.getLogger().error(getRuleNode(),"weaving rule: cannot create list of source nodes",GeneratorUtil.describeInput(context));
     return false;
   }
-  Collection<SNode> queryNodes=environment.getQueryExecutor().evaluateSourceNodesQuery(context.getInput(),ruleNode,null,query,context);
+  final SourceNodesQuery snq=environment.getQueryProvider(getRuleNode()).getSourceNodesQuery(query);
+  Collection<SNode> queryNodes=environment.getQueryExecutor().evaluate(snq,new SourceSubstituteMacroNodesContext(context,query.getReference()));
   if (queryNodes.isEmpty()) {
     return false;
   }
   mapWeaveContentNodeToTemplateDeclarationContentNode(environment,outputContextNode,context.getInput());
   for (  SNode queryNode : queryNodes) {
-    weaveTemplateDeclaration(outputContextNode,GeneratorUtil.createConsequenceContext(new DefaultTemplateContext(queryNode),environment,consequenceNode),environment);
+    weaveTemplateDeclaration(outputContextNode,new DefaultTemplateContext(environment,queryNode,null));
   }
   return true;
 }

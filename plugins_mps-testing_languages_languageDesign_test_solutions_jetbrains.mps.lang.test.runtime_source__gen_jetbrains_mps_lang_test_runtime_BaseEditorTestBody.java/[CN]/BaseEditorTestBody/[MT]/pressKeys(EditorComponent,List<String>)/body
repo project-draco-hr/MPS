@@ -1,12 +1,63 @@
 {
+  final Component eventTargetComponent;
+  EditorCell selectedCell=editorComponent.getSelectedCell();
+  if (selectedCell != null) {
+    Component eventTarget=getEventTargetComponent(selectedCell,editorComponent);
+    if (eventTarget == editorComponent) {
+      eventTargetComponent=null;
+    }
+ else {
+      while ((eventTarget instanceof JComponent) && ((JComponent)eventTarget).getComponentCount() > 0) {
+        eventTarget=((JComponent)eventTarget).getComponent(((JComponent)eventTarget).getComponentCount() - 1);
+      }
+      eventTargetComponent=eventTarget;
+    }
+  }
+ else {
+    eventTargetComponent=null;
+  }
+  final boolean[] eventWasPassed=new boolean[]{true};
   SwingUtilities.invokeAndWait(new Runnable(){
     @Override public void run(){
       for (      String code : keyStrokes) {
         KeyStroke stroke=KeyStroke.getKeyStroke(code);
-        editorComponent.processKeyPressed(new KeyEvent(editorComponent,KeyEvent.KEY_PRESSED,0,stroke.getModifiers(),stroke.getKeyCode(),stroke.getKeyChar()));
-        editorComponent.processKeyReleased(new KeyEvent(editorComponent,KeyEvent.KEY_RELEASED,0,stroke.getModifiers(),stroke.getKeyCode(),stroke.getKeyChar()));
+        KeyEvent keyPressedEvent=new KeyEvent(editorComponent,KeyEvent.KEY_PRESSED,0,stroke.getModifiers(),stroke.getKeyCode(),stroke.getKeyChar());
+        KeyEvent keyReleasedEvent=new KeyEvent(editorComponent,KeyEvent.KEY_RELEASED,0,stroke.getModifiers(),stroke.getKeyCode(),stroke.getKeyChar());
+        if (eventTargetComponent == null) {
+          editorComponent.processKeyPressed(keyPressedEvent);
+          editorComponent.processKeyReleased(keyReleasedEvent);
+        }
+ else {
+          Class<?> clazz=eventTargetComponent.getClass();
+          Method theMethod=null;
+          while (theMethod == null && clazz != null) {
+            try {
+              theMethod=clazz.getDeclaredMethod("processKeyEvent",KeyEvent.class);
+              theMethod.setAccessible(true);
+            }
+ catch (            NoSuchMethodException e) {
+            }
+            clazz=clazz.getSuperclass();
+          }
+          if (theMethod != null) {
+            try {
+              theMethod.invoke(eventTargetComponent,keyPressedEvent);
+              theMethod.invoke(eventTargetComponent,keyReleasedEvent);
+            }
+ catch (            IllegalAccessException e) {
+              eventWasPassed[0]=false;
+            }
+catch (            InvocationTargetException e) {
+              eventWasPassed[0]=false;
+            }
+          }
+ else {
+            eventWasPassed[0]=false;
+          }
+        }
       }
     }
   }
 );
+  Assert.assertTrue("Keyboard event was not passed to corresponding component",eventWasPassed[0]);
 }

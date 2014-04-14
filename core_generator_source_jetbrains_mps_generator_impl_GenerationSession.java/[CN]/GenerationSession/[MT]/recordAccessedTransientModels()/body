@@ -1,20 +1,25 @@
 {
   Collection<SModelReference> modelToKeepCandidates=new LinkedHashSet<SModelReference>();
-  modelToKeepCandidates.addAll(myLogRecorder.ofKind(MessageKind.ERROR));
-  if (myGenerationOptions.isShowWarnings() && myGenerationOptions.isKeepModelsWithWarnings()) {
-    modelToKeepCandidates.addAll(myLogRecorder.ofKind(MessageKind.WARNING));
-  }
-  for (  SModelReference mr : modelToKeepCandidates) {
-    mySessionContext.keepTransientModel(mr,false);
+  final TransientModelsModule transientsModule=mySessionContext.getModule();
+  if (keepTransientForMessageNavigation()) {
+    modelToKeepCandidates.addAll(myLogRecorder.ofKind(MessageKind.ERROR));
+    if (myGenerationOptions.isShowWarnings() && myGenerationOptions.isKeepModelsWithWarnings()) {
+      modelToKeepCandidates.addAll(myLogRecorder.ofKind(MessageKind.WARNING));
+    }
+    for (    SModelReference mr : modelToKeepCandidates) {
+      if (transientsModule.isMyTransientModel(mr)) {
+        transientsModule.addModelToKeep(mr,false);
+      }
+    }
   }
   myLogRecorder.reset();
   final boolean discardTransients=!myGenerationOptions.isSaveTransientModels();
   for (  SModel m : myTransientModelsToRecycle) {
     if (discardTransients && !modelToKeepCandidates.contains(m.getReference())) {
-      mySessionContext.getModule().removeModel(m);
+      transientsModule.removeModel(m);
     }
  else {
-      mySessionContext.keepTransientModel(m.getReference(),true);
+      transientsModule.addModelToKeep(m.getReference(),true);
     }
   }
   myTransientModelsToRecycle.clear();
