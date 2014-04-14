@@ -2,13 +2,33 @@
   return new Mapper<SNode,DiagramNodeView>(getSNode(),createDiagramNodeView()){
     @Override protected void registerSynchronizers(    Mapper.SynchronizersConfiguration configuration){
       super.registerSynchronizers(configuration);
-      configuration.add(Synchronizers.forConstantRole(this,getContentViewMapperSource(),getTarget().contentView.children(),new MapperFactory<String,MindMapCentralThoughtView>(){
-        public Mapper<? extends String,? extends MindMapCentralThoughtView> createMapper(        String block){
-          return new Mapper<String,MindMapCentralThoughtView>(block,new MindMapCentralThoughtView()){
+      final DiagramNodeView diagramNodeView=getTarget();
+      configuration.add(Synchronizers.forConstantRole(this,getContentViewMapperSource(),getTarget().contentView.children(),new MapperFactory<String,PolygonContentView>(){
+        public Mapper<? extends String,? extends PolygonContentView> createMapper(        String block){
+          return new Mapper<String,PolygonContentView>(block,new PolygonContentView()){
             @Override protected void registerSynchronizers(            Mapper.SynchronizersConfiguration configuration){
               super.registerSynchronizers(configuration);
-              myPropertyCell_pr685x_a0a.registerSynchronizers(configuration,getTarget().text());
-              myPropertyCell_pr685x_a1a.registerSynchronizers(configuration,getTarget().isClicked);
+              configuration.add(Synchronizers.forProperty(getTarget().prop(MovableContentView.POSITION_X),new Runnable(){
+                public void run(){
+                  updatePositionsFromModel(getTarget(),diagramNodeView);
+                }
+              }
+));
+              configuration.add(Synchronizers.forProperty(getTarget().prop(MovableContentView.POSITION_Y),new Runnable(){
+                public void run(){
+                  updatePositionsFromModel(getTarget(),diagramNodeView);
+                }
+              }
+));
+              configuration.add(Synchronizers.forProperty(getTarget().bounds(),new WritableProperty<Rectangle>(){
+                public void set(                Rectangle bounds){
+                  getTarget().prop(MovableContentView.POSITION_X).set(bounds.origin.x);
+                  getTarget().prop(MovableContentView.POSITION_Y).set(bounds.origin.y);
+                }
+              }
+));
+              myPropertyCell_pr685x_a0a.registerSynchronizers(configuration,getTarget().prop(MovableContentView.POSITION_X));
+              myPropertyCell_pr685x_a1a.registerSynchronizers(configuration,getTarget().prop(MovableContentView.POSITION_Y));
             }
           }
 ;
@@ -28,10 +48,24 @@
         }
       }
 ));
-      configuration.add(Synchronizers.forProperty(getTarget().focused(),new Runnable(){
-        public void run(){
-          if (getTarget().focused().get()) {
+      configuration.add(Synchronizers.forProperty(getTarget().focused(),new WritableProperty<Boolean>(){
+        public void set(        Boolean isFocused){
+          if (isFocused && !(isSelected())) {
             SelectionUtil.selectCell(getContext(),getSNode(),getCellId());
+          }
+ else           if (!(isFocused) && isSelected()) {
+            getEditorComponent().getSelectionManager().clearSelection();
+          }
+        }
+      }
+));
+      configuration.add(Synchronizers.forProperty(mySelectedItem,new WritableProperty<Boolean>(){
+        public void set(        Boolean isSelected){
+          if (isSelected && !(getTarget().focused().get())) {
+            getTarget().container().focusedView().set(getTarget());
+          }
+ else           if (!(isSelected) && getTarget().focused().get()) {
+            getTarget().container().focusedView().set(null);
           }
         }
       }
