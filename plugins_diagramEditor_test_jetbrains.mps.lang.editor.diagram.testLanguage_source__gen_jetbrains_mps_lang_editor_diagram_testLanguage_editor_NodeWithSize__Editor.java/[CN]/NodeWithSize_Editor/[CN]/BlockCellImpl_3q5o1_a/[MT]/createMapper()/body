@@ -1,0 +1,78 @@
+{
+  return new Mapper<SNode,DiagramNodeView>(getSNode(),createDiagramNodeView()){
+    @Override protected void registerSynchronizers(    Mapper.SynchronizersConfiguration configuration){
+      super.registerSynchronizers(configuration);
+      final DiagramNodeView diagramNodeView=getTarget();
+      configuration.add(Synchronizers.forConstantRole(this,getContentViewMapperSource(),getTarget().contentView.children(),new MapperFactory<String,BoxFigure>(){
+        public Mapper<? extends String,? extends BoxFigure> createMapper(        String block){
+          return new Mapper<String,BoxFigure>(block,new BoxFigure()){
+            @Override protected void registerSynchronizers(            Mapper.SynchronizersConfiguration configuration){
+              super.registerSynchronizers(configuration);
+              configuration.add(Synchronizers.forProperty(getTarget().prop(MovableContentView.POSITION_X),new Runnable(){
+                public void run(){
+                  updatePositionsFromModel(getTarget(),diagramNodeView);
+                }
+              }
+));
+              configuration.add(Synchronizers.forProperty(getTarget().prop(MovableContentView.POSITION_Y),new Runnable(){
+                public void run(){
+                  updatePositionsFromModel(getTarget(),diagramNodeView);
+                }
+              }
+));
+              configuration.add(Synchronizers.forProperty(getTarget().bounds(),new WritableProperty<Rectangle>(){
+                public void set(                Rectangle bounds){
+                  getTarget().prop(MovableContentView.POSITION_X).set(bounds.origin.x);
+                  getTarget().prop(MovableContentView.POSITION_Y).set(bounds.origin.y);
+                }
+              }
+));
+              myPropertyCell_3q5o1_a0a.registerSynchronizers(configuration,getTarget().prop(MovableContentView.POSITION_X));
+              myPropertyCell_3q5o1_a1a.registerSynchronizers(configuration,getTarget().prop(MovableContentView.POSITION_Y));
+              myPropertyCell_3q5o1_a2a.registerSynchronizers(configuration,getTarget().figureWidth);
+              myPropertyCell_3q5o1_a3a.registerSynchronizers(configuration,getTarget().figureHeight);
+            }
+          }
+;
+        }
+      }
+));
+      configuration.add(Synchronizers.forProperty(getTarget().bounds(),new WritableProperty<Rectangle>(){
+        public void set(        Rectangle rect){
+          DiagramCell diagramCell=getDiagramCell();
+          if (diagramCell == null) {
+            return;
+          }
+          setX(rect.origin.x + diagramCell.getX());
+          setY(rect.origin.y + diagramCell.getY());
+          setWidth(rect.dimension.x);
+          setHeight(rect.dimension.y);
+        }
+      }
+));
+      configuration.add(Synchronizers.forProperty(getTarget().focused(),new WritableProperty<Boolean>(){
+        public void set(        Boolean isFocused){
+          if (isFocused && !(isSelected())) {
+            SelectionUtil.selectCell(getContext(),getSNode(),getCellId());
+          }
+ else           if (!(isFocused) && isSelected()) {
+            getEditorComponent().getSelectionManager().clearSelection();
+          }
+        }
+      }
+));
+      configuration.add(Synchronizers.forProperty(mySelectedItem,new WritableProperty<Boolean>(){
+        public void set(        Boolean isSelected){
+          if (isSelected && !(getTarget().focused().get())) {
+            getTarget().container().focusedView().set(getTarget());
+          }
+ else           if (!(isSelected) && getTarget().focused().get()) {
+            getTarget().container().focusedView().set(null);
+          }
+        }
+      }
+));
+    }
+  }
+;
+}
