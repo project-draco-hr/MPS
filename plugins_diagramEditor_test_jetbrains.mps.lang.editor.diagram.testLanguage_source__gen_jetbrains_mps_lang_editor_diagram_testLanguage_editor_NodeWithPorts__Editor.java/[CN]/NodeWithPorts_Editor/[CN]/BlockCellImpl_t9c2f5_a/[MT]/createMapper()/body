@@ -1,0 +1,94 @@
+{
+  return new Mapper<SNode,DiagramNodeView>(getSNode(),createDiagramNodeView()){
+    @Override protected void registerSynchronizers(    Mapper.SynchronizersConfiguration configuration){
+      super.registerSynchronizers(configuration);
+      configuration.add(Synchronizers.forObservableRole(this,myInputPorts,getTarget().inputs.children(),new MapperFactory<SNode,View>(){
+        public Mapper<? extends SNode,? extends View> createMapper(        SNode portNode){
+          return ((PortCell)getDirectChildCell(portNode)).createMapper();
+        }
+      }
+));
+      configuration.add(Synchronizers.forObservableRole(this,myOutputPorts,getTarget().outputs.children(),new MapperFactory<SNode,View>(){
+        public Mapper<? extends SNode,? extends View> createMapper(        SNode portNode){
+          return ((PortCell)getDirectChildCell(portNode)).createMapper();
+        }
+      }
+));
+      final DiagramNodeView diagramNodeView=getTarget();
+      configuration.add(Synchronizers.forConstantRole(this,getContentViewMapperSource(),getTarget().contentView.children(),new MapperFactory<String,BoxFigure>(){
+        public Mapper<? extends String,? extends BoxFigure> createMapper(        String block){
+          return new Mapper<String,BoxFigure>(block,new BoxFigure()){
+            @Override protected void registerSynchronizers(            Mapper.SynchronizersConfiguration configuration){
+              super.registerSynchronizers(configuration);
+              configuration.add(Synchronizers.forProperty(getTarget().prop(MovableContentView.POSITION_X),new Runnable(){
+                public void run(){
+                  updatePositionsFromModel(getTarget(),diagramNodeView);
+                }
+              }
+));
+              configuration.add(Synchronizers.forProperty(getTarget().prop(MovableContentView.POSITION_Y),new Runnable(){
+                public void run(){
+                  updatePositionsFromModel(getTarget(),diagramNodeView);
+                }
+              }
+));
+              configuration.add(Synchronizers.forProperty(getTarget().bounds(),new WritableProperty<Rectangle>(){
+                public void set(                Rectangle bounds){
+                  getTarget().prop(MovableContentView.POSITION_X).set(bounds.origin.x);
+                  getTarget().prop(MovableContentView.POSITION_Y).set(bounds.origin.y);
+                }
+              }
+));
+              myPropertyCell_t9c2f5_a0a.registerSynchronizers(configuration,getTarget().prop(MovableContentView.POSITION_X));
+              myPropertyCell_t9c2f5_a1a.registerSynchronizers(configuration,getTarget().prop(MovableContentView.POSITION_Y));
+              myPropertyCell_t9c2f5_a2a.registerSynchronizers(configuration,getTarget().figureWidth);
+              myPropertyCell_t9c2f5_a3a.registerSynchronizers(configuration,getTarget().figureHeight);
+              myPropertyCell_t9c2f5_a4a.registerSynchronizers(configuration,getTarget().lineWidth);
+            }
+          }
+;
+        }
+      }
+));
+      final View targetView=this.getTarget();
+      configuration.add(Synchronizers.forProperty(targetView.focused(),new WritableProperty<Boolean>(){
+        public void set(        Boolean isFocused){
+          if (isFocused && !(isSelected())) {
+            SelectionUtil.selectCell(getContext(),getSNode(),getCellId());
+          }
+        }
+      }
+));
+      configuration.add(Synchronizers.forProperty(mySelectedItem,new WritableProperty<Boolean>(){
+        public void set(        Boolean isSelected){
+          if (isSelected) {
+            for (            View view : Sequence.fromIterable(JetpadUtils.getAllChildren(targetView))) {
+              if (view.focused().get()) {
+                return;
+              }
+            }
+            targetView.container().focusedView().set(targetView);
+          }
+ else           if (!(isSelected) && targetView.focused().get()) {
+            targetView.container().focusedView().set(null);
+          }
+        }
+      }
+));
+      configuration.add(Synchronizers.forProperty(targetView.bounds(),new WritableProperty<Rectangle>(){
+        public void set(        Rectangle rect){
+          DiagramCell diagramCell=getDiagramCell();
+          if (diagramCell == null) {
+            return;
+          }
+          setX(rect.origin.x + diagramCell.getX());
+          setY(rect.origin.y + diagramCell.getY());
+          setWidth(rect.dimension.x);
+          setHeight(rect.dimension.y);
+        }
+      }
+));
+    }
+  }
+;
+}
