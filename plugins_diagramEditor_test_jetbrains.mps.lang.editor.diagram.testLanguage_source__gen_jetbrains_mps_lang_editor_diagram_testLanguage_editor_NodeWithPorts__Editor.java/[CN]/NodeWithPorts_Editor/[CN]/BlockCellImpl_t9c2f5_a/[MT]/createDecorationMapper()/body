@@ -1,0 +1,45 @@
+{
+  return new Mapper<SNode,NodeDecoratorView>(getSNode(),new NodeDecoratorView()){
+    @Override protected void registerSynchronizers(    Mapper.SynchronizersConfiguration configuration){
+      super.registerSynchronizers(configuration);
+      DiagramCell diagramCell=getDiagramCell();
+      if (diagramCell == null) {
+        return;
+      }
+      final Mapper<SNode,DiagramNodeView> blockMapper=getBlockMapper();
+      if (blockMapper == null) {
+        return;
+      }
+      configuration.add(Synchronizers.forProperty(myErrorItem,getTarget().hasError));
+      configuration.add(Synchronizers.forProperty(blockMapper.getTarget().focused(),getTarget().isSelected));
+      final BoxFigureExt contentView=(BoxFigureExt)getContentView();
+      configuration.add(Synchronizers.forProperty(contentView.bounds(),getTarget().bounds));
+      configuration.add(Synchronizers.forProperty(Properties.constant(Boolean.TRUE),getTarget().resizable));
+      configuration.add(Synchronizers.forProperty(getTarget().boundsDelta,new WritableProperty<Rectangle>(){
+        public void set(        Rectangle delta){
+          if (delta == null) {
+            return;
+          }
+          Vector positionDelta=delta.origin;
+          Vector sizeDelta=delta.dimension;
+          blockMapper.getTarget().move(positionDelta);
+          contentView.prop(ResizableContentView.PREFERRED_SIZE).set(contentView.prop(ResizableContentView.PREFERRED_SIZE).get().add(sizeDelta));
+        }
+      }
+));
+      configuration.add(Synchronizers.forObservableRole(this,myInputPorts,getTarget().inputPortDecotatorView.children(),new MapperFactory<SNode,PortDecoratorView>(){
+        public Mapper<? extends SNode,? extends PortDecoratorView> createMapper(        SNode portNode){
+          return ((PortCell)getDirectChildCell(portNode)).createDecorationMapper();
+        }
+      }
+));
+      configuration.add(Synchronizers.forObservableRole(this,myOutputPorts,getTarget().outputPortDecotatorView.children(),new MapperFactory<SNode,PortDecoratorView>(){
+        public Mapper<? extends SNode,? extends PortDecoratorView> createMapper(        SNode portNode){
+          return ((PortCell)getDirectChildCell(portNode)).createDecorationMapper();
+        }
+      }
+));
+    }
+  }
+;
+}
