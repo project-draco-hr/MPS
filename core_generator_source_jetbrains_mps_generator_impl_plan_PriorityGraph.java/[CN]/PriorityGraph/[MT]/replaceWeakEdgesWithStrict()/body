@@ -1,0 +1,50 @@
+{
+  final ArrayDeque<Entry> weakEntries=new ArrayDeque<Entry>();
+  for (  Entry entry : myRulePriorityEntries) {
+    if (!entry.isStrict() && !entry.isTrivial()) {
+      weakEntries.add(entry);
+    }
+  }
+  while (!weakEntries.isEmpty()) {
+    Entry weak=weakEntries.removeFirst();
+    myRulePriorityEntries.remove(weak);
+    boolean weakGotUpdate=false;
+    Collection<Entry> toAdd=new ArrayList<Entry>();
+    for (    Entry entry : myRulePriorityEntries) {
+      final boolean substituteForSooner=entry.later().hasCommonMappings(weak.sooner());
+      final boolean dependsOnWeak=entry.sooner().includes(weak.later());
+      if (!substituteForSooner && !dependsOnWeak) {
+        continue;
+      }
+      weakGotUpdate=true;
+      final Entry newEntry;
+      if (substituteForSooner) {
+        newEntry=new Entry(weak.later(),entry.sooner(),entry.isStrict());
+      }
+ else {
+        assert dependsOnWeak;
+        newEntry=new Entry(entry.later(),weak.sooner(),entry.isStrict());
+      }
+      toAdd.add(newEntry);
+      if (!newEntry.isStrict() && !newEntry.isTrivial()) {
+        weakEntries.add(newEntry);
+      }
+    }
+    if (!weakGotUpdate) {
+      toAdd.add(new Entry(weak.later(),weak.sooner(),true));
+    }
+    for (Iterator<Entry> it=toAdd.iterator(); it.hasNext(); ) {
+      Entry next=it.next();
+      if (!next.isTrivial()) {
+        continue;
+      }
+      for (      Entry e : myRulePriorityEntries) {
+        if (e.later().includes(next.later())) {
+          it.remove();
+          break;
+        }
+      }
+    }
+    myRulePriorityEntries.addAll(toAdd);
+  }
+}
