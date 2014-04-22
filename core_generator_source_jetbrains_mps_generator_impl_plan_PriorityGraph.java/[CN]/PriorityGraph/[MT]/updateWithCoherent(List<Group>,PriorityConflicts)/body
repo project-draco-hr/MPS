@@ -1,0 +1,35 @@
+{
+  Collection<Entry> toRemove=new ArrayList<Entry>(5);
+  Collection<Entry> toAdd=new ArrayList<Entry>(5);
+  for (  Group g : coherentMappings) {
+    boolean edgeWithNonEmptyDependency=false;
+    for (    Entry entry : myRulePriorityEntries) {
+      final boolean soonerMatches=entry.sooner().hasCommonMappings(g);
+      final boolean laterMatches=g.includes(entry.later());
+      if (soonerMatches && laterMatches) {
+        if (entry.isStrict()) {
+          conflicts.register(Kind.CoherentWithStrict,g,entry.sooner(),entry.later());
+          toRemove.add(entry);
+        }
+        continue;
+      }
+      if (soonerMatches) {
+        entry.updateSoonerWith(g);
+      }
+      if (laterMatches) {
+        if (entry.isTrivial()) {
+          toRemove.add(entry);
+        }
+ else {
+          entry.replaceLaterWith(g);
+          edgeWithNonEmptyDependency=true;
+        }
+      }
+    }
+    if (!edgeWithNonEmptyDependency) {
+      toAdd.add(newTrivialEdge(g));
+    }
+  }
+  myRulePriorityEntries.addAll(toAdd);
+  myRulePriorityEntries.removeAll(toRemove);
+}
