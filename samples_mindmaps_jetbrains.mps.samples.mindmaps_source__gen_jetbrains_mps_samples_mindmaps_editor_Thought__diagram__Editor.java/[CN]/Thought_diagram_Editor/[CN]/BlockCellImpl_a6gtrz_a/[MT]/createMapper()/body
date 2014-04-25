@@ -3,9 +3,9 @@
     @Override protected void registerSynchronizers(    Mapper.SynchronizersConfiguration configuration){
       super.registerSynchronizers(configuration);
       final DiagramNodeView diagramNodeView=getTarget();
-      configuration.add(Synchronizers.forConstantRole(this,getContentViewMapperSource(),getTarget().contentView.children(),new MapperFactory<String,PolygonContentView>(){
-        public Mapper<? extends String,? extends PolygonContentView> createMapper(        String block){
-          return new Mapper<String,PolygonContentView>(block,new PolygonContentView()){
+      configuration.add(Synchronizers.forConstantRole(this,getContentViewMapperSource(),getTarget().contentView.children(),new MapperFactory<String,NamedBoxFigure>(){
+        public Mapper<? extends String,? extends NamedBoxFigure> createMapper(        String block){
+          return new Mapper<String,NamedBoxFigure>(block,new NamedBoxFigure()){
             @Override protected void registerSynchronizers(            Mapper.SynchronizersConfiguration configuration){
               super.registerSynchronizers(configuration);
               configuration.add(Synchronizers.forProperty(getTarget().prop(MovableContentView.POSITION_X),new Runnable(){
@@ -29,14 +29,39 @@
 ));
               myPropertyCell_a6gtrz_a0a.registerSynchronizers(configuration,getTarget().prop(MovableContentView.POSITION_X));
               myPropertyCell_a6gtrz_a1a.registerSynchronizers(configuration,getTarget().prop(MovableContentView.POSITION_Y));
-              myPropertyCell_a6gtrz_a2a.registerSynchronizers(configuration,getTarget().text());
+              myPropertyCell_a6gtrz_a2a.registerSynchronizers(configuration,getTarget().nameText());
             }
           }
 ;
         }
       }
 ));
-      configuration.add(Synchronizers.forProperty(getTarget().bounds(),new WritableProperty<Rectangle>(){
+      final View targetView=this.getTarget();
+      configuration.add(Synchronizers.forProperty(targetView.focused(),new WritableProperty<Boolean>(){
+        public void set(        Boolean isFocused){
+          if (isFocused && !(isSelected())) {
+            SelectionUtil.selectCell(getContext(),getSNode(),getCellId());
+          }
+        }
+      }
+));
+      configuration.add(Synchronizers.forProperty(mySelectedItem,new WritableProperty<Boolean>(){
+        public void set(        Boolean isSelected){
+          if (isSelected) {
+            for (            View view : Sequence.fromIterable(JetpadUtils.getAllChildren(targetView))) {
+              if (view.focused().get()) {
+                return;
+              }
+            }
+            targetView.container().focusedView().set(targetView);
+          }
+ else           if (!(isSelected) && targetView.focused().get()) {
+            targetView.container().focusedView().set(null);
+          }
+        }
+      }
+));
+      configuration.add(Synchronizers.forProperty(targetView.bounds(),new WritableProperty<Rectangle>(){
         public void set(        Rectangle rect){
           DiagramCell diagramCell=getDiagramCell();
           if (diagramCell == null) {
@@ -46,28 +71,6 @@
           setY(rect.origin.y + diagramCell.getY());
           setWidth(rect.dimension.x);
           setHeight(rect.dimension.y);
-        }
-      }
-));
-      configuration.add(Synchronizers.forProperty(getTarget().focused(),new WritableProperty<Boolean>(){
-        public void set(        Boolean isFocused){
-          if (isFocused && !(isSelected())) {
-            SelectionUtil.selectCell(getContext(),getSNode(),getCellId());
-          }
- else           if (!(isFocused) && isSelected()) {
-            getEditorComponent().getSelectionManager().clearSelection();
-          }
-        }
-      }
-));
-      configuration.add(Synchronizers.forProperty(mySelectedItem,new WritableProperty<Boolean>(){
-        public void set(        Boolean isSelected){
-          if (isSelected && !(getTarget().focused().get())) {
-            getTarget().container().focusedView().set(getTarget());
-          }
- else           if (!(isSelected) && getTarget().focused().get()) {
-            getTarget().container().focusedView().set(null);
-          }
         }
       }
 ));
