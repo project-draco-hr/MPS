@@ -1,0 +1,38 @@
+{
+  Collection<Entry> toRemove=new HashSet<Entry>();
+  Collection<Entry> toAdd=new HashSet<Entry>();
+  for (  Group g : coherentMappings) {
+    boolean coherentGroupNeedsTrivialEdge=true;
+    for (    Entry entry : myRulePriorityEntries) {
+      final boolean soonerMatches=g.includes(entry.sooner());
+      final boolean laterMatches=g.includes(entry.later());
+      if (!soonerMatches && !laterMatches) {
+        continue;
+      }
+      if (soonerMatches && laterMatches) {
+        if (entry.isStrict()) {
+          conflicts.registerCoherentWithStrict(g,entry.sooner(),entry.getRules());
+        }
+        toRemove.add(entry);
+        continue;
+      }
+      toRemove.add(entry);
+      if (soonerMatches) {
+        toAdd.add(new Entry(entry.later(),g,entry.isStrict(),entry.getRules()));
+      }
+      if (laterMatches) {
+        if (!entry.isTrivial()) {
+          toAdd.add(new Entry(g,entry.sooner(),entry.isStrict(),entry.getRules()));
+          coherentGroupNeedsTrivialEdge=false;
+        }
+      }
+    }
+    if (coherentGroupNeedsTrivialEdge) {
+      toAdd.add(newTrivialEdge(g));
+    }
+    myRulePriorityEntries.addAll(toAdd);
+    myRulePriorityEntries.removeAll(toRemove);
+    toAdd.clear();
+    toRemove.clear();
+  }
+}
