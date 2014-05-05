@@ -1,23 +1,29 @@
 {
   Project project=myEnvironment.getProject();
-  List<ITestNodeWrapper> nodeWrappers=ListSequence.fromList(myRunConfiguration.getJUnitSettings().getTests(ProjectHelper.toMPSProject(project))).toListSequence();
-  ProcessHandler process=new Junit_Command().setDebuggerSettings_String(myDebuggerSettings.getCommandLine(true)).createProcess(nodeWrappers,myRunConfiguration.getJavaRunParameters().getJavaRunParameters());
-  TestRunState dispatcher=new TestRunState(nodeWrappers);
-  TestEventsDispatcher eventsDispatcher=new TestEventsDispatcher(dispatcher);
-  ConsoleView console=ConsoleCreator.createConsoleView(project,false);
-  console.addMessageFilter(new StandaloneMPSStackTraceFilter(project));
-  UnitTestViewComponent viewComponent=new UnitTestViewComponent(project,new ProjectOperationContext(ProjectHelper.toMPSProject(project)),console,dispatcher,new _FunctionTypes._void_P0_E0(){
+  List<ITestNodeWrapper> nodeWrappers=myRunConfiguration.getJUnitSettings().getTests(ProjectHelper.toMPSProject(project));
+  JUnitProcessPack processPack;
+  JUnitLightExecutor lightExecutor=new JUnitLightExecutor(nodeWrappers,project);
+  if (lightExecutor.accept()) {
+    processPack=lightExecutor.execute();
+  }
+ else {
+    TestRunState runState=new TestRunState(nodeWrappers);
+    TestEventsDispatcher eventsDispatcher=new TestEventsDispatcher(runState);
+    ProcessHandler process=new Junit_Command().createProcess(nodeWrappers,myRunConfiguration.getJavaRunParameters().getJavaRunParameters());
+    processPack=new JUnitProcessPacker(project,runState,eventsDispatcher).packProcess(process);
+  }
+  ProcessHandler process=processPack.getProcess();
+  final UnitTestViewComponent testViewComponent=processPack.getTestViewComponent();
+  ProcessListener listener=processPack.getListener();
+  _FunctionTypes._void_P0_E0 disposeHandler=new _FunctionTypes._void_P0_E0(){
     public void invoke(){
+      testViewComponent.dispose();
     }
   }
-);
+;
 {
     ProcessHandler _processHandler=process;
-    _processHandler.addProcessListener(new UnitTestProcessListener(eventsDispatcher));
-    return new DefaultExecutionResult(_processHandler,new DefaultExecutionConsole(viewComponent,new _FunctionTypes._void_P0_E0(){
-      public void invoke(){
-      }
-    }
-));
+    _processHandler.addProcessListener(listener);
+    return new DefaultExecutionResult(_processHandler,new DefaultExecutionConsole(testViewComponent,disposeHandler));
   }
 }
