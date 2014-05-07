@@ -12,28 +12,25 @@
       badLanguages.add(next);
       continue;
     }
-    Collection<TemplateModule> generators=language.getGenerators();
-    if (generators == null) {
-      result.put(next,Collections.<TemplateModule>emptyList());
-      continue;
-    }
-    ArrayList<TemplateModule> langGenerators=new ArrayList<TemplateModule>(generators.size());
-    result.put(next,langGenerators);
-    for (    TemplateModule generator : generators) {
-      if (generator == null) {
-        continue;
+    HashSet<String> targetLanguages=new HashSet<String>();
+    HashSet<String> moreLanguages=new HashSet<String>();
+    result.put(next,collectLanguagesFromGenerators(language,targetLanguages,moreLanguages));
+    if (myOnlyLanguageRealUses) {
+      HashSet<String> checkExtendedLanguages=new HashSet<String>(targetLanguages);
+      checkExtendedLanguages.add(next);
+      checkExtendedLanguages.removeAll(processed);
+      for (      String targetLanguage : checkExtendedLanguages) {
+        Language langModule=ModuleRepositoryFacade.getInstance().getModule(targetLanguage,Language.class);
+        for (        SModuleReference mr : langModule.getExtendedLanguageRefs()) {
+          targetLanguages.add(mr.getModuleName());
+        }
       }
-      langGenerators.add(generator);
-      final Collection<String> generatorOutputLanguages=generator.getUsedLanguages();
-      participatingLanguages.addAll(generatorOutputLanguages);
-      HashSet<String> moreLanguages=new HashSet<String>();
-      moreLanguages.addAll(generatorOutputLanguages);
-      final Collection<String> refGenLangs=getLanguagesFromReferencedModules(generator);
-      moreLanguages.addAll(refGenLangs);
-      moreLanguages.removeAll(processed);
-      processed.addAll(moreLanguages);
-      queue.addAll(moreLanguages);
     }
+    participatingLanguages.addAll(targetLanguages);
+    moreLanguages.addAll(targetLanguages);
+    moreLanguages.removeAll(processed);
+    processed.addAll(moreLanguages);
+    queue.addAll(moreLanguages);
   }
   ArrayList<TemplateModule> all=new ArrayList<TemplateModule>();
   for (  Collection<TemplateModule> m : result.values()) {
@@ -41,7 +38,6 @@
   }
   myAccessibleGenerators=Collections.unmodifiableList(all);
   if (myOnlyLanguageRealUses) {
-    buildLangExtendClosure(Collections.<String>emptyList(),badLanguages);
     ArrayList<TemplateModule> engaged=new ArrayList<TemplateModule>();
     participatingLanguages.retainAll(result.keySet());
     for (    String pl : participatingLanguages) {
