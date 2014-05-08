@@ -1,57 +1,109 @@
 {
-  myMessagesChanged=false;
   EditorComponent editorComponent=(EditorComponent)editorContext.getEditorComponent();
-  SNode sNode=editorComponent.getEditedNode();
-  SNodeReference sNodePointer=editorComponent.getEditedNodePointer();
+  SModel model=editorContext.getModel();
+  myMessagesChanged=false;
   Set<EditorMessage> result=SetSequence.fromSet(new HashSet<EditorMessage>());
-  if (sNode == null) {
+  SNode editedNode=editorComponent.getEditedNode();
+  if (editedNode == null) {
     if (LOG.isEnabledFor(Level.ERROR)) {
       LOG.error("edited node is null");
     }
     return result;
   }
-  if (sNodePointer == null) {
-    if (LOG.isEnabledFor(Level.ERROR)) {
-      LOG.error("edited NodePointer is null");
+  if (node.getModel() == null || SNodeOperations.getModel(editedNode) == null) {
+    return result;
+  }
+  EditorComponent mainEditorComponent=null;
+  boolean inspector=editorComponent instanceof InspectorEditorComponent;
+  if (inspector) {
+    List<SNode> editedNodeAncestors=SNodeOperations.getAncestors(editedNode,null,true);
+    for (    EditorComponent candidate : MapSequence.fromMap(myEditorComponentToErrorMap).keySet()) {
+      if (ListSequence.fromList(editedNodeAncestors).contains(candidate.getEditedNode())) {
+        mainEditorComponent=candidate;
+        break;
+      }
     }
-    return result;
+    if (mainEditorComponent == null) {
+      return result;
+    }
   }
-  SModel descriptor=SNodeOperations.getModel(sNode);
-  if (descriptor == null) {
-    return result;
+ else {
+    mainEditorComponent=editorComponent;
   }
-  LanguageErrorsComponent errorsComponent=MapSequence.fromMap(myNodePointersToComponents).get(new SNodePointer(SNodeOperations.getContainingRoot(sNode)));
-  if (errorsComponent == null) {
-    errorsComponent=new LanguageErrorsComponent(sNode);
-    MapSequence.fromMap(myNodePointersToComponents).put(sNodePointer,errorsComponent);
+  final Wrappers._T<LanguageErrorsComponent> errorsComponent=new Wrappers._T<LanguageErrorsComponent>(MapSequence.fromMap(myEditorComponentToErrorMap).get(mainEditorComponent));
+  if (errorsComponent.value == null) {
+    errorsComponent.value=new LanguageErrorsComponent(model);
+    MapSequence.fromMap(myEditorComponentToErrorMap).put(mainEditorComponent,errorsComponent.value);
+    mainEditorComponent.addDisposeListener(myDisposeListener);
+    Set<EditorComponent> mappedEditorComponent=MapSequence.fromMap(myModelToEditorComponentsMap).get(model);
+    if (mappedEditorComponent == null) {
+      mappedEditorComponent=SetSequence.fromSet(new HashSet<EditorComponent>());
+      MapSequence.fromMap(myModelToEditorComponentsMap).put(model,mappedEditorComponent);
+      addModelListener(model);
+    }
+    SetSequence.fromSet(mappedEditorComponent).addElement(mainEditorComponent);
   }
-  if (!(editorComponent instanceof InspectorEditorComponent) && !(SetSequence.fromSet(myEditorComponents).contains(editorComponent))) {
-    SetSequence.fromSet(myEditorComponents).addElement(editorComponent);
-    editorComponent.addDisposeListener(myDisposeListener);
-  }
-  addModelListener(descriptor);
   if (!(wasCheckedOnce)) {
-    errorsComponent.clear();
+    errorsComponent.value.clear();
   }
-  boolean changed=false;
-  TypeCheckingContext typecheckingContext=editorComponent.getTypeCheckingContext();
-  try {
-    if (typecheckingContext != null) {
-      typecheckingContext.setIsNonTypesystemComputation();
+  if (inspector) {
+    myMessagesChanged=errorsComponent.value.checkInspector();
+  }
+ else {
+    boolean changed=false;
+    TypeCheckingContext typecheckingContext=mainEditorComponent.getTypeCheckingContext();
+    try {
+      if (typecheckingContext != null) {
+        typecheckingContext.setIsNonTypesystemComputation();
+      }
+      changed=errorsComponent.value.check(SNodeOperations.getContainingRoot(((SNode)node)),myRules,editorContext.getRepository());
     }
-    changed=errorsComponent.check(node,myRules,editorContext.getOperationContext());
-  }
   finally {
-    if (typecheckingContext != null) {
-      typecheckingContext.resetIsNonTypesystemComputation();
+      if (typecheckingContext != null) {
+        typecheckingContext.resetIsNonTypesystemComputation();
+      }
     }
+    myMessagesChanged=changed;
   }
-  myMessagesChanged=changed;
-  for (  IErrorReporter errorReporter : errorsComponent.getErrors()) {
+  final List<Tuples._2<QuickFix_Runtime,SNode>> quickFixesToExecute=ListSequence.fromList(new ArrayList<Tuples._2<QuickFix_Runtime,SNode>>());
+  for (  IErrorReporter errorReporter : errorsComponent.value.getErrors()) {
+    SNode nodeWithError=errorReporter.getSNode();
+    if (!(ListSequence.fromList(SNodeOperations.getAncestors(nodeWithError,null,true)).contains(editedNode))) {
+      continue;
+    }
     MessageStatus status=errorReporter.getMessageStatus();
     String errorString=errorReporter.reportError();
-    HighlighterMessage message=HighlightUtil.createHighlighterMessage(errorReporter.getSNode(),NameUtil.capitalize(status.getPresentation()) + ": " + errorString,errorReporter,LanguageEditorChecker.this,editorContext);
+    HighlighterMessage message=HighlightUtil.createHighlighterMessage(nodeWithError,NameUtil.capitalize(status.getPresentation()) + ": " + errorString,errorReporter,LanguageEditorChecker.this,editorContext);
+    List<QuickFixProvider> intentionProviders=message.getIntentionProviders();
+    if (intentionProviders.size() == 1 && intentionProviders.get(0).isExecutedImmediately()) {
+      QuickFix_Runtime quickFix=intentionProviders.get(0).getQuickFix();
+      if (quickFix != null) {
+        ListSequence.fromList(quickFixesToExecute).addElement(MultiTuple.<QuickFix_Runtime,SNode>from(quickFix,nodeWithError));
+      }
+    }
     SetSequence.fromSet(result).addElement(message);
+  }
+  if (ListSequence.fromList(quickFixesToExecute).isNotEmpty()) {
+    LaterInvocator.invokeLater(new Runnable(){
+      public void run(){
+        ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
+          public void run(){
+            boolean wasExecuted=false;
+            for (            Tuples._2<QuickFix_Runtime,SNode> fix : quickFixesToExecute) {
+              if (SNodeOperations.getModel(fix._1()) != null) {
+                fix._0().execute(fix._1());
+                wasExecuted=true;
+              }
+            }
+            if (wasExecuted) {
+              errorsComponent.value.clear();
+            }
+          }
+        }
+);
+      }
+    }
+);
   }
   return result;
 }
