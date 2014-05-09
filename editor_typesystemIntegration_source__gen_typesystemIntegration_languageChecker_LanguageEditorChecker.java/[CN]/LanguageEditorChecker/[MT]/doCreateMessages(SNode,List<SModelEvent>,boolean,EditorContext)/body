@@ -30,10 +30,10 @@
  else {
     mainEditorComponent=editorComponent;
   }
-  final Wrappers._T<LanguageErrorsComponent> errorsComponent=new Wrappers._T<LanguageErrorsComponent>(MapSequence.fromMap(myEditorComponentToErrorMap).get(mainEditorComponent));
-  if (errorsComponent.value == null) {
-    errorsComponent.value=new LanguageErrorsComponent(model);
-    MapSequence.fromMap(myEditorComponentToErrorMap).put(mainEditorComponent,errorsComponent.value);
+  LanguageErrorsComponent errorsComponent=MapSequence.fromMap(myEditorComponentToErrorMap).get(mainEditorComponent);
+  if (errorsComponent == null) {
+    errorsComponent=new LanguageErrorsComponent(model);
+    MapSequence.fromMap(myEditorComponentToErrorMap).put(mainEditorComponent,errorsComponent);
     mainEditorComponent.addDisposeListener(myDisposeListener);
     Set<EditorComponent> mappedEditorComponent=MapSequence.fromMap(myModelToEditorComponentsMap).get(model);
     if (mappedEditorComponent == null) {
@@ -44,10 +44,10 @@
     SetSequence.fromSet(mappedEditorComponent).addElement(mainEditorComponent);
   }
   if (!(wasCheckedOnce)) {
-    errorsComponent.value.clear();
+    errorsComponent.clear();
   }
   if (inspector) {
-    myMessagesChanged=errorsComponent.value.checkInspector();
+    myMessagesChanged=errorsComponent.checkInspector();
   }
  else {
     boolean changed=false;
@@ -56,7 +56,7 @@
       if (typecheckingContext != null) {
         typecheckingContext.setIsNonTypesystemComputation();
       }
-      changed=errorsComponent.value.check(SNodeOperations.getContainingRoot(((SNode)node)),myRules,editorContext.getRepository());
+      changed=errorsComponent.check(SNodeOperations.getContainingRoot(((SNode)node)),myRules,editorContext.getRepository());
     }
   finally {
       if (typecheckingContext != null) {
@@ -66,7 +66,7 @@
     myMessagesChanged=changed;
   }
   final List<Tuples._2<QuickFix_Runtime,SNode>> quickFixesToExecute=ListSequence.fromList(new ArrayList<Tuples._2<QuickFix_Runtime,SNode>>());
-  for (  IErrorReporter errorReporter : errorsComponent.value.getErrors()) {
+  for (  IErrorReporter errorReporter : errorsComponent.getErrors()) {
     SNode nodeWithError=errorReporter.getSNode();
     if (!(ListSequence.fromList(SNodeOperations.getAncestors(nodeWithError,null,true)).contains(editedNode))) {
       continue;
@@ -83,20 +83,15 @@
     }
     SetSequence.fromSet(result).addElement(message);
   }
-  if (ListSequence.fromList(quickFixesToExecute).isNotEmpty()) {
+  if (ListSequence.fromList(quickFixesToExecute).isNotEmpty() && model instanceof EditableSModel && !(model.getModule() instanceof TransientModelsModule)) {
     LaterInvocator.invokeLater(new Runnable(){
       public void run(){
         ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
           public void run(){
-            boolean wasExecuted=false;
             for (            Tuples._2<QuickFix_Runtime,SNode> fix : quickFixesToExecute) {
               if (SNodeOperations.getModel(fix._1()) != null) {
                 fix._0().execute(fix._1());
-                wasExecuted=true;
               }
-            }
-            if (wasExecuted) {
-              errorsComponent.value.clear();
             }
           }
         }
