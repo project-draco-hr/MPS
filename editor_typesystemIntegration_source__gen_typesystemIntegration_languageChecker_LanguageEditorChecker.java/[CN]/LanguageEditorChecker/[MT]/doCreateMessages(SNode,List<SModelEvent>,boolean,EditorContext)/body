@@ -69,6 +69,7 @@
   if (!(myMessagesChanged)) {
     return result;
   }
+  boolean runQuickFixes=shouldRunQuickFixs(model,inspector);
   final List<Tuples._2<QuickFix_Runtime,SNode>> quickFixesToExecute=ListSequence.fromList(new ArrayList<Tuples._2<QuickFix_Runtime,SNode>>());
   for (  IErrorReporter errorReporter : errorsComponent.getErrors()) {
     SNode nodeWithError=errorReporter.getSNode();
@@ -79,7 +80,7 @@
     String errorString=errorReporter.reportError();
     HighlighterMessage message=HighlightUtil.createHighlighterMessage(nodeWithError,NameUtil.capitalize(status.getPresentation()) + ": " + errorString,errorReporter,LanguageEditorChecker.this,editorContext);
     List<QuickFixProvider> intentionProviders=message.getIntentionProviders();
-    if (intentionProviders.size() == 1 && intentionProviders.get(0).isExecutedImmediately()) {
+    if (runQuickFixes && intentionProviders.size() == 1 && intentionProviders.get(0).isExecutedImmediately()) {
       QuickFix_Runtime quickFix=intentionProviders.get(0).getQuickFix();
       if (quickFix != null) {
         ListSequence.fromList(quickFixesToExecute).addElement(MultiTuple.<QuickFix_Runtime,SNode>from(quickFix,nodeWithError));
@@ -87,7 +88,12 @@
     }
     SetSequence.fromSet(result).addElement(message);
   }
-  if (ListSequence.fromList(quickFixesToExecute).isNotEmpty() && model instanceof EditableSModel && !(model.getModule() instanceof TransientModelsModule)) {
+  if (inspector) {
+    return result;
+  }
+  final boolean wasForceRunQuickFixes=myForceRunQuickFixes;
+  myForceRunQuickFixes=false;
+  if (ListSequence.fromList(quickFixesToExecute).isNotEmpty()) {
     LaterInvocator.invokeLater(new Runnable(){
       public void run(){
         ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
@@ -95,6 +101,9 @@
             for (            Tuples._2<QuickFix_Runtime,SNode> fix : quickFixesToExecute) {
               if (SNodeOperations.getModel(fix._1()) != null) {
                 fix._0().execute(fix._1());
+                if (wasForceRunQuickFixes) {
+                  myForceRunQuickFixes=true;
+                }
               }
             }
           }
