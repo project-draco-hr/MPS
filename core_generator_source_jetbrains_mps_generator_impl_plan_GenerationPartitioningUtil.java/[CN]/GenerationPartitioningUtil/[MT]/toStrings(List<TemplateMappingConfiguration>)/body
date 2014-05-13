@@ -1,34 +1,19 @@
 {
   List<Pair<String,TemplateMappingConfiguration>> strings=new ArrayList<Pair<String,TemplateMappingConfiguration>>();
-  Map<TemplateModel,Integer> numOfMappingsByModel=new HashMap<TemplateModel,Integer>();
+  MultiMap<TemplateModel,TemplateMappingConfiguration> mcByModel=new MultiMap<TemplateModel,TemplateMappingConfiguration>();
   for (  TemplateMappingConfiguration mappingConfig : mappings) {
-    TemplateModel model=mappingConfig.getModel();
-    if (!numOfMappingsByModel.containsKey(model)) {
-      numOfMappingsByModel.put(model,0);
-    }
-    numOfMappingsByModel.put(model,numOfMappingsByModel.get(model) + 1);
+    mcByModel.putValue(mappingConfig.getModel(),mappingConfig);
   }
-  Iterator<TemplateModel> models=numOfMappingsByModel.keySet().iterator();
-  while (models.hasNext()) {
-    TemplateModel model=models.next();
-    int totalMappings=model.getConfigurations().size();
-    if (totalMappings <= 1 || numOfMappingsByModel.get(model) < totalMappings) {
-      models.remove();
+  for (  TemplateModel model : mcByModel.keySet()) {
+    HashSet<TemplateMappingConfiguration> all=new HashSet<TemplateMappingConfiguration>(model.getConfigurations());
+    HashSet<TemplateMappingConfiguration> seen=new HashSet<TemplateMappingConfiguration>(mcByModel.get(model));
+    if (all.equals(seen)) {
+      strings.add(new Pair<String,TemplateMappingConfiguration>(model.getLongName() + ".*",seen.iterator().next()));
     }
  else {
-      numOfMappingsByModel.put(model,0);
-    }
-  }
-  for (  TemplateMappingConfiguration mappingConfig : mappings) {
-    TemplateModel model=mappingConfig.getModel();
-    if (numOfMappingsByModel.containsKey(model)) {
-      if (numOfMappingsByModel.get(model) == 0) {
-        strings.add(new Pair<String,TemplateMappingConfiguration>(model.getLongName() + ".*",mappingConfig));
-        numOfMappingsByModel.put(model,1);
+      for (      TemplateMappingConfiguration mappingConfig : seen) {
+        strings.add(new Pair<String,TemplateMappingConfiguration>(model.getLongName() + "." + mappingConfig.getName(),mappingConfig));
       }
-    }
- else {
-      strings.add(new Pair<String,TemplateMappingConfiguration>(model.getLongName() + "." + mappingConfig.getName(),mappingConfig));
     }
   }
   Collections.sort(strings,new Comparator<Pair<String,TemplateMappingConfiguration>>(){
