@@ -1,42 +1,38 @@
 {
-  myPriorityMap.checkSelfLocking(myConflicts);
-  PriorityMapUtil.joinIntersectingCoherentMappings(myCoherentMappings);
-  myPriorityMap.makeLockedByAllCoherentIfLockedByOne(myCoherentMappings);
-  myPriorityMap.makeLocksEqualsForCoherentMappings(myCoherentMappings,myConflicts);
-  boolean need_more_passes=true;
-  while (need_more_passes) {
-    need_more_passes=false;
-    iterate_all_mappings:     for (    TemplateMappingConfiguration lockedMapping : myPriorityMap.keys()) {
-      while (true) {
-        List<TemplateMappingConfiguration> weakLockMappings=myPriorityMap.getWeakLockMappingsForLockedMapping(lockedMapping);
-        if (weakLockMappings.isEmpty())         break;
-        for (        TemplateMappingConfiguration weakLockMapping : weakLockMappings) {
-          myPriorityMap.replaceWeakLock(lockedMapping,weakLockMapping);
-          myPriorityMap.checkSelfLocking(lockedMapping,myConflicts);
-          List<TemplateMappingConfiguration> lockedMappings_1=myPriorityMap.getLockedMappingsForLockMapping(lockedMapping);
-          for (          TemplateMappingConfiguration lockedMapping_1 : lockedMappings_1) {
-            PriorityData priorityDataToApply=myPriorityMap.priorityData(lockedMapping_1,lockedMapping);
-            boolean newLockAdded=myPriorityMap.updateLock(lockedMapping_1,weakLockMapping,priorityDataToApply);
-            myPriorityMap.checkSelfLocking(lockedMapping_1,myConflicts);
-            if (newLockAdded) {
-              PriorityData priorityData=myPriorityMap.priorityData(lockedMapping_1,weakLockMapping);
-              if (priorityData != null && priorityData.isWeak()) {
-                need_more_passes=true;
-                break iterate_all_mappings;
-              }
-            }
-          }
-        }
+  myPriorityGraph.finalizeEdges(myConfigurations);
+  myPriorityGraph.checkSelfLocking(myConflicts);
+  myPriorityGraph.checkLowPrioLocksTopPrio(myConflicts);
+  List<Group> coherentMappings=joinSameStepMappings();
+  myPriorityGraph.updateWithCoherent(coherentMappings,myConflicts);
+  myPriorityGraph.replaceWeakEdgesWithStrict();
+  boolean topPriorityGroup=false;
+  ArrayDeque<Collection<Group>> stack=new ArrayDeque<Collection<Group>>();
+  while (!myPriorityGraph.isEmpty()) {
+    Collection<Group> step=myPriorityGraph.getGroupsNotInDependency();
+    if (step.isEmpty()) {
+      myPriorityGraph.reportEdgesLeft(myConflicts);
+      break;
+    }
+    for (Iterator<Group> it=step.iterator(); it.hasNext(); ) {
+      if (it.next().isTopPriority() != topPriorityGroup) {
+        it.remove();
       }
     }
-  }
-  for (  PriorityData priorityData : myPriorityMap.priorityData()) {
-    if (!priorityData.isStrict()) {
-      throw new RuntimeException("Unexpected weak priority");
+    if (step.isEmpty()) {
+      if (topPriorityGroup) {
+        myPriorityGraph.reportEdgesLeft(myConflicts);
+        break;
+      }
+      topPriorityGroup=true;
+    }
+ else {
+      stack.push(step);
+      myPriorityGraph.dropEdgesOf(step);
     }
   }
-  myPriorityMap.checkTopPriMappingsAreNotLockedByNonTopPri(myConflicts);
-  List<List<TemplateMappingConfiguration>> mappingSets=createMappingSets();
-  myPriorityMap.reportLeftovers(myConflicts);
-  return mappingSets;
+  ArrayList<GenerationPhase> rv=new ArrayList<GenerationPhase>(stack.size());
+  while (!stack.isEmpty()) {
+    rv.add(new GenerationPhase(stack.pop()));
+  }
+  return rv;
 }
