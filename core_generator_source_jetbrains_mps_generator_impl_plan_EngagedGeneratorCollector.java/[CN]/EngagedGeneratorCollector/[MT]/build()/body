@@ -1,9 +1,9 @@
 {
-  Queue<String> queue=new LinkedList<String>(getDirectlyUsedLanguages());
-  queue.addAll(myAdditionalLanguages);
+  Queue<String> queue=new ArrayDeque<String>(getAllLanguages());
   Set<String> processed=new HashSet<String>(queue);
   Map<String,List<TemplateModule>> result=new HashMap<String,List<TemplateModule>>();
   Set<String> badLanguages=new HashSet<String>();
+  Set<String> participatingLanguages=new HashSet<String>(processed);
   while (!queue.isEmpty()) {
     String next=queue.remove();
     LanguageRuntime language=LanguageRegistry.getInstance().getLanguage(next);
@@ -12,37 +12,40 @@
       badLanguages.add(next);
       continue;
     }
-    Collection<TemplateModule> generators=language.getGenerators();
-    if (generators == null) {
-      result.put(next,Collections.<TemplateModule>emptyList());
-      continue;
-    }
-    ArrayList<TemplateModule> langGenerators=new ArrayList<TemplateModule>(generators.size());
-    result.put(next,langGenerators);
-    for (    TemplateModule generator : generators) {
-      if (generator == null) {
-        continue;
-      }
-      langGenerators.add(generator);
-      HashSet<String> otherLanguages=new HashSet<String>();
-      otherLanguages.addAll(generator.getUsedLanguages());
-      final Collection<String> refGenLangs=getLanguagesFromReferencedModules(generator);
-      if (!myUseLanguagesFromExtendedGenerators) {
-        refGenLangs.retainAll(getDirectlyUsedLanguages());
-      }
-      otherLanguages.addAll(refGenLangs);
-      otherLanguages.removeAll(processed);
-      for (      String lang : otherLanguages) {
-        processed.add(lang);
-        queue.add(lang);
+    HashSet<String> targetLanguages=new HashSet<String>();
+    HashSet<String> moreLanguages=new HashSet<String>();
+    result.put(next,collectLanguagesFromGenerators(language,targetLanguages,moreLanguages));
+    if (myOnlyLanguageRealUses) {
+      HashSet<String> checkExtendedLanguages=new HashSet<String>(targetLanguages);
+      checkExtendedLanguages.add(next);
+      checkExtendedLanguages.removeAll(processed);
+      for (      String targetLanguage : checkExtendedLanguages) {
+        Language langModule=ModuleRepositoryFacade.getInstance().getModule(targetLanguage,Language.class);
+        for (        SModuleReference mr : langModule.getExtendedLanguageRefs()) {
+          targetLanguages.add(mr.getModuleName());
+        }
       }
     }
+    participatingLanguages.addAll(targetLanguages);
+    moreLanguages.addAll(targetLanguages);
+    moreLanguages.removeAll(processed);
+    processed.addAll(moreLanguages);
+    queue.addAll(moreLanguages);
   }
   ArrayList<TemplateModule> all=new ArrayList<TemplateModule>();
   for (  Collection<TemplateModule> m : result.values()) {
     all.addAll(m);
   }
   myAccessibleGenerators=Collections.unmodifiableList(all);
-  buildLangExtendClosure(Collections.<String>emptyList(),Collections.<String>emptyList());
-  myEngagedGenerators=myAccessibleGenerators;
+  if (myOnlyLanguageRealUses) {
+    ArrayList<TemplateModule> engaged=new ArrayList<TemplateModule>();
+    participatingLanguages.retainAll(result.keySet());
+    for (    String pl : participatingLanguages) {
+      engaged.addAll(result.get(pl));
+    }
+    myEngagedGenerators=Collections.unmodifiableList(engaged);
+  }
+ else {
+    myEngagedGenerators=myAccessibleGenerators;
+  }
 }

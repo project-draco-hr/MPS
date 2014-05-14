@@ -8,16 +8,12 @@
   }
   final Map<SNode,SNode> reResolvedTargets=new HashMap<SNode,SNode>();
   if (!(wasCheckedOnce) || myCachesCleared) {
+    myCachesCleared=false;
     for (    SNode methodCall : SNodeOperations.getDescendants(rootNode,"jetbrains.mps.baseLanguage.structure.IMethodCall",false,new String[]{})) {
       testAndFixMethodCall(methodCall,reResolvedTargets);
     }
   }
  else {
-    Set<SNodeReference> expressionsWithChangedTypes;
-synchronized (myRecalculatedTypesLock) {
-      expressionsWithChangedTypes=new HashSet<SNodeReference>(myCurrentExpressionsWithChangedTypes);
-      myCurrentExpressionsWithChangedTypes.clear();
-    }
     SModelEventVisitor visitor=new SModelEventVisitorAdapter(){
       @Override public void visitChildEvent(      SModelChildEvent event){
         SNode child=event.getChild();
@@ -53,9 +49,6 @@ synchronized (myRecalculatedTypesLock) {
         continue;
       }
       event.accept(visitor);
-    }
-    for (    SNodeReference expressionWithChangedType : expressionsWithChangedTypes) {
-      expressionTypeChanged(((SNodePointer)expressionWithChangedType).resolve(MPSModuleRepository.getInstance()),reResolvedTargets);
     }
   }
   ThreadUtils.runInUIThreadNoWait(new Runnable(){
