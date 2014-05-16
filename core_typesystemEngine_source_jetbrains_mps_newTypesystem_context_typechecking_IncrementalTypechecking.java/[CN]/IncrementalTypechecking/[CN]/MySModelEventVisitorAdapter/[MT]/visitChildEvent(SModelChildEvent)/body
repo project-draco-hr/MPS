@@ -3,12 +3,19 @@
   final SNode parent=event.getParent();
   markInvalid(child);
   markInvalid(parent);
-  final List<SNode> descendants=jetbrains.mps.util.SNodeOperations.getDescendants(child,null);
-  for (  SNode descendant : descendants) {
-    if (event.isRemoved()) {
+  List<SNode> childWithDescendants=IterableUtil.copyToList(SNodeUtil.getDescendants(child,null,true));
+  if (event.isRemoved()) {
+    Iterator<SNode> it=childWithDescendants.iterator();
+    it.next();
+    while (it.hasNext()) {
+      SNode descendant=it.next();
       markDependentNodesForInvalidation(descendant,myNonTypeSystemComponent);
       markDependentNodesForInvalidation(descendant,getTypecheckingComponent());
     }
   }
-  markReferenceTargetsInvalid(collectReferences(child,descendants));
+  List<SReference> references=new ArrayList<SReference>();
+  for (  SNode descendant : childWithDescendants) {
+    references.addAll(IterableUtil.asCollection(descendant.getReferences()));
+  }
+  markReferenceTargetsInvalid(references);
 }
