@@ -1,9 +1,23 @@
 {
-  for (  SNode methodCall : SNodeOperations.getDescendants(arg,"jetbrains.mps.baseLanguage.structure.IMethodCall",false,new String[]{})) {
-    for (    SNode throwable : SLinkOperations.getTargets(SLinkOperations.getTarget(methodCall,"baseMethodDeclaration",false),"throwsItem",true)) {
-      if (SNodeOperations.isInstanceOf(throwable,"jetbrains.mps.baseLanguage.structure.ClassifierType")) {
-        SetSequence.fromSet(throwables).addElement(SLinkOperations.getTarget(SNodeOperations.cast(throwable,"jetbrains.mps.baseLanguage.structure.ClassifierType"),"classifier",false));
-      }
+  ListSequence.fromList(SNodeOperations.getDescendants(arg,"jetbrains.mps.baseLanguage.structure.IMethodCall",false,new String[]{})).translate(new ITranslator2<SNode,SNode>(){
+    public Iterable<SNode> translate(    SNode it){
+      return SLinkOperations.getTargets(SLinkOperations.getTarget(it,"baseMethodDeclaration",false),"throwsItem",true);
     }
   }
+).union(ListSequence.fromList(SNodeOperations.getDescendants(arg,"jetbrains.mps.baseLanguage.classifiers.structure.DefaultClassifierMethodCallOperation",false,new String[]{})).translate(new ITranslator2<SNode,SNode>(){
+    public Iterable<SNode> translate(    SNode it){
+      return SLinkOperations.getTargets(SLinkOperations.getTarget(it,"member",false),"throwsItem",true);
+    }
+  }
+)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SNodeOperations.isInstanceOf(it,"jetbrains.mps.baseLanguage.structure.ClassifierType");
+    }
+  }
+).visitAll(new IVisitor<SNode>(){
+    public void visit(    SNode throwable){
+      SetSequence.fromSet(throwables).addElement(SLinkOperations.getTarget(SNodeOperations.cast(throwable,"jetbrains.mps.baseLanguage.structure.ClassifierType"),"classifier",false));
+    }
+  }
+);
 }

@@ -10,13 +10,15 @@
   }
   final Wrappers._T<IResult> result=new Wrappers._T<IResult>();
   ModelAccess.instance().flushEventQueue();
+  final Exception[] exceptions=new Exception[1];
   ThreadUtils.runInUIThreadAndWait(new Runnable(){
     public void run(){
       IOperationContext context=new ProjectOperationContext(project);
       IScript scr=ModuleGenerationHolder.defaultScriptBuilder().toScript();
       try {
         final MakeSession session=new MakeSession(context,myMessageHandler,true);
-        IScriptController ctl=new IScriptController.Stub(){
+        final AbstractMakeService.DefaultMonitor monitor=new AbstractMakeService.DefaultMonitor(session);
+        IScriptController ctl=new IScriptController.Stub(monitor,monitor){
           @Override public void setup(          IPropertiesPool ppool){
             new TextGenFacetInitializer().failNoTextGen(false).generateDebugInfo(true).populate(ppool);
             new MakeFacetInitializer().setPathToFile(new _FunctionTypes._return_P1_E0<IFile,String>(){
@@ -31,13 +33,18 @@
 ;
         result.value=new TestMakeService().make(session,ModuleGenerationHolder.collectResources(context,module),scr,ctl,new EmptyProgressMonitor()).get();
       }
- catch (      InterruptedException ignore) {
+ catch (      InterruptedException ex) {
+        exceptions[0]=ex;
       }
-catch (      ExecutionException ignore) {
+catch (      ExecutionException ex) {
+        exceptions[0]=ex;
       }
     }
   }
 );
   ModelAccess.instance().flushEventQueue();
+  if (exceptions[0] != null) {
+    throw exceptions[0];
+  }
   isSucessful=result.value.isSucessful();
 }

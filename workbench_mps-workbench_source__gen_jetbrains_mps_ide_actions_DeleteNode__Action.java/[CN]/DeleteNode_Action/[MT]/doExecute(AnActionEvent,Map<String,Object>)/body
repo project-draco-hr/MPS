@@ -1,8 +1,15 @@
 {
   try {
-    final DeleteNodesHelper helper=new DeleteNodesHelper(((List<SNode>)MapSequence.fromMap(_params).get("nodes")),((MPSProject)MapSequence.fromMap(_params).get("project")));
+    final Wrappers._T<List<SNode>> affNodes=new Wrappers._T<List<SNode>>();
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        affNodes.value=Sequence.fromIterable(DeleteNode_Action.this.getAffectedNodes(_params)).toListSequence();
+      }
+    }
+);
+    final DeleteNodesHelper helper=new DeleteNodesHelper(affNodes.value,((MPSProject)MapSequence.fromMap(_params).get("project")));
     final Wrappers._boolean dialogNeeded=new Wrappers._boolean(false);
-    ((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess().runReadAction(new Runnable(){
+    ModelAccess.instance().runReadAction(new Runnable(){
       public void run(){
         dialogNeeded.value=helper.hasOptions();
       }
@@ -20,7 +27,7 @@
     helper.deleteNodes(safeOption.selected,aspectsOption.selected,true);
   }
  catch (  Throwable t) {
-    if (LOG.isEnabledFor(Priority.ERROR)) {
+    if (LOG.isEnabledFor(Level.ERROR)) {
       LOG.error("User's action execute method failed. Action:" + "DeleteNode",t);
     }
   }
