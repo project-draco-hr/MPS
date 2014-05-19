@@ -1,43 +1,39 @@
 {
-  final SNode editedNode=editorComponent.getEditedNode();
-  if (editedNode == null) {
-    return Collections.emptySet();
-  }
-  if (SNodeOperations.isDisposed(editedNode)) {
-    Set<IBreakpoint> allBreakpoints=myBreakpointsManagerComponent.getAllIBreakpoints();
-    Set<ILocationBreakpoint> locationBreakpoints=new HashSet<ILocationBreakpoint>();
-    for (    IBreakpoint breakpoint : allBreakpoints) {
-      if (breakpoint instanceof ILocationBreakpoint) {
-        locationBreakpoints.add((ILocationBreakpoint)breakpoint);
-      }
-    }
-    return locationBreakpoints;
-  }
-  SNodeReference rootPointer=ModelAccess.instance().runReadAction(new Computable<SNodeReference>(){
-    @Override public SNodeReference compute(){
-      final SNode rootNode=(editedNode.getModel() == null ? null : editedNode.getContainingRoot());
-      return new SNodePointer(rootNode);
-    }
-  }
-);
-  if (rootPointer == null) {
-    return Collections.emptySet();
-  }
-  final Set<ILocationBreakpoint> breakpointsForRoot=myBreakpointsManagerComponent.getBreakpoints(rootPointer);
-  if (breakpointsForRoot == null) {
-    return Collections.emptySet();
-  }
-  final Set<ILocationBreakpoint> result=new HashSet<ILocationBreakpoint>();
+  final Wrappers._T<Set<ILocationBreakpoint>> result=new Wrappers._T<Set<ILocationBreakpoint>>(new HashSet<ILocationBreakpoint>());
   ModelAccess.instance().runReadAction(new Runnable(){
-    @Override public void run(){
+    public void run(){
+      final SNode editedNode=editorComponent.getEditedNode();
+      if (editedNode == null) {
+        return;
+      }
+      if (SNodeOperations.isDisposed(editedNode)) {
+        Set<IBreakpoint> allBreakpoints=myBreakpointsManagerComponent.getAllIBreakpoints();
+        Set<ILocationBreakpoint> locationBreakpoints=new HashSet<ILocationBreakpoint>();
+        for (        IBreakpoint breakpoint : allBreakpoints) {
+          if (breakpoint instanceof ILocationBreakpoint) {
+            locationBreakpoints.add((ILocationBreakpoint)breakpoint);
+          }
+        }
+        result.value=locationBreakpoints;
+        return;
+      }
+      SNode rootNode=(editedNode.getModel() == null ? null : editedNode.getContainingRoot());
+      SNodeReference rootPointer=rootNode.getReference();
+      if (rootPointer == null) {
+        return;
+      }
+      final Set<ILocationBreakpoint> breakpointsForRoot=myBreakpointsManagerComponent.getBreakpoints(rootPointer);
+      if (breakpointsForRoot == null) {
+        return;
+      }
       for (      ILocationBreakpoint locationBreakpoint : breakpointsForRoot) {
         SNode node=locationBreakpoint.getLocation().getSNode();
         if (node != null && EditorComponentUtil.isNodeShownInTheComponent(editorComponent,node)) {
-          result.add(locationBreakpoint);
+          result.value.add(locationBreakpoint);
         }
       }
     }
   }
 );
-  return result;
+  return result.value;
 }
