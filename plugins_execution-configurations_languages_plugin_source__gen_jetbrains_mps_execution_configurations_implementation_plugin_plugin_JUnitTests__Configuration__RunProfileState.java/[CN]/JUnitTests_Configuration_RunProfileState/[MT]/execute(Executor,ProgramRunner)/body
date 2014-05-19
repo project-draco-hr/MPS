@@ -9,7 +9,18 @@
  else {
     TestRunState runState=new TestRunState(nodeWrappers);
     TestEventsDispatcher eventsDispatcher=new TestEventsDispatcher(runState);
-    ProcessHandler process=new Junit_Command().createProcess(nodeWrappers,myRunConfiguration.getJavaRunParameters().getJavaRunParameters());
+    final int runId=TempRunIdManager.getInstance().acquireId();
+    String runIdString="-D" + CachesUtil.PROPERTY_RUN_ID + "=\""+ runId+ "\"";
+    JavaRunParameters_Configuration javaRunParams=myRunConfiguration.getJavaRunParameters();
+    JavaRunParameters parameters=javaRunParams.getJavaRunParameters().clone();
+    parameters.setVmOptions(javaRunParams.getJavaRunParameters().getVmOptions() + " " + runIdString);
+    ProcessHandler process=new Junit_Command().createProcess(nodeWrappers,parameters);
+    process.addProcessListener(new ProcessAdapter(){
+      @Override public void processTerminated(      ProcessEvent p0){
+        TempRunIdManager.getInstance().releaseId(runId);
+      }
+    }
+);
     processPack=new JUnitProcessPacker(project,runState,eventsDispatcher).packProcess(process);
   }
   ProcessHandler process=processPack.getProcess();
