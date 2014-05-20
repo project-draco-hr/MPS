@@ -1,0 +1,34 @@
+{
+  Map<String,Set<SNode>> methodNameToMethodMapCopy=MapSequence.fromMap(new HashMap<String,Set<SNode>>());
+  for (  String methodName : MapSequence.fromMap(nameToMethodsMap).keySet()) {
+    SetSequence.fromSet(safeGet(methodNameToMethodMapCopy,methodName)).addSequence(SetSequence.fromSet(MapSequence.fromMap(nameToMethodsMap).get(methodName)));
+  }
+  for (  final SNode classifierMethod : Sequence.fromIterable(BehaviorReflection.invokeNonVirtual((Class<Iterable<SNode>>)((Class)Object.class),superClassifier,"jetbrains.mps.baseLanguage.structure.Classifier","call_methods_5292274854859311639",new Object[]{})).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return canBeOverriden(it) && ((SLinkOperations.getTarget(it,"visibility",true) != null) || isVisiblePackagePrivateMethod(superClassifier,classifier));
+    }
+  }
+)) {
+    Set<SNode> similarMethods=MapSequence.fromMap(methodNameToMethodMapCopy).get(SPropertyOperations.getString(classifierMethod,"name"));
+    if (similarMethods == null) {
+      continue;
+    }
+    List<SNode> overridingMethods=new ArrayList<SNode>();
+    for (    SNode overridingMethod : SetSequence.fromSet(similarMethods).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return BehaviorReflection.invokeNonVirtual(Boolean.TYPE,classifierMethod,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration","call_hasSameSignature_1213877350435",new Object[]{it});
+      }
+    }
+)) {
+      SetSequence.fromSet(safeGet(this.myOverridingToOverridenMethodsMap,overridingMethod)).addElement(MultiTuple.<SNode,SNode>from(classifierMethod,superClassifier));
+      ListSequence.fromList(overridingMethods).addElement(overridingMethod);
+    }
+    SetSequence.fromSet(similarMethods).removeSequence(ListSequence.fromList(overridingMethods));
+    if (SetSequence.fromSet(similarMethods).isEmpty()) {
+      MapSequence.fromMap(methodNameToMethodMapCopy).removeKey(SPropertyOperations.getString(classifierMethod,"name"));
+    }
+  }
+  if (!(MapSequence.fromMap(methodNameToMethodMapCopy).isEmpty())) {
+    collectOverridingMethodsInClassifierHierarchy(superClassifier,methodNameToMethodMapCopy,visitedClassifiers);
+  }
+}
