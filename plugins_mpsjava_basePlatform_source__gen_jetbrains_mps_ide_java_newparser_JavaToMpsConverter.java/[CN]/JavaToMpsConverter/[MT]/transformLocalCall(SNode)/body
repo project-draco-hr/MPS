@@ -7,16 +7,18 @@
   if (!(SNodeOperations.isInstanceOf(target,"jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration"))) {
     return null;
   }
-  SNode thisClass=SNodeOperations.getAncestor(localCall,"jetbrains.mps.baseLanguage.structure.Classifier",false,false);
-  SNode thatClass=SNodeOperations.getAncestor(target,"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false);
-  if (thisClass == thatClass) {
+  Scope staticMethodScope=Scope.getScope(SNodeOperations.getParent(localCall),localCall,SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration"));
+  if (staticMethodScope.contains(target)) {
     return null;
   }
   SNode smc=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StaticMethodCall",null);
-  SLinkOperations.setTarget(smc,"classConcept",thatClass,false);
+  SLinkOperations.setTarget(smc,"classConcept",SNodeOperations.getAncestor(target,"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false),false);
   SLinkOperations.setTarget(smc,"baseMethodDeclaration",SNodeOperations.cast(target,"jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration"),false);
   for (  SNode arg : ListSequence.fromList(SLinkOperations.getTargets(localCall,"actualArgument",true))) {
     ListSequence.fromList(SLinkOperations.getTargets(smc,"actualArgument",true)).addElement(SNodeOperations.copyNode(arg));
+  }
+  for (  SNode arg : ListSequence.fromList(SLinkOperations.getTargets(localCall,"typeArgument",true))) {
+    ListSequence.fromList(SLinkOperations.getTargets(smc,"typeArgument",true)).addElement(SNodeOperations.copyNode(arg));
   }
   return smc;
 }
