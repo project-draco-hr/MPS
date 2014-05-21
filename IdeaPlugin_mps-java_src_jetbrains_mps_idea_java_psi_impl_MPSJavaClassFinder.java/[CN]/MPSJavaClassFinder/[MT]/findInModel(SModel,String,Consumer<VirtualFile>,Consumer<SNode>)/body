@@ -2,12 +2,28 @@
   String packageName=model.getModelName();
   if (!qname.startsWith(packageName + "."))   return;
   DataSource dataSource=model.getSource();
-  if (dataSource instanceof FileSystemBasedDataSource) {
-    for (    IFile iFile : ((FileSystemBasedDataSource)dataSource).getAffectedFiles()) {
-      VirtualFile vFile=LocalFileSystem.getInstance().findFileByPath(iFile.getPath());
-      if (vFile != null) {
-        processedConsumer.consume(vFile);
+  List<IFile> dataSourceFiles=new ArrayList<IFile>();
+  if (dataSource instanceof FileDataSource) {
+    dataSourceFiles.add(((FileDataSource)dataSource).getFile());
+  }
+ else   if (dataSource instanceof FolderDataSource) {
+    FolderDataSource fds=(FolderDataSource)dataSource;
+    for (    String stream : fds.getAvailableStreams()) {
+      dataSourceFiles.add(fds.getFile(stream));
+    }
+  }
+ else   if (dataSource instanceof FolderSetDataSource) {
+    for (    IFile file : ((FolderSetDataSource)dataSource).getAffectedFiles()) {
+      for (      IFile child : file.getChildren()) {
+        if (child.isDirectory())         continue;
+        dataSourceFiles.add(child);
       }
+    }
+  }
+  for (  IFile iFile : dataSourceFiles) {
+    VirtualFile vFile=LocalFileSystem.getInstance().findFileByPath(iFile.getPath());
+    if (vFile != null) {
+      processedConsumer.consume(vFile);
     }
   }
   FastNodeFinder fastFinder=((SModelInternal)model).getFastNodeFinder();

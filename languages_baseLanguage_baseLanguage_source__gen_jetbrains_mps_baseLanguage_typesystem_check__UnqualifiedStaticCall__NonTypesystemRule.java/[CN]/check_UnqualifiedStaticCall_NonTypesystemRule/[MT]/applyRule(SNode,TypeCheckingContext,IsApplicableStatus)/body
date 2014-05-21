@@ -7,17 +7,15 @@
   if (!(SNodeOperations.isInstanceOf(target,"jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration"))) {
     return;
   }
-  SNode thisClass=SNodeOperations.getAncestor(localCall,"jetbrains.mps.baseLanguage.structure.Classifier",false,false);
-  SNode thatClass=SNodeOperations.getAncestor(target,"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false);
-  if (thisClass == thatClass) {
+  Scope staticMethodScope=Scope.getScope(SNodeOperations.getParent(localCall),localCall,SConceptOperations.findConceptDeclaration("jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration"));
+  if (staticMethodScope.contains(target)) {
     return;
   }
   SNode smc=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StaticMethodCall",null);
-  SLinkOperations.setTarget(smc,"classConcept",thatClass,false);
+  SLinkOperations.setTarget(smc,"classConcept",SNodeOperations.getAncestor(target,"jetbrains.mps.baseLanguage.structure.ClassConcept",false,false),false);
   SLinkOperations.setTarget(smc,"baseMethodDeclaration",SNodeOperations.cast(target,"jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration"),false);
-  for (  SNode arg : ListSequence.fromList(SLinkOperations.getTargets(localCall,"actualArgument",true))) {
-    ListSequence.fromList(SLinkOperations.getTargets(smc,"actualArgument",true)).addElement(SNodeOperations.copyNode(arg));
-  }
+  ResolveUnknownUtil.reattachMethodArguments(localCall,smc);
+  ResolveUnknownUtil.reattachTypeArguments(localCall,smc);
 {
     MessageTarget errorTarget=new NodeMessageTarget();
     IErrorReporter _reporter_2309309498=typeCheckingContext.reportTypeError(localCall,"unqualified non-local static call","r:00000000-0000-4000-0000-011c895902c5(jetbrains.mps.baseLanguage.typesystem)","3151797052703996720",null,errorTarget);

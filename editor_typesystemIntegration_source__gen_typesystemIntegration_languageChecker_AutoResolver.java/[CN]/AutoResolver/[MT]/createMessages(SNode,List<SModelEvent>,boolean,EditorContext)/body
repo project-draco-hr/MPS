@@ -1,25 +1,41 @@
 {
   Set<EditorMessage> messages=SetSequence.fromSet(new LinkedHashSet<EditorMessage>());
-  if (SNodeOperations.getModel(rootNode) == null || SNodeOperations.getModel(rootNode) == null) {
+  if (SNodeOperations.getModel(rootNode) == null || SNodeOperations.getModel(rootNode).getModule() == null) {
     return messages;
   }
-  if (SNodeOperations.getModel(rootNode).getModule() instanceof TransientModelsModule) {
-    return messages;
-  }
-  boolean autoresolve=!(hasUnresolvedImportedModels(SNodeOperations.getModel(rootNode),editorContext));
+  boolean autofix=isAutofix(SNodeOperations.getModel(rootNode),editorContext.getRepository());
   final Set<SReference> badReferences=collectBadReferences(rootNode);
   for (  SReference ref : SetSequence.fromSet(badReferences)) {
     EditorMessage message=HighlightUtil.createHighlighterMessage(ref.getSourceNode(),"Unresolved reference",this,editorContext);
     SetSequence.fromSet(messages).addElement(message);
   }
-  if (autoresolve) {
+  if (autofix) {
+    final boolean wasForceAutofix=myForceAutofix;
+    myForceAutofix=false;
     final IOperationContext operationContext=editorContext.getOperationContext();
     if (operationContext != null) {
       ModelAccess.instance().runWriteInEDT(new Runnable(){
         @Override public void run(){
           ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
             @Override public void run(){
-              ResolverComponent.getInstance().resolveScopesOnly(badReferences,editorContext.getRepository());
+              for (              SReference brokenRef : SetSequence.fromSet(badReferences)) {
+                if (!(ResolverComponent.getInstance().resolveScopesOnly(brokenRef,editorContext.getRepository()))) {
+                  SNode sourceNode=brokenRef.getSourceNode();
+                  if (sourceNode == null) {
+                    return;
+                  }
+                  final String resolveInfo=ReferenceResolverUtils.getResolveInfo(brokenRef,sourceNode);
+                  if (resolveInfo == null) {
+                    return;
+                  }
+                  if (!(EditorBasedReferenceResolverUtils.resolveInEditor((EditorComponent)editorContext.getEditorComponent(),sourceNode,resolveInfo,brokenRef.getRole()))) {
+                    return;
+                  }
+                }
+                if (wasForceAutofix) {
+                  myForceAutofix=true;
+                }
+              }
             }
           }
 ,operationContext.getProject());
