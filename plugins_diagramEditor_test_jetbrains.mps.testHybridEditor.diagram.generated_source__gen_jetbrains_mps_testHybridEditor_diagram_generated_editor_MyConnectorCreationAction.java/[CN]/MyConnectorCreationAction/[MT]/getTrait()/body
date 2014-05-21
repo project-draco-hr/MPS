@@ -1,0 +1,53 @@
+{
+  if (myTrait == null) {
+    myTrait=new ViewTraitBuilder().on(ViewEvents.MOUSE_DRAGGED,new ViewEventHandler<MouseEvent>(){
+      @Override public void handle(      View view,      MouseEvent event){
+        if (!(myDiagramCell.hasConnectionDragFeedback())) {
+          View sourceView=view.viewAt(event.location());
+          if (sourceView == null || !(check_lbjacb_a0a1a0a0a0b0a0a0a0a0f(sourceView.prop(JetpadUtils.CONNECTION_SOURCE).get()))) {
+            return;
+          }
+          myDiagramCell.showConnectionDragFeedback(sourceView);
+        }
+        myDiagramCell.updateConnectionDragFeedback(event.location());
+      }
+    }
+).on(ViewEvents.MOUSE_RELEASED,new ViewEventHandler<MouseEvent>(){
+      @Override public void handle(      View view,      MouseEvent event){
+        if (!(myDiagramCell.hasConnectionDragFeedback())) {
+          return;
+        }
+        myDiagramCell.hideConnectionDragFeedback();
+        final DiagramCell.ConnectionInfo connectionInfo=myDiagramCell.getConnectionInfo();
+        final Wrappers._boolean result=new Wrappers._boolean(false);
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            if (connectionInfo.isValid() && SNodeOperations.isInstanceOf(connectionInfo.getFromNode(),"jetbrains.mps.testHybridEditor.structure.BlockInstance") && connectionInfo.getFromId() instanceof SNode&& SNodeOperations.isInstanceOf(connectionInfo.getToNode(),"jetbrains.mps.testHybridEditor.structure.BlockInstance")&& connectionInfo.getToId() instanceof SNode&& eq_lbjacb_a0a0a0a0a0a4a0a0b0a0a0a0a5(SNodeOperations.getContainingLinkDeclaration(((SNode)connectionInfo.getToId())),SLinkOperations.findLinkDeclaration("jetbrains.mps.testHybridEditor.structure.MetaBlock","inMetaPorts"))) {
+              result.value=true;
+            }
+          }
+        }
+);
+        if (!(result.value)) {
+          return;
+        }
+        ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+          public void run(){
+            SNode connectorInstance=SConceptOperations.createNewNode("jetbrains.mps.testHybridEditor.structure.ConnectorInstance",null);
+            SLinkOperations.setTarget(connectorInstance,"source",SConceptOperations.createNewNode("jetbrains.mps.testHybridEditor.structure.ConnectorEndInstance",null),true);
+            SLinkOperations.setTarget(connectorInstance,"target",SConceptOperations.createNewNode("jetbrains.mps.testHybridEditor.structure.ConnectorEndInstance",null),true);
+            SLinkOperations.setTarget(SLinkOperations.getTarget(connectorInstance,"source",true),"block",SNodeOperations.cast(connectionInfo.getFromNode(),"jetbrains.mps.testHybridEditor.structure.BlockInstance"),false);
+            SLinkOperations.setTarget(SLinkOperations.getTarget(connectorInstance,"source",true),"metaPort",((SNode)connectionInfo.getFromId()),false);
+            SLinkOperations.setTarget(SLinkOperations.getTarget(connectorInstance,"target",true),"block",SNodeOperations.cast(connectionInfo.getToNode(),"jetbrains.mps.testHybridEditor.structure.BlockInstance"),false);
+            SLinkOperations.setTarget(SLinkOperations.getTarget(connectorInstance,"target",true),"metaPort",((SNode)connectionInfo.getToId()),false);
+            ListSequence.fromList(SLinkOperations.getTargets(((SNode)myDiagramCell.getSNode()),"newConnectors",true)).addElement(connectorInstance);
+          }
+        }
+);
+        event.consume();
+      }
+    }
+).build();
+  }
+  return myTrait;
+}
