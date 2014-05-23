@@ -1,0 +1,59 @@
+{
+  if (editorContext.getOperationContext() == null) {
+    return;
+  }
+  final Project project=editorContext.getOperationContext().getProject();
+  final EditorComponent editorComponent=(EditorComponent)editorContext.getEditorComponent();
+  final Set<EditorCell> errorCells=SetSequence.fromSetWithValues(new HashSet<EditorCell>(),editorComponent.getCellTracker().getErrorCells());
+  final boolean wasForceAutofix=myForceAutofix;
+  myForceAutofix=false;
+  ModelAccess.instance().runWriteInEDT(new Runnable(){
+    @Override public void run(){
+      ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
+        @Override public void run(){
+          boolean doRecheckEditor=false;
+          for (          SReference brokenRef : SetSequence.fromSet(badReferences)) {
+            boolean resolvedBySope=ResolverComponent.getInstance().resolveScopesOnly(brokenRef,editorContext.getRepository());
+            SNode sourceNode=brokenRef.getSourceNode();
+            if (sourceNode == null) {
+              continue;
+            }
+            String referenceRole=brokenRef.getRole();
+            EditorCell cellWithRole=editorComponent.findNodeCellWithRole(sourceNode,referenceRole);
+            if (!(resolvedBySope)) {
+              if (cellWithRole == null) {
+                continue;
+              }
+              String resolveInfo=ReferenceResolverUtils.getResolveInfo(brokenRef,sourceNode);
+              if (resolveInfo == null) {
+                continue;
+              }
+              if (EditorBasedReferenceResolverUtils.substituteCell(cellWithRole,resolveInfo,editorContext)) {
+                doRecheckEditor=true;
+              }
+            }
+            SetSequence.fromSet(errorCells).removeElement(cellWithRole);
+          }
+          for (          EditorCell errorCell : SetSequence.fromSet(errorCells)) {
+            if (!(errorCell instanceof EditorCell_Label)) {
+              continue;
+            }
+            EditorCell_Label labelErrorCell=(EditorCell_Label)errorCell;
+            String errorText=labelErrorCell.getText();
+            if ((errorText == null || errorText.length() == 0)) {
+              continue;
+            }
+            if (EditorBasedReferenceResolverUtils.substituteCell(labelErrorCell,errorText,editorContext)) {
+              doRecheckEditor=true;
+            }
+          }
+          if (doRecheckEditor && wasForceAutofix) {
+            myForceAutofix=true;
+          }
+        }
+      }
+,project);
+    }
+  }
+);
+}
