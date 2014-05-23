@@ -30,4 +30,22 @@
   }
   ModuleChecker moduleCheckerForGenerator=new ModuleChecker(SLinkOperations.getTarget(language,"generator",true),SLinkOperations.getTarget(language,"generator",true),myVisibleModules,myPathConverter,myGenContext,myModuleSourceDir,generatorDescriptor,myReporter);
   moduleCheckerForGenerator.check(type);
+  if (type.doFullImport) {
+    Set<SNode> alreadyInDeps=unwrapExtractedDeps(language);
+    SetSequence.fromSet(alreadyInDeps).addElement(language);
+    Set<SNode> generatorDeps=unwrapExtractedDeps(SLinkOperations.getTarget(language,"generator",true));
+    for (    SNode dep : generatorDeps) {
+      SNode extraDep=dep;
+      if (SNodeOperations.isInstanceOf(dep,"jetbrains.mps.build.mps.structure.BuildMps_Generator")) {
+        extraDep=SLinkOperations.getTarget(SNodeOperations.cast(dep,"jetbrains.mps.build.mps.structure.BuildMps_Generator"),"sourceLanguage",false);
+      }
+      if (SetSequence.fromSet(alreadyInDeps).contains(extraDep)) {
+        continue;
+      }
+      SNode newDep=SModelOperations.createNewNode(SNodeOperations.getModel(language),null,"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule");
+      SLinkOperations.setTarget(newDep,"module",extraDep,false);
+      ListSequence.fromList(SLinkOperations.getTargets(language,"dependencies",true)).addElement(newDep);
+      SetSequence.fromSet(alreadyInDeps).addElement(extraDep);
+    }
+  }
 }
