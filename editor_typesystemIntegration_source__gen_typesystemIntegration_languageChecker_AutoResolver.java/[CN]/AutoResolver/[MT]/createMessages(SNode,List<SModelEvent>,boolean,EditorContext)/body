@@ -3,46 +3,13 @@
   if (SNodeOperations.getModel(rootNode) == null || SNodeOperations.getModel(rootNode).getModule() == null) {
     return messages;
   }
-  boolean autofix=isAutofix(SNodeOperations.getModel(rootNode),editorContext.getRepository());
-  final Set<SReference> badReferences=collectBadReferences(rootNode);
+  Set<SReference> badReferences=collectBadReferences(rootNode);
   for (  SReference ref : SetSequence.fromSet(badReferences)) {
     EditorMessage message=HighlightUtil.createHighlighterMessage(ref.getSourceNode(),"Unresolved reference",this,editorContext);
     SetSequence.fromSet(messages).addElement(message);
   }
-  if (autofix) {
-    final boolean wasForceAutofix=myForceAutofix;
-    myForceAutofix=false;
-    final IOperationContext operationContext=editorContext.getOperationContext();
-    if (operationContext != null) {
-      ModelAccess.instance().runWriteInEDT(new Runnable(){
-        @Override public void run(){
-          ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
-            @Override public void run(){
-              for (              SReference brokenRef : SetSequence.fromSet(badReferences)) {
-                if (!(ResolverComponent.getInstance().resolveScopesOnly(brokenRef,editorContext.getRepository()))) {
-                  SNode sourceNode=brokenRef.getSourceNode();
-                  if (sourceNode == null) {
-                    return;
-                  }
-                  final String resolveInfo=ReferenceResolverUtils.getResolveInfo(brokenRef,sourceNode);
-                  if (resolveInfo == null) {
-                    return;
-                  }
-                  if (!(EditorBasedReferenceResolverUtils.resolveInEditor((EditorComponent)editorContext.getEditorComponent(),sourceNode,resolveInfo,brokenRef.getRole()))) {
-                    return;
-                  }
-                }
-                if (wasForceAutofix) {
-                  myForceAutofix=true;
-                }
-              }
-            }
-          }
-,operationContext.getProject());
-        }
-      }
-);
-    }
+  if (isAutofix(SNodeOperations.getModel(rootNode),editorContext.getRepository())) {
+    runAutofix(badReferences,editorContext);
   }
   return messages;
 }
