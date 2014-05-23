@@ -1,32 +1,15 @@
 {
   Set<EditorMessage> messages=SetSequence.fromSet(new LinkedHashSet<EditorMessage>());
-  if (SNodeOperations.getModel(rootNode) == null || SNodeOperations.getModel(rootNode) == null) {
+  if (SNodeOperations.getModel(rootNode) == null || SNodeOperations.getModel(rootNode).getModule() == null) {
     return messages;
   }
-  if (SNodeOperations.getModel(rootNode).getModule() instanceof TransientModelsModule) {
-    return messages;
-  }
-  boolean autoresolve=!(hasUnresolvedImportedModels(SNodeOperations.getModel(rootNode),editorContext));
-  final Set<SReference> badReferences=collectBadReferences(rootNode);
+  Set<SReference> badReferences=collectBadReferences(rootNode);
   for (  SReference ref : SetSequence.fromSet(badReferences)) {
     EditorMessage message=HighlightUtil.createHighlighterMessage(ref.getSourceNode(),"Unresolved reference",this,editorContext);
     SetSequence.fromSet(messages).addElement(message);
   }
-  if (autoresolve) {
-    final IOperationContext operationContext=editorContext.getOperationContext();
-    if (operationContext != null) {
-      ModelAccess.instance().runWriteInEDT(new Runnable(){
-        @Override public void run(){
-          ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
-            @Override public void run(){
-              ResolverComponent.getInstance().resolveScopesOnly(badReferences,editorContext.getRepository());
-            }
-          }
-,operationContext.getProject());
-        }
-      }
-);
-    }
+  if (isAutofix(SNodeOperations.getModel(rootNode),editorContext.getRepository())) {
+    runAutofix(badReferences,editorContext);
   }
   return messages;
 }
