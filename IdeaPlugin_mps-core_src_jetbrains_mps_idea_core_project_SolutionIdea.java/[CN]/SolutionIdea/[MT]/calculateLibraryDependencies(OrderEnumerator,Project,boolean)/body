@@ -1,5 +1,5 @@
 {
-  final Map<SModuleReference,Boolean> modules=new HashMap<SModuleReference,Boolean>();
+  final Map<SModule,Boolean> modules=new HashMap<SModule,Boolean>();
   orderEnumerator.forEach(new Processor<OrderEntry>(){
     public boolean process(    OrderEntry oe){
       if (!(oe instanceof LibraryOrderEntry)) {
@@ -13,20 +13,24 @@
       if (ModuleLibraryType.isModuleLibrary(library)) {
         Set<SModuleReference> moduleReferences=ModuleLibrariesUtil.getModules(library);
         for (        SModuleReference moduleReference : moduleReferences) {
+          SModule m=moduleReference.resolve(MPSModuleRepository.getInstance());
+          if (m == null) {
+            continue;
+          }
           if (modules.containsKey(moduleReference)) {
             if (loe.isExported()) {
-              modules.put(moduleReference,true);
+              modules.put(m,true);
             }
           }
  else {
-            modules.put(moduleReference,loe.isExported());
+            modules.put(m,loe.isExported());
           }
         }
       }
  else       if (includeStubs) {
-        Solution s=(Solution)MPSModuleRepository.getInstance().getModuleById(ModuleId.foreign(library.getName()));
+        SModule s=MPSModuleRepository.getInstance().getModuleById(ModuleId.foreign(library.getName()));
         if (s != null) {
-          modules.put(s.getModuleReference(),loe.isExported());
+          modules.put(s,loe.isExported());
         }
       }
       return true;
@@ -34,8 +38,8 @@
   }
 );
   List<SDependency> result=new ArrayList<SDependency>();
-  for (  Entry<SModuleReference,Boolean> entry : modules.entrySet()) {
-    result.add(new SDependencyAdapter(new Dependency(entry.getKey(),entry.getValue())));
+  for (  Entry<SModule,Boolean> entry : modules.entrySet()) {
+    result.add(new SDependencyImpl(entry.getKey(),SDependencyScope.DEFAULT,entry.getValue()));
   }
   return result;
 }
