@@ -1,0 +1,20 @@
+{
+  SNode marshalFunction=entry.myExportLabel.getChildren("unmarshal").iterator().next();
+  String functionName="unmarshal_" + marshalFunction.getNodeId().toString();
+  SNode outputConcept=entry.myExportLabel.getReferenceTarget("outputKind");
+  SNode outputProxy;
+synchronized (myTempModels) {
+    SModel proxyModel=myTempModels.get(entry.myModelReference);
+    if (proxyModel == null) {
+      proxyModel=myContext.getModule().createTransientModel(entry.myModelReference);
+      myTempModels.put(entry.myModelReference,proxyModel);
+    }
+    outputProxy=SModelUtil_new.instantiateConceptDeclaration(outputConcept,proxyModel);
+    if (outputProxy.getModel() == null) {
+      proxyModel.addRootNode(outputProxy);
+    }
+  }
+  ExportLabelContext ctx=new ExportLabelContextImpl(input,outputProxy,entry.myValue.getKeeper());
+  invokeExportFunction(entry.myExportLabel.getModel(),functionName,ctx);
+  return outputProxy;
+}
