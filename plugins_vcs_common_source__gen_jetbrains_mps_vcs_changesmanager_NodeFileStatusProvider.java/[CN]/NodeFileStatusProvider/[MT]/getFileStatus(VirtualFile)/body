@@ -6,20 +6,22 @@
     return FileStatus.NOT_CHANGED;
   }
   final MPSNodeVirtualFile nodeFile=(MPSNodeVirtualFile)file;
-  SNode root=MPSEditorUtil.getCurrentEditedNode(myProject,nodeFile);
-  if (root == null) {
-    root=ModelAccess.instance().runReadAction(new Computable<SNode>(){
-      @Override public SNode compute(){
-        return nodeFile.getNode().getContainingRoot();
+  final Wrappers._T<FileStatus> status=new Wrappers._T<FileStatus>(null);
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      SNode root=MPSEditorUtil.getCurrentEditedNode(myProject,nodeFile);
+      if (root == null) {
+        root=nodeFile.getNode().getContainingRoot();
       }
+      if (root == null) {
+        return;
+      }
+      if (SNodeUtil.isAccessible(root,MPSModuleRepository.getInstance())) {
+        return;
+      }
+      status.value=myMapping.getStatus(root);
     }
+  }
 );
-  }
-  if (root == null) {
-    return null;
-  }
-  if (SNodeOperations.isDisposed(root)) {
-    return null;
-  }
-  return myMapping.getStatus(root);
+  return status.value;
 }
