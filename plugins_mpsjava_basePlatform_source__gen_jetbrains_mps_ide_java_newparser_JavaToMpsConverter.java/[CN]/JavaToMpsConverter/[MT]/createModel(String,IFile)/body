@@ -1,23 +1,27 @@
 {
-  ModelFactory factory=(myCreatePerRoot ? PersistenceRegistry.getInstance().getFolderModelFactory(FilePerRootModelPersistence.FACTORY_ID) : PersistenceRegistry.getInstance().getModelFactory(MPSExtentions.MODEL));
-  ModelRoot modelRoot;
-  String sourceRoot;
-  if (myCreateInplace) {
-    Tuples._2<ModelRoot,String> where=getRootContainingDir(pkgDir);
-    modelRoot=where._0();
-    sourceRoot=where._1();
-  }
- else {
-    modelRoot=getFirstRootToCreateModel(pkgFqName);
-    sourceRoot=null;
-  }
-  if (modelRoot == null) {
-    LOG.error("Failed to get model root to create the model in");
-    return null;
-  }
   SModel modelDescr;
   try {
-    modelDescr=((DefaultModelRoot)modelRoot).createModel(pkgFqName,sourceRoot,factory);
+    if (myCreateInplace) {
+      Tuples._2<ModelRoot,String> where=getRootContainingDir(pkgDir);
+      ModelRoot modelRoot=where._0();
+      if (modelRoot == null) {
+        LOG.error("Cannot convert to MPS in-place: java sources not under proper model root");
+        return null;
+      }
+      FilePerRootDataSource ds=new FilePerRootDataSource(pkgDir,modelRoot);
+      Map<String,String> options=MapSequence.fromMap(new HashMap<String,String>());
+      MapSequence.fromMap(options).put(ModelFactory.OPTION_MODELNAME,pkgFqName);
+      modelDescr=PersistenceRegistry.getInstance().getFolderModelFactory(FilePerRootModelPersistence.FACTORY_ID).create(ds,options);
+      ((SModelBase)modelDescr).setModelRoot(modelRoot);
+    }
+ else {
+      ModelRoot modelRoot=getFirstRootToCreateModel(pkgFqName);
+      if (modelRoot == null) {
+        LOG.error("Failed to find model root to create model in");
+        return null;
+      }
+      modelDescr=((DefaultModelRoot)modelRoot).createModel(pkgFqName,null,PersistenceRegistry.getInstance().getModelFactory(MPSExtentions.MODEL));
+    }
     if (modelDescr == null) {
       LOG.error("Failed to create model: createModel returned null");
       return null;
