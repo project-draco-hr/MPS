@@ -6,20 +6,21 @@
         return null;
       }
       final HierarchyTreeNode treeNode=(HierarchyTreeNode)node;
-      SNodeReference ptr=ModelAccess.instance().runReadAction(new Computable<SNodeReference>(){
-        @Override public SNodeReference compute(){
+      final Wrappers._T<SNodeReference> ptr=new Wrappers._T<SNodeReference>(null);
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
           SNode node=treeNode.getNode();
-          if (node == null || SNodeOperations.isDisposed(node)) {
-            return null;
+          if (node == null || !(SNodeUtil.isAccessible(node,MPSModuleRepository.getInstance()))) {
+            return;
           }
-          return new SNodePointer(node);
+          ptr.value=new SNodePointer(node);
         }
       }
 );
-      if (ptr == null) {
+      if (ptr.value == null) {
         return null;
       }
-      Navigatable n=new NodeNavigatable(ProjectHelper.toMPSProject(getProject()),ptr);
+      Navigatable n=new NodeNavigatable(ProjectHelper.toMPSProject(getProject()),ptr.value);
       return (n.canNavigate() ? n : null);
     }
     @Override public String getPreviousOccurenceActionName(){
