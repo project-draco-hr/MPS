@@ -1,0 +1,30 @@
+{
+  final String fqName=concept.getQualifiedName();
+  TextGenDescriptor descriptor=textGenDescriptors.get(fqName);
+  if (descriptor != null) {
+    return descriptor;
+  }
+  if (!startLoad(fqName,LanguageAspect.TEXT_GEN)) {
+    return new DefaultTextGenDescriptor();
+  }
+  try {
+    LanguageRuntime languageRuntime=myLanguageRegistry.getLanguage(concept.getLanguage().getQualifiedName());
+    TextGenAspectDescriptor textGenAspectDescriptor;
+    if (languageRuntime == null) {
+      LOG.warn(String.format("No language for concept %s, while looking for textgen descriptor.",fqName),new Throwable());
+      textGenAspectDescriptor=new TextGenAspectInterpreted();
+    }
+ else {
+      textGenAspectDescriptor=languageRuntime.getTextGenAspectDescriptor();
+    }
+    descriptor=textGenAspectDescriptor.getDescriptor(concept);
+    if (descriptor == null) {
+      descriptor=new DefaultTextGenDescriptor();
+    }
+    textGenDescriptors.put(fqName,descriptor);
+    return descriptor;
+  }
+  finally {
+    finishLoad(fqName,LanguageAspect.TEXT_GEN);
+  }
+}
