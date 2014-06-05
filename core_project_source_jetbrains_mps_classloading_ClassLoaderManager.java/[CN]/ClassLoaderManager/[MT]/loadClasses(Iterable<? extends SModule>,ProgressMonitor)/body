@@ -1,5 +1,4 @@
 {
-  long startTime=System.currentTimeMillis();
   Set<SModule> modulesToLoad=new HashSet<SModule>();
   for (  SModule module : modules) {
     if (ModuleClassLoaderSupport.canCreate(module)) {
@@ -9,29 +8,13 @@
       modulesToLoad.add(module);
     }
   }
-  modulesToLoad=Collections.unmodifiableSet(modulesToLoad);
   if (modulesToLoad.isEmpty())   return modulesToLoad;
-  for (  SModule module : modules) {
-    if (ModuleClassLoaderSupport.canCreate(module)) {
-      createClassLoader(module);
-    }
+  for (  SModule module : modulesToLoad) {
+    createClassLoader(module);
   }
-  addStat("load:main",startTime);
   monitor.start("Load classes...",1);
   try {
-    monitor.step("Rebuilding ui...");
-    for (    MPSClassesListener listener : myClassesHandlers) {
-      startTime=System.currentTimeMillis();
-      try {
-        listener.afterClassesLoaded(modulesToLoad);
-      }
- catch (      Throwable t) {
-        LOG.error(t);
-      }
- finally {
-        addStat("load:" + listener.getClass().getName(),startTime);
-      }
-    }
+    broadCastLoad(modulesToLoad);
     monitor.advance(1);
   }
   finally {
