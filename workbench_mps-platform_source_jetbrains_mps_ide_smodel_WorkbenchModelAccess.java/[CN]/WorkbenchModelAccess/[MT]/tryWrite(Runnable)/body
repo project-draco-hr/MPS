@@ -3,37 +3,13 @@
     r.run();
     return true;
   }
-  if (myDistributedLocksMode && ApplicationManager.getApplication().isDispatchThread()) {
-    return false;
-  }
-  com.intellij.openapi.util.Computable<Boolean> computable=new com.intellij.openapi.util.Computable<Boolean>(){
+  Computable<Boolean> c=new Computable<Boolean>(){
     @Override public Boolean compute(){
-      try {
-        if (getWriteLock().tryLock(WAIT_FOR_WRITE_LOCK_MILLIS,MILLISECONDS)) {
-          try {
-            clearRepositoryStateCaches();
-            r.run();
-          }
-  finally {
-            getWriteLock().unlock();
-          }
-          return true;
-        }
- else {
-          return false;
-        }
-      }
- catch (      InterruptedException e) {
-        return false;
-      }
+      r.run();
+      return true;
     }
   }
 ;
-  if (ThreadUtils.isEventDispatchThread()) {
-    Boolean res=new TryWriteActionComputable<Boolean>(computable).compute();
-    return res != null ? res : false;
-  }
- else {
-    return ApplicationManager.getApplication().runReadAction(computable);
-  }
+  Boolean res=tryWrite(c);
+  return res != null ? res : false;
 }
