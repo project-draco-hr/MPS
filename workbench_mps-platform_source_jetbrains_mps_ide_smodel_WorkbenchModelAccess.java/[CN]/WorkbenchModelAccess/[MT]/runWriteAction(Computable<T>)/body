@@ -6,29 +6,7 @@
   if (myDistributedLocksMode && ApplicationManager.getApplication().isDispatchThread()) {
     throw new IllegalStateException("deadlock prevention: do not start write action in EDT, use tryWrite");
   }
-  com.intellij.openapi.util.Computable<T> computable=new com.intellij.openapi.util.Computable<T>(){
-    @Override public T compute(){
-      getWriteLock().lock();
-      try {
-        clearRepositoryStateCaches();
-        return c.compute();
-      }
-  finally {
-        getWriteLock().unlock();
-      }
-    }
-  }
-;
-  if (isInEDT()) {
-    try {
-      myWritesScheduled.incrementAndGet();
-      return ApplicationManager.getApplication().runWriteAction(computable);
-    }
-  finally {
-      myWritesScheduled.decrementAndGet();
-    }
-  }
- else {
-    return ApplicationManager.getApplication().runReadAction(computable);
-  }
+  ComputeRunnable<T> r=new ComputeRunnable<T>(c);
+  runWriteAction(r);
+  return r.getResult();
 }

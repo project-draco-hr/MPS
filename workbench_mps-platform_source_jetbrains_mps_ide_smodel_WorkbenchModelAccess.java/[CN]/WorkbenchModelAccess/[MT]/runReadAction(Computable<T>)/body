@@ -5,16 +5,7 @@
   if (myDistributedLocksMode && ApplicationManager.getApplication().isDispatchThread()) {
     throw new IllegalStateException("deadlock prevention: do not start read action in EDT, use tryRead");
   }
-  return ApplicationManager.getApplication().runReadAction(new com.intellij.openapi.util.Computable<T>(){
-    @Override public T compute(){
-      getReadLock().lock();
-      try {
-        return c.compute();
-      }
-  finally {
-        getReadLock().unlock();
-      }
-    }
-  }
-);
+  ComputeRunnable<T> r=new ComputeRunnable<T>(c);
+  runReadAction(r);
+  return r.getResult();
 }

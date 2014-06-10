@@ -2,23 +2,9 @@
   if (canRead()) {
     return c.compute();
   }
-  if (myDistributedLocksMode && ApplicationManager.getApplication().isDispatchThread()) {
-    return null;
+  ComputeRunnable<T> r=new ComputeRunnable<T>(c);
+  if (tryRead(r)) {
+    return r.getResult();
   }
-  return ApplicationManager.getApplication().runReadAction(new com.intellij.openapi.util.Computable<T>(){
-    @Override public T compute(){
-      if (getReadLock().tryLock()) {
-        try {
-          return c.compute();
-        }
-  finally {
-          getReadLock().unlock();
-        }
-      }
- else {
-        return null;
-      }
-    }
-  }
-);
+  return null;
 }
