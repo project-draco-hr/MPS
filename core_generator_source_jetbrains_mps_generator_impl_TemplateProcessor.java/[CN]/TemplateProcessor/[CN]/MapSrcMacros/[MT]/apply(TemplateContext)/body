@@ -12,30 +12,18 @@
   }
   ArrayList<SNode> outputNodes=new ArrayList<SNode>(newInputNodes.size());
   for (  SNode newInputNode : newInputNodes) {
-    boolean inputChanged=(newInputNode != templateContext.getInput());
-    if (inputChanged) {
-      myTracer.pushInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+    TemplateContext newcontext=templateContext.subContext(newInputNode);
+    final TemplateExecutionEnvironment env=templateContext.getEnvironment();
+    if (macro_mapperFunction != null) {
+      SNode childToReplaceLater=myTemplateProcessor.myOutputModel.createNode(templateNode.getConcept());
+      outputNodes.add(childToReplaceLater);
+      myTemplateProcessor.getGenerator().getDelayedChanges().addExecuteMapSrcNodeMacroChange(macro,childToReplaceLater,newcontext,env.getQueryExecutor());
     }
-    try {
-      TemplateContext newcontext=templateContext.subContext(newInputNode);
-      final TemplateExecutionEnvironment env=templateContext.getEnvironment();
-      if (macro_mapperFunction != null) {
-        SNode childToReplaceLater=myTemplateProcessor.myOutputModel.createNode(templateNode.getConcept());
-        myTracer.pushOutputNodeToReplaceLater(childToReplaceLater);
-        outputNodes.add(childToReplaceLater);
-        myTemplateProcessor.getGenerator().getDelayedChanges().addExecuteMapSrcNodeMacroChange(macro,childToReplaceLater,newcontext,env.getQueryExecutor());
-      }
  else {
-        List<SNode> _outputNodes=nextMacro(newcontext);
-        outputNodes.addAll(_outputNodes);
-        for (        SNode outputNode : _outputNodes) {
-          myTemplateProcessor.getGenerator().getDelayedChanges().addExecuteMapSrcNodeMacroPostProcChange(macro,outputNode,newcontext,env.getQueryExecutor());
-        }
-      }
-    }
-  finally {
-      if (inputChanged) {
-        myTracer.closeInputNode(GenerationTracerUtil.getSNodePointer(newInputNode));
+      List<SNode> _outputNodes=nextMacro(newcontext);
+      outputNodes.addAll(_outputNodes);
+      for (      SNode outputNode : _outputNodes) {
+        myTemplateProcessor.getGenerator().getDelayedChanges().addExecuteMapSrcNodeMacroPostProcChange(macro,outputNode,newcontext,env.getQueryExecutor());
       }
     }
   }
