@@ -6,45 +6,39 @@
 switch (0) {
 case 0:
         boolean generationOk=false;
-      if (!(Generate_Facet.Target_configure.vars(pa.global()).saveTransient())) {
-        IGenerationTracer tracer=Generate_Facet.Target_checkParameters.vars(pa.global()).project().getComponent(IGenerationTracer.class);
-        if (tracer != null) {
-          tracer.discardTracing();
-        }
+      final Wrappers._T<Map<SModule,Iterable<SModel>>> retainedModels=new Wrappers._T<Map<SModule,Iterable<SModel>>>();
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        retainedModels.value=RetainedUtil.collectModelsToRetain(input);
       }
-    final Wrappers._T<Map<SModule,Iterable<SModel>>> retainedModels=new Wrappers._T<Map<SModule,Iterable<SModel>>>();
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      retainedModels.value=RetainedUtil.collectModelsToRetain(input);
+    }
+);
+  IGenerationHandler gh=new MakeGenerationHandler(new _FunctionTypes._return_P1_E0<Boolean,GResource>(){
+    public Boolean invoke(    GResource data){
+      data.retainedModels(MapSequence.fromMap(retainedModels.value).get(data.module()));
+      _output_fi61u2_a0d.value=Sequence.fromIterable(_output_fi61u2_a0d.value).concat(Sequence.fromIterable(Sequence.<IResource>singleton(data)));
+      return true;
     }
   }
 );
-IGenerationHandler gh=new MakeGenerationHandler(new _FunctionTypes._return_P1_E0<Boolean,GResource>(){
-  public Boolean invoke(  GResource data){
-    data.retainedModels(MapSequence.fromMap(retainedModels.value).get(data.module()));
-    _output_fi61u2_a0d.value=Sequence.fromIterable(_output_fi61u2_a0d.value).concat(Sequence.fromIterable(Sequence.<IResource>singleton(data)));
-    return true;
-  }
-}
-);
 IMessageHandler mh=new IMessageHandler(){
-@Override public void handle(IMessage msg){
-  monitor.reportFeedback(new IFeedback.MESSAGE(msg));
-}
-@Override public void clear(){
-}
+  @Override public void handle(  IMessage msg){
+    monitor.reportFeedback(new IFeedback.MESSAGE(msg));
+  }
+  @Override public void clear(){
+  }
 }
 ;
 progressMonitor.start("Generating",Sequence.fromIterable(input).foldLeft(0,new ILeftCombinator<MResource,Integer>(){
 public Integer combine(Integer s,MResource it){
-return s + Sequence.fromIterable(it.models()).count() * 1000;
+  return s + Sequence.fromIterable(it.models()).count() * 1000;
 }
 }
 ));
 try {
 List<SModel> models=Sequence.fromIterable(input).translate(new ITranslator2<MResource,SModel>(){
 public Iterable<SModel> translate(MResource in){
-return in.models();
+  return in.models();
 }
 }
 ).toListSequence();
