@@ -1,2 +1,34 @@
 {
+  for (  SLanguageId id : sourceModel.usedLanguages()) {
+    Language lang=new SLanguageAdapter(id).getSourceModule();
+    String name=lang != null ? lang.getModuleName() : MPSModuleRepository.getInstance().getDebugRegistry().getLanguageName(id);
+    Element langElement=new Element(ModelPersistence9.DEBUG_INFO_LANG);
+    langElement.setAttribute(ModelPersistence9.ID,id.serialize());
+    langElement.setAttribute(ModelPersistence9.DEBUG_INFO_NAME,name);
+    debugInfoElement.addContent(langElement);
+  }
+  for (  ImportElement ie : sourceModel.importedModels()) {
+    SModelReference ref=ie.getModelReference();
+    org.jetbrains.mps.openapi.model.SModel model=ref.resolve(MPSModuleRepository.getInstance());
+    String name=model != null ? model.getModelName() : MPSModuleRepository.getInstance().getDebugRegistry().getModelName(ref.getModelId());
+    Element langElement=new Element(ModelPersistence9.DEBUG_INFO_MODEL);
+    langElement.setAttribute(ModelPersistence9.REF,ref.toString());
+    langElement.setAttribute(ModelPersistence9.DEBUG_INFO_NAME,name);
+    debugInfoElement.addContent(langElement);
+  }
+  Map<SConceptId,String> ids=new HashMap<SConceptId,String>();
+  for (  SNode root : sourceModel.getRootNodes()) {
+    for (    SNode n : SNodeUtil.getDescendants(root)) {
+      SConceptId id=n.getConcept().getId();
+      SNode concept=new SConceptAdapter(id).getConceptDeclarationNode();
+      String name=concept != null ? concept.getProperty("name") : MPSModuleRepository.getInstance().getDebugRegistry().getConceptName(id);
+      ids.put(id,name);
+    }
+  }
+  for (  Entry<SConceptId,String> e : ids.entrySet()) {
+    Element langElement=new Element(ModelPersistence9.DEBUG_INFO_CONCEPT);
+    langElement.setAttribute(ModelPersistence9.ID,e.getKey().serialize());
+    langElement.setAttribute(ModelPersistence9.DEBUG_INFO_NAME,e.getValue());
+    debugInfoElement.addContent(langElement);
+  }
 }
