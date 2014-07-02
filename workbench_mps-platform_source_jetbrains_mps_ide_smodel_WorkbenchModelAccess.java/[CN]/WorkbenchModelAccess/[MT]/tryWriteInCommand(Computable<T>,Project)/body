@@ -1,28 +1,5 @@
 {
-  if (myDistributedLocksMode) {
-    return null;
-  }
-  ApplicationManager.getApplication().assertIsDispatchThread();
-  final T[] res=(T[])new Object[]{null};
-  final Project project=p != null ? p : CurrentProjectAccessUtil.getMPSProjectFromUI();
-  Runnable commandRunnable=new Runnable(){
-    @Override public void run(){
-      try {
-        if (getWriteLock().tryLock(WAIT_FOR_WRITE_LOCK_MILLIS,MILLISECONDS)) {
-          try {
-            clearRepositoryStateCaches();
-            res[0]=new CommandComputable<T>(r,project).compute();
-          }
-  finally {
-            getWriteLock().unlock();
-          }
-        }
-      }
- catch (      InterruptedException ignore) {
-      }
-    }
-  }
-;
-  CommandProcessor.getInstance().executeCommand(ProjectHelper.toIdeaProject(project),new TryWriteActionRunnable(commandRunnable),"",null,UndoConfirmationPolicy.DO_NOT_REQUEST_CONFIRMATION);
-  return res[0];
+  ComputeRunnable<T> r=new ComputeRunnable<T>(c);
+  boolean success=tryWriteInCommand(r,p);
+  return success ? r.getResult() : null;
 }

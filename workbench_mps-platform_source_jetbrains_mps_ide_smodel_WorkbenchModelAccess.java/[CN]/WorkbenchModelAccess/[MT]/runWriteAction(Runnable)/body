@@ -20,8 +20,14 @@
     }
   }
 ;
-  if (ThreadUtils.isEventDispatchThread()) {
-    ApplicationManager.getApplication().runWriteAction(runnable);
+  if (isInEDT()) {
+    try {
+      myWritesScheduled.incrementAndGet();
+      ApplicationManager.getApplication().runWriteAction(runnable);
+    }
+  finally {
+      myWritesScheduled.decrementAndGet();
+    }
   }
  else {
     ApplicationManager.getApplication().runReadAction(runnable);

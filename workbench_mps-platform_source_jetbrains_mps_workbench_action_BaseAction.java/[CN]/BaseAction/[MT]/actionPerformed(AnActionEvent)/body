@@ -6,27 +6,22 @@
     }
   }
 );
-  final ModelAccess access=ModelAccess.instance();
   if (myExecuteOutsideCommand) {
     doExecute(event,params);
   }
  else {
+    final Runnable r=new UndoRunnable.Base(getTemplatePresentation().getText(),null){
+      @Override public void run(){
+        doExecute(event,params);
+      }
+    }
+;
     Project project=getEventProject(event);
     if (project != null) {
-      access.runWriteActionInCommand(new Runnable(){
-        @Override public void run(){
-          doExecute(event,params);
-        }
-      }
-,getTemplatePresentation().getText(),null,false,project.getComponent(MPSProject.class));
+      ProjectHelper.getModelAccess(project).executeCommand(r);
     }
  else {
-      access.runWriteActionInCommand(new Runnable(){
-        @Override public void run(){
-          doExecute(event,params);
-        }
-      }
-);
+      MPSModuleRepository.getInstance().getModelAccess().runWriteAction(r);
     }
   }
 }
