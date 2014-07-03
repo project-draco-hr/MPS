@@ -1,0 +1,34 @@
+{
+  ArrayList<TraceNodeUI> rv=new ArrayList<TraceNodeUI>();
+  if (!myCompactTemplates) {
+    for (    SNodeReference r : templateNodes) {
+      rv.add(new TraceNodeUI(Kind.TEMPLATE,r));
+    }
+    return rv;
+  }
+  LinkedHashSet<SNode> mostSpecificTemplates=new LinkedHashSet<SNode>();
+  L1:   for (  SNodeReference t : templateNodes) {
+    SNode templateNode=t == null ? null : t.resolve(MPSModuleRepository.getInstance());
+    if (templateNode == null) {
+      rv.add(new TraceNodeUI(Kind.TEMPLATE,t));
+      continue;
+    }
+    for (    SNode tn : new ArrayList<SNode>(mostSpecificTemplates)) {
+      if (tn.getContainingRoot() == templateNode.getContainingRoot()) {
+        if (SNodeOperations.isAncestor(tn,templateNode)) {
+          mostSpecificTemplates.remove(tn);
+          mostSpecificTemplates.add(templateNode);
+          continue L1;
+        }
+ else         if (SNodeOperations.isAncestor(templateNode,tn)) {
+          continue L1;
+        }
+      }
+    }
+    mostSpecificTemplates.add(templateNode);
+  }
+  for (  SNode n : mostSpecificTemplates) {
+    rv.add(new TraceNodeUI(Kind.TEMPLATE,n.getReference()));
+  }
+  return rv;
+}
