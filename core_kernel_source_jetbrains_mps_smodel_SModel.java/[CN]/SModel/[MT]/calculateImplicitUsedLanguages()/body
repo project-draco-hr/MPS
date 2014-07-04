@@ -1,0 +1,28 @@
+{
+  List<VersionedElement<SLanguageId>> newImplicitUsedLanguageIds=new ArrayList<VersionedElement<SLanguageId>>();
+  for (  SModuleReference dk : myDevKits) {
+    DevKit devKit=((DevKit)dk.resolve(MPSModuleRepository.getInstance()));
+    if (devKit == null)     continue;
+    for (    SLanguageId exported : devKit.getAllExportedLanguageIds()) {
+      Language lang=new SLanguageAdapter(exported).getSourceModule();
+      int languageVersion;
+      if (lang == null) {
+        LOG.error("DevKit" + devKit.getName() + " exports language"+ MPSModuleRepository.getInstance().getDebugRegistry().getLanguageName(exported)+ "which cannot be resolved");
+        VersionedElement<SLanguageId> oldElement=SModelOperations.getImplicitUsedLanguage(this,exported);
+        if (oldElement == null) {
+          continue;
+        }
+        languageVersion=oldElement.getVersion();
+      }
+ else {
+        languageVersion=lang.getLanguageVersion();
+      }
+      VersionedElement<SLanguageId> ve=new VersionedElement<SLanguageId>(exported,languageVersion);
+      if (!newImplicitUsedLanguageIds.contains(ve)) {
+        newImplicitUsedLanguageIds.add(ve);
+      }
+    }
+  }
+  myImplicitLanguagesIds.clear();
+  myImplicitLanguagesIds.addAll(newImplicitUsedLanguageIds);
+}
