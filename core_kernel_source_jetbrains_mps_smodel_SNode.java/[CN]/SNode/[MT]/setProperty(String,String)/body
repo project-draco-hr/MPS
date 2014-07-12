@@ -1,54 +1,25 @@
 {
   assertCanChange();
-  org.jetbrains.mps.openapi.model.SNode concept=getConceptDeclarationNode();
-  if (concept != null) {
-    SConceptId cid=LangUtil.getConceptId(concept);
-    SPropertyId propId=((DebugRegistryImpl)MPSModuleRepository.getInstance().getDebugRegistry()).getPropertyId(cid,propertyName);
-    setProperty(propId,propertyValue);
-  }
-  propertyName=InternUtil.intern(propertyName);
   propertyValue=InternUtil.intern(propertyValue);
-  if (ourMemberAccessModifier != null) {
-    String conceptName=myConceptFqName == null ? getConceptNameFromDebugInfo() : myConceptFqName;
-    if (conceptName != null) {
-      propertyName=ourMemberAccessModifier.getNewPropertyName(getModel(),conceptName,propertyName);
-    }
-  }
-  int index=getPropertyIndex(propertyName);
-  final String oldValue=index == -1 ? null : myProperties[index + 1];
-  if (EqualUtil.equals(oldValue,propertyValue))   return;
-  if (propertyValue == null) {
-    String[] oldProperties=myProperties;
-    int newLength=oldProperties.length - 2;
-    if (newLength == 0) {
-      myProperties=null;
-    }
- else {
-      myProperties=new String[newLength];
-      System.arraycopy(oldProperties,0,myProperties,0,index);
-      System.arraycopy(oldProperties,index + 2,myProperties,index,newLength - index);
-    }
-  }
- else   if (oldValue == null) {
-    String[] oldProperties=myProperties == null ? EMPTY_ARRAY : myProperties;
-    myProperties=new String[oldProperties.length + 2];
-    System.arraycopy(oldProperties,0,myProperties,0,oldProperties.length);
-    myProperties[myProperties.length - 2]=propertyName;
-    myProperties[myProperties.length - 1]=propertyValue;
+  String pname=ourMemberAccessModifier != null ? ourMemberAccessModifier.getNewPropertyName(getModel(),myConceptFqName,propertyName) : InternUtil.intern(propertyName);
+  final Pair<Boolean,String> isSet;
+  if (isWorkingById() == Mode.ID) {
+    isSet=setProperty_byId(name2pid(propertyName),propertyValue);
   }
  else {
-    myProperties[index + 1]=propertyValue;
+    isSet=setProperty_byName(propertyName,propertyValue);
   }
+  if (!isSet.o1)   return;
   final String finalPropertyValue=propertyValue;
-  final String finalPropertyName=propertyName;
+  final String finalPropertyName=pname;
   performUndoableAction(new Computable<SNodeUndoableAction>(){
     @Override public SNodeUndoableAction compute(){
-      return new PropertyChangeUndoableAction(SNode.this,finalPropertyName,oldValue,finalPropertyValue);
+      return new PropertyChangeUndoableAction(SNode.this,finalPropertyName,isSet.o2,finalPropertyValue);
     }
   }
 );
   if (needFireEvent()) {
-    myModel.firePropertyChangedEvent(this,propertyName,oldValue,propertyValue);
+    myModel.firePropertyChangedEvent(this,propertyName,isSet.o2,propertyValue);
   }
-  propertyChanged(propertyName,oldValue,propertyValue);
+  propertyChanged(propertyName,isSet.o2,propertyValue);
 }
