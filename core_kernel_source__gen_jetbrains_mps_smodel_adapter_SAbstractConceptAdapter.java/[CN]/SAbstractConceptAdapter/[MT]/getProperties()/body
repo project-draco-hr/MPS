@@ -1,18 +1,15 @@
 {
-  ConceptDescriptor d=myConceptId != null ? ConceptRegistry.getInstance().getConceptDescriptor(myConceptId) : ConceptRegistry.getInstance().getConceptDescriptor(myConceptName);
+  ConceptDescriptor d=ConceptRegistry.getInstance().getConceptDescriptor(getQualifiedName());
   if (d instanceof IllegalConceptDescriptor) {
     illegalConceptDescriptorWarning();
     return Collections.emptyList();
   }
+  final ConceptAndSuperConceptsScope scope=new ConceptAndSuperConceptsScope(getConceptDeclarationNode());
   return SetSequence.fromSet(((Set<String>)d.getPropertyNames())).select(new ISelector<String,SProperty>(){
     public SProperty select(    String it){
-      if (myConceptId != null) {
-        SPropertyId id=IdUtil.getPropId(myConceptId,it);
-        return (SProperty)new SPropertyAdapter(id);
-      }
- else {
-        return (SProperty)(new SPropertyAdapter(myConceptName,it));
-      }
+      SNode propNode=scope.getPropertyDeclarationByName(it);
+      if (propNode == null)       return null;
+      return new SPropertyAdapter(IdHelper.getPropId((jetbrains.mps.smodel.SNode)propNode));
     }
   }
 );
