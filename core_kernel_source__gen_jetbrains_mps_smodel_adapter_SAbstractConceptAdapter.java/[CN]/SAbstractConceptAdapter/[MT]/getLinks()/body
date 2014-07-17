@@ -1,23 +1,27 @@
 {
-  ConceptDescriptor d=ConceptRegistry.getInstance().getConceptDescriptor(getQualifiedName());
+  ConceptDescriptor d=ConceptRegistry.getInstance().getConceptDescriptor(myConceptName);
   if (d instanceof IllegalConceptDescriptor) {
     illegalConceptDescriptorWarning();
-    return Collections.emptyList();
+    return Collections.<SAbstractLink>emptyList();
   }
   final ConceptAndSuperConceptsScope scope=new ConceptAndSuperConceptsScope(getConceptDeclarationNode());
-  Iterable<SAbstractLink> seq=SetSequence.fromSet(((Set<String>)d.getChildrenNames())).select(new ISelector<String,SAbstractLink>(){
-    public SAbstractLink select(    String it){
+  Iterable<SContainmentLinkAdapter> seq=SetSequence.fromSet(((Set<String>)d.getChildrenNames())).select(new ISelector<String,SContainmentLinkAdapter>(){
+    public SContainmentLinkAdapter select(    String it){
       SNode linkNode=scope.getLinkDeclarationByRole(it);
-      if (linkNode == null)       return null;
+      if (linkNode == null) {
+        return null;
+      }
       return new SContainmentLinkAdapter(IdHelper.getNodeRoleId((jetbrains.mps.smodel.SNode)linkNode));
     }
   }
 );
-  return Sequence.fromIterable(seq).concat(SetSequence.fromSet(((Set<String>)d.getReferenceNames())).select(new ISelector<String,SReferenceLinkAdapter>(){
-    public SReferenceLinkAdapter select(    String it){
+  return Sequence.fromIterable(seq).concat(SetSequence.fromSet(((Set<String>)d.getReferenceNames())).select(new ISelector<String,SAbstractLink>(){
+    public SAbstractLink select(    String it){
       SNode linkNode=scope.getLinkDeclarationByRole(it);
-      if (linkNode == null)       return null;
-      return new SReferenceLinkAdapter(IdHelper.getRefRoleId((jetbrains.mps.smodel.SNode)linkNode));
+      if (linkNode == null) {
+        return null;
+      }
+      return ((SAbstractLink)new SReferenceLinkAdapter(IdHelper.getRefRoleId((jetbrains.mps.smodel.SNode)linkNode)));
     }
   }
 ));
