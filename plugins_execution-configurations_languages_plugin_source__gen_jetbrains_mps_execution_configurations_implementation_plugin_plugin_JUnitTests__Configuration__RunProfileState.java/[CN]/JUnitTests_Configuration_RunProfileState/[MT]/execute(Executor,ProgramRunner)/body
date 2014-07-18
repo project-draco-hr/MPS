@@ -2,8 +2,8 @@
   Project project=myEnvironment.getProject();
   List<ITestNodeWrapper> nodeWrappers=myRunConfiguration.getJUnitSettings().getTests(ProjectHelper.toMPSProject(project));
   JUnitProcessPack processPack;
-  JUnitLightExecutor lightExecutor=new JUnitLightExecutor(nodeWrappers,project);
-  if (myRunConfiguration.getJUnitSettings().getLightExec() && lightExecutor.accept()) {
+  if (myRunConfiguration.getJUnitSettings().getLightExec() && JUnitLightExecutor.accept(nodeWrappers)) {
+    JUnitLightExecutor lightExecutor=new JUnitLightExecutor(nodeWrappers,project);
     processPack=lightExecutor.execute();
   }
  else {
@@ -13,7 +13,11 @@
     String runIdString="-D" + CachesUtil.PROPERTY_RUN_ID + "=\""+ runId+ "\"";
     JavaRunParameters_Configuration javaRunParams=myRunConfiguration.getJavaRunParameters();
     JavaRunParameters parameters=javaRunParams.getJavaRunParameters().clone();
-    parameters.setVmOptions(javaRunParams.getJavaRunParameters().getVmOptions() + " " + runIdString);
+    String vmFromJava=javaRunParams.getJavaRunParameters().getVmOptions();
+    if (vmFromJava == null) {
+      vmFromJava="";
+    }
+    parameters.setVmOptions(vmFromJava + " " + runIdString);
     ProcessHandler process=new Junit_Command().createProcess(nodeWrappers,parameters);
     process.addProcessListener(new ProcessAdapter(){
       @Override public void processTerminated(      ProcessEvent p0){
