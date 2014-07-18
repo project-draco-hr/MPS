@@ -1,0 +1,47 @@
+{
+  if (Sequence.fromIterable(languages).isEmpty()) {
+    return;
+  }
+  Set<SNode> extraLangs=SetSequence.fromSet(new HashSet<SNode>());
+  for (  SNode g : Sequence.fromIterable(languages).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return (SLinkOperations.getTarget(it,"generator",true) != null);
+    }
+  }
+).select(new ISelector<SNode,SNode>(){
+    public SNode select(    SNode it){
+      return SLinkOperations.getTarget(it,"generator",true);
+    }
+  }
+)) {
+    if (g == null) {
+      continue;
+    }
+    Iterable<SNode> deps=Sequence.fromIterable(SNodeOperations.ofConcept(dependencies(g),"jetbrains.mps.build.mps.structure.BuildMps_ModuleDependencyOnModule")).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return (SLinkOperations.getTarget(it,"module",false) != null);
+      }
+    }
+).select(new ISelector<SNode,SNode>(){
+      public SNode select(      SNode it){
+        return SLinkOperations.getTarget(it,"module",false);
+      }
+    }
+);
+    SetSequence.fromSet(extraLangs).addSequence(Sequence.fromIterable(SNodeOperations.ofConcept(deps,"jetbrains.mps.build.mps.structure.BuildMps_Generator")).select(new ISelector<SNode,SNode>(){
+      public SNode select(      SNode it){
+        return BuildMps_Generator_Behavior.call_getSourceLanguage_9200313594510517119(it);
+      }
+    }
+).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return it != null;
+      }
+    }
+));
+    SetSequence.fromSet(extraLangs).addSequence(Sequence.fromIterable(SNodeOperations.ofConcept(deps,"jetbrains.mps.build.mps.structure.BuildMps_Language")));
+  }
+  SetSequence.fromSet(extraLangs).removeSequence(SetSequence.fromSet(modules));
+  modules.addAll(extraLangs);
+  collectGeneratorsDependendencies(extraLangs);
+}

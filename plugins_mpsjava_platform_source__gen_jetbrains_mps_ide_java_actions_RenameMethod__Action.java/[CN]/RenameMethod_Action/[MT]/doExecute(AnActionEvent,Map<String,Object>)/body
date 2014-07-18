@@ -2,13 +2,6 @@
   try {
     FeatureUsageTracker.getInstance().triggerFeatureUsed("refactoring.rename");
     ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
-    final Wrappers._T<List<SNode>> overridingList=new Wrappers._T<List<SNode>>();
-    modelAccess.runReadAction(new Runnable(){
-      public void run(){
-        overridingList.value=MethodRefactoringUtils.findOverridingMethods(RenameUtil.getMethodDeclaration(((SNode)MapSequence.fromMap(_params).get("target"))),new EmptyProgressMonitor());
-      }
-    }
-);
     final Wrappers._T<String> oldName=new Wrappers._T<String>();
     modelAccess.runReadAction(new Runnable(){
       public void run(){
@@ -21,7 +14,7 @@
       }
     }
 );
-    final RenameMethodDialog d=new RenameMethodDialog(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject(),oldName.value,ListSequence.fromList(overridingList.value).isNotEmpty());
+    final RenameMethodDialog d=new RenameMethodDialog(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject(),oldName.value);
     d.show();
     final String newName=d.getName();
     if (newName == null) {
@@ -30,10 +23,10 @@
     modelAccess.runReadInEDT(new Runnable(){
       @Override public void run(){
         SNode node=((SNode)((SNode)MapSequence.fromMap(_params).get("target")));
-        if (!(SNodeUtil.isAccessible(node,MPSModuleRepository.getInstance()))) {
+        if (!(SNodeUtil.isAccessible(node,((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository()))) {
           return;
         }
-        RefactoringAccess.getInstance().getRefactoringFacade().execute(RefactoringContext.createRefactoringContextByName("jetbrains.mps.baseLanguage.refactorings.RenameMethod",Arrays.asList("newName","refactorOverriding"),Arrays.asList(newName,d.getOverriding()),((SNode)MapSequence.fromMap(_params).get("target")),((MPSProject)MapSequence.fromMap(_params).get("project"))));
+        RefactoringAccess.getInstance().getRefactoringFacade().execute(RefactoringContext.createRefactoringContextByName("jetbrains.mps.baseLanguage.refactorings.RenameMethod",Arrays.asList("newName"),Arrays.asList(newName),((SNode)MapSequence.fromMap(_params).get("target")),((MPSProject)MapSequence.fromMap(_params).get("project"))));
       }
     }
 );
