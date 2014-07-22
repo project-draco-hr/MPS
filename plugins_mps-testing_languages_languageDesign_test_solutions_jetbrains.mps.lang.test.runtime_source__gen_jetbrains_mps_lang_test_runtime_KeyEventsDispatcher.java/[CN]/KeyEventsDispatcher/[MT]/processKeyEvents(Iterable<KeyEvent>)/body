@@ -1,0 +1,41 @@
+{
+  final Component eventTargetComponent=getKeyEventTargetComponent();
+  final Method processKeyEventMethod=KeyEventsDispatcher.getProcessKeyEventMethod(eventTargetComponent);
+  final boolean[] eventsPassed=new boolean[]{true};
+  UndoHelper undoHelper=new UndoHelper(myProject,myEditorComponent);
+  undoHelper.runUndoableInEDTAndWait(new Runnable(){
+    public void run(){
+      if (eventTargetComponent == null) {
+        Sequence.fromIterable(events).visitAll(new IVisitor<KeyEvent>(){
+          public void visit(          KeyEvent it){
+            if (it.getID() == KeyEvent.KEY_TYPED) {
+              myEditorComponent.processKeyTyped(it);
+            }
+ else             if (it.getID() == KeyEvent.KEY_PRESSED) {
+              myEditorComponent.processKeyPressed(it);
+            }
+ else {
+              myEditorComponent.processKeyReleased(it);
+            }
+          }
+        }
+);
+      }
+ else {
+        for (        KeyEvent event : Sequence.fromIterable(events)) {
+          try {
+            processKeyEventMethod.invoke(eventTargetComponent,event);
+          }
+ catch (          InvocationTargetException e) {
+            eventsPassed[0]=false;
+          }
+catch (          IllegalAccessException e) {
+            eventsPassed[0]=false;
+          }
+        }
+      }
+    }
+  }
+);
+  Assert.assertTrue("Keyboard events were not passed to corresponding component",eventsPassed[0]);
+}
