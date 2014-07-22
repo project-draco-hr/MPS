@@ -1,51 +1,45 @@
 {
-  if (myModule instanceof Language || myModule instanceof Solution || myModule instanceof Generator) {
-    return new AnActionButtonRunnable(){
-      @Override public void run(      AnActionButton anActionButton){
-        final List<Dependency> list=(new DependencyChooser()).compute();
-        ModelAccess.instance().runReadAction(new Runnable(){
-          @Override public void run(){
-            for (            Dependency dependency : list) {
-              SModuleReference moduleReference=dependency.getModuleRef();
-              final SModule module=MPSModuleRepository.getInstance().getModuleByFqName(moduleReference.getModuleName());
-              if (module instanceof Language) {
-                myDependTableModel.addLanguageItem(dependency);
-              }
- else               if (module instanceof Generator) {
-                myDependTableModel.addGeneratorItem(dependency);
-              }
- else {
-                myDependTableModel.addUnsecifiedItem(dependency);
-              }
-            }
-          }
-        }
-);
-      }
-    }
-;
-  }
- else   if (myModule instanceof DevKit) {
-    return new AnActionButtonRunnable(){
-      @Override public void run(      AnActionButton anActionButton){
-        final List<SModuleReference> list=(new LDSChooser()).compute();
-        ModelAccess.instance().runReadAction(new Runnable(){
-          @Override public void run(){
-            for (            SModuleReference moduleReference : list) {
-              final SModule module=MPSModuleRepository.getInstance().getModuleByFqName(moduleReference.getModuleName());
-              if (module instanceof Language)               myDependTableModel.addLanguageItem(new Dependency(moduleReference,SDependencyScope.EXTENDS));
- else               if (module instanceof DevKit)               myDependTableModel.addDevkitItem(new Dependency(moduleReference,SDependencyScope.EXTENDS));
- else               if (module instanceof Solution)               myDependTableModel.addSolutionItem(new Dependency(moduleReference,SDependencyScope.EXTENDS));
-            }
-          }
-        }
-);
-      }
-    }
-;
-  }
   return new AnActionButtonRunnable(){
     @Override public void run(    AnActionButton anActionButton){
+      final boolean isDevkit=myModule instanceof DevKit;
+      Iterable<SModule> selectionSet=getProjectModules();
+      if (isDevkit) {
+        selectionSet=new ConditionalIterable<SModule>(selectionSet,new VisibleModuleCondition());
+      }
+      ComputeRunnable<List<SModuleReference>> c=new ComputeRunnable<List<SModuleReference>>(new ModuleCollector(selectionSet));
+      myProject.getModelAccess().runReadAction(c);
+      final String dialogTitle=isDevkit ? "Choose DevKit contents" : "Choose modules";
+      final List<SModuleReference> list=CommonChoosers.showModuleSetChooser(myProject,dialogTitle,c.getResult());
+      if (list.isEmpty()) {
+        return;
+      }
+      myProject.getModelAccess().runReadAction(new Runnable(){
+        @Override public void run(){
+          for (          SModuleReference moduleReference : list) {
+            final SModule module=moduleReference.resolve(MPSModuleRepository.getInstance());
+            final Dependency dep;
+            if (isDevkit) {
+              dep=new Dependency(moduleReference,SDependencyScope.EXTENDS);
+            }
+ else {
+              dep=new Dependency(moduleReference,SDependencyScope.DEFAULT,false);
+            }
+            if (module instanceof Language) {
+              myDependTableModel.addLanguageItem(dep);
+            }
+ else             if (module instanceof Generator) {
+              myDependTableModel.addGeneratorItem(dep);
+            }
+ else             if (module instanceof Solution) {
+              myDependTableModel.addSolutionItem(dep);
+            }
+ else {
+              myDependTableModel.addUnspecifiedItem(dep);
+            }
+          }
+        }
+      }
+);
     }
   }
 ;
