@@ -1,36 +1,33 @@
 {
-  Queue<String> queue=new ArrayDeque<String>(getAllLanguages());
-  Set<String> processed=new HashSet<String>(queue);
-  Map<String,List<TemplateModule>> result=new HashMap<String,List<TemplateModule>>();
-  Set<String> badLanguages=new HashSet<String>();
-  Set<String> participatingLanguages=new HashSet<String>(processed);
+  myBadLanguages.clear();
+  final Collection<String> initialLanguages=getAllLanguages();
+  Queue<EngagedLanguage> queue=new ArrayDeque<EngagedLanguage>(resolveLanguages(initialLanguages,null,null));
+  Set<String> processedLanguages=new HashSet<String>(initialLanguages);
+  Map<EngagedLanguage,List<TemplateModule>> result=new HashMap<EngagedLanguage,List<TemplateModule>>();
+  Set<EngagedLanguage> participatingLanguages=new HashSet<EngagedLanguage>(queue);
   while (!queue.isEmpty()) {
-    String next=queue.remove();
-    LanguageRuntime language=LanguageRegistry.getInstance().getLanguage(next);
-    if (language == null) {
-      LOG.error(String.format("Model %s uses language %s which is missing (likely is not yet generated or is a bootstrap dependency)",myModel.getModelName(),next));
-      badLanguages.add(next);
-      continue;
-    }
-    HashSet<String> targetLanguages=new HashSet<String>();
-    HashSet<String> moreLanguages=new HashSet<String>();
-    result.put(next,collectLanguagesFromGenerators(language,targetLanguages,moreLanguages));
-    if (myOnlyLanguageRealUses) {
-      HashSet<String> checkExtendedLanguages=new HashSet<String>(targetLanguages);
-      checkExtendedLanguages.add(next);
-      checkExtendedLanguages.removeAll(processed);
-      for (      String targetLanguage : checkExtendedLanguages) {
-        Language langModule=ModuleRepositoryFacade.getInstance().getModule(targetLanguage,Language.class);
-        for (        SModuleReference mr : langModule.getExtendedLanguageRefs()) {
-          targetLanguages.add(mr.getModuleName());
-        }
+    EngagedLanguage next=queue.remove();
+    for (    LanguageRuntime extendedLang : next.getLanguage().getExtendedLanguages()) {
+      if (processedLanguages.add(extendedLang.getNamespace())) {
+        final EngagedLanguage engaged=new EngagedLanguage(extendedLang,next,"EXTENDS");
+        participatingLanguages.add(engaged);
+        queue.add(engaged);
       }
     }
-    participatingLanguages.addAll(targetLanguages);
-    moreLanguages.addAll(targetLanguages);
-    moreLanguages.removeAll(processed);
-    processed.addAll(moreLanguages);
-    queue.addAll(moreLanguages);
+    HashSet<EngagedLanguage> targetLanguages=new HashSet<EngagedLanguage>();
+    HashSet<EngagedLanguage> extraLanguages=new HashSet<EngagedLanguage>();
+    result.put(next,collectLanguagesFromGenerators(next,targetLanguages,extraLanguages));
+    for (    EngagedLanguage t : targetLanguages) {
+      if (processedLanguages.add(t.getName())) {
+        participatingLanguages.add(t);
+        queue.add(t);
+      }
+    }
+    for (    EngagedLanguage o : extraLanguages) {
+      if (processedLanguages.add(o.getName())) {
+        queue.add(o);
+      }
+    }
   }
   ArrayList<TemplateModule> all=new ArrayList<TemplateModule>();
   for (  Collection<TemplateModule> m : result.values()) {
@@ -40,7 +37,7 @@
   if (myOnlyLanguageRealUses) {
     ArrayList<TemplateModule> engaged=new ArrayList<TemplateModule>();
     participatingLanguages.retainAll(result.keySet());
-    for (    String pl : participatingLanguages) {
+    for (    EngagedLanguage pl : participatingLanguages) {
       engaged.addAll(result.get(pl));
     }
     myEngagedGenerators=Collections.unmodifiableList(engaged);
