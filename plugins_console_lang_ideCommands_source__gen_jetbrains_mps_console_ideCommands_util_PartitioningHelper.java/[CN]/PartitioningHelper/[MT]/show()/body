@@ -1,0 +1,48 @@
+{
+  GenerationPlan plan=new GenerationPlan(inputModel);
+  Map<TemplateMappingPriorityRule,TemplateModule> myRule2Generator=new HashMap<TemplateMappingPriorityRule,TemplateModule>();
+  for (  TemplateModule generator : plan.getGenerators()) {
+    Collection<TemplateMappingPriorityRule> priorities=generator.getPriorities();
+    if (priorities == null) {
+      continue;
+    }
+    for (    TemplateMappingPriorityRule rule : priorities) {
+      myRule2Generator.put(rule,generator);
+    }
+  }
+  messagesView.add(new Message(MessageKind.INFORMATION,"================================="));
+  for (  TemplateModule generator : plan.getGenerators()) {
+    Collection<TemplateMappingPriorityRule> rules=generator.getPriorities();
+    if (rules == null) {
+      continue;
+    }
+    for (    TemplateMappingPriorityRule r : rules) {
+      Message msg=new Message(MessageKind.INFORMATION,r.toString());
+      msg.setHintObject(generator.getReference());
+      messagesView.add(msg);
+    }
+  }
+  messagesView.add(new Message(MessageKind.INFORMATION,"================================="));
+  if (plan.hasIgnoredPriorityRules()) {
+    printPlanConflicts(plan.getIgnoredPriorityRules(),"Ignored mapping priority rules:");
+  }
+  if (plan.hasConflictingPriorityRules()) {
+    printPlanConflicts(plan.getConflicts(),"Conflicting mapping priority rules encountered:");
+  }
+  console.addText("---------------------  mappings partitioning  -----------------------------------\n\n");
+  for (int step=0; step < plan.getStepCount(); step++) {
+    List<TemplateMappingConfiguration> mappingSet=plan.getMappingConfigurations(step);
+    console.addText(" [ " + (step + 1) + " ]\n");
+    List<Pair<String,TemplateMappingConfiguration>> strings=GenerationPartitioningUtil.toStrings(mappingSet);
+    for (    Pair<String,TemplateMappingConfiguration> string : strings) {
+      SNode node=SConceptOperations.createNewNode("jetbrains.mps.console.ideCommands.structure.ClickableGenerator",null);
+      SPropertyOperations.set(node,"moduleId",string.o2.getModel().getSModelReference().resolve(MPSModuleRepository.getInstance()).getModule().getModuleId().toString());
+      SPropertyOperations.set(node,"text",string.o1);
+      console.addText(" ");
+      console.addNode(node);
+      console.addText("\n");
+    }
+    console.addText("\n");
+  }
+  console.addText("---------------------------------------------------------------------------------\n");
+}
