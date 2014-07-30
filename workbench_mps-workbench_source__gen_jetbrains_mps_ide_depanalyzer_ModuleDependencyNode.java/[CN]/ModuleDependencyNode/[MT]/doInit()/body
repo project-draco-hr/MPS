@@ -1,47 +1,13 @@
 {
-  Set<SModule> reqModules=SetSequence.fromSet(new HashSet<SModule>());
-  Set<SModule> rtModules=SetSequence.fromSet(new HashSet<SModule>());
-  Set<SModule> usedLanguages=SetSequence.fromSet(new HashSet<SModule>());
-  DependencyTree tree=(DependencyTree)getTree();
-  for (  SModule module : ListSequence.fromList(myModules)) {
-    GlobalModuleDependenciesManager depManager=new GlobalModuleDependenciesManager(module);
-    SetSequence.fromSet(reqModules).addSequence(CollectionSequence.fromCollection(depManager.getModules(GlobalModuleDependenciesManager.Deptype.VISIBLE)));
-    SetSequence.fromSet(rtModules).addSequence(CollectionSequence.fromCollection(depManager.getModules(GlobalModuleDependenciesManager.Deptype.EXECUTE)));
-    SetSequence.fromSet(usedLanguages).addSequence(CollectionSequence.fromCollection(depManager.getUsedLanguages()));
-  }
-  Set<SModule> allModules=(tree.isShowRuntime() ? rtModules : reqModules);
-  Set<SModule> depLoops=tree.getLoops();
-  SetSequence.fromSet(allModules).addSequence(SetSequence.fromSet(depLoops).intersect(ListSequence.fromList(myModules)));
-  if (tree.isHideSourceModules()) {
-    SetSequence.fromSet(allModules).removeSequence(ListSequence.fromList(tree.getModules()));
-    SetSequence.fromSet(usedLanguages).removeSequence(ListSequence.fromList(tree.getModules()));
-  }
-  for (  SModule m : SetSequence.fromSet(allModules).sort(new ISelector<SModule,String>(){
-    public String select(    SModule it){
-      return it.getModuleName();
+  for (  DepPath c : Sequence.fromIterable(myCycles)) {
+    Iterator<DepLink> itr=Sequence.fromIterable(c.elements()).iterator();
+    itr.next();
+    MPSTreeNode parent=this;
+    while (itr.hasNext()) {
+      DependencyTreeNode dtn=new DependencyTreeNode(itr.next());
+      parent.add(dtn);
+      parent=dtn;
     }
-  }
-,true)) {
-    add(new ModuleDependencyNode.DepDependencyNode(m,!(SetSequence.fromSet(reqModules).contains(m)),SetSequence.fromSet(depLoops).contains(m),getOperationContext()));
-  }
-  if (tree.isShowUsedLanguage()) {
-    MPSTreeNode usedlanguages=new TextMPSTreeNode("Used Languages",getOperationContext());
-    boolean hasBootstrapDep=false;
-    for (    SModule l : SetSequence.fromSet(usedLanguages).sort(new ISelector<SModule,String>(){
-      public String select(      SModule it){
-        return it.getModuleName();
-      }
-    }
-,true)) {
-      Iterable<SModule> langModules=new GlobalModuleDependenciesManager(l).getModules(GlobalModuleDependenciesManager.Deptype.EXECUTE);
-      boolean isBootstrapDep=Sequence.fromIterable(langModules).intersect(ListSequence.fromList(myModules)).isNotEmpty();
-      hasBootstrapDep|=isBootstrapDep;
-      usedlanguages.add(new ModuleDependencyNode.ULangDependencyNode(l,isBootstrapDep,getOperationContext()));
-    }
-    if (hasBootstrapDep) {
-      usedlanguages.addTreeMessage(BOOTSTRAP_DEPENDENCY);
-    }
-    add(usedlanguages);
   }
   myInitialized=true;
 }
