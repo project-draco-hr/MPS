@@ -1,0 +1,39 @@
+{
+  EditorCell nodeCell=editorContext.getEditorComponent().findNodeCell(node);
+  if (nodeCell == null || ReadOnlyUtil.isCellOrSelectionReadOnlyInEditor(editorContext.getEditorComponent(),nodeCell)) {
+    return;
+  }
+  SNode conceptDeclaration=SNodeOperations.cast(SNodeOperations.getParent(node),"jetbrains.mps.lang.structure.structure.ConceptDeclaration");
+  final Wrappers._T<SNode> nextReference=new Wrappers._T<SNode>(null);
+  final Wrappers._T<SNode> referenceToSelect=new Wrappers._T<SNode>(null);
+  ListSequence.fromList(SLinkOperations.getTargets(conceptDeclaration,"linkDeclaration",true)).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return SPropertyOperations.hasValue(it,"metaClass","reference","reference");
+    }
+  }
+).foldLeft(false,new ILeftCombinator<SNode,Boolean>(){
+    public Boolean combine(    Boolean nodeVisited,    SNode nextSibling){
+      if (nextSibling == node) {
+        return true;
+      }
+      if (!(nodeVisited)) {
+        referenceToSelect.value=nextSibling;
+      }
+ else       if (nextReference.value == null) {
+        nextReference.value=nextSibling;
+      }
+      return nodeVisited;
+    }
+  }
+);
+  SNodeOperations.deleteNode(node);
+  if (referenceToSelect.value != null) {
+    SelectionUtil.selectLabelCellAnSetCaret(editorContext,referenceToSelect.value,SelectionManager.LAST_CELL,-1);
+  }
+ else   if (nextReference.value != null) {
+    SelectionUtil.selectLabelCellAnSetCaret(editorContext,nextReference.value,SelectionManager.FIRST_CELL,0);
+  }
+ else {
+    SelectionUtil.selectLabelCellAnSetCaret(editorContext,conceptDeclaration,"emptyRefPlaceHolder",0);
+  }
+}
