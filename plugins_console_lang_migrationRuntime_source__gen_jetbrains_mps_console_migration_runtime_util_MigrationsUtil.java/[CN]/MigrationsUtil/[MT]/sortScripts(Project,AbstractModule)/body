@@ -1,0 +1,54 @@
+{
+  List<? extends List<MigrationScript>> primaryScripts=Sequence.fromIterable(fetchPrimaryScripts(project,module)).select(new ISelector<Iterable<MigrationScript>,IListSequence<MigrationScript>>(){
+    public IListSequence<MigrationScript> select(    Iterable<MigrationScript> it){
+      return Sequence.fromIterable(it).where(new IWhereFilter<MigrationScript>(){
+        public boolean accept(        MigrationScript it){
+          return ((PrimaryMigrationScript)it).applicableToModule(module);
+        }
+      }
+).toListSequence();
+    }
+  }
+).toListSequence();
+  Map<MigrationScript,Set<MigrationScript>> dependencies=MapSequence.fromMap(new HashMap<MigrationScript,Set<MigrationScript>>());
+  for (  List<MigrationScript> seq : ListSequence.fromList(primaryScripts)) {
+    for (int i=0; i < ListSequence.fromList(seq).count() - 1; i++) {
+      if (MapSequence.fromMap(dependencies).get(ListSequence.fromList(seq).getElement(i + 1)) == null) {
+        MapSequence.fromMap(dependencies).put(ListSequence.fromList(seq).getElement(i + 1),SetSequence.fromSet(new HashSet<MigrationScript>()));
+      }
+      SetSequence.fromSet(MapSequence.fromMap(dependencies).get(ListSequence.fromList(seq).getElement(i + 1))).addElement(ListSequence.fromList(seq).getElement(i));
+    }
+  }
+  List<MigrationScript> result=ListSequence.fromList(new ArrayList<MigrationScript>());
+  int maxBreak=0;
+  while (ListSequence.fromList(primaryScripts).translate(new ITranslator2<List<MigrationScript>,MigrationScript>(){
+    public Iterable<MigrationScript> translate(    List<MigrationScript> it){
+      return it;
+    }
+  }
+).isNotEmpty()) {
+    boolean progress=false;
+    for (    List<MigrationScript> seq : ListSequence.fromList(primaryScripts)) {
+      while (ListSequence.fromList(seq).isNotEmpty() && SetSequence.fromSet(MapSequence.fromMap(dependencies).get(ListSequence.fromList(seq).first())).count() <= maxBreak) {
+        for (        MigrationScript breaking : SetSequence.fromSet(MapSequence.fromMap(dependencies).get(ListSequence.fromList(seq).first()))) {
+          if (LOG.isEnabledFor(Level.ERROR)) {
+            LOG.error("Breaking dependency " + ListSequence.fromList(seq).first() + " < "+ breaking);
+          }
+        }
+        maxBreak=0;
+        MigrationScript script=ListSequence.fromList(seq).removeElementAt(0);
+        if (!(ListSequence.fromList(result).contains(script))) {
+          ListSequence.fromList(result).addElement(script);
+        }
+        progress=true;
+      }
+    }
+    if (progress == false) {
+      if (LOG.isEnabledFor(Level.ERROR)) {
+        LOG.error("Cycle in migration script dependencies");
+      }
+      maxBreak=1;
+    }
+  }
+  return result;
+}
