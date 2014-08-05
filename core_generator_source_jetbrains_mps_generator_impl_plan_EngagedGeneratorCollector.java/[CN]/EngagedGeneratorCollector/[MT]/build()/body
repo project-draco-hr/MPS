@@ -3,7 +3,7 @@
   final Collection<String> initialLanguages=getAllLanguages();
   Queue<EngagedLanguage> queue=new ArrayDeque<EngagedLanguage>(resolveLanguages(initialLanguages,null,null));
   Set<String> processedLanguages=new HashSet<String>(initialLanguages);
-  Map<EngagedLanguage,List<TemplateModule>> result=new LinkedHashMap<EngagedLanguage,List<TemplateModule>>();
+  List<EngagedGenerator> result=new ArrayList<EngagedGenerator>();
   Set<EngagedLanguage> participatingLanguages=new HashSet<EngagedLanguage>(queue);
   while (!queue.isEmpty()) {
     EngagedLanguage next=queue.remove();
@@ -15,41 +15,24 @@
       }
     }
     HashSet<EngagedLanguage> targetLanguages=new HashSet<EngagedLanguage>();
-    HashSet<EngagedLanguage> extraLanguages=new HashSet<EngagedLanguage>();
-    result.put(next,collectLanguagesFromGenerators(next,targetLanguages,extraLanguages));
+    result.addAll(collectGeneratorsAndTargetLanguages(next,targetLanguages));
     for (    EngagedLanguage t : targetLanguages) {
       if (processedLanguages.add(t.getName())) {
         participatingLanguages.add(t);
         queue.add(t);
       }
     }
-    for (    EngagedLanguage o : extraLanguages) {
-      if (processedLanguages.add(o.getName())) {
-        queue.add(o);
-      }
-    }
   }
   if (LOG.isDebugEnabled()) {
-    LOG.debug(">>>");
-    for (    EngagedLanguage l : result.keySet()) {
-      LOG.debug(new StringBuilder().append(' ').append(processedLanguages.contains(l.getName()) ? '*' : ' ').append(l));
-    }
-    LOG.debug("<<<");
+    dump(result);
   }
   ArrayList<TemplateModule> all=new ArrayList<TemplateModule>();
-  for (  Collection<TemplateModule> m : result.values()) {
-    all.addAll(m);
-  }
-  myAccessibleGenerators=Collections.unmodifiableList(all);
-  if (myOnlyLanguageRealUses) {
-    ArrayList<TemplateModule> engaged=new ArrayList<TemplateModule>();
-    participatingLanguages.retainAll(result.keySet());
-    for (    EngagedLanguage pl : participatingLanguages) {
-      engaged.addAll(result.get(pl));
+  HashSet<SModuleReference> processedGenerators=new HashSet<SModuleReference>(result.size() * 2);
+  for (  EngagedGenerator m : result) {
+    final TemplateModule tm=m.getGenerator();
+    if (processedGenerators.add(tm.getModuleReference())) {
+      all.add(tm);
     }
-    myEngagedGenerators=Collections.unmodifiableList(engaged);
   }
- else {
-    myEngagedGenerators=myAccessibleGenerators;
-  }
+  return Collections.unmodifiableList(all);
 }

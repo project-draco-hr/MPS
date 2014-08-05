@@ -3,10 +3,25 @@
     final Wrappers._T<List<SModel>> models=new Wrappers._T<List<SModel>>();
     ModelAccess.instance().runReadAction(new Runnable(){
       public void run(){
-        Iterable<SModel> allModels=SModelRepository.getInstance().getModelDescriptors();
-        models.value=ListSequence.fromListWithValues(new ArrayList<SModel>(),Sequence.fromIterable(allModels).where(new IWhereFilter<SModel>(){
+        Iterable<SModule> projectModules=((MPSProject)MapSequence.fromMap(_params).get("mpsProject")).getModules();
+        models.value=ListSequence.fromListWithValues(new ArrayList<SModel>(),Sequence.fromIterable(projectModules).where(new IWhereFilter<SModule>(){
+          public boolean accept(          SModule it){
+            return it instanceof Language;
+          }
+        }
+).select(new ISelector<SModule,SModel>(){
+          public SModel select(          SModule it){
+            return LanguageAspect.EDITOR.get((Language)it);
+          }
+        }
+).where(new IWhereFilter<SModel>(){
           public boolean accept(          SModel it){
-            return SNodeOperations.isGeneratable(it) && LanguageAspect.EDITOR.is(it);
+            return it != null;
+          }
+        }
+).where(new IWhereFilter<SModel>(){
+          public boolean accept(          SModel it){
+            return SNodeOperations.isGeneratable(it);
           }
         }
 ));
