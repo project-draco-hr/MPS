@@ -1,0 +1,26 @@
+{
+  try {
+    List<ITestNodeWrapper> testNodes=ListSequence.fromList(success).union(ListSequence.fromList(failure)).toListSequence();
+    TestRunState runState=new TestRunState(testNodes);
+    TestEventsDispatcher eventsDispatcher=new TestEventsDispatcher(runState);
+    Executor processExecutor;
+    processExecutor=new JUnitLightExecutor(testNodes,eventsDispatcher);
+    ProcessHandler process=processExecutor.execute();
+    CheckTestStateListener checkListener=new CheckTestStateListener(success,failure);
+    runState.addListener(checkListener);
+    OutputRedirector.redirect(process,new UnitTestProcessListener(eventsDispatcher));
+    int exitcode=ProcessHandlerBuilder.startAndWait(process,300 * 100);
+    if (exitcode > 0) {
+      Assert.fail("Exit code is not 0 but " + exitcode);
+    }
+ else     if (exitcode < 0) {
+      Assert.fail("Process running too long.");
+    }
+    if (!(checkListener.getMessages().equals(""))) {
+      Assert.fail(checkListener.getMessages());
+    }
+  }
+ catch (  ExecutionException e) {
+    Assert.fail(e.getMessage());
+  }
+}
