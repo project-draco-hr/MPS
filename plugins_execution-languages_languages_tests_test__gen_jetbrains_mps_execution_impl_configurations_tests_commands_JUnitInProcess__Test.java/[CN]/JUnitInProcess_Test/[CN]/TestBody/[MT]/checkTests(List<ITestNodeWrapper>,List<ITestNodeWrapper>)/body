@@ -1,14 +1,33 @@
 {
   try {
     List<ITestNodeWrapper> testNodes=ListSequence.fromList(success).union(ListSequence.fromList(failure)).toListSequence();
-    TestRunState runState=new TestRunState(testNodes);
+    final TestRunState runState=new TestRunState(testNodes);
     TestEventsDispatcher eventsDispatcher=new TestEventsDispatcher(runState);
     Executor processExecutor;
     processExecutor=new JUnitLightExecutor(testNodes,eventsDispatcher);
+    if (LOG.isInfoEnabled()) {
+      LOG.info("Starting in-process-execution");
+    }
     ProcessHandler process=processExecutor.execute();
-    CheckTestStateListener checkListener=new CheckTestStateListener(success,failure);
-    runState.addListener(checkListener);
+    final Wrappers._T<CheckTestStateListener> checkListener=new Wrappers._T<CheckTestStateListener>();
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        checkListener.value=new CheckTestStateListener(success,failure);
+        runState.addListener(checkListener.value);
+      }
+    }
+);
     OutputRedirector.redirect(process,new UnitTestProcessListener(eventsDispatcher));
+    int exitcode=ProcessHandlerBuilder.startAndWait(process,30 * 1000);
+    if (exitcode != ListSequence.fromList(failure).count()) {
+      Assert.fail("Exit code must be equal to " + ListSequence.fromList(failure).count() + ", but "+ exitcode);
+    }
+ else     if (exitcode < 0) {
+      Assert.fail("Process is running for too long");
+    }
+    if (!(checkListener.value.getMessages().equals(""))) {
+      Assert.fail(checkListener.value.getMessages());
+    }
   }
  catch (  ExecutionException e) {
     Assert.fail(e.getMessage());
