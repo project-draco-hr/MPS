@@ -3,8 +3,10 @@
   Set<String> usedLanguages=new HashSet<String>();
   ModelDependencyScanner depScan=new ModelDependencyScanner();
   depScan.crossModelReferences(true).usedLanguages(false);
+  boolean anyGeneratorModelNotLoaded=false;
   for (  SModel model : myModule.getModels()) {
     if (!model.isLoaded()) {
+      anyGeneratorModelNotLoaded|=SModelStereotype.isGeneratorModel(model);
       continue;
     }
     if (SModelStereotype.isGeneratorModel(model)) {
@@ -13,26 +15,8 @@
     depScan.walk(model);
   }
   warnings.addAll(warnMissingTargetLangRuntime(usedLanguages));
-  HashSet<SModule> seen=new HashSet<SModule>();
-  for (  SDependency dep : myModule.getDeclaredDependencies()) {
-    if (seen.contains(dep.getTarget()) || (dep.getScope() != SDependencyScope.EXTENDS && dep.getScope() != SDependencyScope.DEFAULT)) {
-      continue;
-    }
-    if (dep.getTarget() instanceof Generator) {
-      HashSet<SModelReference> otherGeneratorModels=new HashSet<SModelReference>();
-      for (      SModel m : dep.getTarget().getModels()) {
-        otherGeneratorModels.add(m.getReference());
-      }
-      final Language otherGenLanguage=((Generator)dep.getTarget()).getSourceLanguage();
-      for (      SModel m : (otherGenLanguage == null ? Collections.<SModel>emptySet() : otherGenLanguage.getModels())) {
-        otherGeneratorModels.add(m.getReference());
-      }
-      if (CollectionUtil.intersects(depScan.getCrossModelReferences(),otherGeneratorModels)) {
-        continue;
-      }
-      warnings.add(String.format("Superfluous dependency to generator %s, no generator template nor its source language's node is in use",dep.getTarget().getModuleName()));
-      seen.add(dep.getTarget());
-    }
+  if (!anyGeneratorModelNotLoaded) {
+    warnings.addAll(warnStrictGeneratorDependencies(depScan));
   }
   return warnings;
 }
