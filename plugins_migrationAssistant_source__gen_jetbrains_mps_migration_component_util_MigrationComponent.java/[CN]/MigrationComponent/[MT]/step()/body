@@ -1,22 +1,27 @@
 {
-  Iterable<Pair<MigrationScript,AbstractModule>> allStepScripts=fetchScripts();
-  Iterable<Pair<MigrationScript,AbstractModule>> availableScripts=Sequence.fromIterable(allStepScripts).where(new IWhereFilter<Pair<MigrationScript,AbstractModule>>(){
-    public boolean accept(    Pair<MigrationScript,AbstractModule> it){
-      return isAvailable(it);
+  ModelAccess.instance().runWriteAction(new Runnable(){
+    public void run(){
+      Iterable<Pair<MigrationScript,AbstractModule>> allStepScripts=fetchScripts();
+      Iterable<Pair<MigrationScript,AbstractModule>> availableScripts=Sequence.fromIterable(allStepScripts).where(new IWhereFilter<Pair<MigrationScript,AbstractModule>>(){
+        public boolean accept(        Pair<MigrationScript,AbstractModule> it){
+          return isAvailable(it);
+        }
+      }
+);
+      if (Sequence.fromIterable(allStepScripts).isNotEmpty()) {
+        MigrationsUtil.executeScript(Sequence.fromIterable(availableScripts).first().first,Sequence.fromIterable(availableScripts).first().second);
+        lastState=MigrationManager.MigrationState.STEP;
+      }
+ else {
+        if (Sequence.fromIterable(allStepScripts).isEmpty()) {
+          lastState=MigrationManager.MigrationState.FINISHED;
+        }
+ else {
+          lastState=MigrationManager.MigrationState.CONFLICT;
+        }
+      }
     }
   }
 );
-  if (Sequence.fromIterable(allStepScripts).isNotEmpty()) {
-    MigrationsUtil.executeScript(Sequence.fromIterable(availableScripts).first().first,Sequence.fromIterable(availableScripts).first().second);
-    return MigrationManager.MigrationState.STEP;
-  }
- else {
-    if (Sequence.fromIterable(allStepScripts).isEmpty()) {
-      return MigrationManager.MigrationState.FINISHED;
-    }
- else {
-      lastState=MigrationManager.MigrationState.CONFLICT;
-      return MigrationManager.MigrationState.CONFLICT;
-    }
-  }
+  return lastState;
 }
