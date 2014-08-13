@@ -1,27 +1,49 @@
 {
+  if (LOG.isInfoEnabled()) {
+    LOG.info("Initializing test...");
+  }
   test.setProject(testProject);
-  final Runnable runnable=new Runnable(){
-    @Override public void run(){
-      initialize(test,modelName);
+  TransformationTest cachedTest=ourTestModelSaver.getTest();
+  SModel cachedModel=check_ovzmet_a0d0m(cachedTest);
+  SModel cachedTransientModel=check_ovzmet_a0e0m(cachedTest);
+  if (modelName.equals(check_ovzmet_a0a5a21(check_ovzmet_a0a0f0m(cachedModel)))) {
+    if (LOG.isInfoEnabled()) {
+      LOG.info("using cache");
     }
-    private void initialize(    final TransformationTest test,    final String modelName){
-      SModel modelDescriptor=findModel(modelName);
-      test.setModelDescriptor(modelDescriptor);
-      test.init();
+    test.setModelDescriptor(cachedModel);
+    test.setTransientModelDescriptor(cachedTransientModel);
+  }
+ else {
+    if (LOG.isInfoEnabled()) {
+      LOG.info("caching again");
     }
-    private SModel findModel(    final String modelName){
-      SModel modelDescriptor=SModelRepository.getInstance().getModelDescriptor(PersistenceFacade.getInstance().createModelReference(modelName));
-      if (modelDescriptor == null) {
-        Assert.fail("Can't find model " + modelName + " in projects "+ Arrays.toString(ProjectManager.getInstance().getOpenProjects())+ ".");
+    if (cachedTest != null) {
+      dispose(cachedTest);
+    }
+    final Runnable runnable=new Runnable(){
+      @Override public void run(){
+        initialize(test,modelName);
       }
-      return modelDescriptor;
+      private void initialize(      final TransformationTest test,      final String modelName){
+        SModel modelDescriptor=findModel(modelName);
+        test.setModelDescriptor(modelDescriptor);
+        test.init();
+      }
+      private SModel findModel(      final String modelName){
+        SModel modelDescriptor=SModelRepository.getInstance().getModelDescriptor(PersistenceFacade.getInstance().createModelReference(modelName));
+        if (modelDescriptor == null) {
+          Assert.fail("Can't find model " + modelName + " in projects "+ Arrays.toString(ProjectManager.getInstance().getOpenProjects())+ ".");
+        }
+        return modelDescriptor;
+      }
     }
-  }
 ;
-  SwingUtilities.invokeAndWait(new Runnable(){
-    public void run(){
-      ModelAccess.instance().runWriteActionInCommand(runnable,testProject);
+    SwingUtilities.invokeAndWait(new Runnable(){
+      public void run(){
+        testProject.getModelAccess().executeCommand(runnable);
+      }
     }
-  }
 );
+    ourTestModelSaver.setTest(test);
+  }
 }
