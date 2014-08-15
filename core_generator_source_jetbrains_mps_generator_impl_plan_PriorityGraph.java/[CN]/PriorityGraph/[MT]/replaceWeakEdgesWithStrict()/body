@@ -8,7 +8,6 @@
   while (!weakEntries.isEmpty()) {
     Entry weak=weakEntries.removeFirst();
     myRulePriorityEntries.remove(weak);
-    boolean weakGotUpdate=false;
     Collection<Entry> toAdd=new ArrayList<Entry>();
     for (    Entry entry : myRulePriorityEntries) {
       if (entry.isTrivial()) {
@@ -19,7 +18,6 @@
       if (!substituteForSooner && !dependsOnWeak) {
         continue;
       }
-      weakGotUpdate=true;
       final Entry newEntry;
       HashSet<MappingPriorityRule> mergedRules=new HashSet<MappingPriorityRule>(entry.getRules());
       mergedRules.addAll(weak.getRules());
@@ -35,19 +33,31 @@
         weakEntries.add(newEntry);
       }
     }
-    if (!weakGotUpdate) {
-      toAdd.add(new Entry(weak.sooner(),weak.later(),true,weak.getRules()));
+    if (toAdd.isEmpty()) {
+      toAdd.add(weak.makeStrict());
     }
-    for (Iterator<Entry> it=toAdd.iterator(); it.hasNext(); ) {
-      Entry next=it.next();
-      if (!next.isTrivial()) {
-        continue;
+ else {
+      HashSet<Group> addedSooner=new HashSet<Group>();
+      HashSet<Group> addedLater=new HashSet<Group>();
+      for (      Entry e : toAdd) {
+        addedSooner.add(e.sooner());
+        addedLater.add(e.later());
       }
+      addedSooner.remove(weak.sooner());
+      addedLater.remove(weak.later());
+      TransitiveClosure<Group> closureBuilder=new TransitiveClosure<Group>();
       for (      Entry e : myRulePriorityEntries) {
-        if (e.later().equals(next.later())) {
-          it.remove();
-          break;
+        if (!e.isTrivial()) {
+          closureBuilder.feed(e.sooner(),e.later());
         }
+      }
+      HashSet<Group> closure=new HashSet<Group>();
+      for (      Group l : addedSooner) {
+        closure.addAll(closureBuilder.closure(l));
+      }
+      closure.retainAll(addedLater);
+      if (closure.isEmpty()) {
+        toAdd.add(weak.makeStrict());
       }
     }
     myRulePriorityEntries.addAll(toAdd);
