@@ -1,0 +1,33 @@
+{
+  Set<SLanguageId> myUsedLanguages=new HashSet<SLanguageId>();
+  for (  org.jetbrains.mps.openapi.model.SNode root : getRootNodes()) {
+    for (    org.jetbrains.mps.openapi.model.SNode n : SNodeUtil.getDescendants(root)) {
+      SConceptId conceptId=n.getConcept().getId();
+      myUsedLanguages.add(conceptId.getLanguageId());
+      if (n.getParent() != null) {
+        SContainmentLinkId roleId=n.getRoleInParentId();
+        myUsedLanguages.add(roleId.getConceptId().getLanguageId());
+      }
+      for (      SPropertyId pid : n.getPropertyIds()) {
+        myUsedLanguages.add(pid.getConceptId().getLanguageId());
+      }
+      for (      SReference ref : n.getReferences()) {
+        myUsedLanguages.add(ref.getRoleId().getConceptId().getLanguageId());
+      }
+    }
+  }
+  Map<SLanguageId,Integer> myNewImplicitLanguagesIds=new HashMap<SLanguageId,Integer>(myUsedLanguages.size());
+  for (  SLanguageId lang : myLanguagesIds.keySet()) {
+    myUsedLanguages.remove(lang);
+  }
+  for (  Entry<SLanguageId,Integer> lang : myImplicitLanguagesIds.entrySet()) {
+    if (myUsedLanguages.remove(lang.getKey())) {
+      myNewImplicitLanguagesIds.put(lang.getKey(),lang.getValue());
+    }
+  }
+  for (  SLanguageId lang : myUsedLanguages) {
+    int version=new SLanguageAdapter(lang).getSourceModule().getLanguageVersion();
+    myNewImplicitLanguagesIds.put(lang,version);
+  }
+  myImplicitLanguagesIds=myNewImplicitLanguagesIds;
+}

@@ -1,11 +1,25 @@
 {
   IFile source=FileSystem.getInstance().getFileByPath(sourceFile);
   try {
-    DefaultSModel model=(stripImplementation ? ModelPersistence.readModelWithoutImplementation(new FileDataSource(source)) : ModelPersistence.readModel(new FileDataSource(source),false));
+    final DefaultSModel model=(stripImplementation ? ModelPersistence.readModelWithoutImplementation(new FileDataSource(source)) : ModelPersistence.readModel(new FileDataSource(source),false));
     if (model.getSModelHeader().getPersistenceVersion() < ModelPersistence.LAST_VERSION) {
       throw new IOException("cannot convert " + sourceFile + ": model persistence is too old, please upgrade");
     }
-    BinaryPersistence.writeModel(model,new FileDataSource(FileSystem.getInstance().getFileByPath(destFile)));
+    final Wrappers._T<IOException> e=new Wrappers._T<IOException>(null);
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        try {
+          BinaryPersistence.writeModel(model,new FileDataSource(FileSystem.getInstance().getFileByPath(destFile)));
+        }
+ catch (        IOException e1) {
+          e.value=e1;
+        }
+      }
+    }
+);
+    if (e.value != null) {
+      throw e.value;
+    }
   }
  catch (  ModelReadException e) {
     throw new IOException("Couldn't parse " + sourceFile + ": "+ e.getMessageEx(),e);
