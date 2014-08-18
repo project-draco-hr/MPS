@@ -1,21 +1,19 @@
 {
   try {
-    EditorComponent component=((EditorComponent)((Editor)MapSequence.fromMap(_params).get("editor")).getCurrentEditorComponent());
+    final EditorComponent component=((EditorComponent)((Editor)MapSequence.fromMap(_params).get("editor")).getCurrentEditorComponent());
     if (component == null) {
       return;
     }
-    Set<String> enabledHints=component.getEnabledHints();
-    ConceptEditorHintSettings settings=new ConceptEditorHintSettings();
-    settings.putAll(ConceptEditorHintSettingsComponent.getInstance(((Project)MapSequence.fromMap(_params).get("project"))).getSettings());
-    for (    String lang : settings.getLanguagesNames()) {
-      for (      ConceptEditorHint hint : SetSequence.fromSet(settings.getHints(lang))) {
-        settings.put(lang,hint,false);
+    final ConceptEditorHintSettings settings=new ConceptEditorHintSettings(LanguageRegistry.getInstance().getAvailableLanguages());
+    SwingUtilities.invokeLater(new Runnable(){
+      public void run(){
+        settings.updateSettings(component.getEnabledHints());
+        final ConceptEditorHintPreferencesPage page=new ConceptEditorHintPreferencesPage(settings);
+        DialogWrapper dialog=new HintsDialog(((Project)MapSequence.fromMap(_params).get("project")),page,settings,component);
+        dialog.show();
       }
     }
-    settings.updateSettings(enabledHints);
-    final ConceptEditorHintPreferencesPage page=new ConceptEditorHintPreferencesPage(settings);
-    DialogWrapper dialog=new HintsDialog(((Project)MapSequence.fromMap(_params).get("project")),page,settings,component);
-    dialog.show();
+);
   }
  catch (  Throwable t) {
     if (LOG.isEnabledFor(Level.ERROR)) {
