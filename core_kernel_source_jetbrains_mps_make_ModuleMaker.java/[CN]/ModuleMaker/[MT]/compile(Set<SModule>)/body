@@ -11,14 +11,14 @@
   JavaCompiler compiler=new JavaCompiler();
   boolean hasJavaToCompile=false;
   boolean hasFilesToCopyOrDelete=false;
-  ttrace.push("preparing to compile",false);
+  myTracer.push("preparing to compile",false);
   Set<SModule> modulesWithRemovals=new HashSet<SModule>();
   for (  SModule m : modules) {
     if (areClassesUpToDate(m))     continue;
     if (!getJavaFacet(m).isCompileInMps()) {
-      String text="Module which compiled in IDEA depend on module which has to be compiled in MPS:" + m.getModuleName();
+      String text="Module which compiled in IDEA depends on module which has to be compiled in MPS:" + m.getModuleName();
       messages.add(createMessage(MessageKind.WARNING,text,m));
-      handler.handle(createMessage(MessageKind.INFORMATION,text,m));
+      myHandler.handle(createMessage(MessageKind.INFORMATION,text,m));
       continue;
     }
     ModuleSources sources=getModuleSources(m);
@@ -33,30 +33,30 @@
       myContainingModules.put(f.getClassName(),m);
     }
   }
-  ttrace.pop();
+  myTracer.pop();
   if (!hasJavaToCompile && !hasFilesToCopyOrDelete) {
     return new MPSCompilationResult(0,0,false,Collections.<SModule>emptySet(),messages);
   }
-  ttrace.push("invalidating classpath",false);
+  myTracer.push("invalidating classpath",false);
   for (  SModule module : modulesWithRemovals) {
     invalidateCompiledClasses(module);
   }
-  ttrace.pop();
+  myTracer.pop();
   Set<SModule> changedModules=new HashSet<SModule>();
   MyCompilationResultAdapter listener=null;
   if (hasJavaToCompile) {
-    ttrace.push("compiling java",false);
+    myTracer.push("compiling java",false);
     IClassPathItem classPathItems=computeDependenciesClassPath(modules);
     listener=new MyCompilationResultAdapter(modules,classPathItems,messages);
     compiler.addCompilationResultListener(listener);
-    ttrace.push("eclipse compiler",true);
+    myTracer.push("eclipse compiler",true);
     compiler.compile(classPathItems);
-    ttrace.pop();
+    myTracer.pop();
     changedModules.addAll(listener.myChangedModules);
     compiler.removeCompilationResultListener(listener);
-    ttrace.pop();
+    myTracer.pop();
   }
-  ttrace.push("copying resources",false);
+  myTracer.push("copying resources",false);
   for (  SModule module : modules) {
     ModuleSources sources=getModuleSources(module);
     for (    ResourceFile toCopy : sources.getResourcesToCopy()) {
@@ -73,22 +73,22 @@
       }
     }
   }
-  ttrace.pop();
-  ttrace.push("updating classpath",false);
+  myTracer.pop();
+  myTracer.push("updating classpath",false);
   for (  SModule module : changedModules) {
     invalidateCompiledClasses(module);
   }
-  ttrace.pop();
+  myTracer.pop();
   for (  SModule module : modulesWithRemovals) {
     if (!changedModules.contains(module)) {
-      handler.handle(createMessage(MessageKind.WARNING,"Module with removals not in changed modules: " + module,module));
+      myHandler.handle(createMessage(MessageKind.WARNING,"Module with removals not in changed modules: " + module,module));
     }
   }
   if (hasJavaToCompile && changedModules.isEmpty()) {
-    handler.handle(createMessage(MessageKind.ERROR,"has java to compile but changed modules is empty",null));
+    myHandler.handle(createMessage(MessageKind.ERROR,"has java to compile but changed modules is empty",null));
   }
   if (!hasJavaToCompile && !changedModules.isEmpty()) {
-    handler.handle(createMessage(MessageKind.ERROR,"has not java to compile but changed modules is not empty",null));
+    myHandler.handle(createMessage(MessageKind.ERROR,"has not java to compile but changed modules is not empty",null));
   }
   return new MPSCompilationResult(listener == null ? 0 : listener.getErrorCount(),0,false,changedModules,messages);
 }

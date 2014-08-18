@@ -1,0 +1,40 @@
+{
+  final List<Request> requestList=new ArrayList<Request>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      ITestNodeWrapper<?> testNode : myTestNodes) {
+        String fqName=testNode.getFqName();
+        final SModule module=getModuleByNode(testNode.getNode());
+        if (testNode.isTestCase()) {
+          final Class<?> aClass=myTestClassStorage.loadTestClass(fqName,module);
+          Request requestForClass;
+          if (aClass == null) {
+            requestForClass=new NodeWrappersTestsContributor.EmptyRequest(Description.createSuiteDescription(fqName));
+          }
+ else {
+            requestForClass=Request.aClass(aClass);
+          }
+          TestNodeRequest request=new TestNodeRequest(requestForClass,testNode);
+          requestList.add(request);
+        }
+ else {
+          int index=fqName.lastIndexOf('.');
+          String testFqName=fqName.substring(0,index);
+          String methodName=fqName.substring(index + 1);
+          final Class aClass=myTestClassStorage.loadTestClass(testFqName,module);
+          Request requestForMethod;
+          if (aClass == null) {
+            requestForMethod=new NodeWrappersTestsContributor.EmptyRequest(Description.createTestDescription(testFqName,methodName));
+          }
+ else {
+            requestForMethod=Request.method(aClass,methodName);
+          }
+          TestNodeRequest request=new TestNodeRequest(requestForMethod,testNode);
+          requestList.add(request);
+        }
+      }
+    }
+  }
+);
+  return requestList;
+}

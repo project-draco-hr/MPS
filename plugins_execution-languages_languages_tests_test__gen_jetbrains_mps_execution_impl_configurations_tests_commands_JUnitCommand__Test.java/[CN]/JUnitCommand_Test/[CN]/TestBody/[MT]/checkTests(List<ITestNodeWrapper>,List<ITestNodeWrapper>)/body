@@ -1,24 +1,24 @@
 {
   try {
     List<ITestNodeWrapper> allTests=ListSequence.fromList(success).union(ListSequence.fromList(failure)).toListSequence();
-    ProcessHandler process=new Junit_Command().createProcess(allTests);
+    ProcessHandler process=new JUnit_Command().createProcess(allTests);
     TestRunState runState=new TestRunState(allTests);
     CheckTestStateListener checkListener=new CheckTestStateListener(success,failure);
     runState.addListener(checkListener);
     TestEventsDispatcher eventsDispatcher=new TestEventsDispatcher(runState);
     OutputRedirector.redirect(process,new UnitTestProcessListener(eventsDispatcher));
-    int exitcode=ProcessHandlerBuilder.startAndWait(process,5 * 60 * 1000);
-    if (exitcode > 0) {
-      Assert.fail("Exit code is not 0 but " + exitcode);
+    int exitcode=ProcessHandlerBuilder.startAndWait(process,30 * 1000);
+    if (exitcode != ListSequence.fromList(failure).count()) {
+      Assert.fail("Exit code must be equal to " + ListSequence.fromList(failure).count() + ", but "+ exitcode);
     }
  else     if (exitcode < 0) {
-      Assert.fail("Process running too long.");
+      Assert.fail("Process is running for too long");
     }
     if (isNotEmptyString(checkListener.getMessages())) {
       Assert.fail(checkListener.getMessages());
     }
   }
  catch (  ExecutionException e) {
-    Assert.fail(e.getMessage());
+    Assert.fail();
   }
 }

@@ -2,14 +2,14 @@
   if (myState.getAvailableText() != null) {
     return;
   }
-  String loseTest=myState.getLostClass();
-  String loseMethod=myState.getLostMethod();
+  String lostTest=myState.getLostClass();
+  String lostMethod=myState.getLostMethod();
   String test=myState.getCurrentClass();
   String method=myState.getCurrentMethod();
   final Wrappers._T<TestMethodTreeNode> methodNode=new Wrappers._T<TestMethodTreeNode>();
-  if (loseTest != null && loseMethod != null) {
-    methodNode.value=get(loseTest,loseMethod);
-    TestCaseTreeNode testCaseNode=get(loseTest);
+  if (lostTest != null && lostMethod != null) {
+    methodNode.value=get(lostTest,lostMethod);
+    TestCaseTreeNode testCaseNode=get(lostTest);
     if (methodNode.value != null && testCaseNode != null) {
       updateState(methodNode.value,testCaseNode,TestState.ERROR);
     }
@@ -17,7 +17,7 @@
  else {
     TestCaseTreeNode testCaseNode=get(test);
     methodNode.value=get(test,method);
-    if (methodNode.value != null && testCaseNode != null) {
+    if (testCaseNode != null) {
       if (myState.isTerminated()) {
         updateState(methodNode.value,testCaseNode,TestState.TERMINATED);
         myAnimator.stopMovie();
@@ -39,16 +39,18 @@
 );
         }
       }
- else       if (TestEvent.END_TEST_PREFIX.equals(myState.getToken())) {
-        if (TestState.IN_PROGRESS.equals(methodNode.value.getState())) {
+ else       if (TestEvent.FINISH_TEST_PREFIX.equals(myState.getToken())) {
+        if (methodNode.value != null && TestState.IN_PROGRESS.equals(methodNode.value.getState())) {
           updateState(methodNode.value,testCaseNode,TestState.PASSED);
         }
       }
- else       if (TestEvent.FAILURE_TEST_PREFIX.equals(myState.getToken())) {
-        updateState(methodNode.value,testCaseNode,TestState.FAILED);
+ else       if (TestEvent.ASSUMPTION_FAILURE_TEST_PREFIX.equals(myState.getToken())) {
+        updateState(methodNode.value,testCaseNode,TestState.IGNORED);
       }
- else       if (TestEvent.ERROR_TEST_PREFIX.equals(myState.getToken())) {
-        methodNode.value.setState(TestState.ERROR);
+ else       if (TestEvent.FAILURE_TEST_PREFIX.equals(myState.getToken())) {
+        if (methodNode.value != null) {
+          methodNode.value.setState(TestState.FAILED);
+        }
         updateState(methodNode.value,testCaseNode,TestState.ERROR);
       }
     }
@@ -61,7 +63,7 @@
     }
 );
   }
-  if (UnitTestOptions.isHidePased()) {
+  if (UnitTestOptions.isHidePassed()) {
     SwingUtilities.invokeLater(new Runnable(){
       public void run(){
         hidePassed(true);
