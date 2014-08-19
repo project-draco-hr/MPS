@@ -1,27 +1,35 @@
 {
   List<SNode> result=ListSequence.fromList(new ArrayList<SNode>());
-  if (expr == null) {
-    return result;
-  }
-  List<SNode> leftDescent=ListSequence.fromList(new ArrayList<SNode>());
-  List<SNode> rightDescent=ListSequence.fromList(new ArrayList<SNode>());
-  if (SNodeOperations.isInstanceOf(expr,"jetbrains.mps.baseLanguage.structure.IBinaryLike")) {
-    leftDescent=descendInto(BehaviorReflection.invokeVirtual((Class<SNode>)((Class)Object.class),SNodeOperations.cast(expr,"jetbrains.mps.baseLanguage.structure.IBinaryLike"),"virtual_getSyntacticallyLeftSideExpression_1742226163722653708",new Object[]{}),completingByRightParen);
-    rightDescent=descendInto(BehaviorReflection.invokeVirtual((Class<SNode>)((Class)Object.class),SNodeOperations.cast(expr,"jetbrains.mps.baseLanguage.structure.IBinaryLike"),"virtual_getSyntacticallyRightSideExpression_1742226163722653714",new Object[]{}),completingByRightParen);
-  }
-  if (completingByRightParen) {
-    if ((AttributeOperations.getAttribute(expr,new IAttributeDescriptor.NodeAttribute("jetbrains.mps.baseLanguage.structure.IncompleteLeftParen")) != null)) {
-      ListSequence.fromList(result).addElement(expr);
+  List<SNode> candidates=ListSequence.fromList(new ArrayList<SNode>());
+  SNode current=expr;
+  while (current != null) {
+    if (completingByRightParen && (AttributeOperations.getAttribute(current,new IAttributeDescriptor.NodeAttribute("jetbrains.mps.baseLanguage.structure.IncompleteLeftParen")) != null)) {
+      ListSequence.fromList(result).addElement(current);
     }
-    ListSequence.fromList(result).addSequence(ListSequence.fromList(leftDescent));
-    ListSequence.fromList(result).addSequence(ListSequence.fromList(rightDescent));
-  }
-  if (!(completingByRightParen)) {
-    if ((AttributeOperations.getAttribute(expr,new IAttributeDescriptor.NodeAttribute("jetbrains.mps.baseLanguage.structure.IncompleteRightParen")) != null)) {
-      ListSequence.fromList(result).addElement(expr);
+    if (!(completingByRightParen) && (AttributeOperations.getAttribute(current,new IAttributeDescriptor.NodeAttribute("jetbrains.mps.baseLanguage.structure.IncompleteRightParen")) != null)) {
+      ListSequence.fromList(result).addElement(current);
     }
-    ListSequence.fromList(result).addSequence(ListSequence.fromList(rightDescent));
-    ListSequence.fromList(result).addSequence(ListSequence.fromList(leftDescent));
+    if (SNodeOperations.isInstanceOf(current,"jetbrains.mps.baseLanguage.structure.IBinaryLike")) {
+      SNode left=BehaviorReflection.invokeVirtual((Class<SNode>)((Class)Object.class),SNodeOperations.cast(current,"jetbrains.mps.baseLanguage.structure.IBinaryLike"),"virtual_getSyntacticallyLeftSideExpression_1742226163722653708",new Object[]{});
+      SNode right=BehaviorReflection.invokeVirtual((Class<SNode>)((Class)Object.class),SNodeOperations.cast(current,"jetbrains.mps.baseLanguage.structure.IBinaryLike"),"virtual_getSyntacticallyRightSideExpression_1742226163722653714",new Object[]{});
+      if (completingByRightParen) {
+        if (left != null) {
+          ListSequence.fromList(candidates).addElement(left);
+        }
+        if (right != null) {
+          ListSequence.fromList(candidates).addElement(right);
+        }
+      }
+      if (!(completingByRightParen)) {
+        if (right != null) {
+          ListSequence.fromList(candidates).addElement(right);
+        }
+        if (left != null) {
+          ListSequence.fromList(candidates).addElement(left);
+        }
+      }
+    }
+    current=ListSequence.fromList(candidates).removeElementAt(0);
   }
   return result;
 }
