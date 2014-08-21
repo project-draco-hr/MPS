@@ -1,26 +1,38 @@
 {
-  myTimer.suspend();
-  int batchProcessMax=20;
-  final ArrayList<Pair<MPSTreeNode,NodeUpdate>> updates=new ArrayList<Pair<MPSTreeNode,NodeUpdate>>(batchProcessMax);
-  Pair<MPSTreeNode,NodeUpdate> u;
-  while ((u=myUpdates.poll()) != null && --batchProcessMax >= 0) {
-    updates.add(u);
-  }
-  if (!myUpdates.isEmpty()) {
-    myTimer.resume();
-  }
-  if (updates.isEmpty()) {
+  if (!myGuard.tryAcquire()) {
     return;
   }
-  ModelAccess.instance().runReadInEDT(new Runnable(){
-    @Override public void run(){
-      for (      Pair<MPSTreeNode,NodeUpdate> update : updates) {
-        MPSTreeNode node=update.o1;
-        if (!checkDisposed(node))         return;
-        update.o2.update(node);
-        node.updateNodePresentationInTree();
+  try {
+    do {
+      int batchProcessMax=20;
+      final ArrayList<Pair<MPSTreeNode,NodeUpdate>> updates=new ArrayList<Pair<MPSTreeNode,NodeUpdate>>(batchProcessMax);
+      Pair<MPSTreeNode,NodeUpdate> u;
+      while ((u=myUpdates.poll()) != null && --batchProcessMax >= 0) {
+        updates.add(u);
       }
-    }
-  }
+      if (updates.isEmpty()) {
+        break;
+      }
+      myProject.getModelAccess().runReadInEDT(new Runnable(){
+        @Override public void run(){
+          final HashSet<MPSTreeNode> toRefresh=new HashSet<MPSTreeNode>();
+          for (          Pair<MPSTreeNode,NodeUpdate> update : updates) {
+            MPSTreeNode node=update.o1;
+            if (!checkDisposed(node))             return;
+            update.o2.update(node);
+            toRefresh.add(node);
+          }
+          for (          MPSTreeNode node : toRefresh) {
+            node.updateNodePresentationInTree();
+          }
+        }
+      }
 );
+    }
+ while (!myUpdates.isEmpty());
+    myTimer.suspend();
+  }
+  finally {
+    myGuard.release();
+  }
 }
