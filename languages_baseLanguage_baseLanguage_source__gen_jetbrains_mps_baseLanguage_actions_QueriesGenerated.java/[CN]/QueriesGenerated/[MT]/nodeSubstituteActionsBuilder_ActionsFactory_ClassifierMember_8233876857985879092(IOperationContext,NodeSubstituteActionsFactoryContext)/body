@@ -54,12 +54,15 @@
             if (clNode != null && SPropertyOperations.getString(clNode,"name").equals(name.trim())) {
               return null;
             }
+            if ((SLinkOperations.getTarget(curr,"type",true) == null) && IncompleteMemberHelper.isKnownTypeName(_context.getCurrentTargetNode(),name.trim())) {
+              return null;
+            }
             if (JavaNameUtil.isJavaIdentifier(name.trim())) {
-              if (SPropertyOperations.getBoolean(curr,"synchronized") || SPropertyOperations.getBoolean(curr,"abstract") || SNodeOperations.isInstanceOf(SLinkOperations.getTarget(curr,"type",true),"jetbrains.mps.baseLanguage.structure.VoidType")) {
-                return name + ((pattern.endsWith("()") || pattern.endsWith("(") ? "()" : ""));
-              }
+              return name + "()";
+            }
  else {
-                return name + "()";
+              if (IncompleteMemberHelper.isJavaKeyWordNotApplicableAsModifier(_context.getCurrentTargetNode(),name.trim())) {
+                return name + "...";
               }
             }
           }
@@ -108,10 +111,10 @@
         }
         @Override protected SNode selectChildNode(        SNode createdNode,        SModel model,        String pattern,        EditorContext editorContext){
           if ((SLinkOperations.getTarget(SNodeOperations.cast(createdNode,"jetbrains.mps.baseLanguage.structure.VariableDeclaration"),"initializer",true) == null)) {
-            SelectionUtil.selectCell(editorContext,SNodeOperations.cast(createdNode,"jetbrains.mps.baseLanguage.structure.VariableDeclaration"),SelectionManager.LAST_EDITABLE_CELL);
+            SelectionUtil.selectLabelCellAnSetCaret(editorContext,SNodeOperations.cast(createdNode,"jetbrains.mps.baseLanguage.structure.VariableDeclaration"),SelectionManager.LAST_EDITABLE_CELL,-1);
           }
  else {
-            SelectionUtil.selectCell(editorContext,SLinkOperations.getTarget(SNodeOperations.cast(createdNode,"jetbrains.mps.baseLanguage.structure.VariableDeclaration"),"initializer",true),SelectionManager.FIRST_EDITABLE_CELL);
+            SelectionUtil.selectLabelCellAnSetCaret(editorContext,SLinkOperations.getTarget(SNodeOperations.cast(createdNode,"jetbrains.mps.baseLanguage.structure.VariableDeclaration"),"initializer",true),SelectionManager.FIRST_EDITABLE_CELL,-1);
           }
           return null;
         }
@@ -121,29 +124,23 @@
         public String getMatchingText(        String pattern){
           SNode curr=SNodeOperations.cast(_context.getCurrentTargetNode(),"jetbrains.mps.baseLanguage.structure.IncompleteMemberDeclaration");
           if (SPropertyOperations.getBoolean(curr,"abstract") || SNodeOperations.isInstanceOf(SLinkOperations.getTarget(curr,"type",true),"jetbrains.mps.baseLanguage.structure.VoidType") || SPropertyOperations.getBoolean(curr,"synchronized")) {
-            if ((pattern != null && pattern.length() > 0) && !(pattern.endsWith("(")) && !(pattern.endsWith("()"))) {
-              return pattern + ";";
-            }
             return null;
           }
           if (!((pattern == null || pattern.length() == 0))) {
-            final Wrappers._T<String> name=new Wrappers._T<String>(pattern);
+            String name=pattern;
             if (pattern.endsWith(";") || pattern.endsWith("=")) {
-              name.value=name.value.substring(0,name.value.length() - 1);
+              name=name.substring(0,name.length() - 1);
             }
-            if ((SLinkOperations.getTarget(curr,"type",true) == null) && Sequence.fromIterable(ClassifierScopes.getVisibleClassifiersScope(_context.getCurrentTargetNode(),true).getAvailableElements(pattern)).where(new IWhereFilter<SNode>(){
-              public boolean accept(              SNode it){
-                return eq_x583g4_a0a0a0a0a0a0d0c0d0a0a0a0c0a0c0zc(SPropertyOperations.getString(SNodeOperations.cast(it,"jetbrains.mps.baseLanguage.structure.Classifier"),"name"),name.value);
+            if ((SLinkOperations.getTarget(curr,"type",true) == null) && IncompleteMemberHelper.isKnownTypeName(_context.getCurrentTargetNode(),name.trim())) {
+              return null;
+            }
+            if (JavaNameUtil.isJavaIdentifier(name.trim())) {
+              return name + ((pattern.endsWith("=") ? "=" : ""));
+            }
+ else {
+              if (IncompleteMemberHelper.isJavaKeyWordNotApplicableAsModifier(_context.getCurrentTargetNode(),name.trim())) {
+                return name + "...";
               }
-            }
-).isNotEmpty()) {
-              return null;
-            }
-            if ((SLinkOperations.getTarget(curr,"type",true) == null) && (pattern.equals("string") || pattern.equals("map") || pattern.equals("set")|| pattern.equals("list")|| pattern.equals("sorted_set")|| pattern.equals("sorted_map"))) {
-              return null;
-            }
-            if (JavaNameUtil.isJavaIdentifier(name.value.trim())) {
-              return name.value + ((pattern.endsWith("=") ? "=" : ""));
             }
           }
           return null;
