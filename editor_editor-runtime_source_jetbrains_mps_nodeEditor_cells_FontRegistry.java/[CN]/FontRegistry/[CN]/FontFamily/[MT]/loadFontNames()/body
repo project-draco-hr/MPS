@@ -1,0 +1,68 @@
+{
+  if (myFontNames.isEmpty()) {
+    return;
+  }
+  if (myFontNames.size() == 1) {
+    myRegularFontName=myFontNames.get(0);
+    return;
+  }
+  String prefix=getCommonPrefix();
+  if (prefix.isEmpty()) {
+    myRegularFontName=myFontNames.get(0);
+    LOG.error("Common prefix was not found for font family \"" + myFamilyName + "\" using first available font as regular one: \""+ myRegularFontName+ "\"");
+    return;
+  }
+  int prefixLength=prefix.length();
+  int regularSuffixLen=-1;
+  int italicSuffixLen=-1;
+  int boldSuffixLen=-1;
+  int boldItalicSuffixLen=-1;
+  for (  String fontName : myFontNames) {
+    if (fontName.length() < prefixLength) {
+      LOG.error("Font name \"" + fontName + "\" registered in font family \""+ myFamilyName+ "\" is shorter that the length of common prefix \""+ prefix+ "\". Skipping it.");
+      continue;
+    }
+    String fontSuffix=fontName.substring(prefixLength);
+    if (fontSuffix.isEmpty() || fontSuffix.contains("Regular") || fontSuffix.contains("Plain")) {
+      if (myRegularFontName == null || fontSuffix.length() < regularSuffixLen) {
+        myRegularFontName=fontName;
+        regularSuffixLen=fontSuffix.length();
+      }
+      continue;
+    }
+    boolean bold=fontSuffix.contains("Bold");
+    boolean italic=fontSuffix.contains("Italic") || fontSuffix.contains("Oblique");
+    if (bold & italic) {
+      if (myBoldItalicFontName == null || fontSuffix.length() < boldItalicSuffixLen) {
+        myBoldItalicFontName=fontName;
+        boldItalicSuffixLen=fontSuffix.length();
+      }
+    }
+ else     if (bold) {
+      if (myBoldFontName == null || fontSuffix.length() < boldSuffixLen) {
+        myBoldFontName=fontName;
+        boldSuffixLen=fontSuffix.length();
+      }
+    }
+ else     if (italic) {
+      if (myItalicFontName == null || fontSuffix.length() < italicSuffixLen) {
+        myItalicFontName=fontName;
+        italicSuffixLen=fontSuffix.length();
+      }
+    }
+  }
+  if (myRegularFontName == null) {
+    if (myBoldFontName != null) {
+      myRegularFontName=myBoldFontName;
+    }
+ else     if (myItalicFontName != null) {
+      myRegularFontName=myItalicFontName;
+    }
+ else     if (myBoldItalicFontName != null) {
+      myRegularFontName=myBoldItalicFontName;
+    }
+ else {
+      myRegularFontName=myFontNames.get(0);
+    }
+  }
+}
