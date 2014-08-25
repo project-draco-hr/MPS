@@ -1,13 +1,21 @@
 {
   FastNodeFinder fnf=FastNodeFinderManager.get(model);
-  processTemplateNodeAttribute(fnf.getNodes(RuleUtil.concept_TemplateFragment,false));
-  processTemplateNodeAttribute(fnf.getNodes(RuleUtil.concept_RootTemplateAnnotation,false));
-  final NodeScanner ns=new NodeScanner(new MacroFilter());
-  for (  SNode rc : fnf.getNodes(RuleUtil.concept_InlineTemplate_RuleConsequence,false)) {
-    SNode templateNode=RuleUtil.getInlineTemplate_templateNode(rc);
-    ns.scan(templateNode);
+  Translate<SNode,SNode> parentExtractor=new Translate<SNode,SNode>(){
+    @Override public SNode translate(    SNode t){
+      return t.getParent();
+    }
   }
-  myTargetLanguages.addAll(ns.getUsedLanguages());
+;
+  Translate<SNode,SNode> inlineTemplateExtractor=new Translate<SNode,SNode>(){
+    @Override public SNode translate(    SNode rc){
+      return RuleUtil.getInlineTemplate_templateNode(rc);
+    }
+  }
+;
+  processTemplateNode(fnf.getNodes(RuleUtil.concept_TemplateFragment,false),parentExtractor);
+  processTemplateNode(fnf.getNodes(RuleUtil.concept_RootTemplateAnnotation,false),parentExtractor);
+  processTemplateNode(fnf.getNodes(RuleUtil.concept_InlineTemplate_RuleConsequence,false),inlineTemplateExtractor);
+  scanScriptsForChangeOperations(fnf);
   processQueryNodes(fnf.getNodes(RuleUtil.concept_TemplateQueryBase,true));
   return this;
 }

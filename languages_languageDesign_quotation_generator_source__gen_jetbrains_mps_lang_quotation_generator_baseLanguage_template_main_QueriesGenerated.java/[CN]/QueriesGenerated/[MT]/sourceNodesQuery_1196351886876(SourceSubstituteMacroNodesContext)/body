@@ -1,23 +1,37 @@
 {
   final List<SNode> result=new ArrayList<SNode>();
-  for (  SReference ref : Sequence.fromIterable(_context.getNode().getReferences())) {
+  SNode originalNode=TracingUtil.getInputNode(_context.getNode(),_context.getOriginalInputModel().getRepository());
+  if (originalNode == null) {
+    originalNode=_context.getNode();
+  }
+  SNode originalAncestor=SNodeOperations.getAncestor(originalNode,"jetbrains.mps.lang.quotation.structure.Quotation",false,false);
+  for (  SReference ref : Sequence.fromIterable(originalNode.getReferences())) {
     if ((AttributeOperations.getAttribute(_context.getNode(),new IAttributeDescriptor.LinkAttribute("jetbrains.mps.lang.quotation.structure.ReferenceAntiquotation",ref.getRole())) != null)) {
       continue;
     }
     SNode targetNode=((SNode)ref.getTargetNode());
-    if (SNodeOperations.getAncestor(targetNode,"jetbrains.mps.lang.quotation.structure.Quotation",false,false) == SNodeOperations.getAncestor(_context.getNode(),"jetbrains.mps.lang.quotation.structure.Quotation",false,false)) {
+    SNode targetAncestor=SNodeOperations.getAncestor(targetNode,"jetbrains.mps.lang.quotation.structure.Quotation",false,false);
+    boolean innerQuotationRef;
+    if (targetAncestor != null) {
+      innerQuotationRef=targetAncestor == originalAncestor;
+    }
+ else {
+      if (originalAncestor == null) {
+        innerQuotationRef=SNodeOperations.getContainingRoot(targetNode) == SNodeOperations.getContainingRoot(originalNode);
+      }
+ else {
+        innerQuotationRef=false;
+      }
+    }
+    if (innerQuotationRef) {
+      continue;
+    }
+    if (targetAncestor != null && targetAncestor == originalAncestor) {
       continue;
     }
     SNode referenceNode=SModelOperations.createNewNode(_context.getOutputModel(),null,"jetbrains.mps.lang.core.structure.BaseConcept");
+    referenceNode.setProperty("targetModel",((SModelReference)ref.getTargetSModelReference()).update().toString());
     referenceNode.setProperty("role",ref.getRole());
-    if (targetNode != null && TracingUtil.getInput(targetNode) != null) {
-      SNodeReference originalInput=TracingUtil.getInput(targetNode);
-      referenceNode.setProperty("targetModel",originalInput.getModelReference().toString());
-      targetNode=originalInput.resolve(MPSModuleRepository.getInstance());
-    }
- else {
-      referenceNode.setProperty("targetModel",((SModelReference)ref.getTargetSModelReference()).update().toString());
-    }
     if (targetNode != null) {
       referenceNode.setProperty("targetNodeId",targetNode.getNodeId().toString());
     }

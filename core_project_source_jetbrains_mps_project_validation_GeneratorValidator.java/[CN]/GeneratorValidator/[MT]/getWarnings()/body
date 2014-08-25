@@ -1,23 +1,22 @@
 {
   List<String> warnings=new ArrayList<String>(super.getWarnings());
   Set<String> usedLanguages=new HashSet<String>();
-  for (  SModel model : myModule.getOwnTemplateModels()) {
-    if (SModelStereotype.isGeneratorModel(model) && model.isLoaded()) {
+  ModelDependencyScanner depScan=new ModelDependencyScanner();
+  depScan.crossModelReferences(true).usedLanguages(false);
+  boolean anyGeneratorModelNotLoaded=false;
+  for (  SModel model : myModule.getModels()) {
+    if (!model.isLoaded()) {
+      anyGeneratorModelNotLoaded|=SModelStereotype.isGeneratorModel(model);
+      continue;
+    }
+    if (SModelStereotype.isGeneratorModel(model)) {
       usedLanguages.addAll(ModelContentUtil.getUsedLanguageNamespacesInTemplateModel(model));
     }
+    depScan.walk(model);
   }
-  Set<String> extendedLanguages=new HashSet<String>();
-  Language sourceLanguage=myModule.getSourceLanguage();
-  usedLanguages.remove(sourceLanguage.getModuleName());
-  for (  Language language : LanguageDependenciesManager.getAllExtendedLanguages(sourceLanguage)) {
-    extendedLanguages.add(language.getModuleName());
-  }
-  for (  String lang : usedLanguages) {
-    Language language=ModuleRepositoryFacade.getInstance().getModule(lang,Language.class);
-    if (language == null)     continue;
-    if (!extendedLanguages.contains(lang) && !language.getRuntimeModulesReferences().isEmpty()) {
-      warnings.add(sourceLanguage + " should extend " + lang);
-    }
+  warnings.addAll(warnMissingTargetLangRuntime(usedLanguages));
+  if (!anyGeneratorModelNotLoaded) {
+    warnings.addAll(warnStrictGeneratorDependencies(depScan));
   }
   return warnings;
 }

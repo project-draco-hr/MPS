@@ -18,16 +18,17 @@
     }
   }
 );
-  usedLangsTable.addMouseListener(new MouseAdapter(){
-    @Override public void mouseClicked(    MouseEvent e){
-    }
-  }
-);
   ToolbarDecorator decorator=ToolbarDecorator.createDecorator(usedLangsTable);
   decorator.setAddAction(new AnActionButtonRunnable(){
     @Override public void run(    AnActionButton anActionButton){
-      List<SModuleReference> list=(new LanguageOrDevKitChooser()).compute();
-      for (      SModuleReference reference : list)       myUsedLangsTableModel.addItem(reference);
+      Iterable<SModule> modules=new ConditionalIterable<SModule>(getProjectModules(),new ModuleInstanceCondition(Language.class,DevKit.class));
+      modules=new ConditionalIterable<SModule>(modules,new VisibleModuleCondition());
+      ComputeRunnable<List<SModuleReference>> c=new ComputeRunnable<List<SModuleReference>>(new ModuleCollector(modules));
+      myProject.getModelAccess().runReadAction(c);
+      List<SModuleReference> list=CommonChoosers.showModuleSetChooser(myProject,"Choose Language or DevKit",c.getResult());
+      for (      SModuleReference reference : list) {
+        myUsedLangsTableModel.addItem(reference);
+      }
     }
   }
 ).setRemoveAction(new AnActionButtonRunnable(){

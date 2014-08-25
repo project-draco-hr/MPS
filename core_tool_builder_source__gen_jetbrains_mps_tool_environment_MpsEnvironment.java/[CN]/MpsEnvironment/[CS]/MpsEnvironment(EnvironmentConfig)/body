@@ -1,33 +1,21 @@
 {
-  this.config=config;
+  if (LOG.isInfoEnabled()) {
+    LOG.info("Creating MPS environment");
+  }
   ActiveEnvironment.activateEnvironment(this);
-  BasicConfigurator.configure(new ConsoleAppender(new SimpleLayout()));
+  BasicConfigurator.configure();
   Logger.getRootLogger().setLevel(Level.INFO);
   myPlatformLoader=new MpsPlatform();
   myPlatformLoader.init();
-  RuntimeFlags.setTestMode(true);
+  RuntimeFlags.setTestMode(TestMode.USUAL);
   GenerationSettingsProvider.getInstance().setGenerationSettings(new DefaultModifiableGenerationSettings());
   try {
     EnvironmentUtils.setSystemProperties(false);
     EnvironmentUtils.setPluginPath();
   }
- catch (  Exception ex) {
-    throw new RuntimeException(ex);
+ catch (  Exception e) {
+    throw new RuntimeException(e);
   }
-  Map<String,String> macros=MapSequence.fromMap(new HashMap<String,String>());
-  for (  String name : MapSequence.fromMap(config.macros()).keySet()) {
-    MapSequence.fromMap(macros).put(name,MapSequence.fromMap(config.macros()).get(name).getAbsolutePath());
-  }
-  macroProvider=EnvironmentUtils.createMapMacrosProvider(macros);
-  PathMacros.getInstance().addMacrosProvider(macroProvider);
-  libContributors=SetSequence.fromSetWithValues(new HashSet<LibraryContributor>(),createLibContributors(config));
-  for (  LibraryContributor libContributor : Sequence.fromIterable(libContributors)) {
-    LibraryInitializer.getInstance().addContributor(libContributor);
-  }
-  ModelAccess.instance().runWriteAction(new Runnable(){
-    @Override public void run(){
-      LibraryInitializer.getInstance().update();
-    }
-  }
-);
+  myLibContributors=initLibs(config);
+  myMacrosProvider=initMacros(config);
 }

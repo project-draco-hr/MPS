@@ -1,0 +1,84 @@
+{
+  final TreeMessage HAS_CYCLE=new TreeMessage(Color.RED,"module with dependency cycle",null);
+  final TreeMessage BOOTSTRAP_DEPENDENCY=new TreeMessage(Color.RED,"language with bootstrap dependency",null);
+  Iterable<SModule> sortedModules=Sequence.fromIterable(allDependencies).select(new ISelector<DepLink,SModule>(){
+    public SModule select(    DepLink it){
+      return it.module;
+    }
+  }
+).distinct().sort(new ISelector<SModule,String>(){
+    public String select(    SModule it){
+      return it.getModuleName();
+    }
+  }
+,true);
+  for (  final SModule module : Sequence.fromIterable(sortedModules)) {
+    Iterable<DepLink> moduleDeps=Sequence.fromIterable(allDependencies).where(new IWhereFilter<DepLink>(){
+      public boolean accept(      DepLink it){
+        return it.module == module && it.role.isDependency();
+      }
+    }
+);
+    if (Sequence.fromIterable(moduleDeps).isEmpty()) {
+      continue;
+    }
+    ModuleDependencyNode n=new ModuleDependencyNode(module,moduleDeps,false);
+    final CycleBuilder cb=new CycleBuilder(new Condition<DepLink>(){
+      public boolean met(      DepLink dl){
+        return dl.role.isDependency();
+      }
+    }
+);
+    Iterable<DepPath> cycles=Sequence.fromIterable(moduleDeps).translate(new ITranslator2<DepLink,DepPath>(){
+      public Iterable<DepPath> translate(      DepLink dep){
+        return cb.cyclePaths(dep);
+      }
+    }
+);
+    if (Sequence.fromIterable(cycles).isNotEmpty()) {
+      n.setCycles(cycles);
+      n.addTreeMessage(HAS_CYCLE);
+    }
+    root.add(n);
+  }
+  if (isShowUsedLanguage()) {
+    MPSTreeNode usedlanguages=new TextTreeNode("Used Languages");
+    boolean hasBootstrapDep=false;
+    for (    final SModule module : Sequence.fromIterable(sortedModules)) {
+      Iterable<DepLink> usedLangDeps=Sequence.fromIterable(allDependencies).where(new IWhereFilter<DepLink>(){
+        public boolean accept(        DepLink it){
+          return it.module == module && it.role.isUsedLanguage();
+        }
+      }
+);
+      if (Sequence.fromIterable(usedLangDeps).isEmpty()) {
+        continue;
+      }
+      ModuleDependencyNode n=new ModuleDependencyNode(module,usedLangDeps,true);
+      final CycleBuilder cb=new CycleBuilder(new Condition<DepLink>(){
+        public boolean met(        DepLink dl){
+          return dl.role.isUsedLanguage();
+        }
+      }
+);
+      Iterable<DepPath> cycles=Sequence.fromIterable(usedLangDeps).translate(new ITranslator2<DepLink,DepPath>(){
+        public Iterable<DepPath> translate(        DepLink dep){
+          return cb.cyclePaths(dep);
+        }
+      }
+);
+      if (Sequence.fromIterable(cycles).isNotEmpty()) {
+        hasBootstrapDep=true;
+        n.setCycles(cycles);
+        n.addTreeMessage(BOOTSTRAP_DEPENDENCY);
+      }
+      usedlanguages.add(n);
+    }
+    if (hasBootstrapDep) {
+      usedlanguages.addTreeMessage(BOOTSTRAP_DEPENDENCY);
+    }
+    if (usedlanguages.getChildCount() > 0) {
+      root.add(usedlanguages);
+    }
+  }
+}

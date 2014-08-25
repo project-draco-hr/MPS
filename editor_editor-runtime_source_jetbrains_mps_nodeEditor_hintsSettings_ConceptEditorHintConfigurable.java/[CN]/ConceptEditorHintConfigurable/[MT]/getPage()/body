@@ -1,6 +1,22 @@
 {
   if (myPage == null) {
-    myPage=new ConceptEditorHintPreferencesPage(ConceptEditorHintSettingsComponent.getInstance(myProject).getSettings());
+    ModelAccess.instance().runReadAction(new Runnable(){
+      @Override public void run(){
+        mySettings=new ConceptEditorHintSettings(LanguageRegistry.getInstance().getAvailableLanguages());
+      }
+    }
+);
+    mySettings.updateSettings(ConceptEditorHintSettingsComponent.getInstance(myProject).getState().getEnabledHints());
+    myPage=new ConceptEditorHintPreferencesPage(mySettings);
+    LanguageRegistry.getInstance().addRegistryListener(myLanguageReloadListener=new LanguageRegistryListener(){
+      @Override public void afterLanguagesLoaded(      Iterable<LanguageRuntime> languages){
+        myLanguageRegistryChanged=true;
+      }
+      @Override public void beforeLanguagesUnloaded(      Iterable<LanguageRuntime> languages){
+        myLanguageRegistryChanged=true;
+      }
+    }
+);
   }
   return myPage;
 }

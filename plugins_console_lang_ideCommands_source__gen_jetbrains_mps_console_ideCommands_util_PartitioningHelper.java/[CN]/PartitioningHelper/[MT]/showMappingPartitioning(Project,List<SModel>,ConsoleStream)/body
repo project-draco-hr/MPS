@@ -1,60 +1,8 @@
 {
   SModel inputModel=models.get(0);
-  GenerationPlan plan=new GenerationPlan(inputModel);
-  Map<TemplateMappingPriorityRule,TemplateModule> myRule2Generator=new HashMap<TemplateMappingPriorityRule,TemplateModule>();
-  for (  TemplateModule generator : plan.getGenerators()) {
-    Collection<TemplateMappingPriorityRule> priorities=generator.getPriorities();
-    if (priorities == null) {
-      continue;
-    }
-    for (    TemplateMappingPriorityRule rule : priorities) {
-      myRule2Generator.put(rule,generator);
-    }
-  }
   MessagesViewTool messagesView=project.getComponent(MessagesViewTool.class);
   messagesView.resetAutoscrollOption();
-  messagesView.add(new Message(MessageKind.INFORMATION,"================================="));
-  for (  TemplateModule generator : plan.getGenerators()) {
-    Collection<TemplateMappingPriorityRule> rules=generator.getPriorities();
-    if (rules == null) {
-      continue;
-    }
-    for (    TemplateMappingPriorityRule r : rules) {
-      Message msg=new Message(MessageKind.INFORMATION,r.toString());
-      msg.setHintObject(generator.getReference());
-      messagesView.add(msg);
-    }
-  }
-  messagesView.add(new Message(MessageKind.INFORMATION,"================================="));
-  if (plan.hasConflictingPriorityRules()) {
-    messagesView.openToolLater(true);
-    messagesView.add(new Message(MessageKind.ERROR,PartitioningHelper.class,"Conflicting mapping priority rules encountered:"));
-    console.addText("Conflicting mapping priority rules encountered:\n\n");
-    for (    Conflict c : plan.getConflicts()) {
-      Message msg=new Message(MessageKind.ERROR,PartitioningHelper.class,c.getText());
-      msg.setHintObject(c.getOrigin());
-      messagesView.add(msg);
-      console.addText(String.format("%s\n",c.getText()));
-    }
-    console.addText("=================================\n");
-    messagesView.add(new Message(MessageKind.INFORMATION,"================================="));
-  }
-  console.addText("---------------------  mappings partitioning  -----------------------------------\n\n");
-  for (int step=0; step < plan.getStepCount(); step++) {
-    List<TemplateMappingConfiguration> mappingSet=plan.getMappingConfigurations(step);
-    console.addText(" [ " + (step + 1) + " ]\n");
-    List<Pair<String,TemplateMappingConfiguration>> strings=GenerationPartitioningUtil.toStrings(mappingSet);
-    for (    Pair<String,TemplateMappingConfiguration> string : strings) {
-      SNode node=SConceptOperations.createNewNode("jetbrains.mps.console.ideCommands.structure.ClickableGenerator",null);
-      SPropertyOperations.set(node,"moduleId",string.o2.getModel().getSModelReference().resolve(MPSModuleRepository.getInstance()).getModule().getModuleId().toString());
-      SPropertyOperations.set(node,"text",string.o1);
-      console.addText(" ");
-      console.addNode(node);
-      console.addText("\n");
-    }
-    console.addText("\n");
-  }
-  console.addText("---------------------------------------------------------------------------------\n");
+  new PartitioningHelper(inputModel,messagesView,console).show();
   List<SNode> roots=new ArrayList<SNode>();
   for (  SModel md : models) {
     SModel model=md;

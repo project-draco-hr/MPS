@@ -1,0 +1,25 @@
+{
+  ArrayList<String> warnings=new ArrayList<String>(5);
+  HashSet<SModule> seen=new HashSet<SModule>();
+  for (  SDependency dep : myModule.getDeclaredDependencies()) {
+    if (seen.contains(dep.getTarget()) || (dep.getScope() != SDependencyScope.EXTENDS && dep.getScope() != SDependencyScope.DEFAULT)) {
+      continue;
+    }
+    if (dep.getTarget() instanceof Generator) {
+      HashSet<SModelReference> otherGeneratorModels=new HashSet<SModelReference>();
+      for (      SModel m : dep.getTarget().getModels()) {
+        otherGeneratorModels.add(m.getReference());
+      }
+      final Language otherGenLanguage=((Generator)dep.getTarget()).getSourceLanguage();
+      for (      SModel m : (otherGenLanguage == null ? Collections.<SModel>emptySet() : otherGenLanguage.getModels())) {
+        otherGeneratorModels.add(m.getReference());
+      }
+      seen.add(dep.getTarget());
+      if (CollectionUtil.intersects(dependencies.getCrossModelReferences(),otherGeneratorModels)) {
+        continue;
+      }
+      warnings.add(String.format("Superfluous dependency to generator %s, no generator template nor its source language's node is in use",dep.getTarget().getModuleName()));
+    }
+  }
+  return warnings;
+}
