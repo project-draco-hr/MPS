@@ -3,22 +3,21 @@
   final ProgressMonitor monitor=indicator != null ? new ProgressMonitorAdapter(indicator) : new EmptyProgressMonitor();
   monitor.start("Making modules",10);
   try {
-    ModelAccess.instance().runReadAction(new Runnable(){
-      @Override public void run(){
+    MPSCompilationResult mpsCompilationResult=ModelAccess.instance().runReadAction(new Computable<MPSCompilationResult>(){
+      @Override public MPSCompilationResult compute(){
         monitor.advance(1);
         MessagesViewTool mvt=myProject.getComponent(MessagesViewTool.class);
         final ModuleMaker maker=new ModuleMaker(mvt.newHandler(),MessageKind.ERROR);
-        myReloadManager.computeNoReload(new Computable<Object>(){
-          @Override public Object compute(){
-            maker.make(IterableUtil.asCollection(MPSModuleRepository.getInstance().getModules()),monitor.subTask(9));
-            return null;
+        return myReloadManager.computeNoReload(new Computable<MPSCompilationResult>(){
+          @Override public MPSCompilationResult compute(){
+            return maker.make(IterableUtil.asCollection(MPSModuleRepository.getInstance().getModules()),monitor.subTask(9));
           }
         }
 );
       }
     }
 );
-    reloadClasses(indicator,early);
+    reloadClasses(mpsCompilationResult,indicator,early);
   }
   finally {
     monitor.done();
