@@ -1,0 +1,37 @@
+{
+  myCache=null;
+  GenerationDependencies dependencies=myIncrementalStrategy.getDependencies(model);
+  if (dependencies == null || !dependencies.isContainsIncrementalInfo()) {
+    return;
+  }
+  GenerationCacheContainer incrementalCacheContainer=myIncrementalStrategy.getContainer();
+  if (incrementalCacheContainer == null) {
+    if (reporter != null) {
+      reporter.report("No container for incremental caches.");
+    }
+    return;
+  }
+  String oldHash=dependencies.getModelHash();
+  ModelCacheContainer cacheContainer=incrementalCacheContainer.getCache(model,oldHash,false);
+  if (cacheContainer == null) {
+    if (reporter != null) {
+      reporter.report("No cache for " + model.getReference().toString() + " ("+ oldHash+ ")");
+    }
+    return;
+  }
+  IntermediateModelsCache c=IntermediateModelsCache.load(cacheContainer);
+  if (c != null && myPlanSignature.equals(c.getSignature())) {
+    myCache=c;
+  }
+ else   if (reporter != null) {
+    if (c == null) {
+      reporter.report("Caches are corrupted for " + oldHash);
+    }
+ else {
+      reporter.report("Plan differs:");
+      for (      String s : DifflibFacade.getSimpleDiff(c.getSignature(),myPlanSignature)) {
+        reporter.report(s);
+      }
+    }
+  }
+}
