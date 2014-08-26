@@ -1,0 +1,57 @@
+{
+  if (myInitialized) {
+    return;
+  }
+synchronized (this) {
+    myCreateRootRules=new ArrayList<TemplateCreateRootRule>(5);
+    myRootMappingRules=new ArrayList<TemplateRootMappingRule>(5);
+    myWeavingRules=new ArrayList<TemplateWeavingRule>(5);
+    myDropRootRules=new ArrayList<TemplateDropRootRule>(5);
+    myPreScripts=new ArrayList<TemplateMappingScript>(5);
+    myPostScripts=new ArrayList<TemplateMappingScript>(5);
+    ArrayList<TemplateReductionRule> reductionRules=new ArrayList<TemplateReductionRule>(20);
+    ArrayList<TemplateReductionRule> patternRules=new ArrayList<TemplateReductionRule>(5);
+    for (    SNode child : myMappingConfiguration.getChildren()) {
+      String conceptName=child.getConcept().getQualifiedName();
+      if (conceptName.equals(RuleUtil.concept_Reduction_MappingRule)) {
+        reductionRules.add(new TemplateReductionRuleInterpreted(child));
+      }
+ else       if (conceptName.equals(RuleUtil.concept_Root_MappingRule)) {
+        myRootMappingRules.add(new TemplateRootMappingRuleInterpreted(child));
+      }
+ else       if (conceptName.equals(RuleUtil.concept_PatternReduction_MappingRule)) {
+        patternRules.add(new TemplateReductionPatternRuleInterpreted(child));
+      }
+ else       if (conceptName.equals(RuleUtil.concept_CreateRootRule)) {
+        myCreateRootRules.add(new TemplateCreateRootRuleInterpreted(child));
+      }
+ else       if (conceptName.equals(RuleUtil.concept_Weaving_MappingRule)) {
+        myWeavingRules.add(new TemplateWeavingRuleInterpreted(child));
+      }
+ else       if (conceptName.equals(RuleUtil.concept_DropRootRule)) {
+        myDropRootRules.add(new TemplateDropRuleInterpreted(child));
+      }
+ else       if (conceptName.equals(RuleUtil.concept_MappingScriptReference)) {
+        SNode mappingScript=RuleUtil.getMappingScriptReference_Script(child);
+        if (mappingScript == null) {
+          continue;
+        }
+        if (child.getRoleInParent().equals(RuleUtil.link_MappingConfiguration_preMappingScript)) {
+          myPreScripts.add(new TemplateMappingScriptInterpreted(mappingScript));
+        }
+ else {
+          myPostScripts.add(new TemplateMappingScriptInterpreted(mappingScript));
+        }
+      }
+    }
+    if (patternRules.isEmpty()) {
+      myReductionRules=reductionRules;
+    }
+ else {
+      myReductionRules=new ArrayList<TemplateReductionRule>(patternRules.size() + reductionRules.size());
+      myReductionRules.addAll(patternRules);
+      myReductionRules.addAll(reductionRules);
+    }
+    myInitialized=true;
+  }
+}
