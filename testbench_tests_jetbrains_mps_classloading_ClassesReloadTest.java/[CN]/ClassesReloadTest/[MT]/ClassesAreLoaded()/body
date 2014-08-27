@@ -1,16 +1,21 @@
 {
   Project project=openProject(new File(PROJECT_PATH));
-  ModelAccess.instance().runReadAction(new Runnable(){
-    @Override public void run(){
-      List<SModule> wrongReloadableModules=new LinkedList<SModule>();
-      ClassLoaderManager classLoaderManager=ClassLoaderManager.getInstance();
-      for (      SModule module : MPSModuleRepository.getInstance().getModules()) {
-        if (classLoaderManager.canLoad(module))         if (classLoaderManager.getClassLoader(module) == null)         wrongReloadableModules.add(module);
+  try {
+    ModelAccess.instance().runReadAction(new Runnable(){
+      @Override public void run(){
+        for (        SModule module : MPSModuleRepository.getInstance().getModules()) {
+          checkModule(module);
+        }
+        if (!myModuleNamesToErrors.isEmpty()) {
+          System.err.println("Some class loading problems for modules:");
+          for (          String moduleName : myModuleNamesToErrors.keySet())           System.err.println(moduleName + " ::: " + myModuleNamesToErrors.get(moduleName));
+          fail();
+        }
       }
-      Assert.assertTrue("No class loader for modules:",wrongReloadableModules.isEmpty());
-      for (      SModule module : wrongReloadableModules)       System.err.println(module.getModuleName());
     }
-  }
 );
-  disposeProject(project);
+  }
+  finally {
+    disposeProject(project);
+  }
 }
