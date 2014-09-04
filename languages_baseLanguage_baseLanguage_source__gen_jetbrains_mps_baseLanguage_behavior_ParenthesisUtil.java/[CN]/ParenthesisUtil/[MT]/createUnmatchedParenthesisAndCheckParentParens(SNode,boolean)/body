@@ -1,0 +1,32 @@
+{
+  SNode expressionToProcess=myExpression;
+  SNode expressionToSetFocusOn=null;
+  SNode current=findWrappingParens(expressionToProcess);
+  while (current != null) {
+    boolean propagateNewParensInsteadOfExpr=false;
+    SNode replacing=SLinkOperations.getTarget(SNodeOperations.cast(current,"jetbrains.mps.baseLanguage.structure.ParenthesizedExpression"),"expression",true);
+    SNode rightMostNode=EditorParenthesisUtil.findRightmostOrLeftmostLeafExpression(replacing,true);
+    SNode leftMostNode=EditorParenthesisUtil.findRightmostOrLeftmostLeafExpression(replacing,false);
+    if ((completingByRightParen && eq_a65dpo_a0a0a5a5a01_0(expressionToProcess,rightMostNode)) || (!(completingByRightParen) && eq_a65dpo_a0a0a5a5a01(expressionToProcess,leftMostNode))) {
+      propagateNewParensInsteadOfExpr=true;
+    }
+    SNodeOperations.replaceWithAnother(current,replacing);
+    SNode localExpToSetFocusOn;
+    if (completingByRightParen) {
+      SNodeFactoryOperations.setNewAttribute(leftMostNode,new IAttributeDescriptor.NodeAttribute("jetbrains.mps.baseLanguage.structure.IncompleteLeftParen"),"jetbrains.mps.baseLanguage.structure.IncompleteLeftParen");
+      localExpToSetFocusOn=ParenthesisUtil.createUnmatchedParenthesis(expressionToProcess,true);
+      expressionToProcess=(propagateNewParensInsteadOfExpr ? localExpToSetFocusOn : rightMostNode);
+    }
+ else {
+      SNodeFactoryOperations.setNewAttribute(rightMostNode,new IAttributeDescriptor.NodeAttribute("jetbrains.mps.baseLanguage.structure.IncompleteRightParen"),"jetbrains.mps.baseLanguage.structure.IncompleteRightParen");
+      localExpToSetFocusOn=ParenthesisUtil.createUnmatchedParenthesis(expressionToProcess,false);
+      expressionToProcess=(propagateNewParensInsteadOfExpr ? localExpToSetFocusOn : leftMostNode);
+    }
+    if (expressionToSetFocusOn == null) {
+      expressionToSetFocusOn=localExpToSetFocusOn;
+    }
+    current=findWrappingParens(expressionToProcess);
+  }
+  SNode created=createUnmatchedParenthesis(expressionToProcess,completingByRightParen);
+  return (expressionToSetFocusOn != null ? expressionToSetFocusOn : created);
+}
