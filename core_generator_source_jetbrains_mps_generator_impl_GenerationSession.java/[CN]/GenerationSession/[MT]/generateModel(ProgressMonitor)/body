@@ -14,14 +14,8 @@
   }
   monitor.start("",1 + myGenerationPlan.getStepCount());
   try {
-    final Map<String,Object> generationParameters;
-    if (parametersProvider != null) {
-      generationParameters=parametersProvider.getParameters(myOriginalInputModel);
-    }
- else {
-      generationParameters=null;
-    }
-    IncrementalGenerationHandler incrementalHandler=new IncrementalGenerationHandler(myOriginalInputModel,new ProjectOperationContext(myProject),myGenerationOptions,myGenerationPlan.getSignature(),generationParameters,null);
+    IntermediateCacheHelper cacheHelper=new IntermediateCacheHelper(myGenerationOptions.getIncrementalStrategy(),myGenerationPlan,ttrace);
+    IncrementalGenerationHandler incrementalHandler=new IncrementalGenerationHandler(myOriginalInputModel,myProject,myGenerationOptions,cacheHelper,null);
     myDependenciesBuilder=incrementalHandler.createDependenciesBuilder();
     if (incrementalHandler.canOptimize()) {
       int ignored=incrementalHandler.getIgnoredRoots().size();
@@ -53,10 +47,11 @@
       ((IncrementalDependenciesBuilder)myDependenciesBuilder).traceDependencyOrigins();
     }
     boolean success=false;
-    myNewCache=incrementalHandler.createNewCache();
+    myIntermediateCache=new IntermediateCacheHelper(myGenerationOptions.getIncrementalStrategy(),myGenerationPlan,ttrace);
+    myIntermediateCache.createNew(myOriginalInputModel);
     ttrace.pop();
     try {
-      mySessionContext=new GenerationSessionContext(mySessionContext,myGenerationPlan,generationParameters);
+      mySessionContext=new GenerationSessionContext(mySessionContext,myGenerationPlan);
       SModel currInputModel=createTransientModel("0");
       new CloneUtil(myOriginalInputModel,currInputModel).traceOriginalInput().cloneModelWithImports();
       for (Iterator<SNode> it1=myOriginalInputModel.getRootNodes().iterator(), it2=currInputModel.getRootNodes().iterator(); it1.hasNext() && it2.hasNext(); ) {
@@ -118,14 +113,11 @@ catch (    Exception e) {
       return new GenerationStatus.ERROR(myOriginalInputModel);
     }
  finally {
-      if (myNewCache != null) {
-        if (success) {
-          myNewCache.store();
-        }
+      if (success) {
+        myIntermediateCache.commit();
+      }
  else {
-          myNewCache.remove();
-        }
-        myLogger.info("time spent saving cache: " + myNewCache.getTimeSpent());
+        myIntermediateCache.discard();
       }
     }
   }
