@@ -9,6 +9,30 @@
   if (ref.getTargetNode() != null) {
     return;
   }
+  final String enumConstName=((DynamicReference)ref).getResolveInfo();
+  for (  SNode enclosingEnum : ListSequence.fromList(SNodeOperations.getAncestors(varRef,"jetbrains.mps.baseLanguage.structure.EnumClass",false))) {
+    SNode enumConst=Sequence.fromIterable(Members.visibleEnumConstants(enclosingEnum)).findFirst(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return enumConstName.equals(SPropertyOperations.getString(it,"name"));
+      }
+    }
+);
+    if ((enumConst == null)) {
+      continue;
+    }
+    SNode result=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.EnumConstantReference",null);
+    SLinkOperations.setTarget(result,"enumClass",enclosingEnum,false);
+    SLinkOperations.setTarget(result,"enumConstantDeclaration",enumConst,false);
+{
+      MessageTarget errorTarget=new NodeMessageTarget();
+      IErrorReporter _reporter_2309309498=typeCheckingContext.reportTypeError(varRef,"Unqualified enum constant reference","r:00000000-0000-4000-0000-011c895902c5(jetbrains.mps.baseLanguage.typesystem)","502936544108889529",null,errorTarget);
+{
+        BaseQuickFixProvider intentionProvider=new BaseQuickFixProvider("jetbrains.mps.baseLanguage.typesystem.replaceNode_QuickFix",true);
+        intentionProvider.putArgument("newNode",result);
+        _reporter_2309309498.addIntentionProvider(intentionProvider);
+      }
+    }
+  }
   SNode root=SNodeOperations.getContainingRoot(varRef);
   if (!(SNodeOperations.isInstanceOf(root,"jetbrains.mps.baseLanguage.structure.Classifier"))) {
     return;
@@ -17,7 +41,6 @@
   if ((javaImports == null)) {
     return;
   }
-  final String enumConstName=((DynamicReference)ref).getResolveInfo();
   for (  SNode singleNameImport : Sequence.fromIterable(JavaImports_Behavior.call_staticSingleName_5230012391903395274(javaImports))) {
     if (!(enumConstName.equals(Tokens_Behavior.call_lastToken_1296023605440030462(singleNameImport)))) {
       continue;
