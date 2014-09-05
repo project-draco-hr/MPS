@@ -1,0 +1,40 @@
+{
+  try {
+    SModel model=MPSCommonDataKeys.MODEL.getData(event.getDataContext());
+    if (!(model instanceof DefaultSModelDescriptor)) {
+      return;
+    }
+    List<SModuleReference> langs=((DefaultSModelDescriptor)model).importedLanguages();
+    Iterable<SNode> descrs=ListSequence.fromList(langs).select(new ISelector<SModuleReference,Language>(){
+      public Language select(      SModuleReference it){
+        return ((Language)it.resolve(MPSModuleRepository.getInstance()));
+      }
+    }
+).where(new IWhereFilter<Language>(){
+      public boolean accept(      Language it){
+        return it != null;
+      }
+    }
+).translate(new ITranslator2<Language,SModel>(){
+      public Iterable<SModel> translate(      Language it){
+        return it.getAccessoryModels();
+      }
+    }
+).translate(new ITranslator2<SModel,SNode>(){
+      public Iterable<SNode> translate(      SModel it){
+        return SModelOperations.getRoots(((SModel)it),"jetbrains.mps.lang.classLike.structure.ClassLikeDescriptor");
+      }
+    }
+);
+    ClassLikes_ActionGroup.this.removeAll();
+    for (    SNode descr : Sequence.fromIterable(descrs)) {
+      ClassLikes_ActionGroup.this.addParameterizedAction(new NewClassLike_Action(descr),PluginId.getId("jetbrains.mps.lang.classLike.pluginSolution"),descr);
+    }
+  }
+ catch (  Throwable t) {
+    LOG.error("User group error",t);
+  }
+  for (  Pair<ActionPlace,Condition<BaseAction>> p : this.myPlaces) {
+    this.addPlace(p.first,p.second);
+  }
+}
