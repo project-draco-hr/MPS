@@ -25,6 +25,7 @@ for (ASTNode astNode : astTypes) {
 }
 resultNodes=roots;
 }
+attachComments(source,converter,util.recordedParsingInformation);
 if (compRes.currentPackage != null) {
 StringBuffer sb=new StringBuffer();
 compRes.currentPackage.print(0,sb,false);
@@ -36,6 +37,7 @@ ASTNode[] astNodes=util.parseClassBodyDeclarations(source,0,source.length,settin
 if (astNodes != null && astNodes.length > 0) {
 resultNodes=converter.convertClassContents(astNodes,context);
 }
+attachComments(source,converter,util.recordedParsingInformation);
 break;
 case STATEMENTS:
 AbstractMethodDeclaration absMethod=util.parseStatements(source,settings,true,recovery);
@@ -45,12 +47,17 @@ return JavaParser.JavaParseResult.UNKNOWN_ERROR;
 Statement[] stmts=absMethod.statements;
 if (stmts != null && stmts.length > 0) {
 SNode stmtList=SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.StatementList",null);
-resultNodes=((FullASTConverter)converter).convertStatementsOf(absMethod,stmtList);
+((FullASTConverter)converter).convertStatementsInto(absMethod,stmtList);
+attachComments(source,converter,util.recordedParsingInformation);
+resultNodes=ListSequence.fromList(new ArrayList<SNode>());
+for (SNode stmt : ListSequence.fromList(SLinkOperations.getTargets(stmtList,"statement",true))) {
+SNodeOperations.deleteNode(stmt);
+ListSequence.fromList(resultNodes).addElement(stmt);
+}
 }
 break;
 default :
 throw new IllegalArgumentException("Parsing other than class and statements is not supported yet ");
 }
-attachComments(source,converter,util.recordedParsingInformation);
 return new JavaParser.JavaParseResult(resultNodes,resultPackageName,problemDescription(util.recordedParsingInformation));
 }

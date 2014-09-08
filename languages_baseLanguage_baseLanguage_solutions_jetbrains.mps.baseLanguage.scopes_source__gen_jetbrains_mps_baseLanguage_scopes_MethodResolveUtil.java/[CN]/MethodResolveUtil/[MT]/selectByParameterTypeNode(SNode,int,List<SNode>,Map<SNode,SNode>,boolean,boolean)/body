@@ -16,21 +16,13 @@
         continue;
       }
     }
-    List<SNode> methodTypeVariableDecls=SLinkOperations.getTargets(candidate,"typeVariableDeclaration",true);
-    for (    SNode tvd : ListSequence.fromList(methodTypeVariableDecls)) {
-      typeByTypeVar.put(tvd,SConceptOperations.createNewNode("jetbrains.mps.baseLanguage.structure.WildCardType",null));
-    }
+    Set<SNode> methodTypeVariableDecls=SetSequence.fromSetWithValues(new HashSet<SNode>(),SLinkOperations.getTargets(candidate,"typeVariableDeclaration",true));
     SNode typeOfParam=(varArg ? SLinkOperations.getTarget(SNodeOperations.cast(type,"jetbrains.mps.baseLanguage.structure.VariableArityType"),"componentType",true) : SLinkOperations.getTarget(ListSequence.fromList(params).getElement(indexOfArg),"type",true));
     if ((typeOfParam == null)) {
       continue;
     }
     typeOfParam=GenericTypesUtil.getTypeWithResolvedTypeVars(typeOfParam,typeByTypeVar);
-    ListSequence.fromList(methodTypeVariableDecls).visitAll(new IVisitor<SNode>(){
-      public void visit(      SNode tvd){
-        typeByTypeVar.remove(tvd);
-      }
-    }
-);
+    typeOfParam=GenericTypesUtil.methodParamTypeWoutTypeVars(typeOfParam,methodTypeVariableDecls);
     if (subtypingManager.isSubtype(typeOfArg,typeOfParam,isWeak)) {
       Set<SNode> methods=typesOfParamToMethods.get(typeOfParam);
       if (methods == null) {
