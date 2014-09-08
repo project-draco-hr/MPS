@@ -1,15 +1,14 @@
 {
-  if (isInBatchCommand())   throw new IllegalStateException("Cannot start one batch command within another one");
   ModelAccess.instance().runWriteAction(new Runnable(){
     @Override public void run(){
+      if (myBatchCommandLevel == 0)       onCommandStarted();
+      ++myBatchCommandLevel;
       try {
-        onCommandStarted();
-        myInBatchCommand=true;
         batchCommand.run();
       }
   finally {
-        myInBatchCommand=false;
-        onCommandFinished();
+        --myBatchCommandLevel;
+        if (myBatchCommandLevel == 0)         onCommandFinished();
       }
     }
   }
