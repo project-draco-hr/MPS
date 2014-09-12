@@ -1,0 +1,46 @@
+{
+  SNode expressionToProcess=myExpression;
+  SNode expressionToSetFocusOn=null;
+  SNode current=findWrappingParens(expressionToProcess);
+  while (current != null) {
+    SNode leftParenOnParens=AttributeOperations.getAttribute(current,new IAttributeDescriptor.NodeAttribute("jetbrains.mps.baseLanguage.structure.IncompleteLeftParen"));
+    SNode rightParenOnParens=AttributeOperations.getAttribute(current,new IAttributeDescriptor.NodeAttribute("jetbrains.mps.baseLanguage.structure.IncompleteRightParen"));
+    boolean propagateNewParensInsteadOfExpr=false;
+    SNode replacing=SLinkOperations.getTarget(SNodeOperations.cast(current,"jetbrains.mps.baseLanguage.structure.ParenthesizedExpression"),"expression",true);
+    SNode rightMostNode=EditorParenthesisUtil.findRightmostOrLeftmostLeafExpression(replacing,true);
+    SNode leftMostNode=EditorParenthesisUtil.findRightmostOrLeftmostLeafExpression(replacing,false);
+    if ((completingByRightParen && eq_a65dpo_a0a0a8a5a7_0(expressionToProcess,rightMostNode)) || (!(completingByRightParen) && eq_a65dpo_a0a0a8a5a7(expressionToProcess,leftMostNode))) {
+      propagateNewParensInsteadOfExpr=true;
+    }
+    SNodeOperations.replaceWithAnother(current,replacing);
+    SNode localExpToSetFocusOn;
+    if (completingByRightParen) {
+      setOrIncreaseParen(leftMostNode,false);
+      localExpToSetFocusOn=ParenthesisUtil.createUnmatchedParenthesis(expressionToProcess,true);
+      expressionToProcess=(propagateNewParensInsteadOfExpr ? localExpToSetFocusOn : rightMostNode);
+    }
+ else {
+      setOrIncreaseParen(rightMostNode,true);
+      localExpToSetFocusOn=ParenthesisUtil.createUnmatchedParenthesis(expressionToProcess,false);
+      expressionToProcess=(propagateNewParensInsteadOfExpr ? localExpToSetFocusOn : leftMostNode);
+    }
+    if (expressionToSetFocusOn == null) {
+      expressionToSetFocusOn=localExpToSetFocusOn;
+    }
+    if (completingByRightParen && leftParenOnParens != null) {
+      setOrMergeParen(localExpToSetFocusOn,false,leftParenOnParens);
+    }
+    if (!(completingByRightParen) && rightParenOnParens != null) {
+      setOrMergeParen(localExpToSetFocusOn,true,rightParenOnParens);
+    }
+    if (completingByRightParen && rightParenOnParens != null) {
+      setOrMergeParen(expressionToProcess,true,rightParenOnParens);
+    }
+    if (!(completingByRightParen) && leftParenOnParens != null) {
+      setOrMergeParen(expressionToProcess,false,leftParenOnParens);
+    }
+    current=findWrappingParens(expressionToProcess);
+  }
+  SNode created=createUnmatchedParenthesis(expressionToProcess,completingByRightParen);
+  return (expressionToSetFocusOn != null ? expressionToSetFocusOn : created);
+}
