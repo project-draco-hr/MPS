@@ -3,11 +3,28 @@
   Object o=context.getSessionObject(ExportsVault.class);
   if (o instanceof MultiMap) {
     myVault=(MultiMap<SNode,ExportEntry>)o;
+    myExportsModel=(SModel)context.getSessionObject(ModelExports.class);
     myTempModels=(Map<SModelReference,SModel>)context.getSessionObject(ExportEntry.class);
   }
  else {
     myVault=new MultiMap<SNode,ExportEntry>();
     myTempModels=new HashMap<SModelReference,SModel>();
+class FakeSource extends DataSourceBase implements StreamDataSource {
+      @Override public InputStream openInputStream() throws IOException {
+        throw new IOException();
+      }
+      @Override public OutputStream openOutputStream() throws IOException {
+        throw new IOException();
+      }
+    }
+    ;
+    try {
+      myExportsModel=PersistenceRegistry.getInstance().getDefaultModelFactory().create(new FakeSource(),Collections.singletonMap(ModelFactory.OPTION_MODELNAME,context.getOriginalInputModel().getModelName()));
+    }
+ catch (    IOException ex) {
+      throw new IllegalStateException("Could not create model to keep cross-model exports",ex);
+    }
+    context.putSessionObject(ModelExports.class,myExportsModel);
     context.putSessionObject(ExportsVault.class,myVault);
     context.putSessionObject(ExportEntry.class,myTempModels);
   }
