@@ -1,23 +1,40 @@
 {
   assertCanChange();
   propertyValue=InternUtil.intern(propertyValue);
-  final Pair<Boolean,String> isSet;
-  if (workingMode() == IdMigrationMode.NAME) {
-    isSet=setProperty_byName(pid2name(property),propertyValue);
+  int index=getPropertyIndex(property);
+  final String oldValue=index == -1 ? null : (String)myProperties[index + 1];
+  if (EqualUtil.equals(oldValue,propertyValue))   return;
+  if (propertyValue == null) {
+    Object[] oldProperties=myProperties;
+    int newLength=oldProperties.length - 2;
+    if (newLength == 0) {
+      myProperties=null;
+    }
+ else {
+      myProperties=new Object[newLength];
+      System.arraycopy(oldProperties,0,myProperties,0,index);
+      System.arraycopy(oldProperties,index + 2,myProperties,index,newLength - index);
+    }
+  }
+ else   if (oldValue == null) {
+    Object[] oldProperties=myProperties == null ? EMPTY_ARRAY : myProperties;
+    myProperties=new Object[oldProperties.length + 2];
+    System.arraycopy(oldProperties,0,myProperties,0,oldProperties.length);
+    myProperties[myProperties.length - 2]=property;
+    myProperties[myProperties.length - 1]=propertyValue;
   }
  else {
-    isSet=setProperty_byId(property,propertyValue);
+    myProperties[index + 1]=propertyValue;
   }
-  if (!isSet.o1)   return;
   final String finalPropertyValue=propertyValue;
   performUndoableAction(new Computable<SNodeUndoableAction>(){
     @Override public SNodeUndoableAction compute(){
-      return new PropertyChangeUndoableAction(SNode.this,pid2name(property),isSet.o2,finalPropertyValue);
+      return new PropertyChangeUndoableAction(SNode.this,property.getName(),oldValue,finalPropertyValue);
     }
   }
 );
   if (needFireEvent()) {
-    myModel.firePropertyChangedEvent(this,pid2name(property),isSet.o2,propertyValue);
+    myModel.firePropertyChangedEvent(this,property.getName(),oldValue,propertyValue);
   }
-  propertyChanged(property,isSet.o2,propertyValue);
+  propertyChanged(property,oldValue,propertyValue);
 }
