@@ -1,18 +1,18 @@
 {
   LOG.debug("Saving model " + model.getReference() + " to "+ source.getLocation());
-  persistenceVersion=persistenceVersion < 4 ? LAST_VERSION : Math.max(7,persistenceVersion);
+  persistenceVersion=actualPersistenceVersion(persistenceVersion);
   if (source.isReadOnly()) {
     throw new IOException("`" + source.getLocation() + "' is read-only");
   }
   int oldVersion=persistenceVersion;
-  if (model instanceof DefaultSModel) {
-    DefaultSModel defaultSModel=(DefaultSModel)model;
-    oldVersion=defaultSModel.getPersistenceVersion();
+  if (model.getModelDescriptor() instanceof PersistenceVersionAware) {
+    PersistenceVersionAware modelWithPersistenceVer=(PersistenceVersionAware)model.getModelDescriptor();
+    oldVersion=modelWithPersistenceVer.getPersistenceVersion();
     if (oldVersion != persistenceVersion) {
-      defaultSModel.setPersistenceVersion(persistenceVersion);
+      modelWithPersistenceVer.setPersistenceVersion(persistenceVersion);
     }
   }
-  Document document=saveModel(model);
+  Document document=modelToXml(model,persistenceVersion);
   JDOMUtil.writeDocument(document,source);
   if (oldVersion != persistenceVersion) {
     LOG.info("persistence upgraded: " + oldVersion + "->"+ persistenceVersion+ " "+ model.getReference());
