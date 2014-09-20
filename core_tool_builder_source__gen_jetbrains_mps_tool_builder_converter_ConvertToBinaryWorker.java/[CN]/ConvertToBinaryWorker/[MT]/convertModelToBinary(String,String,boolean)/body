@@ -1,13 +1,14 @@
 {
   IFile source=FileSystem.getInstance().getFileByPath(sourceFile);
-  try {
-    DefaultSModel model=(stripImplementation ? ModelPersistence.readModelWithoutImplementation(new FileDataSource(source)) : ModelPersistence.readModel(new FileDataSource(source),false));
-    if (model.getSModelHeader().getPersistenceVersion() < ModelPersistence.LAST_VERSION) {
-      throw new IOException("cannot convert " + sourceFile + ": model persistence is too old, please upgrade");
-    }
-    BinaryPersistence.writeModel(model,new FileDataSource(FileSystem.getInstance().getFileByPath(destFile)));
+  ModelFactory modelFactory=PersistenceFacade.getInstance().getModelFactory(FileUtil.getExtension(source.getName()));
+  if (modelFactory == null) {
+    modelFactory=PersistenceFacade.getInstance().getDefaultModelFactory();
   }
- catch (  ModelReadException e) {
-    throw new IOException("Couldn't parse " + sourceFile + ": "+ e.getMessageEx(),e);
+  try {
+    SModel model=modelFactory.load(new FileDataSource(source),Collections.singletonMap(DefaultModelPersistence.OPTION_STRIP_IMPLEMENTATION,Boolean.toString(stripImplementation)));
+    PersistenceFacade.getInstance().getModelFactory(MPSExtentions.MODEL_BINARY).save(model,new FileDataSource(FileSystem.getInstance().getFileByPath(destFile)));
+  }
+ catch (  ModelSaveException e) {
+    throw new IOException(String.format("Failed to write model in binary format to file %s",destFile),e);
   }
 }
