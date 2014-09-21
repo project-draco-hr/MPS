@@ -1,2 +1,30 @@
 {
+  ModelAccess.assertLegalWrite();
+  Set<SModule> modulesToLoad=new HashSet<SModule>();
+  for (  SModule module : modules) {
+    if (canLoad(module) && canCreate(module)) {
+      if (module.getRepository() == null) {
+        throw new IllegalArgumentException("Cannot get class from disposed module " + module);
+      }
+      if (getClassLoader(module) != null) {
+        LOG.error("Classes of the " + module + " are already being managed by "+ getClassLoader(module)+ " class loader",new Throwable());
+        continue;
+      }
+      modulesToLoad.add(module);
+    }
+  }
+  if (modulesToLoad.isEmpty())   return modulesToLoad;
+  for (  SModule module : modulesToLoad) {
+    LOG.debug("Loading module " + module);
+    createClassLoader(module);
+  }
+  monitor.start("Loading classes...",1);
+  try {
+    myBroadCaster.onLoad(modulesToLoad);
+    monitor.advance(1);
+  }
+  finally {
+    monitor.done();
+  }
+  return modulesToLoad;
 }
