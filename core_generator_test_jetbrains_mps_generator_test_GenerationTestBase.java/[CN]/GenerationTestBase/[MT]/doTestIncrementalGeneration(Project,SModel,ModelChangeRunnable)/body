@@ -33,8 +33,8 @@
     List<String> hashes=new ArrayList<String>();
     hashes.add(incrementalStrategy.getHash().get(GeneratableSModel.FILE));
     GenerationOptions options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).reporting(true,true,false,2).incremental(incrementalStrategy).create();
-    IncrementalTestGenerationHandler generationHandler=new IncrementalTestGenerationHandler();
-    GenerationFacade.generateModels(p,Collections.singletonList(descr),ModuleContext.create(descr,p),generationHandler,new EmptyProgressMonitor(),generationHandler.getMessageHandler(),options,p.getComponent(TransientModelsComponent.class));
+    IncrementalTestGenerationHandler generationHandler=new IncrementalTestGenerationHandler(p);
+    GenerationFacade.generateModels(p,Collections.singletonList(descr),ModuleContext.create(descr,p),generationHandler,new EmptyProgressMonitor(),generationHandler.getMessageHandler(),options,p.getComponent(TransientModelsProvider.class));
     Map<String,String> generated=replaceInContent(generationHandler.getGeneratedContent(),new String[]{randomName,originalModel.getModule().getModuleName()},new String[]{randomId,originalModel.getModule().getModuleReference().getModuleId().toString()});
     assertNoDiff(generationHandler.getExistingContent(),generated);
     Map<String,String> incrementalGenerationResults=generationHandler.getGeneratedContent();
@@ -62,19 +62,19 @@
       Assert.assertNotNull(generationHandler.getLastDependencies());
       incrementalStrategy.setDependencies(generationHandler.getLastDependencies());
       options=GenerationOptions.getDefaults().rebuildAll(false).strictMode(true).reporting(true,true,false,2).incremental(incrementalStrategy).create();
-      generationHandler=new IncrementalTestGenerationHandler(incrementalGenerationResults);
+      generationHandler=new IncrementalTestGenerationHandler(p,incrementalGenerationResults);
       generationHandler.checkIncremental(options);
       long start=System.nanoTime();
-      GenerationFacade.generateModels(p,Collections.singletonList(descr),ModuleContext.create(descr,p),generationHandler,new EmptyProgressMonitor(),generationHandler.getMessageHandler(),options,p.getComponent(TransientModelsComponent.class));
+      GenerationFacade.generateModels(p,Collections.singletonList(descr),ModuleContext.create(descr,p),generationHandler,new EmptyProgressMonitor(),generationHandler.getMessageHandler(),options,p.getComponent(TransientModelsProvider.class));
       time.add(System.nanoTime() - start);
       incrementalGenerationResults=generationHandler.getGeneratedContent();
       assertDiff(generationHandler.getExistingContent(),incrementalGenerationResults,1);
     }
     incrementalStrategy.setDependencies(null);
     options=GenerationOptions.getDefaults().rebuildAll(true).strictMode(true).reporting(true,true,false,2).incremental(incrementalStrategy).create();
-    generationHandler=new IncrementalTestGenerationHandler(incrementalGenerationResults);
+    generationHandler=new IncrementalTestGenerationHandler(p,incrementalGenerationResults);
     long start=System.nanoTime();
-    GenerationFacade.generateModels(p,Collections.singletonList(descr),ModuleContext.create(descr,p),generationHandler,new EmptyProgressMonitor(),generationHandler.getMessageHandler(),options,p.getComponent(TransientModelsComponent.class));
+    GenerationFacade.generateModels(p,Collections.singletonList(descr),ModuleContext.create(descr,p),generationHandler,new EmptyProgressMonitor(),generationHandler.getMessageHandler(),options,p.getComponent(TransientModelsProvider.class));
     time.add(System.nanoTime() - start);
     assertNoDiff(incrementalGenerationResults,generationHandler.getGeneratedContent());
     PerformanceMessenger.getInstance().reportPercent("incrementalGeneration",(time.get(time.size() - 2)) / 1000000,(time.get(time.size() - 1)) / 1000000);

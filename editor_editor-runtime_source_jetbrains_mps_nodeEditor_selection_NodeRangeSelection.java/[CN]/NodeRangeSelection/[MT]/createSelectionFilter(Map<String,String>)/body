@@ -1,0 +1,32 @@
+{
+  String filterClassName=properties.get(SELECTION_FILTER_CLASS_NAME);
+  if (filterClassName == null) {
+    return null;
+  }
+  String moduleRefString=properties.get(SELECTION_FILTER_MODULE_REFERENCE);
+  RangeSelectionFilter result;
+  try {
+    Class filterClass=moduleRefString != null ? loadFromModule(moduleRefString,filterClassName) : Class.forName(filterClassName);
+    if (filterClass == null) {
+      throw new SelectionStoreException("Can't load selection filter class: " + filterClassName + (moduleRefString != null ? "" : "module reference: " + moduleRefString));
+    }
+    Object filterInstance=filterClass.newInstance();
+    if (filterInstance instanceof RangeSelectionFilter) {
+      result=(RangeSelectionFilter)filterInstance;
+    }
+ else {
+      throw new SelectionStoreException("Loaded filter class " + filterInstance + " is not instance of RangeSelectionFilter");
+    }
+  }
+ catch (  ClassNotFoundException e) {
+    throw new SelectionStoreException("Filter class not found: " + e.getMessage());
+  }
+catch (  InstantiationException e) {
+    throw new SelectionStoreException("Can't instantiate filter class: " + e.getMessage());
+  }
+catch (  IllegalAccessException e) {
+    throw new SelectionStoreException("Illegal access while instantiating filter class: " + e.getMessage());
+  }
+  result.loadFilter(properties);
+  return result;
+}

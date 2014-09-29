@@ -1,14 +1,24 @@
 {
+  final SModel originalOutputModel=tg.getOutputModel();
   ttrace.push(String.format("Step %d.%d",myMajorStep + 1,myMinorStep),true);
-  boolean hasChanges=tg.apply(progress,isPrimary);
+  final boolean hasChanges=tg.apply(progress,isPrimary);
   ttrace.pop();
-  SModel outputModel=tg.getOutputModel();
-  if (myNewCache != null && (isPrimary || hasChanges)) {
-    ttrace.push("saving cache",false);
-    TransientModelWithMetainfo modelWithMetaInfo=TransientModelWithMetainfo.create(outputModel,myDependenciesBuilder);
-    tg.getMappings().export(modelWithMetaInfo,myDependenciesBuilder);
-    myNewCache.store(myMajorStep,myMinorStep,modelWithMetaInfo);
-    ttrace.pop();
+  if (isPrimary || hasChanges) {
+    myIntermediateCache.store(myMajorStep,myMinorStep,tg,myDependenciesBuilder);
   }
-  return new Pair<Boolean,SModel>(hasChanges,outputModel);
+  if (hasChanges) {
+    SModel realOutputModel=tg.getOutputModel();
+    SModelOperations.validateLanguagesAndImports(realOutputModel,false,false);
+    myDependenciesBuilder.updateModel(realOutputModel);
+  }
+ else {
+    myDependenciesBuilder.dropModel();
+    if (!isPrimary) {
+      myMinorStep--;
+    }
+    if (myLogger.needsInfo()) {
+      myLogger.info(String.format("unchanged, empty model '%s' removed",SModelStereotype.getStereotype(originalOutputModel)));
+    }
+  }
+  return hasChanges;
 }
