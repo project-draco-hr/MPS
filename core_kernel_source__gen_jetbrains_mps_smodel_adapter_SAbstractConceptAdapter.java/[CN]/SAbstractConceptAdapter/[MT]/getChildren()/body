@@ -1,18 +1,19 @@
 {
-  ConceptDescriptor d=ConceptRegistry.getInstance().getConceptDescriptor(getQualifiedName());
-  if (d instanceof IllegalConceptDescriptor) {
-    illegalConceptDescriptorWarning();
-    return Collections.emptyList();
+  ConceptDescriptor d=getConceptDescriptor(myConceptId);
+  if (d instanceof IllegalConceptDescriptor)   return Collections.emptyList();
+  Set<Pair<SContainmentLinkId,String>> linkDescrs=new HashSet<Pair<SContainmentLinkId,String>>();
+  for (  SReferenceLinkId rid : d.getChildRoleIds()) {
+    linkDescrs.add(new Pair<SReferenceLinkId,String>(rid,d.getChildRoleName(rid)));
   }
-  final ConceptAndSuperConceptsScope scope=new ConceptAndSuperConceptsScope(getConceptDeclarationNode());
-  return SetSequence.fromSet(((Set<String>)d.getChildrenNames())).select(new ISelector<String,SContainmentLink>(){
-    public SContainmentLink select(    String it){
-      SNode linkNode=scope.getLinkDeclarationByRole(it);
-      if (linkNode == null) {
-        return null;
-      }
-      return ((SContainmentLink)new SContainmentLinkAdapter(MetaIdByDeclaration.getNodeRoleId((jetbrains.mps.smodel.SNode)linkNode)));
+  for (  SConceptId ii : d.getParentIds()) {
+    ConceptDescriptor id=getConceptDescriptor(ii);
+    for (    SReferenceLinkId rid : id.getChildRoleIds()) {
+      linkDescrs.add(new Pair<SContainmentLinkId,String>(rid,id.getChildRoleName(rid)));
     }
   }
-);
+  ArrayList<SContainmentLink> result=new ArrayList<SContainmentLink>();
+  for (  Pair<SContainmentLinkId,String> e : linkDescrs) {
+    result.add(new SContainmentLinkAdapter(e.o1,e.o2));
+  }
+  return result;
 }

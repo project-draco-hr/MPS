@@ -1,18 +1,19 @@
 {
-  ConceptDescriptor d=ConceptRegistry.getInstance().getConceptDescriptor(myConceptName);
-  if (d instanceof IllegalConceptDescriptor) {
-    illegalConceptDescriptorWarning();
-    return Collections.<SProperty>emptyList();
+  ConceptDescriptor d=getConceptDescriptor(myConceptId);
+  if (d instanceof IllegalConceptDescriptor)   return Collections.emptyList();
+  Set<Pair<SPropertyId,String>> propDescrs=new HashSet<Pair<SPropertyId,String>>();
+  for (  SPropertyId rid : d.getPropertyIds()) {
+    propDescrs.add(new Pair<SPropertyId,String>(rid,d.getPropertyName(rid)));
   }
-  final ConceptAndSuperConceptsScope scope=new ConceptAndSuperConceptsScope(getConceptDeclarationNode());
-  return SetSequence.fromSet(((Set<String>)d.getPropertyNames())).select(new ISelector<String,SProperty>(){
-    public SProperty select(    String it){
-      SNode propNode=scope.getPropertyDeclarationByName(it);
-      if (propNode == null) {
-        return null;
-      }
-      return ((SProperty)new SPropertyAdapter(MetaIdByDeclaration.getPropId((jetbrains.mps.smodel.SNode)propNode)));
+  for (  SConceptId ii : d.getParentIds()) {
+    ConceptDescriptor id=getConceptDescriptor(ii);
+    for (    SPropertyId rid : id.getPropertyIds()) {
+      propDescrs.add(new Pair<SPropertyId,String>(rid,id.getPropertyName(rid)));
     }
   }
-);
+  ArrayList<SProperty> result=new ArrayList<SProperty>();
+  for (  Pair<SPropertyId,String> e : propDescrs) {
+    result.add(new SPropertyAdapter(e.o1,e.o2));
+  }
+  return result;
 }

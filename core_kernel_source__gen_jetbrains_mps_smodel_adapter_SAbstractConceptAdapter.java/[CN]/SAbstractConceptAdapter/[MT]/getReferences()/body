@@ -1,18 +1,19 @@
 {
-  ConceptDescriptor d=ConceptRegistry.getInstance().getConceptDescriptor(getQualifiedName());
-  if (d instanceof IllegalConceptDescriptor) {
-    illegalConceptDescriptorWarning();
-    return Collections.emptyList();
+  ConceptDescriptor d=getConceptDescriptor(myConceptId);
+  if (d instanceof IllegalConceptDescriptor)   return Collections.emptyList();
+  Set<Pair<SReferenceLinkId,String>> refDescrs=new HashSet<Pair<SReferenceLinkId,String>>();
+  for (  SReferenceLinkId rid : d.getReferenceIds()) {
+    refDescrs.add(new Pair<SReferenceLinkId,String>(rid,d.getRefName(rid)));
   }
-  final ConceptAndSuperConceptsScope scope=new ConceptAndSuperConceptsScope(getConceptDeclarationNode());
-  return SetSequence.fromSet(((Set<String>)d.getReferenceNames())).select(new ISelector<String,SReferenceLink>(){
-    public SReferenceLink select(    String it){
-      SNode linkNode=scope.getLinkDeclarationByRole(it);
-      if (linkNode == null) {
-        return null;
-      }
-      return ((SReferenceLink)new SReferenceLinkAdapter(MetaIdByDeclaration.getRefRoleId((jetbrains.mps.smodel.SNode)linkNode)));
+  for (  SConceptId ii : d.getParentIds()) {
+    ConceptDescriptor id=getConceptDescriptor(ii);
+    for (    SReferenceLinkId rid : id.getReferenceIds()) {
+      refDescrs.add(new Pair<SReferenceLinkId,String>(rid,id.getRefName(rid)));
     }
   }
-);
+  ArrayList<SReferenceLink> result=new ArrayList<SReferenceLink>();
+  for (  Pair<SReferenceLinkId,String> e : refDescrs) {
+    result.add(new SReferenceLinkAdapter(e.o1,e.o2));
+  }
+  return result;
 }
