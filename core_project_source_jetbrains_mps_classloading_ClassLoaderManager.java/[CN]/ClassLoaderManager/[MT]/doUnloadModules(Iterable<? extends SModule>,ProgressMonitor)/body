@@ -1,0 +1,21 @@
+{
+synchronized (CLASS_LOADING_LOCK) {
+    Set<SModule> modulesToUnload=filterModules(modules,myMPSLoadableCondition);
+    if (modulesToUnload.size() == 0)     return modulesToUnload;
+    monitor.start("Unloading module classes...",1);
+    try {
+      Collection<SModule> modulesAndBackDeps=myModulesWatcher.getBackDependencies(modulesToUnload);
+      modulesToUnload=filterModules(modulesAndBackDeps,negateCondition(myUnloadedCondition));
+      if (modulesToUnload.isEmpty())       return modulesToUnload;
+      LOG.debug("Unloading " + modulesToUnload.size() + " modules");
+      monitor.step("Disposing old class loaders...");
+      myBroadCaster.onUnload(modulesToUnload);
+      myClassLoadersHolder.doUnloadModules(modulesToUnload);
+      monitor.advance(1);
+      return modulesToUnload;
+    }
+  finally {
+      monitor.done();
+    }
+  }
+}
