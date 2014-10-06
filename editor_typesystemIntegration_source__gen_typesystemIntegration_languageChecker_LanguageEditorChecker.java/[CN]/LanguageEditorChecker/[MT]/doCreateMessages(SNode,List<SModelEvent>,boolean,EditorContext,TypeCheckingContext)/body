@@ -1,0 +1,116 @@
+{
+  EditorComponent editorComponent=(EditorComponent)editorContext.getEditorComponent();
+  SModel model=editorContext.getModel();
+  myScopeChecker.setEditorComponent(editorComponent);
+  myMessagesChanged=false;
+  Set<EditorMessage> result=SetSequence.fromSet(new HashSet<EditorMessage>());
+  SNode editedNode=editorComponent.getEditedNode();
+  if (editedNode == null) {
+    if (LOG.isEnabledFor(Level.ERROR)) {
+      LOG.error("edited node is null");
+    }
+    return result;
+  }
+  if (node.getModel() == null || SNodeOperations.getModel(editedNode) == null) {
+    return result;
+  }
+  EditorComponent mainEditorComponent=null;
+  boolean inspector=editorComponent instanceof InspectorEditorComponent;
+  if (inspector) {
+    List<SNode> editedNodeAncestors=SNodeOperations.getAncestors(editedNode,null,true);
+    for (    EditorComponent candidate : MapSequence.fromMap(myEditorComponentToErrorMap).keySet()) {
+      if (ListSequence.fromList(editedNodeAncestors).contains(candidate.getEditedNode())) {
+        mainEditorComponent=candidate;
+        break;
+      }
+    }
+    if (mainEditorComponent == null) {
+      return result;
+    }
+  }
+ else {
+    mainEditorComponent=editorComponent;
+  }
+  LanguageErrorsComponent errorsComponent=MapSequence.fromMap(myEditorComponentToErrorMap).get(mainEditorComponent);
+  if (errorsComponent == null) {
+    errorsComponent=new LanguageErrorsComponent(model);
+    MapSequence.fromMap(myEditorComponentToErrorMap).put(mainEditorComponent,errorsComponent);
+    mainEditorComponent.addDisposeListener(myDisposeListener);
+    Set<EditorComponent> mappedEditorComponent=MapSequence.fromMap(myModelToEditorComponentsMap).get(model);
+    if (mappedEditorComponent == null) {
+      mappedEditorComponent=SetSequence.fromSet(new HashSet<EditorComponent>());
+      MapSequence.fromMap(myModelToEditorComponentsMap).put(model,mappedEditorComponent);
+      addModelListener(model);
+    }
+    SetSequence.fromSet(mappedEditorComponent).addElement(mainEditorComponent);
+  }
+  if (!(wasCheckedOnce)) {
+    errorsComponent.clear();
+  }
+  if (inspector) {
+    myMessagesChanged=errorsComponent.checkInspector();
+  }
+ else {
+    boolean changed=false;
+    try {
+      if (typeCheckingContext != null) {
+        typeCheckingContext.setIsNonTypesystemComputation();
+      }
+      changed=errorsComponent.check(SNodeOperations.getContainingRoot(((SNode)node)),myRules,editorContext.getRepository());
+    }
+  finally {
+      if (typeCheckingContext != null) {
+        typeCheckingContext.resetIsNonTypesystemComputation();
+      }
+    }
+    myMessagesChanged=changed;
+  }
+  if (!(myMessagesChanged)) {
+    return result;
+  }
+  boolean runQuickFixes=shouldRunQuickFixs(model,inspector);
+  final List<Tuples._2<QuickFix_Runtime,SNode>> quickFixesToExecute=ListSequence.fromList(new ArrayList<Tuples._2<QuickFix_Runtime,SNode>>());
+  for (  IErrorReporter errorReporter : errorsComponent.getErrors()) {
+    SNode nodeWithError=errorReporter.getSNode();
+    if (!(ListSequence.fromList(SNodeOperations.getAncestors(nodeWithError,null,true)).contains(editedNode))) {
+      continue;
+    }
+    MessageStatus status=errorReporter.getMessageStatus();
+    String errorString=errorReporter.reportError();
+    HighlighterMessage message=HighlightUtil.createHighlighterMessage(nodeWithError,NameUtil.capitalize(status.getPresentation()) + ": " + errorString,errorReporter,LanguageEditorChecker.this,editorContext);
+    List<QuickFixProvider> intentionProviders=message.getIntentionProviders();
+    if (runQuickFixes && intentionProviders.size() == 1 && intentionProviders.get(0).isExecutedImmediately()) {
+      QuickFix_Runtime quickFix=intentionProviders.get(0).getQuickFix();
+      if (quickFix != null) {
+        ListSequence.fromList(quickFixesToExecute).addElement(MultiTuple.<QuickFix_Runtime,SNode>from(quickFix,nodeWithError));
+      }
+    }
+    SetSequence.fromSet(result).addElement(message);
+  }
+  if (inspector) {
+    return result;
+  }
+  final boolean wasForceRunQuickFixes=myForceRunQuickFixes;
+  myForceRunQuickFixes=false;
+  if (ListSequence.fromList(quickFixesToExecute).isNotEmpty()) {
+    LaterInvocator.invokeLater(new Runnable(){
+      public void run(){
+        ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
+          public void run(){
+            for (            Tuples._2<QuickFix_Runtime,SNode> fix : quickFixesToExecute) {
+              if (SNodeOperations.getModel(fix._1()) != null) {
+                fix._0().execute(fix._1());
+                if (wasForceRunQuickFixes) {
+                  myForceRunQuickFixes=true;
+                }
+              }
+            }
+          }
+        }
+);
+      }
+    }
+);
+  }
+  return result;
+}
