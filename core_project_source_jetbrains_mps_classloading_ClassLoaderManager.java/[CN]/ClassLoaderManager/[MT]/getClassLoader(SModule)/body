@@ -1,18 +1,8 @@
 {
-  CustomClassLoadingFacet customClassLoadingFacet=module.getFacet(CustomClassLoadingFacet.class);
-  if (customClassLoadingFacet != null) {
-    if (customClassLoadingFacet.isValid()) {
-      return customClassLoadingFacet.getClassLoader();
-    }
- else {
-      LOG.warning("Facet " + module.getModuleName() + " is not valid");
-      return null;
-    }
-  }
-  JavaModuleFacet moduleFacet=module.getFacet(JavaModuleFacet.class);
-  if (moduleFacet != null && !moduleFacet.isCompileInMps()) {
-    LOG.warning("Module " + module.getModuleName() + " is not compiled in mps and doesn't have non-reloadable facet");
-    return ClassLoaderManager.class.getClassLoader();
-  }
-  return myClassLoaders.get(module);
+  if (!myLoadableCondition.met(module))   return null;
+  if (!myValidCondition.met(module))   return null;
+  ClassLoader classLoader=doGetClassLoader(module);
+  if (classLoader != null)   return classLoader;
+  doLoadModules(Collections.singleton(module),new EmptyProgressMonitor());
+  return doGetClassLoader(module);
 }

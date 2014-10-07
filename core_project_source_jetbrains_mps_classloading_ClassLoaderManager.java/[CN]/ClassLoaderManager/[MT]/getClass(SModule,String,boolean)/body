@@ -1,22 +1,18 @@
 {
-  if (!canLoad(module)) {
-    throw new IllegalArgumentException("Module " + module.getModuleName() + " can't be start point for classes loading");
-  }
+  assertCanLoad(module);
   if (module instanceof Language) {
     if (classFqName.startsWith(module.getModuleName() + ".stubs.")) {
       try {
         return ((Language)module).getStubsLoader().loadClass(classFqName);
       }
  catch (      ClassNotFoundException e) {
-        LOG.error(e);
+        LOG.error("Exception during stubs' class loading",e);
         return null;
       }
     }
   }
   ClassLoader classLoader=getClassLoader(module);
-  if (classLoader == null) {
-    return null;
-  }
+  if (classLoader == null)   return null;
   try {
     String internClassName=InternUtil.intern(classFqName);
     if (ownClassOnly && classLoader instanceof ModuleClassLoader) {
@@ -24,10 +20,11 @@
     }
     return classLoader.loadClass(internClassName);
   }
- catch (  Throwable t) {
-    if (!(t instanceof ClassNotFoundException) || !ownClassOnly) {
-      LOG.error(t);
-    }
-    return null;
+ catch (  ClassNotFoundException e) {
+    if (!ownClassOnly)     LOG.error("Exception during class loading",e);
   }
+catch (  Throwable t) {
+    LOG.error("Exception during class loading",t);
+  }
+  return null;
 }

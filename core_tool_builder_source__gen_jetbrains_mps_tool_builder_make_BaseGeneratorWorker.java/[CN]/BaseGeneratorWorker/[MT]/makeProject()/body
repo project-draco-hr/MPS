@@ -1,14 +1,16 @@
 {
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      new ModuleMaker().make(IterableUtil.asCollection(MPSModuleRepository.getInstance().getModules()),new EmptyProgressMonitor());
+  final MPSCompilationResult mpsCompilationResult=ModelAccess.instance().runReadAction(new Computable<MPSCompilationResult>(){
+    public MPSCompilationResult compute(){
+      return new ModuleMaker().make(IterableUtil.asCollection(MPSModuleRepository.getInstance().getModules()),new EmptyProgressMonitor());
     }
   }
 );
-  ModelAccess.instance().runWriteAction(new Runnable(){
-    public void run(){
-      ClassLoaderManager.getInstance().reloadAll(new EmptyProgressMonitor());
+  if (mpsCompilationResult.isReloadingNeeded()) {
+    ModelAccess.instance().runWriteAction(new Runnable(){
+      public void run(){
+        ClassLoaderManager.getInstance().reloadModules(mpsCompilationResult.getChangedModules());
+      }
     }
-  }
 );
+  }
 }
