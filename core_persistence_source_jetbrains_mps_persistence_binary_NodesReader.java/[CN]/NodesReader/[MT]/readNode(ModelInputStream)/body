@@ -1,8 +1,11 @@
 {
   SConceptId cid=readConceptId(is);
+  String cname=is.readString();
   SNodeId nodeId=is.readNodeId();
   String linkStr=is.readString();
-  SContainmentLinkId nodeRole=SContainmentLinkId.deserialize(linkStr);
+  String linkName=is.readString();
+  String cName=is.readString();
+  SContainmentLinkId nodeRole=linkStr == null ? null : SContainmentLinkId.deserialize(linkStr);
   byte nodeInfo=is.readByte();
   if (is.readByte() != '{') {
     throw new IOException("bad stream, no '{'");
@@ -12,7 +15,7 @@
     ConceptKind kind=getConceptKind(nodeInfo);
     interfaceNode=(kind == ConceptKind.INTERFACE || nodeRole == null);
   }
-  SConceptAdapterById c=new SConceptAdapterById(cid,DebugRegistry.getInstance().getConceptName(cid));
+  SConceptAdapterById c=new SConceptAdapterById(cid,cname);
   jetbrains.mps.smodel.SNode node=interfaceNode ? new InterfaceSNode(c) : new jetbrains.mps.smodel.SNode(c);
   node.setId(nodeId);
   readProperties(is,node);
@@ -22,5 +25,6 @@
   if (is.readByte() != '}') {
     throw new IOException("bad stream, no '}'");
   }
-  return new Pair<SContainmentLink,jetbrains.mps.smodel.SNode>(new SContainmentLinkAdapterById(nodeRole,DebugRegistry.getInstance().getConceptName(nodeRole.getConceptId()),DebugRegistry.getInstance().getLinkName(nodeRole)),node);
+  SContainmentLinkAdapterById linkAdapter=nodeRole == null ? null : new SContainmentLinkAdapterById(nodeRole,cName,linkName);
+  return new Pair<SContainmentLink,jetbrains.mps.smodel.SNode>(linkAdapter,node);
 }
