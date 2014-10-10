@@ -1,19 +1,23 @@
 {
   GenerationOptions options=GenerationOptions.getDefaults().generateInParallel(false,1).rebuildAll(true).strictMode(true).reporting(false,true,false,2).incremental(new DefaultNonIncrementalStrategy()).create();
-  IncrementalTestGenerationHandler generationHandler=new IncrementalTestGenerationHandler(p);
-  GenerationFacade.generateModels(p,Collections.singletonList(descr),ModuleContext.create(descr,p),generationHandler,new EmptyProgressMonitor(),generationHandler.getMessageHandler(),options,p.getComponent(TransientModelsProvider.class));
-  assertNoDiff(generationHandler.getExistingContent(),generationHandler.getGeneratedContent());
+class NoOpHandler extends GenerationHandlerBase {
+    @Override public boolean handleOutput(    SModule module,    SModel inputModel,    GenerationStatus status,    IOperationContext invocationContext,    ProgressMonitor progressMonitor){
+      return true;
+    }
+    @Override public int estimateCompilationMillis(){
+      return 0;
+    }
+  }
+  ;
+  GenerationFacade.generateModels(p,Collections.singletonList(descr),ModuleContext.create(descr,p),new NoOpHandler(),new EmptyProgressMonitor(),new TestMessageHandler(),options,new TransientModelsProvider(p,null));
   options=GenerationOptions.getDefaults().generateInParallel(false,1).rebuildAll(true).strictMode(true).reporting(false,true,false,2).incremental(new DefaultNonIncrementalStrategy()).create();
-  generationHandler=new IncrementalTestGenerationHandler(p);
   long start=System.nanoTime();
-  GenerationFacade.generateModels(p,Collections.singletonList(descr),ModuleContext.create(descr,p),generationHandler,new EmptyProgressMonitor(),generationHandler.getMessageHandler(),options,p.getComponent(TransientModelsProvider.class));
+  GenerationFacade.generateModels(p,Collections.singletonList(descr),ModuleContext.create(descr,p),new NoOpHandler(),new EmptyProgressMonitor(),new TestMessageHandler(),options,new TransientModelsProvider(p,null));
   long singleThread=System.nanoTime() - start;
   options=GenerationOptions.getDefaults().generateInParallel(true,threads).rebuildAll(true).strictMode(true).reporting(false,true,false,2).incremental(new DefaultNonIncrementalStrategy()).create();
-  generationHandler=new IncrementalTestGenerationHandler(p);
   start=System.nanoTime();
-  GenerationFacade.generateModels(p,Collections.singletonList(descr),ModuleContext.create(descr,p),generationHandler,new EmptyProgressMonitor(),generationHandler.getMessageHandler(),options,p.getComponent(TransientModelsProvider.class));
+  GenerationFacade.generateModels(p,Collections.singletonList(descr),ModuleContext.create(descr,p),new NoOpHandler(),new EmptyProgressMonitor(),new TestMessageHandler(),options,new TransientModelsProvider(p,null));
   long severalThreads=System.nanoTime() - start;
-  assertNoDiff(generationHandler.getExistingContent(),generationHandler.getGeneratedContent());
   PerformanceMessenger.getInstance().reportPercent("parallelGeneration",severalThreads / 1000000,singleThread / 1000000);
   if (DEBUG) {
     System.out.println("Single thread: " + singleThread / 1000000 / 1000. + ", 4 threads: " + severalThreads / 1000000 / 1000.);
