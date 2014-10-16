@@ -1,11 +1,12 @@
 {
 synchronized (CLASS_LOADING_LOCK) {
-    Set<SModule> modulesToUnload=filterModules(modules,myLoadableCondition);
-    if (modulesToUnload.size() == 0)     return modulesToUnload;
-    monitor.start("Unloading module classes...",1);
+    monitor.start("Unloading modules...",1);
     try {
-      Collection<SModule> modulesAndBackDeps=myModulesWatcher.getBackDependencies(modulesToUnload);
-      modulesToUnload=filterModules(modulesAndBackDeps,negateCondition(myUnloadedCondition));
+      Condition<SModule> loadedCondition=negateCondition(myUnloadedCondition);
+      Set<SModule> modulesToUnload=IterableUtil.asSet(modules);
+      if (modulesToUnload.isEmpty())       return modulesToUnload;
+      Collection<? extends SModule> modulesAndBackDeps=myModulesWatcher.getBackDependencies(modulesToUnload);
+      modulesToUnload=filterModules(modulesAndBackDeps,loadedCondition);
       if (modulesToUnload.isEmpty())       return modulesToUnload;
       LOG.debug("Unloading " + modulesToUnload.size() + " modules");
       monitor.step("Disposing old class loaders...");

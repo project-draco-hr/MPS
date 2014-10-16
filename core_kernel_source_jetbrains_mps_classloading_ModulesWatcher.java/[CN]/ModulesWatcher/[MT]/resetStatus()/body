@@ -1,12 +1,20 @@
 {
   myStatusMap.clear();
-  Collection<SModule> modules=getModules();
+  Collection<? extends SModule> modules=getModules();
   for (  SModule module : modules) {
-    ClassLoadingStatus status=ClassLoadingStatus.VALID;
-    for (    SModuleReference reference : getModuleDescriptorDeps(module)) {
-      if (reference.resolve(myRepository) == null) {
-        status=ClassLoadingStatus.INVALID;
-        break;
+    ClassLoadingStatus status=VALID;
+    if (isModuleDisposed(module)) {
+      status=INVALID;
+      LOG.debug("Module " + module + " is disposed and therefore was marked invalid for class loading");
+    }
+ else {
+      for (      SModuleReference reference : getModuleDescriptorDeps(module)) {
+        SModule resolvedModule=reference.resolve(myRepository);
+        if (resolvedModule == null) {
+          status=INVALID;
+          LOG.warn("Module " + module + " has a disposed dependency and therefore was marked invalid for class loading");
+          break;
+        }
       }
     }
     myStatusMap.put(module,status);
