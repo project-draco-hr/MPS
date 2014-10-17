@@ -1,82 +1,34 @@
 {
   try {
     filter.start();
-    final int version[]={START_PERSISTENCE_TEST_VERSION,START_PERSISTENCE_TEST_VERSION};
-    for (; version[0] < ModelPersistence.LAST_VERSION; ++version[0])     for (version[1]=version[0] + 1; version[1] <= ModelPersistence.LAST_VERSION; ++version[1]) {
-      boolean result=ProjectTestsSupport.testOnProjectCopy(sourceZip,tempDir,TEST_PERSISTENCE_PROJECT,new ProjectRunnable(){
-        public boolean execute(        final Project project){
-          final DefaultSModelDescriptor testModel=ModelAccess.instance().runWriteAction(new Computable<DefaultSModelDescriptor>(){
-            public DefaultSModelDescriptor compute(){
-              DefaultSModelDescriptor modelDescr=(DefaultSModelDescriptor)ProjectTestsSupport.getModel(project,TEST_MODEL);
-              modelDescr.reloadFromSource();
-              assertEquals(START_PERSISTENCE_TEST_VERSION,modelDescr.getPersistenceVersion());
-              return modelDescr;
-            }
+    ProjectTestsSupport.testOnProjectCopy(sourceZip,tempDir,TEST_PERSISTENCE_PROJECT,new ProjectRunnable(){
+      public boolean execute(      final Project project){
+        ModelAccess.instance().runReadAction(new Runnable(){
+          public void run(){
+            MODEL_FILE=new File(((FileDataSource)getModel(project).getSource()).getFile().getPath());
           }
-);
-          final List<DefaultSModelDescriptor> list=new ArrayList<DefaultSModelDescriptor>(1);
-          list.add(testModel);
-          if (version[0] > START_PERSISTENCE_TEST_VERSION) {
-            ModelAccess.instance().runWriteInEDT(new Runnable(){
-              public void run(){
-                upgradePersistence(list,version[0]);
-              }
-            }
-);
-          }
-          ModelAccess.instance().flushEventQueue();
-          assertTrue(testModel.getPersistenceVersion() == version[0]);
-          final ModelLoadResult resultFrom=ModelAccess.instance().runReadAction(new Computable<ModelLoadResult>(){
-            public ModelLoadResult compute(){
-              try {
-                ModelLoadResult result=ModelPersistence.readModel(SModelHeader.create(version[0]),(StreamDataSource)testModel.getSource(),ModelLoadingState.FULLY_LOADED);
-                assertTrue(result.getState() == ModelLoadingState.FULLY_LOADED);
-                return result;
-              }
- catch (              ModelReadException e) {
-                return null;
-              }
-            }
-          }
-);
-          assertNotNull(resultFrom);
-          ModelAccess.instance().runWriteInEDT(new Runnable(){
-            public void run(){
-              upgradePersistence(list,version[1]);
-            }
-          }
-);
-          ModelAccess.instance().flushEventQueue();
-          assertTrue(testModel.getPersistenceVersion() == version[1]);
-          final ModelLoadResult resultTo=ModelAccess.instance().runReadAction(new Computable<ModelLoadResult>(){
-            public ModelLoadResult compute(){
-              try {
-                ModelLoadResult result=ModelPersistence.readModel(SModelHeader.create(version[1]),(StreamDataSource)testModel.getSource(),ModelLoadingState.FULLY_LOADED);
-                assertTrue(result.getState() == ModelLoadingState.FULLY_LOADED);
-                ModelAssert.assertDeepModelEquals(resultFrom.getModel(),result.getModel());
-                return result;
-              }
- catch (              ModelReadException e) {
-                return null;
-              }
-            }
-          }
-);
-          assertNotNull(resultTo);
-          ModelAccess.instance().runWriteAction(new Runnable(){
-            public void run(){
-              resultFrom.getModel().dispose();
-              resultTo.getModel().dispose();
-            }
-          }
-);
-          ModelAccess.instance().flushEventQueue();
-          return true;
         }
-      }
 );
-      assertTrue(result);
+        refreshVfs();
+        waitEDT();
+        ModelAccess.instance().runWriteAction(new Runnable(){
+          @Override public void run(){
+            getModel(project).reloadFromSource();
+            myModelBackup=CopyUtil.copyModel(getModel(project).getSModel());
+          }
+        }
+);
+        for (int fromVersion=START_PERSISTENCE_TEST_VERSION; fromVersion < ModelPersistence.LAST_VERSION; fromVersion++) {
+          for (int toVersion=fromVersion + 1; toVersion <= ModelPersistence.LAST_VERSION; toVersion++) {
+            ModelLoadResult resultFrom=setInitialVersion(getModel(project),fromVersion);
+            checkUpgrade(getModel(project),toVersion,resultFrom);
+            restoreOriginalState(project);
+          }
+        }
+        return true;
+      }
     }
+);
   }
   finally {
     filter.stop();

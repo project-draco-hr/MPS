@@ -1,7 +1,9 @@
 {
   SConceptId cid=readConceptId(is);
+  String cname=is.readString();
   SNodeId nodeId=is.readNodeId();
   String linkStr=is.readString();
+  String linkName=is.readString();
   SContainmentLinkId nodeRole=linkStr == null ? null : SContainmentLinkId.deserialize(linkStr);
   byte nodeInfo=is.readByte();
   if (is.readByte() != '{') {
@@ -12,7 +14,8 @@
     ConceptKind kind=getConceptKind(nodeInfo);
     interfaceNode=(kind == ConceptKind.INTERFACE || nodeRole == null);
   }
-  jetbrains.mps.smodel.SNode node=interfaceNode ? new InterfaceSNode(cid) : new jetbrains.mps.smodel.SNode(cid);
+  SConceptAdapterById c=new SConceptAdapterById(cid,cname);
+  jetbrains.mps.smodel.SNode node=interfaceNode ? new InterfaceSNode(c) : new jetbrains.mps.smodel.SNode(c);
   node.setId(nodeId);
   readProperties(is,node);
   readReferences(is,node);
@@ -21,5 +24,6 @@
   if (is.readByte() != '}') {
     throw new IOException("bad stream, no '}'");
   }
-  return new Pair<SContainmentLinkId,jetbrains.mps.smodel.SNode>(nodeRole,node);
+  SContainmentLinkAdapterById linkAdapter=nodeRole == null ? null : new SContainmentLinkAdapterById(nodeRole,linkName);
+  return new Pair<SContainmentLink,jetbrains.mps.smodel.SNode>(linkAdapter,node);
 }
