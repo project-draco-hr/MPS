@@ -1,0 +1,52 @@
+{
+  try {
+    final SNode targetConcept=MoveUpDialog.getConcept(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject(),((SNode)MapSequence.fromMap(_params).get("target")),"link");
+    ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
+    if (targetConcept == null) {
+      return;
+    }
+    final Wrappers._T<SNode> linkToReplace=new Wrappers._T<SNode>();
+    modelAccess.runReadAction(new Runnable(){
+      public void run(){
+        linkToReplace.value=RefUtil.findLinkToMerge(targetConcept,((SNode)MapSequence.fromMap(_params).get("target")));
+      }
+    }
+);
+    Boolean mergeLinks=false;
+    if ((linkToReplace.value != null)) {
+      String title="Merge to link with the same name";
+switch (OptionDialog.showDialog(((MPSProject)MapSequence.fromMap(_params).get("project")),title,title + "?",true)) {
+case 0:
+        mergeLinks=true;
+      break;
+case 1:
+    mergeLinks=false;
+  break;
+case 2:
+return;
+default :
+}
+}
+final Boolean merge=mergeLinks;
+modelAccess.executeCommandInEDT(new Runnable(){
+public void run(){
+if (!(SNodeUtil.isAccessible(((SNode)MapSequence.fromMap(_params).get("target")),MPSModuleRepository.getInstance()))) {
+return;
+}
+if (!(SNodeUtil.isAccessible(targetConcept,MPSModuleRepository.getInstance()))) {
+return;
+}
+Language targetLanguage=Language.getLanguageFor(SNodeOperations.getModel(targetConcept));
+ListSequence.fromList(SLinkOperations.getTargets(targetConcept,"linkDeclaration",true)).addElement(SNodeOperations.copyNode(((SNode)MapSequence.fromMap(_params).get("target"))));
+AttributeOperations.setAttribute(((SNode)MapSequence.fromMap(_params).get("target")),new IAttributeDescriptor.NodeAttribute("jetbrains.mps.lang.structure.structure.DeprecatedNodeAnnotation"),SConceptOperations.createNewNode("jetbrains.mps.lang.structure.structure.DeprecatedNodeAnnotation",null));
+SPropertyOperations.set(((SNode)MapSequence.fromMap(_params).get("target")),"role",SPropertyOperations.getString(((SNode)MapSequence.fromMap(_params).get("target")),"role") + "_old");
+}
+}
+);
+}
+ catch (Throwable t) {
+if (LOG.isEnabledFor(Level.ERROR)) {
+LOG.error("User's action execute method failed. Action:" + "MoveLinkUpMigration",t);
+}
+}
+}

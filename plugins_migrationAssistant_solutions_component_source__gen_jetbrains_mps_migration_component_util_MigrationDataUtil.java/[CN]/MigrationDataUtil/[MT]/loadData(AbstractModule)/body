@@ -1,0 +1,20 @@
+{
+  IFile file=getDataFile(module);
+  if (!(file.exists())) {
+    return Sequence.fromIterable(Collections.<Tuples._2<MigrationScriptReference,SNode>>emptyList());
+  }
+  List<Tuples._2<MigrationScriptReference,SNode>> result=ListSequence.fromList(new ArrayList<Tuples._2<MigrationScriptReference,SNode>>());
+  FileDataSource dataSource=new FileDataSource(file);
+  ModelFactory factory=PersistenceRegistry.getInstance().getModelFactory(MPSExtentions.MODEL);
+  SModel model;
+  try {
+    model=factory.load(dataSource,Collections.<String,String>emptyMap());
+  }
+ catch (  IOException e) {
+    throw new RuntimeException(e);
+  }
+  for (  SNode root : ListSequence.fromList(SModelOperations.getRoots(model,"jetbrains.mps.lang.migration.util.structure.StepData"))) {
+    ListSequence.fromList(result).addElement(MultiTuple.<MigrationScriptReference,SNode>from(new MigrationScriptReference(PersistenceFacade.getInstance().createModuleReference(SPropertyOperations.getString(SLinkOperations.getTarget(root,"script",true),"module")),SPropertyOperations.getInteger(SLinkOperations.getTarget(root,"script",true),"fromVersion")),SLinkOperations.getTarget(root,"data",true)));
+  }
+  return result;
+}
