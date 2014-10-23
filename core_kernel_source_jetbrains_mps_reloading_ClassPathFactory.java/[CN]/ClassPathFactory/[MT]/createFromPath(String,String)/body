@@ -1,22 +1,25 @@
 {
 synchronized (LOCK) {
     if (myCache.containsKey(path))     return myCache.get(path);
-    boolean jared=path.contains("!/");
-    boolean exists=jared ? FileSystem.getInstance().getFileByPath(path).exists() : new File(path).exists();
+    IFile file=FileSystem.getInstance().getFileByPath(path);
+    path=file.getPath();
+    boolean jared=FileSystem.getInstance().isPackaged(file) || path.endsWith(".jar");
+    boolean isDirectory=file.isDirectory();
+    boolean exists=file.exists() || new File(path).exists();
+    RealClassPathItem item;
     if (!exists) {
-      String moduleString=requestor == null ? "" : (" in " + requestor.toString());
-      String message="Can't load class path item " + path + moduleString+ "."+ (new File(path).isDirectory() ? " Execute make in IDEA." : "");
-      LOG.warn(message);
-      NonExistingClassPathItem item=new NonExistingClassPathItem(path);
-      myCache.put(path,item);
-      return item;
+      String moduleString=requestor == null ? "" : (" in " + requestor);
+      LOG.debug("Can't load class path item " + path + moduleString+ "."+ (isDirectory ? " Execute make in IDEA." : ""));
+      item=new NonExistingClassPathItem(path);
     }
-    if (!jared && new File(path).isDirectory()) {
-      myCache.put(path,new FileClassPathItem(path));
+ else     if (jared) {
+      item=new JarFileClassPathItem(path);
     }
  else {
-      myCache.put(path,new JarFileClassPathItem(path));
+      if (!isDirectory)       throw new IllegalArgumentException("Path variable must point to a directory or to a jar location");
+      item=new FileClassPathItem(path);
     }
-    return myCache.get(path);
+    myCache.put(path,item);
+    return item;
   }
 }
