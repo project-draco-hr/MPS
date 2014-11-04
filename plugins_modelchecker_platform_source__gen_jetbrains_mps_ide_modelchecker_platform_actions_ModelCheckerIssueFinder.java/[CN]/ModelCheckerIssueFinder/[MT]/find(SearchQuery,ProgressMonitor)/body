@@ -30,24 +30,20 @@
   int work=((modules != null ? ListSequence.fromList(modules).count() : 0)) + ListSequence.fromList(models).count() + 1;
   monitor.start("Checking",work);
   try {
-    ModuleChecker moduleChecker=null;
+    SearchResults<ModelCheckerIssue> rv=new SearchResults<ModelCheckerIssue>();
     if (modules != null) {
-      moduleChecker=new ModuleChecker();
+      ModuleChecker moduleChecker=new ModuleChecker();
       for (      SModule module : ListSequence.fromList(modules)) {
         moduleChecker.checkModule(module,monitor.subTask(1,SubProgressKind.REPLACING));
         if (monitor.isCanceled()) {
           break;
         }
       }
+      rv.addAll(moduleChecker.getSearchResults());
     }
     monitor.advance(0);
-    ModelChecker modelChecker;
-    if (moduleChecker != null) {
-      modelChecker=new ModelChecker(operationContext,moduleChecker.getSearchResults());
-    }
- else {
-      modelChecker=new ModelChecker(operationContext);
-    }
+    Project mpsProject=operationContext.getProject();
+    ModelChecker modelChecker=new ModelChecker(mpsProject);
     modelChecker.setSpecificCheckers(getSpecificCheckers());
     monitor.advance(1);
     for (    SModel modelDescriptor : ListSequence.fromList(models)) {
@@ -56,7 +52,8 @@
         break;
       }
     }
-    return modelChecker.getSearchResults();
+    rv.addAll(modelChecker.getSearchResults());
+    return rv;
   }
   finally {
     monitor.done();
