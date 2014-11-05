@@ -1,43 +1,32 @@
 {
-  final Wrappers._T<List<SpecificChecker>> specificCheckers=new Wrappers._T<List<SpecificChecker>>(mySpecificCheckers);
-  if (specificCheckers.value == null) {
-    specificCheckers.value=ModelCheckerSettings.getInstance().getSpecificCheckers();
+  List<SpecificChecker> specificCheckers=mySpecificCheckers;
+  if (specificCheckers == null) {
+    specificCheckers=ModelCheckerSettings.getInstance().getSpecificCheckers();
   }
-  monitor.start("Checking " + model.getModelName(),ListSequence.fromList(specificCheckers.value).count());
+  monitor.start("Checking " + model.getModelName(),ListSequence.fromList(specificCheckers).count());
   try {
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        SModule module=model.getModule();
-        Project project=myOperationContext.getProject();
-        if (module == null) {
-          if (LOG.isEnabledFor(Level.WARN)) {
-            LOG.warn("Module is null for " + model.getModelName() + " model");
+    SModule module=model.getModule();
+    if (module == null) {
+      if (LOG.isEnabledFor(Level.WARN)) {
+        LOG.warn("Module is null for " + model.getModelName() + " model");
+      }
+    }
+    if (module != null) {
+      for (      SpecificChecker specificChecker : ListSequence.fromList(specificCheckers)) {
+        try {
+          List<SearchResult<ModelCheckerIssue>> specificCheckerResults=specificChecker.checkModel(model,monitor.subTask(1,SubProgressKind.AS_COMMENT),module.getRepository());
+          myResults.getSearchResults().addAll(specificCheckerResults);
+        }
+ catch (        Throwable t) {
+          if (LOG.isEnabledFor(Level.ERROR)) {
+            LOG.error("Error while " + model.getModelName() + " model checking",t);
           }
         }
-        if (project == null) {
-          if (LOG.isEnabledFor(Level.WARN)) {
-            LOG.warn("Project is null for IOperationContext in " + model.getModelName() + " model");
-          }
-        }
-        if (module != null && project != null) {
-          for (          SpecificChecker specificChecker : ListSequence.fromList(specificCheckers.value)) {
-            try {
-              List<SearchResult<ModelCheckerIssue>> specificCheckerResults=specificChecker.checkModel(model,monitor.subTask(1,SubProgressKind.AS_COMMENT),project.getRepository());
-              myResults.getSearchResults().addAll(specificCheckerResults);
-            }
- catch (            Throwable t) {
-              if (LOG.isEnabledFor(Level.ERROR)) {
-                LOG.error("Error while " + model.getModelName() + " model checking",t);
-              }
-            }
-            if (monitor.isCanceled()) {
-              break;
-            }
-          }
+        if (monitor.isCanceled()) {
+          break;
         }
       }
     }
-);
   }
   finally {
     monitor.done();
