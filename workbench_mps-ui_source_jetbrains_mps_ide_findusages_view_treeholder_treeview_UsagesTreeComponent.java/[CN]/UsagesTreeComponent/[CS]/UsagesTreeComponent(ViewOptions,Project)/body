@@ -1,0 +1,38 @@
+{
+  super(new BorderLayout());
+  myProject=mpsProject;
+  myTree=new UsagesTree(mpsProject);
+  myOccurrenceNavigator=new OccurenceNavigatorSupport(myTree){
+    @Override protected Navigatable createDescriptorForNode(    DefaultMutableTreeNode node){
+      if (node.getChildCount() > 0)       return null;
+      if (!(node instanceof UsagesTreeNode))       return null;
+      UsagesTreeNode treeNode=(UsagesTreeNode)node;
+      if (treeNode.getUserObject() == null) {
+        return null;
+      }
+      final BaseNodeData data=treeNode.getUserObject().getData();
+      Navigatable n=toNavigatable(data);
+      return n != null && n.canNavigate() ? n : null;
+    }
+    @Override public String getNextOccurenceActionName(){
+      return UsageViewBundle.message("action.next.occurrence");
+    }
+    @Override public String getPreviousOccurenceActionName(){
+      return UsageViewBundle.message("action.previous.occurrence");
+    }
+  }
+;
+  TreeHighlighterExtension.attachHighlighters(myTree,ProjectHelper.toIdeaProject(mpsProject));
+  myTree.setBorder(new EmptyBorder(3,5,3,5));
+  JScrollPane treePane=ScrollPaneFactory.createScrollPane(myTree);
+  myPathProvider.add(PathItemRole.ROLE_MAIN_RESULTS);
+  myPathProvider.add(PathItemRole.ROLE_TARGET_NODE);
+  myViewToolbar=new ViewToolbar();
+  myActionsToolbar=new ActionsToolbar();
+  myDefaultOptions=defaultOptions;
+  myViewOptions.setValues(myDefaultOptions);
+  setComponentsViewOptions(myViewOptions);
+  add(treePane,BorderLayout.CENTER);
+  myContents.addChangeListener(this);
+  myContents.startListening();
+}
