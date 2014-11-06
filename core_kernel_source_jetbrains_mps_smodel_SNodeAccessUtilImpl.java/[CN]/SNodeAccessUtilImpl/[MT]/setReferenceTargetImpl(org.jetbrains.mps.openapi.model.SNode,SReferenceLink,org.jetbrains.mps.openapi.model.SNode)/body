@@ -1,0 +1,24 @@
+{
+  Set<Pair<SNode,SReferenceLink>> threadSet=ourSetReferentEventHandlersInProgress.get();
+  Pair<SNode,SReferenceLink> pair=new Pair<SNode,SReferenceLink>(node,referenceLink);
+  if (threadSet.contains(pair)) {
+    node.setReferenceTarget(referenceLink,target);
+    return;
+  }
+  ReferenceConstraintsDescriptor descriptor=getReferenceConstraintsDescriptor(node,referenceLink);
+  if (descriptor instanceof IllegalReferenceConstraintsDescriptor) {
+    node.setReferenceTarget(referenceLink,target);
+    return;
+  }
+  threadSet.add(pair);
+  try {
+    org.jetbrains.mps.openapi.model.SNode oldReferent=node.getReferenceTarget(referenceLink);
+    if (descriptor.validate(node,oldReferent,target)) {
+      node.setReferenceTarget(referenceLink,target);
+      descriptor.onReferenceSet(node,oldReferent,target);
+    }
+  }
+  finally {
+    threadSet.remove(pair);
+  }
+}
