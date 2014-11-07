@@ -1,25 +1,38 @@
 {
+  if (!myPatternEditor.isActivated()) {
+    return;
+  }
   Point location=myPatternEditor.getLeftBottomPosition();
   Rectangle deviceBounds=WindowsUtil.findDeviceBoundsAt(location);
-  if (location.getY() + PREFERRED_HEIGHT > deviceBounds.height + deviceBounds.y - 150) {
-    getPopupWindow().setPosition(PopupWindowPosition.TOP);
+  Dimension preferredSize=getPreferredSize();
+  if (location.getY() + preferredSize.getHeight() > deviceBounds.height + deviceBounds.y - 150 && location.getY() - getPatternEditor().getHeight() / 2 > deviceBounds.y + deviceBounds.height / 2) {
+    setPosition(PopupWindowPosition.TOP);
   }
  else {
-    getPopupWindow().setPosition(PopupWindowPosition.BOTTOM);
+    setPosition(PopupWindowPosition.BOTTOM);
+  }
+  if (getPosition() == PopupWindowPosition.TOP && myList.getFixedCellHeight() != 0) {
+    double maxHeight=location.getY() - getPatternEditor().getHeight() - deviceBounds.y;
+    double visibleRowCount=maxHeight / myList.getFixedCellHeight();
+    if (visibleRowCount < myList.getVisibleRowCount()) {
+      if (visibleRowCount <= 1) {
+        myList.setVisibleRowCount(1);
+      }
+ else {
+        myList.setVisibleRowCount((int)visibleRowCount);
+      }
+      preferredSize=getPreferredSize();
+    }
+  }
+  if (preferredSize.getWidth() >= deviceBounds.width) {
+    setSize(deviceBounds.width,preferredSize.height);
+  }
+ else {
+    setSize(preferredSize);
   }
   Point newLocation=location;
-  int oldIndex=getSelectionIndex();
-  initListModel();
-  if (oldIndex != -1) {
-    setSelectionIndex(oldIndex);
-    scrollToSelection();
-  }
-  pack();
   if (getPosition() == PopupWindowPosition.TOP) {
-    newLocation=new Point(newLocation.x,newLocation.y - getHeight() - myPatternEditor.getHeight());
-  }
-  if (getWidth() >= deviceBounds.width) {
-    setSize(deviceBounds.width,getSize().height + myList.getFontMetrics(myList.getFont()).getHeight());
+    newLocation=new Point(newLocation.x,newLocation.y - getHeight() - getPatternEditor().getHeight());
   }
   if (newLocation.x < deviceBounds.x) {
     newLocation.x=deviceBounds.x;
@@ -28,8 +41,6 @@
     newLocation=new Point(deviceBounds.width + deviceBounds.x - getWidth(),newLocation.y);
   }
   setLocation(newLocation);
-synchronized (getTreeLock()) {
-    validateTree();
-  }
-  repaint();
+  myScroller.setSize(getSize());
+  myScroller.validate();
 }
