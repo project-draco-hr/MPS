@@ -1,0 +1,40 @@
+{
+  assertCanChange();
+  propertyValue=InternUtil.intern(propertyValue);
+  int index=getPropertyIndex(property);
+  final String oldValue=index == -1 ? null : (String)myProperties[index + 1];
+  if (EqualUtil.equals(oldValue,propertyValue))   return;
+  if (propertyValue == null) {
+    Object[] oldProperties=myProperties;
+    int newLength=oldProperties.length - 2;
+    if (newLength == 0) {
+      myProperties=null;
+    }
+ else {
+      myProperties=new Object[newLength];
+      System.arraycopy(oldProperties,0,myProperties,0,index);
+      System.arraycopy(oldProperties,index + 2,myProperties,index,newLength - index);
+    }
+  }
+ else   if (oldValue == null) {
+    Object[] oldProperties=myProperties == null ? EMPTY_ARRAY : myProperties;
+    myProperties=new Object[oldProperties.length + 2];
+    System.arraycopy(oldProperties,0,myProperties,0,oldProperties.length);
+    myProperties[myProperties.length - 2]=property;
+    myProperties[myProperties.length - 1]=propertyValue;
+  }
+ else {
+    myProperties[index + 1]=propertyValue;
+  }
+  final String finalPropertyValue=propertyValue;
+  performUndoableAction(new Computable<SNodeUndoableAction>(){
+    @Override public SNodeUndoableAction compute(){
+      return new PropertyChangeUndoableAction(SNode.this,property.getName(),oldValue,finalPropertyValue);
+    }
+  }
+);
+  if (needFireEvent()) {
+    myModel.firePropertyChangedEvent(this,property.getName(),oldValue,propertyValue);
+  }
+  propertyChanged(property,oldValue,propertyValue);
+}

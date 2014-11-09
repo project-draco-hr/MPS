@@ -1,0 +1,31 @@
+{
+  ConceptDescriptor descriptor=conceptDescriptorsById.get(id);
+  if (descriptor != null) {
+    return descriptor;
+  }
+  if (!startLoad(id,LanguageAspect.STRUCTURE)) {
+    return new IllegalConceptDescriptor(DebugRegistry.getInstance().getConceptName(id));
+  }
+  try {
+    try {
+      LanguageRuntime languageRuntime=myLanguageRegistry.getLanguage(id.getLanguageId());
+      if (languageRuntime != null) {
+        StructureAspectDescriptor structureAspectDescriptor=languageRuntime.getAspect(StructureAspectDescriptor.class);
+        descriptor=structureAspectDescriptor.getDescriptor(id);
+      }
+    }
+ catch (    Throwable e) {
+      LOG.error("Exception while structure descriptor creating for the concept " + id,e);
+    }
+    if (descriptor == null) {
+      descriptor=new IllegalConceptDescriptor(DebugRegistry.getInstance().getConceptName(id));
+    }
+    if (!(descriptor instanceof IllegalConceptDescriptor)) {
+      conceptDescriptorsById.put(id,descriptor);
+    }
+    return descriptor;
+  }
+  finally {
+    finishLoad(id,LanguageAspect.STRUCTURE);
+  }
+}

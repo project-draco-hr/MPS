@@ -1,0 +1,33 @@
+{
+  Map<String,Document> result=new HashMap<String,Document>();
+  myHelper=new MultiStreamStorageIndexHelper9(sourceModel.getReference());
+  Element headerRoot=new Element(ModelPersistence.MODEL);
+  headerRoot.setAttribute(ModelPersistence9.ID,sourceModel.getReference().toString());
+  headerRoot.setAttribute(ModelPersistence9.FILE_CONTENT,"header");
+  saveModelProperties(sourceModel,headerRoot);
+  result.put(FilePerRootDataSource.HEADER_FILE,new Document(headerRoot));
+  Map<SNodeId,String> rootToFile=FilePerRootFormatUtil.getStreamNames(sourceModel);
+  for (  SNode root : sourceModel.getRootNodes()) {
+    Element rootElement=new Element(ModelPersistence.MODEL);
+    rootElement.setAttribute(ModelPersistence9.ID,sourceModel.getReference().toString());
+    rootElement.setAttribute(ModelPersistence9.FILE_CONTENT,"root");
+    Element persistenceElement=new Element(ModelPersistence.PERSISTENCE);
+    persistenceElement.setAttribute(ModelPersistence.PERSISTENCE_VERSION,VERSION + "");
+    rootElement.addContent(persistenceElement);
+    Element childElement=new Element(ModelPersistence9.NODE);
+    CollectConsumer<SModelReference> usedImports=new CollectConsumer<SModelReference>(new LinkedHashSet<SModelReference>());
+    ((MultiStreamStorageIndexHelper9)myHelper).setUsedImportsListener(usedImports);
+    saveNode(childElement,root,true);
+    ((MultiStreamStorageIndexHelper9)myHelper).setUsedImportsListener(null);
+    for (    SModelReference modelRef : usedImports.getResult()) {
+      Element elem=new Element(ModelPersistence9.IMPORT);
+      elem.setAttribute(ModelPersistence9.IMPORT_INDEX,"" + myHelper.getImportIndex(modelRef));
+      elem.setAttribute(ModelPersistence9.ID,modelRef.toString());
+      elem.setAttribute(ModelPersistence9.IMPLICIT,"true");
+      rootElement.addContent(elem);
+    }
+    rootElement.addContent(childElement);
+    result.put(rootToFile.get(root.getNodeId()),new Document(rootElement));
+  }
+  return result;
+}
