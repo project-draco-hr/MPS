@@ -1,0 +1,20 @@
+{
+  monitor.start("Unloading modules...",1);
+  try {
+    Condition<SModuleReference> loadedCondition=negateCondition(myUnloadedRefCondition);
+    Set<SModuleReference> modulesToUnload=filterModules(modules,loadedCondition);
+    if (modulesToUnload.isEmpty())     return modulesToUnload;
+    Collection<? extends SModuleReference> modulesAndBackDeps=myModulesWatcher.getBackDependencies(modulesToUnload);
+    modulesToUnload=filterModules(modulesAndBackDeps,loadedCondition);
+    if (modulesToUnload.isEmpty())     return modulesToUnload;
+    LOG.debug("Unloading " + modulesToUnload.size() + " modules");
+    monitor.step("Disposing old class loaders...");
+    myBroadCaster.onUnload(modulesToUnload);
+    myClassLoadersHolder.doUnloadModules(modulesToUnload);
+    monitor.advance(1);
+    return modulesToUnload;
+  }
+  finally {
+    monitor.done();
+  }
+}
