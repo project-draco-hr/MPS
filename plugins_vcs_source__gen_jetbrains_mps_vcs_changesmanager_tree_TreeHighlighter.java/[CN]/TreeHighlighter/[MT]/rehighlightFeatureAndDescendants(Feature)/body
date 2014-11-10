@@ -2,18 +2,30 @@
   if (myTree.isDisposed()) {
     return;
   }
+  final List<Feature> toCheck=new ArrayList<Feature>();
 synchronized (myFeaturesHolder) {
-    rehighlightFeature(feature);
     SModelReference modelRef=feature.getModelReference();
-    for (    Feature anotherFeature : ListSequence.fromList(myFeaturesHolder.getFeaturesByModelReference(modelRef))) {
-      if (Sequence.fromIterable(Sequence.fromArray(anotherFeature.getAncestors())).any(new IWhereFilter<Feature>(){
-        public boolean accept(        Feature a){
-          return feature.equals(a);
+    toCheck.addAll(myFeaturesHolder.getFeaturesByModelReference(modelRef));
+  }
+  final List<Feature> toUpdate=new ArrayList<Feature>();
+  toUpdate.add(feature);
+  final Project mpsProject=ProjectHelper.toMPSProject(myRegistry.getProject());
+  mpsProject.getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      for (      Feature anotherFeature : ListSequence.fromList(toCheck)) {
+        if (Sequence.fromIterable(Sequence.fromArray(anotherFeature.getAncestors())).any(new IWhereFilter<Feature>(){
+          public boolean accept(          Feature a){
+            return feature.equals(a);
+          }
+        }
+)) {
+          toUpdate.add(anotherFeature);
         }
       }
-)) {
-        rehighlightFeature(anotherFeature);
-      }
     }
+  }
+);
+  for (  Feature f : ListSequence.fromList(toUpdate)) {
+    rehighlightFeature(f);
   }
 }
