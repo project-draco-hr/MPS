@@ -2,15 +2,15 @@
   if (state != null) {
     try {
       final Wrappers._T<SModel> loadedModel=new Wrappers._T<SModel>(PersistenceUtil.loadBinaryModel(Base64Converter.decode(state.getBytes())));
-      ListSequence.fromList(SModelOperations.getNodes(loadedModel.value,null)).where(new IWhereFilter<SNode>(){
+      ListSequence.fromList(SModelOperations.nodes(loadedModel.value,null)).where(new IWhereFilter<SNode>(){
         public boolean accept(        SNode it){
           return ConceptRegistry.getInstance().getConceptDescriptor(it.getConcept().getQualifiedName()) instanceof IllegalConceptDescriptor;
         }
       }
 ).visitAll(new IVisitor<SNode>(){
         public void visit(        SNode it){
-          if ((SNodeOperations.getAncestor(it,"jetbrains.mps.console.base.structure.HistoryItem",false,false) != null)) {
-            SNodeOperations.deleteNode(SNodeOperations.getAncestor(it,"jetbrains.mps.console.base.structure.HistoryItem",false,false));
+          if ((SNodeOperations.getNodeAncestor(it,MetaAdapterFactory.getConcept(new UUID(-2442401883381282302l,-5546511894809623691l),6852607286009167343l,"jetbrains.mps.console.base.structure.HistoryItem"),false,false) != null)) {
+            SNodeOperations.deleteNode(SNodeOperations.getNodeAncestor(it,MetaAdapterFactory.getConcept(new UUID(-2442401883381282302l,-5546511894809623691l),6852607286009167343l,"jetbrains.mps.console.base.structure.HistoryItem"),false,false));
             if (LOG.isEnabledFor(Level.ERROR)) {
               LOG.error("Unknown concept on loading console history: removing enclosing history item");
             }
@@ -26,14 +26,16 @@
 );
       return loadedModel.value;
     }
- catch (    Throwable e) {
+ catch (    IllegalArgumentException e) {
       if (LOG.isEnabledFor(Level.ERROR)) {
-        LOG.error("Error on loading console history",e);
+        LOG.error("Console history was not loaded. Maybe you are opening project from previous MPS versions?");
       }
-      return null;
+    }
+catch (    Throwable e) {
+      if (LOG.isEnabledFor(Level.ERROR)) {
+        LOG.error("Error on loading console history.",e);
+      }
     }
   }
- else {
-    return null;
-  }
+  return null;
 }

@@ -1,25 +1,34 @@
 {
   unhighlightNode(node);
-  SModel model=SModelRepository.getInstance().getModelDescriptor(feature.getModelReference());
-  if (model instanceof EditableSModel && !(model.isReadOnly())) {
-    if (feature instanceof ModelFeature) {
-      TreeMessage message=getMessage((ModelFeature)feature);
-      if (message != null) {
-        node.addTreeMessage(message);
+  final Project mpsProject=ProjectHelper.toMPSProject(myRegistry.getProject());
+  AbstractComputeRunnable<TreeMessage> cr=new AbstractComputeRunnable<TreeMessage>(){
+    protected TreeMessage compute(){
+      SModel model=feature.getModelReference().resolve(mpsProject.getRepository());
+      if (model instanceof EditableSModel && !(model.isReadOnly())) {
+        EditableSModel emd=(EditableSModel)model;
+        if (feature instanceof ModelFeature) {
+          return getMessage(emd);
+        }
+        myRegistry.getCurrentDifference(emd).setEnabled(true);
+        ModelChange change=myMap.get(feature);
+        if (change == null) {
+          change=myMap.getAddedAncestorValue(feature);
+        }
+        if (change != null) {
+          return getMessage(change,emd);
+        }
+ else         if (myMap.isAncestorOfAddedFeature(feature)) {
+          return getMessage(FileStatus.MODIFIED);
+        }
       }
-      return;
+      return null;
     }
-    EditableSModel emd=(EditableSModel)model;
-    myRegistry.getCurrentDifference(emd).setEnabled(true);
-    ModelChange change=myMap.get(feature);
-    if (change == null) {
-      change=myMap.getAddedAncestorValue(feature);
-    }
-    if (change != null) {
-      node.addTreeMessage(getMessage(change,emd));
-    }
- else     if (myMap.isAncestorOfAddedFeature(feature)) {
-      node.addTreeMessage(getMessage(FileStatus.MODIFIED));
-    }
+  }
+;
+  mpsProject.getModelAccess().runReadAction(cr);
+  TreeMessage message=cr.getResult();
+  if (message != null) {
+    node.addTreeMessage(message);
+    updatePresentation(node);
   }
 }

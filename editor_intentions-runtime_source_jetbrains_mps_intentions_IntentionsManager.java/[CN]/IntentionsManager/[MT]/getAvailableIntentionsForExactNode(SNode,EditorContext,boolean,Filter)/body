@@ -1,2 +1,20 @@
 {
+  CollectAvailableIntentionsVisitor visitor=new CollectAvailableIntentionsVisitor();
+  visitIntentions(node,visitor,filter,isAncestor,context);
+  List<IntentionExecutable> result=new ArrayList<IntentionExecutable>();
+  for (  IntentionFactory factory : visitor.getAvailableIntentionFactories()) {
+    result.addAll(factory.instances(node,context));
+  }
+  List<SimpleEditorMessage> messages=((EditorComponent)context.getEditorComponent()).getHighlightManager().getMessagesFor(node);
+  for (  SimpleEditorMessage message : messages) {
+    List<QuickFixProvider> intentionProviders=((EditorMessage)message).getIntentionProviders();
+    for (    QuickFixProvider intentionProvider : intentionProviders) {
+      QuickFixAdapter intention=new QuickFixAdapter(intentionProvider.getQuickFix(),intentionProvider.isError());
+      if ((isAncestor && !intention.isAvailableInChildNodes()) || !intention.isApplicable(node,context)) {
+        continue;
+      }
+      result.addAll(intention.instances(node,context));
+    }
+  }
+  return result;
 }

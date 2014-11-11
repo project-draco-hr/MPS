@@ -1,45 +1,44 @@
 {
-  IOperationContext operationContext=getOperationContext();
   for (  LanguageAspect aspect : LanguageAspect.values()) {
-    if (aspect.get(getLanguage()) != null) {
-      add(new SModelTreeNode(aspect.get(getLanguage()),null,operationContext,false));
+    if (aspect.get(getModule()) != null) {
+      add(new SModelTreeNode(aspect.get(getModule()),null,false));
     }
   }
-  if (myLanguage.getAccessoryModels().size() > 0) {
+  if (getModule().getAccessoryModels().size() > 0) {
     TextTreeNode accessories=new AccessoriesModelTreeNode(this);
-    List<SModel> sortedModels=SortUtil.sortModels(myLanguage.getAccessoryModels());
+    List<SModel> sortedModels=SortUtil.sortModels(getModule().getAccessoryModels());
     for (    SModel model : sortedModels) {
       SModule m=model.getModule();
-      boolean currentModule=m == null || m == myLanguage;
-      SModule module=m == null ? myLanguage : m;
+      boolean currentModule=m == null || m == getModule();
+      SModule module=m == null ? getModule() : m;
       if (!currentModule) {
-        accessories.add(new SModelReferenceTreeNode(model,new ModuleContext(module,myProject)));
+        accessories.add(new SModelReferenceTreeNode(model,myProject));
       }
  else {
-        accessories.add(new SModelTreeNode(model,null,new ModuleContext(module,myProject)));
+        accessories.add(new SModelTreeNode(model,null));
       }
     }
     this.add(accessories);
   }
-  for (  Generator generator : myLanguage.getGenerators()) {
+  for (  Generator generator : getModule().getGenerators()) {
     MPSTreeNode generatorNode=new GeneratorTreeNode(generator,myProject);
     add(generatorNode);
   }
   TextTreeNode languageRuntime=new RuntimeModulesTreeNode();
-  for (  SModuleReference mr : myLanguage.getRuntimeModulesReferences()) {
+  for (  SModuleReference mr : getModule().getRuntimeModulesReferences()) {
     SModule m=ModuleRepositoryFacade.getInstance().getModule(mr);
-    if (m == null || m == myLanguage)     continue;
+    if (m == null || m == getModule())     continue;
     languageRuntime.add(createFor(myProject,m));
   }
   add(languageRuntime);
-  if (myLanguage.getUtilModels().size() > 0) {
-    TextTreeNode utilModels=new SModelGroupTreeNode(operationContext);
-    SModelsSubtree.create(utilModels,operationContext,(List)myLanguage.getUtilModels(),false);
+  if (getModule().getUtilModels().size() > 0) {
+    TextTreeNode utilModels=new SModelGroupTreeNode();
+    SModelsSubtree.create(utilModels,getModule());
     this.add(utilModels);
   }
   TextTreeNode allModels=new AllModelsTreeNode();
   allModels.setIcon(IdeIcons.PROJECT_MODELS_ICON,false);
   allModels.setIcon(IdeIcons.PROJECT_MODELS_EXPANDED_ICON,true);
-  SModelsSubtree.create(allModels,getOperationContext());
+  SModelsSubtree.create(allModels,getModule());
   add(allModels);
 }
