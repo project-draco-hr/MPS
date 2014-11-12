@@ -1,0 +1,40 @@
+{
+  super(project);
+  setTitle("Choose Mapping Configuration");
+  myProject=ProjectHelper.toMPSProject(project);
+  myLanguage=language;
+  JScrollPane scrollPane=ScrollPaneFactory.createScrollPane(myTree);
+  myMainComponent.add(scrollPane,BorderLayout.CENTER);
+  myMainComponent.setPreferredSize(new Dimension(500,400));
+  myTree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+  myTree.addTreeSelectionListener(new TreeSelectionListener(){
+    @Override public void valueChanged(    TreeSelectionEvent e){
+      if (e.getNewLeadSelectionPath() == null) {
+        return;
+      }
+      TreePath path=myTree.getSelectionModel().getSelectionPath();
+      if (path == null) {
+        return;
+      }
+      Object node=path.getLastPathComponent();
+      if (!(node instanceof SNodeTreeNode)) {
+        return;
+      }
+      final SNodeTreeNode treeNode=(SNodeTreeNode)node;
+      myProject.getModelAccess().runWriteInEDT(new Runnable(){
+        @Override public void run(){
+          SNode node=treeNode.getSNode();
+          if (!(SNodeUtil.isAccessible(node,myProject.getRepository()))) {
+            return;
+          }
+          NavigationSupport.getInstance().openNode(myProject,node,true,true);
+        }
+      }
+);
+    }
+  }
+);
+  myTree.rebuildNow();
+  myTree.expandAll();
+  init();
+}
