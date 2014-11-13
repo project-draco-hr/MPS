@@ -1,0 +1,57 @@
+{
+  SubstituteInfo info=cell.getSubstituteInfo();
+  String smallPattern=pattern.substring(0,pattern.length() - 1);
+  String tail="" + pattern.charAt(pattern.length() - 1);
+  jetbrains.mps.openapi.editor.cells.EditorCell nextCell=CellTraversalUtil.getNextLeaf(cell);
+  while (nextCell != null && !nextCell.isSelectable()) {
+    nextCell=CellTraversalUtil.getNextLeaf(nextCell);
+  }
+  if (canCompleteSmallPatternImmediately(info,pattern,"") || canCompleteSmallPatternImmediately(info,trimLeft(pattern),"")) {
+    if (!canCompleteSmallPatternImmediately(info,pattern,"")) {
+      pattern=trimLeft(pattern);
+    }
+    info.getMatchingActions(pattern,true).get(0).substitute(editorContext,pattern);
+  }
+ else   if (pattern.length() > 0 && (canCompleteSmallPatternImmediately(info,smallPattern,tail) || canCompleteSmallPatternImmediately(info,trimLeft(smallPattern),tail))) {
+    if (!canCompleteSmallPatternImmediately(info,smallPattern,tail)) {
+      smallPattern=trimLeft(smallPattern);
+    }
+    List<SubstituteAction> matchingActions=info.getMatchingActions(smallPattern,true);
+    SubstituteAction item=matchingActions.get(0);
+    SNode newNode=item.substitute(editorContext,smallPattern);
+    editorContext.flushEvents();
+    EditorCell cellForNewNode=editorContext.getEditorComponent().findNodeCell(newNode);
+    if (cellForNewNode != null) {
+      EditorCell_Label target=null;
+      jetbrains.mps.openapi.editor.cells.EditorCell errorOrEditable=CellFinderUtil.findChildByManyFinders(cellForNewNode,true,Finder.FIRST_ERROR,Finder.LAST_EDITABLE);
+      if (errorOrEditable instanceof EditorCell_Label) {
+        target=(EditorCell_Label)errorOrEditable;
+      }
+      if (target != null) {
+        target.changeText(tail);
+        target.end();
+        if (target.isErrorState()) {
+          target.validate(true,false);
+        }
+        editorContext.flushEvents();
+        if (editorContext.getSelectedCell() instanceof EditorCell_Label) {
+          EditorCell_Label label=(EditorCell_Label)editorContext.getSelectedCell();
+          label.end();
+        }
+      }
+    }
+  }
+ else   if (info.getMatchingActions(pattern,false).isEmpty() && info.getMatchingActions(trimLeft(pattern),false).isEmpty() && nextCell != null && nextCell.isErrorState() && nextCell instanceof EditorCell_Label && ((EditorCell_Label)nextCell).isEditable()) {
+    STHintUtil.removeTransformHints(cell.getSNode());
+    EditorCell_Label label=(EditorCell_Label)nextCell;
+    label.changeText(pattern);
+    label.end();
+    editorContext.getEditorComponent().changeSelection(label);
+  }
+ else {
+    if (isInOneStepAmbigousPosition(info,smallPattern + tail)) {
+      activateNodeSubstituteChooser(editorContext,cell,info);
+    }
+  }
+  return true;
+}

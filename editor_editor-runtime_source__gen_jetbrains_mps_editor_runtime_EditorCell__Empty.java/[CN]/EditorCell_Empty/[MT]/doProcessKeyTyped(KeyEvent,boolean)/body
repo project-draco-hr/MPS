@@ -1,32 +1,30 @@
 {
-  final EditorContext editorContext=this.getContext();
-  CellSide side=null;
-  if (!(UIUtil.isReallyTypedEvent(p0))) {
+  final EditorContext editorContext=getContext();
+  if (!(UIUtil.isReallyTypedEvent(event))) {
     return false;
   }
-  this.myCaretVisible=true;
-  final String symbol="" + p0.getKeyChar();
-  if (this.isFirstCaretPosition()) {
-    side=CellSide.LEFT;
+  myCaretVisible=true;
+  final CellActionType actionType;
+  if (isFirstCaretPosition()) {
+    actionType=CellActionType.LEFT_TRANSFORM;
   }
- else   if (this.isLastCaretPosition()) {
-    side=CellSide.RIGHT;
+ else   if (isLastCaretPosition()) {
+    actionType=CellActionType.RIGHT_TRANSFORM;
   }
-  final CellSide fside=side;
-  EditorComputable<Boolean> transformCommand=new EditorComputable<Boolean>(editorContext){
-    protected Boolean doCompute(){
-      if (fside == CellSide.LEFT) {
-        return EditorCell_Empty.this.applyLeftTransform(editorContext,EditorCell_Empty.this,symbol);
-      }
- else       if (fside == CellSide.RIGHT) {
-        return EditorCell_Empty.this.applyRightTransform(editorContext,EditorCell_Empty.this,symbol);
-      }
  else {
-        return true;
+    return true;
+  }
+  editorContext.getRepository().getModelAccess().executeCommand(new EditorCommand(editorContext){
+    protected void doExecute(){
+      CellAction ltAction=editorContext.getEditorComponent().getActionHandler().getApplicableCellAction(EditorCell_Empty.this,actionType);
+      ltAction.execute(editorContext);
+      EditorCell_STHint stHintCell=EditorCell_STHint.getSTHintCell(getSNode(),getEditorComponent());
+      if (stHintCell != null) {
+        stHintCell.changeText("" + event.getKeyChar());
+        stHintCell.end();
       }
     }
   }
-;
-  editorContext.getRepository().getModelAccess().executeCommand(transformCommand);
-  return transformCommand.getResult();
+);
+  return true;
 }
