@@ -1,0 +1,19 @@
+{
+  monitor.start("Loading modules...",1);
+  try {
+    Condition<ReloadableModule> notLoadedCondition=negateCondition(myLoadedCondition);
+    Set<ReloadableModule> modulesToLoad=new LinkedHashSet<ReloadableModule>(filterModules(modules,myWatchableCondition,myValidCondition));
+    if (modulesToLoad.isEmpty())     return Collections.emptySet();
+    modulesToLoad.addAll(myModulesWatcher.getResolvedDependencies(modulesToLoad));
+    modulesToLoad=filterModules(modulesToLoad,myMPSLoadableCondition,notLoadedCondition);
+    if (modulesToLoad.isEmpty())     return Collections.emptySet();
+    LOG.debug("Loading " + modulesToLoad.size() + " modules");
+    monitor.advance(1);
+    Collection<? extends ReloadableModule> modulesToNotify=myClassLoadersHolder.doLoadModules(modulesToLoad,monitor);
+    myBroadCaster.onLoad(modulesToNotify);
+    return modulesToLoad;
+  }
+  finally {
+    monitor.done();
+  }
+}
