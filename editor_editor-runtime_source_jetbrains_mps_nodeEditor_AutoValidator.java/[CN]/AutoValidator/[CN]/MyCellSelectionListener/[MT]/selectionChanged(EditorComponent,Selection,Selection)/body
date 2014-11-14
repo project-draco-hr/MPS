@@ -1,0 +1,35 @@
+{
+  if (mySuppressSelectionChanges || oldSelection == newSelection || !(oldSelection instanceof SingularSelection)) {
+    return;
+  }
+  final EditorCell editorCell=((SingularSelection)oldSelection).getEditorCell();
+  if (newSelection instanceof SingularSelection && ((SingularSelection)newSelection).getEditorCell() == editorCell) {
+    return;
+  }
+  if (((jetbrains.mps.nodeEditor.EditorComponent)editorComponent).isCellSwapInProgress()) {
+    return;
+  }
+  final boolean wasInErrorState=editorCell.isErrorState();
+  final boolean wasStHint=editorCell instanceof EditorCell_STHint;
+  if (!wasInErrorState && !wasStHint) {
+    return;
+  }
+  final SNodeReference nodeReference=editorCell.getSNode().getReference();
+  final CellInfo cellInfo=APICellAdapter.getCellInfo(editorCell);
+  SwingUtilities.invokeLater(new Runnable(){
+    @Override public void run(){
+      myRepository.getModelAccess().runWriteAction(new Runnable(){
+        @Override public void run(){
+          if (wasInErrorState) {
+            validateErrorCell(cellInfo,editorComponent);
+          }
+ else {
+            SideTransformInfoUtil.removeTransformInfo(nodeReference.resolve(myRepository));
+          }
+        }
+      }
+);
+    }
+  }
+);
+}
