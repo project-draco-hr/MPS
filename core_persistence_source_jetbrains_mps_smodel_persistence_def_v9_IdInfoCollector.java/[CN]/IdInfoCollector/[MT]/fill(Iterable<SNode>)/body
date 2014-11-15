@@ -1,0 +1,53 @@
+{
+  for (  SNode n1 : nodes) {
+    fillConcept(n1);
+    fillProperties(n1);
+    fillAssociations(n1);
+    if (n1.getParent() != null) {
+      fillAggregation(n1);
+    }
+    for (    SNode n2 : SNodeUtil.getDescendants(n1,null,false)) {
+      fillConcept(n2);
+      fillProperties(n2);
+      fillAssociations(n2);
+      fillAggregation(n2);
+    }
+  }
+  for (  ConceptInfo ci : myRegistry.values()) {
+    final ConceptDescriptor conceptDescriptor=ConceptRegistry.getInstance().getConceptDescriptor(ci.getConceptId());
+    for (    AggregationLinkInfo li : ci.getAggregationsInUse()) {
+      li.setUnordered(conceptDescriptor.getLinkDescriptor(li.getLinkId()).isUnordered());
+    }
+    char[] res=new char[]{'n','g'};
+switch (conceptDescriptor.getConceptKind()) {
+case INTERFACE:
+      res[0]='i';
+    break;
+case IMPLEMENTATION:
+  res[0]='l';
+break;
+case IMPLEMENTATION_WITH_STUB:
+res[0]='s';
+break;
+}
+switch (conceptDescriptor.getStaticScope()) {
+case ROOT:
+res[1]='r';
+break;
+case NONE:
+res[1]='n';
+break;
+}
+ci.setConceptImplementationKind(new String(res));
+if (ci.isNameSet()) {
+continue;
+}
+String conceptName=conceptDescriptor.getConceptFqName();
+ci.setName(conceptName);
+}
+for (LangInfo li : myLanguagesInUse.values()) {
+final LanguageRuntime langRT=LanguageRegistry.getInstance().getLanguage(li.getLanguageId());
+li.setName(langRT == null ? null : langRT.getNamespace());
+}
+initializeIndexValues();
+}
