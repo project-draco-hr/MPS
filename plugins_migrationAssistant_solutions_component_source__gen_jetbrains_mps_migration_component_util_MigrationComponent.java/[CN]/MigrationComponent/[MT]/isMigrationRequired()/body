@@ -2,13 +2,21 @@
   final Wrappers._boolean result=new Wrappers._boolean(false);
   ModelAccess.instance().runWriteAction(new Runnable(){
     public void run(){
+      List<ProjectMigration> pMig=ProjectMigrationsRegistry.getInstance().getMigrations();
       Iterable<? extends SModule> modules=mpsProject.getModules();
-      result.value=Sequence.fromIterable(modules).any(new IWhereFilter<SModule>(){
+      boolean projectMig=ListSequence.fromList(pMig).any(new IWhereFilter<ProjectMigration>(){
+        public boolean accept(        ProjectMigration it){
+          return it.shouldBeExecuted(mpsProject);
+        }
+      }
+);
+      boolean languageMig=Sequence.fromIterable(modules).any(new IWhereFilter<SModule>(){
         public boolean accept(        SModule it){
           return Sequence.fromIterable(MigrationsUtil.getDependenciesToMigrate((AbstractModule)((SModule)it))).isNotEmpty();
         }
       }
 );
+      result.value=projectMig || languageMig;
     }
   }
 );
