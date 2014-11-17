@@ -1,6 +1,6 @@
 {
-  final Wrappers._T<MigrationManager.MigrationState> lastState=new Wrappers._T<MigrationManager.MigrationState>();
-  final Map<AbstractModule,Iterable<Tuples._3<SModule,Integer,Integer>>> languageVersions=MapSequence.fromMap(new HashMap<AbstractModule,Iterable<Tuples._3<SModule,Integer,Integer>>>());
+  final Wrappers._T<MigrationManager.MigrationState> result=new Wrappers._T<MigrationManager.MigrationState>();
+  final Map<SModule,Iterable<Tuples._2<SLanguage,Integer>>> languageVersions=MapSequence.fromMap(new HashMap<SModule,Iterable<Tuples._2<SLanguage,Integer>>>());
   final Wrappers._T<Iterable<? extends SModule>> projectModules=new Wrappers._T<Iterable<? extends SModule>>();
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
@@ -21,13 +21,13 @@
 );
   final Iterable<ScriptApplied> allStepScripts=Sequence.fromIterable(projectModules.value).ofType(AbstractModule.class).translate(new ITranslator2<AbstractModule,ScriptApplied>(){
     public Iterable<ScriptApplied> translate(    final AbstractModule module){
-      return Sequence.fromIterable(MapSequence.fromMap(languageVersions).get(module)).where(new IWhereFilter<Tuples._3<SModule,Integer,Integer>>(){
-        public boolean accept(        Tuples._3<SModule,Integer,Integer> it){
+      return Sequence.fromIterable(MapSequence.fromMap(languageVersions).get(module)).where(new IWhereFilter<Tuples._2<SLanguage,Integer>>(){
+        public boolean accept(        Tuples._2<SLanguage,Integer> it){
           return MigrationsUtil.isMigrationNeeded(module,it);
         }
       }
-).select(new ISelector<Tuples._3<SModule,Integer,Integer>,MigrationScript>(){
-        public MigrationScript select(        Tuples._3<SModule,Integer,Integer> it){
+).select(new ISelector<Tuples._2<SLanguage,Integer>,MigrationScript>(){
+        public MigrationScript select(        Tuples._2<SLanguage,Integer> it){
           return fetchScriptForModule(module,it);
         }
       }
@@ -47,23 +47,17 @@
 ).toListSequence();
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
-      final Iterable<ScriptApplied> availableScripts=Sequence.fromIterable(allStepScripts).where(new IWhereFilter<ScriptApplied>(){
-        public boolean accept(        ScriptApplied it){
-          return isAvailable(it,languageVersions);
-        }
-      }
-);
-      final ScriptApplied scriptToExecute=Sequence.fromIterable(availableScripts).first();
-      if (scriptToExecute != null) {
-        lastState.value=new MigrationManager.Step(){
+      final ScriptApplied nextScript=calculateNextMigration(allStepScripts);
+      if (nextScript == null) {
+        result.value=new MigrationManager.Step(){
           public String getDescription(){
-            return scriptToExecute.toString();
+            return nextScript.toString();
           }
           public boolean execute(){
             final Wrappers._boolean res=new Wrappers._boolean();
             ModelAccess.instance().runWriteActionInCommand(new Runnable(){
               public void run(){
-                res.value=executeScript(Sequence.fromIterable(availableScripts).first());
+                res.value=executeScript(nextScript);
               }
             }
 );
@@ -72,53 +66,8 @@
         }
 ;
       }
- else {
-        if (Sequence.fromIterable(allStepScripts).isEmpty()) {
-          if (Sequence.fromIterable(projectModules.value).ofType(AbstractModule.class).any(new IWhereFilter<AbstractModule>(){
-            public boolean accept(            final AbstractModule module){
-              return Sequence.fromIterable(MapSequence.fromMap(languageVersions).get(module)).where(new IWhereFilter<Tuples._3<SModule,Integer,Integer>>(){
-                public boolean accept(                Tuples._3<SModule,Integer,Integer> item){
-                  return MigrationsUtil.isMigrationNeeded(module,item);
-                }
-              }
-).isNotEmpty();
-            }
-          }
-)) {
-            lastState.value=new MigrationManager.Error(){
-              public String getErrorMessage(){
-                return "Some migration scripts are missing";
-              }
-            }
-;
-          }
- else {
-            lastState.value=new MigrationManager.Finished(){
-            }
-;
-          }
-        }
- else {
-          lastState.value=new MigrationManager.Conflict(){
-            public Iterable<ScriptApplied> getConflictingScripts(){
-              return allStepScripts;
-            }
-            public boolean forceExecution(            ScriptApplied scriptApplied){
-              final Wrappers._boolean res=new Wrappers._boolean();
-              ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-                public void run(){
-                  res.value=executeScript(Sequence.fromIterable(availableScripts).first());
-                }
-              }
-);
-              return res.value;
-            }
-          }
-;
-        }
-      }
     }
   }
 );
-  return lastState.value;
+  return result.value;
 }
