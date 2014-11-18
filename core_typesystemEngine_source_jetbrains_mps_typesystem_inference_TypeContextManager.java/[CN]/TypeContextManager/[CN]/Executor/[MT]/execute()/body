@@ -1,0 +1,31 @@
+{
+  if (myDisposeRequested.get())   return null;
+  myExecuting.incrementAndGet();
+  final ITypeContextOwner savedOwner=myTypecheckingContextOwner.get();
+  if (myContextOwner != null) {
+    myTypecheckingContextOwner.set(myContextOwner);
+  }
+  final ITypeContextOwner contextOwner=myTypecheckingContextOwner.get();
+  TypeCheckingContext context=null;
+  if (myContextNode != null) {
+    context=acquireTypecheckingContext(myContextNode,contextOwner);
+  }
+  final SubtypingCache savedSubtypingCache=mySubtypingCache.get();
+  mySubtypingCache.set(null);
+  try {
+    return doExecute(context);
+  }
+  finally {
+    mySubtypingCache.set(savedSubtypingCache);
+    if (context != null) {
+      releaseTypecheckingContext(contextOwner);
+    }
+    if (myContextOwner != null) {
+      myTypecheckingContextOwner.set(savedOwner);
+    }
+    int executingTasks=myExecuting.decrementAndGet();
+    if (myDisposeRequested.get() && executingTasks == 0) {
+      doDispose();
+    }
+  }
+}
