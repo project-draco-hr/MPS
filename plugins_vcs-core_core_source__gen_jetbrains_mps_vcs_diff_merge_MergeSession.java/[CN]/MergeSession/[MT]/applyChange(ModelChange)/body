@@ -1,10 +1,19 @@
 {
   if (SetSequence.fromSet(myResolvedChanges).contains(change)) {
+    return;
   }
- else {
-    change.apply(myResultModel,myNodeCopier);
-    SetSequence.fromSet(myResolvedChanges).addElement(change);
-    SetSequence.fromSet(myResolvedChanges).addSequence(ListSequence.fromList(MapSequence.fromMap(mySymmetricChanges).get(change)));
-    excludeChangesNoRestoreIds(getConflictedWith(change));
+  if (change.isNonConflicting()) {
+    ModelChange symmChange=ListSequence.fromList(MapSequence.fromMap(mySymmetricChanges).get(change)).subtract(SetSequence.fromSet(myResolvedChanges)).first();
+    if (symmChange != null) {
+      boolean isMineChange=change.getChangeSet() == myMineChangeSet;
+      SNode mergeHint=SNodeOperations.as(((SNode)change.getMergeHint().resolve(MPSModuleRepository.getInstance())),MetaAdapterFactory.getConcept(new UUID(4026282531954969020l,-9049648244592808842l),7313573869697839898l,"jetbrains.mps.vcs.mergehints.structure.MergeHint"));
+      if ((mergeHint != null) && (SPropertyOperations.hasValue(mergeHint,MetaAdapterFactory.getProperty(new UUID(4026282531954969020l,-9049648244592808842l),7313573869697839898l,8485200647808748986l,"hint"),"1","1") != isMineChange)) {
+        change=symmChange;
+      }
+    }
   }
+  change.apply(myResultModel,myNodeCopier);
+  SetSequence.fromSet(myResolvedChanges).addElement(change);
+  SetSequence.fromSet(myResolvedChanges).addSequence(ListSequence.fromList(MapSequence.fromMap(mySymmetricChanges).get(change)));
+  excludeChangesNoRestoreIds(getConflictedWith(change));
 }
