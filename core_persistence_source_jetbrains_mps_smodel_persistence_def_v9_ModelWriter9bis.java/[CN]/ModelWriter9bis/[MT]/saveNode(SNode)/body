@@ -1,0 +1,36 @@
+{
+  Element nodeElement=new Element(ModelPersistence9.NODE);
+  final ConceptInfo conceptInfo=myMetaInfo.find(node.getConcept());
+  nodeElement.setAttribute(ModelPersistence9.CONCEPT_ID,conceptInfo.getIndex());
+  nodeElement.setAttribute(ModelPersistence9.ID,myIdEncoder.toText(node.getNodeId()));
+  final SContainmentLink roleInParent=node.getContainmentLink();
+  if (roleInParent != null) {
+    final AggregationLinkInfo aggregationLinkInfo=myMetaInfo.find(roleInParent);
+    DocUtil.setNotNullAttribute(nodeElement,ModelPersistence9.ROLE_ID,aggregationLinkInfo.getIndex());
+  }
+  for (  SProperty pid : node.getProperties()) {
+    Element propertyElement=new Element(ModelPersistence9.NODE_PROPERTY);
+    final PropertyInfo propertyInfo=myMetaInfo.find(pid);
+    propertyElement.setAttribute(ModelPersistence9.ROLE_ID,propertyInfo.getIndex());
+    DocUtil.setNotNullAttribute(propertyElement,ModelPersistence9.VALUE,node.getProperty(pid));
+    nodeElement.addContent(propertyElement);
+  }
+  for (  SReference reference : node.getReferences()) {
+    Element linkElement=new Element(ModelPersistence9.NODE_REFERENCE);
+    final AssociationLinkInfo associationLinkInfo=myMetaInfo.find(reference.getLink());
+    linkElement.setAttribute(ModelPersistence9.ROLE_ID,associationLinkInfo.getIndex());
+    final SModelReference targetModel=reference.getTargetSModelReference();
+    if (targetModel != null && myImportsHelper.isLocal(targetModel)) {
+      linkElement.setAttribute(ModelPersistence9.NODE,myIdEncoder.toTextLocal(reference));
+    }
+ else {
+      linkElement.setAttribute(ModelPersistence9.TO,myIdEncoder.toTextExternal(myImportsHelper,targetModel,reference));
+    }
+    DocUtil.setNotNullAttribute(linkElement,ModelPersistence9.RESOLVE,Util9.genResolveInfo(reference));
+    nodeElement.addContent(linkElement);
+  }
+  for (  SNode childNode : node.getChildren()) {
+    nodeElement.addContent(saveNode(childNode));
+  }
+  return nodeElement;
+}

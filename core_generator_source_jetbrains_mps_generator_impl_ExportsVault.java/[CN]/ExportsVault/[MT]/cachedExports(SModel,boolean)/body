@@ -1,0 +1,26 @@
+{
+  final SModelReference inputModelReference=inputModel.getReference();
+  SModel exportsModel=myExportModels.get(inputModelReference);
+  if (exportsModel == null) {
+    final ModelFactory modelFactory=PersistenceFacade.getInstance().getDefaultModelFactory();
+    ModelStreamManager streamManager=myStreamProvider.getStreamManager(inputModel);
+    final String modelFileName="exports";
+    final SingleStreamSource source=new SingleStreamSource(streamManager.getOutputLocation(),modelFileName);
+    try {
+      if (createNew) {
+        exportsModel=modelFactory.create(source,Collections.singletonMap(ModelFactory.OPTION_MODELNAME,inputModel.getModelName()));
+      }
+ else       if (IterableUtil.asSet(streamManager.getOutputLocation().getAvailableStreams()).contains(modelFileName)) {
+        exportsModel=modelFactory.load(source,Collections.<String,String>emptyMap());
+      }
+    }
+ catch (    IOException ex) {
+      throw new IllegalStateException("Could not create model to keep cross-model exports",ex);
+    }
+    if (exportsModel != null) {
+      myExportModels.putIfAbsent(inputModelReference,exportsModel);
+      exportsModel=myExportModels.get(inputModelReference);
+    }
+  }
+  return exportsModel;
+}

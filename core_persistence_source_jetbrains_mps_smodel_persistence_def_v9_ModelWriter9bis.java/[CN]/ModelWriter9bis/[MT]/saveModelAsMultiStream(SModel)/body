@@ -1,0 +1,37 @@
+{
+  myImportsHelper=new ImportsHelper(sourceModel.getReference());
+  Element headerRoot=new Element(ModelPersistence9.MODEL);
+  headerRoot.setAttribute(ModelPersistence9.REF,myIdEncoder.toText(sourceModel.getReference()));
+  headerRoot.setAttribute(ModelPersistence9.FILE_CONTENT,"header");
+  saveModelProperties(sourceModel,headerRoot);
+  final ImportsHelper wholeModelImports=myImportsHelper;
+  Map<String,Document> result=new HashMap<String,Document>();
+  result.put(FilePerRootDataSource.HEADER_FILE,new Document(headerRoot));
+  Map<SNodeId,String> rootToFile=FilePerRootFormatUtil.getStreamNames(sourceModel);
+  for (  SNode root : sourceModel.getRootNodes()) {
+    Element rootElement=new Element(ModelPersistence9.MODEL);
+    rootElement.setAttribute(ModelPersistence9.REF,myIdEncoder.toText(sourceModel.getReference()));
+    rootElement.setAttribute(ModelPersistence9.FILE_CONTENT,"root");
+    rootElement.addContent(createPersistenceElement());
+    final LinkedHashSet<SModelReference> usedImports=new LinkedHashSet<SModelReference>();
+    myImportsHelper=new ImportsHelper(sourceModel.getReference()){
+      @Override public String getIndex(      @NotNull SModelReference modelReference){
+        usedImports.add(modelReference);
+        return wholeModelImports.getIndex(modelReference);
+      }
+    }
+;
+    myMetaInfo=new IdInfoCollector(myMetaInfoProvider);
+    myMetaInfo.fill(Collections.singleton(root));
+    Element childElement=saveNode(root);
+    Element importsElement=new Element(ModelPersistence9.IMPORTS);
+    for (    SModelReference modelRef : usedImports) {
+      importsElement.addContent(createImportElement(modelRef,wholeModelImports.getIndex(modelRef),true));
+    }
+    rootElement.addContent(importsElement);
+    rootElement.addContent(buildRegistry());
+    rootElement.addContent(childElement);
+    result.put(rootToFile.get(root.getNodeId()),new Document(rootElement));
+  }
+  return result;
+}
