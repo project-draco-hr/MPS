@@ -4,27 +4,22 @@
     mis=new ModelInputStream(new ByteArrayInputStream(content));
     SModelHeader modelHeader=loadHeader(mis);
     SModel model=new DefaultSModel(modelHeader.getModelReference(),modelHeader);
-    BinaryPersistence bp=new BinaryPersistence(new RegularMetaModelInfo(),model);
-    bp.loadModelProperties(mis);
+    BinaryPersistence bp=new BinaryPersistence(new StuffedMetaModelInfo(new BaseMetaModelInfo()),model);
+    final ReadHelper readHelper=bp.loadModelProperties(mis);
     for (    ImportElement element : model.importedModels()) {
       consumer.consume(element.getModelReference().getModelName());
     }
-    new NodesReader(modelHeader.getModelReference(),false){
-      @Override protected SConceptId readConceptId(      ModelInputStream is) throws IOException {
-        SConceptId cid=super.readConceptId(is);
-        String name=DebugRegistry.getInstance().getConceptName(cid);
-        consumer.consume(name);
-        return cid;
-      }
-      @Override protected SNodeId readTargetNodeId(      ModelInputStream is) throws IOException {
-        SNodeId id=super.readTargetNodeId(is);
-        if (id != null) {
-          consumer.consume(id.toString());
-        }
-        return id;
-      }
+    for (    SConceptId cid : readHelper.getParticipatingConcepts()) {
+      consumer.consume(Long.toString(cid.getConceptId()));
     }
-.readNodes(mis);
+    readHelper.requestInterfaceOnly(false);
+    final NodesReader reader=new NodesReader(modelHeader.getModelReference(),mis,readHelper);
+    HashSet<SNodeId> externalNodes=new HashSet<SNodeId>();
+    reader.collectExternalNodeIds(externalNodes);
+    reader.readChildren(null);
+    for (    SNodeId n : externalNodes) {
+      consumer.consume(n.toString());
+    }
   }
  catch (  IOException e) {
     throw new ModelReadException("Couldn't read model: " + e.getMessage(),e);
