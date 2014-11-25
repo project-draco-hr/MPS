@@ -1,7 +1,22 @@
 {
   boolean hasAnythingToCompile=false;
   List<IMessage> messages=new ArrayList<IMessage>();
+  Project project=null;
   for (  SModule m : modules) {
+    if (project == null) {
+      SRepository repository=m.getRepository();
+      if (repository instanceof ProjectRepository) {
+        project=((ProjectRepository)repository).getProject();
+      }
+ else       if (repository instanceof MPSModuleRepository) {
+        Set<MPSModuleOwner> owners=((MPSModuleRepository)repository).getOwners(m);
+        for (        MPSModuleOwner owner : owners) {
+          if (owner instanceof Project) {
+            project=((Project)owner);
+          }
+        }
+      }
+    }
     if (isExcluded(m))     continue;
     hasAnythingToCompile=true;
   }
@@ -50,7 +65,13 @@
     listener=new MyCompilationResultAdapter(modules,classPathItems,messages);
     compiler.addCompilationResultListener(listener);
     myTracer.push("eclipse compiler",true);
-    compiler.compile(classPathItems);
+    if (project == null) {
+      compiler.compile(classPathItems);
+    }
+ else {
+      JavaCompilerOptions javaCompilerOptions=JavaCompilerOptionsComponent.getInstance().getJavaCompilerOptions(project);
+      compiler.compile(classPathItems,javaCompilerOptions);
+    }
     myTracer.pop();
     changedModules.addAll(listener.myChangedModules);
     compiler.removeCompilationResultListener(listener);
