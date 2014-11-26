@@ -1,8 +1,26 @@
 {
+  boolean updated=false;
   myRepository.getModelAccess().checkReadAccess();
+  Collection<? extends SModuleReference> allRefs=myDepGraph.getVertices();
   for (  ReloadableModule module : modulesToReload) {
     ReloadableModuleBase reloadableModule=(ReloadableModuleBase)module;
-    removeModuleDeps(reloadableModule);
-    putModuleDeps(reloadableModule);
+    SModuleReference mRef=reloadableModule.getModuleReference();
+    Collection<? extends SModuleReference> currentDeps=new HashSet<SModuleReference>(myDepGraph.getOutgoingEdges(mRef));
+    Collection<? extends ReloadableModuleBase> newModuleDeps=getModuleDeps(reloadableModule);
+    for (    ReloadableModuleBase moduleDep : newModuleDeps) {
+      SModuleReference depRef=moduleDep.getModuleReference();
+      if (!currentDeps.contains(depRef)) {
+        if (allRefs.contains(depRef)) {
+          myDepGraph.addEdge(mRef,depRef);
+          updated=true;
+        }
+      }
+ else       currentDeps.remove(depRef);
+    }
+    for (    SModuleReference curDep : currentDeps) {
+      myDepGraph.removeEdge(mRef,curDep);
+      updated=true;
+    }
   }
+  return updated;
 }
