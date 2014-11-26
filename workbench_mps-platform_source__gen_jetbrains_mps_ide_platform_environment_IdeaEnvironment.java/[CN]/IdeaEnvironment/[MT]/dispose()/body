@@ -1,0 +1,32 @@
+{
+  if (LOG.isDebugEnabled()) {
+    LOG.debug("Disposing environment");
+  }
+  for (  LibraryContributor contrib : ListSequence.fromList(myLibContributors)) {
+    LibraryInitializer.getInstance().removeContributor(contrib);
+  }
+  for (  Project project : SetSequence.fromSet(myContainer.getProjects())) {
+    disposeProject(project.getProjectFile());
+  }
+  try {
+    GuiUtils.runOrInvokeAndWait(new Runnable(){
+      @Override public void run(){
+        ApplicationManager.getApplication().runWriteAction(new Runnable(){
+          public void run(){
+            myIdeaApplication.dispose();
+          }
+        }
+);
+      }
+    }
+);
+  }
+ catch (  InterruptedException e) {
+    throw new RuntimeException(e);
+  }
+catch (  InvocationTargetException e) {
+    throw new RuntimeException(e);
+  }
+  ModelAccess.instance().flushEventQueue();
+  ActiveEnvironment.deactivateEnvironment(this);
+}
