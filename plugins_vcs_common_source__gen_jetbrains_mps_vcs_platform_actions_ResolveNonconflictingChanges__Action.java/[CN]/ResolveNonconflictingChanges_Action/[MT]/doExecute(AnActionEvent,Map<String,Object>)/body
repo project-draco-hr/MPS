@@ -1,18 +1,9 @@
 {
   try {
-    List<VirtualFile> conflictedFiles=ResolveNonconflictingChanges_Action.this.getConflictedFIles(_params);
+    List<VirtualFile> conflictedModelFiles=ResolveNonconflictingChanges_Action.this.getConflictingModelFiles(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject(),_params);
     MergeProvider provider=GitVcs.getInstance(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject()).getMergeProvider();
-    com.intellij.openapi.vcs.merge.MergeSession session=(provider instanceof MergeProvider2 ? ((MergeProvider2)provider).createMergeSession(conflictedFiles) : null);
-    for (    final VirtualFile file : ListSequence.fromList(conflictedFiles)) {
-      FileType fileType=file.getFileType();
-      if (!((SetSequence.fromSet(ModelMergeTool.SUPPORTED_TYPES).contains(fileType)))) {
-        continue;
-      }
-      IFile iFile=FileSystem.getInstance().getFileByPath(file.getPath());
-      String ext=file.getExtension();
-      if (FilePerRootDataSource.isPerRootPersistenceFile(iFile)) {
-        ext=MPSExtentions.MODEL;
-      }
+    com.intellij.openapi.vcs.merge.MergeSession session=(provider instanceof MergeProvider2 ? ((MergeProvider2)provider).createMergeSession(conflictedModelFiles) : null);
+    for (    final VirtualFile file : ListSequence.fromList(conflictedModelFiles)) {
       MergeData mergeData=null;
       try {
         mergeData=provider.loadRevisions(file);
@@ -21,6 +12,11 @@
         if (LOG.isEnabledFor(Level.ERROR)) {
           LOG.error("Error loading revisions to merge",e);
         }
+      }
+      IFile iFile=FileSystem.getInstance().getFileByPath(file.getPath());
+      String ext=file.getExtension();
+      if (FilePerRootDataSource.isPerRootPersistenceFile(iFile)) {
+        ext=MPSExtentions.MODEL;
       }
       SModel baseModel=PersistenceUtil.loadModel(new String(mergeData.ORIGINAL),ext);
       SModel mineModel=PersistenceUtil.loadModel(new String(mergeData.CURRENT),ext);
@@ -70,7 +66,7 @@
           }
         }
 );
-        check_nkvzp6_a4a12a7a0(session,file);
+        check_nkvzp6_a4a81a7a0(session,file);
         VcsDirtyScopeManager.getInstance(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject()).fileDirty(file);
       }
     }

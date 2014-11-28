@@ -1,15 +1,6 @@
 {
   MergeProvider provider=GitVcs.getInstance(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject()).getMergeProvider();
-  for (  VirtualFile file : ListSequence.fromList(ResolveNonconflictingChanges_Action.this.getConflictedFIles(_params))) {
-    FileType fileType=file.getFileType();
-    if (!((SetSequence.fromSet(ModelMergeTool.SUPPORTED_TYPES).contains(fileType)))) {
-      continue;
-    }
-    IFile iFile=FileSystem.getInstance().getFileByPath(file.getPath());
-    String ext=file.getExtension();
-    if (FilePerRootDataSource.isPerRootPersistenceFile(iFile)) {
-      ext=MPSExtentions.MODEL;
-    }
+  for (  VirtualFile file : ListSequence.fromList(ResolveNonconflictingChanges_Action.this.getConflictingModelFiles(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject(),_params))) {
     MergeData mergeData=null;
     try {
       mergeData=provider.loadRevisions(file);
@@ -18,6 +9,11 @@
       if (LOG.isEnabledFor(Level.ERROR)) {
         LOG.error("Error loading revisions to merge",e);
       }
+    }
+    IFile iFile=FileSystem.getInstance().getFileByPath(file.getPath());
+    String ext=file.getExtension();
+    if (FilePerRootDataSource.isPerRootPersistenceFile(iFile)) {
+      ext=MPSExtentions.MODEL;
     }
     SModel baseModel=PersistenceUtil.loadModel(new String(mergeData.ORIGINAL),ext);
     SModel mineModel=PersistenceUtil.loadModel(new String(mergeData.CURRENT),ext);
