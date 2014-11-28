@@ -1,0 +1,38 @@
+{
+  for (  VirtualFile file : ListSequence.fromList(conflictedFiles)) {
+    MergeData mergeData=null;
+    try {
+      mergeData=provider.loadRevisions(file);
+    }
+ catch (    VcsException e) {
+      if (LOG.isEnabledFor(Level.ERROR)) {
+        LOG.error("Error loading revisions to merge",e);
+      }
+    }
+    IFile iFile=FileSystem.getInstance().getFileByPath(file.getPath());
+    String ext=file.getExtension();
+    if (FilePerRootDataSource.isPerRootPersistenceFile(iFile)) {
+      ext=MPSExtentions.MODEL;
+    }
+    final SModel baseModel=PersistenceUtil.loadModel(new String(mergeData.ORIGINAL),ext);
+    final SModel mineModel=PersistenceUtil.loadModel(new String(mergeData.CURRENT),ext);
+    final SModel repoModel=PersistenceUtil.loadModel(new String(mergeData.LAST),ext);
+    final Wrappers._T<MergeSession> mergeSession=new Wrappers._T<MergeSession>();
+    ProjectHelper.getModelAccess(project).runReadAction(new Runnable(){
+      public void run(){
+        mergeSession.value=MergeSession.createMergeSession(baseModel,mineModel,repoModel);
+      }
+    }
+);
+    int conflictingChangesCount=Sequence.fromIterable(mergeSession.value.getAllChanges()).where(new IWhereFilter<ModelChange>(){
+      public boolean accept(      ModelChange c){
+        return Sequence.fromIterable(mergeSession.value.getConflictedWith(c)).isNotEmpty();
+      }
+    }
+).count();
+    if (conflictingChangesCount == 0) {
+      return true;
+    }
+  }
+  return false;
+}
