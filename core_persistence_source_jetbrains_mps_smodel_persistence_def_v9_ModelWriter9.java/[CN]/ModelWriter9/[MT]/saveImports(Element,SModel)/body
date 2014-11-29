@@ -1,19 +1,15 @@
 {
+  Set<SModelReference> crossModelReferences=collectCrossModelReferences(sourceModel);
   for (  ImportElement importElement : sourceModel.importedModels()) {
     SModelReference modelRef=importElement.getModelReference();
-    myHelper.addModelReference(modelRef);
-    Element elem=new Element(ModelPersistence9.IMPORT);
-    elem.setAttribute(ModelPersistence9.IMPORT_INDEX,"" + myHelper.getImportIndex(modelRef));
-    elem.setAttribute(ModelPersistence9.REF,modelRef.toString());
-    rootElement.addContent(elem);
+    crossModelReferences.remove(modelRef);
+    final String index=myImportsHelper.addModelImport(modelRef);
+    rootElement.addContent(createImportElement(modelRef,index,false));
   }
-  for (  ImportElement importElement : sourceModel.getAdditionalModelVersions()) {
-    SModelReference modelRef=importElement.getModelReference();
-    myHelper.addModelReference(modelRef);
-    Element elem=new Element(ModelPersistence9.IMPORT);
-    elem.setAttribute(ModelPersistence9.IMPORT_INDEX,"" + myHelper.getImportIndex(modelRef));
-    elem.setAttribute(ModelPersistence9.REF,modelRef.toString());
-    elem.setAttribute(ModelPersistence9.IMPLICIT,"true");
-    rootElement.addContent(elem);
+  SModelReference[] implicitImports=crossModelReferences.toArray(new SModelReference[crossModelReferences.size()]);
+  Arrays.sort(implicitImports,new ToStringComparator());
+  for (  SModelReference implicitImport : crossModelReferences) {
+    final String index=myImportsHelper.addModelImport(implicitImport);
+    rootElement.addContent(createImportElement(implicitImport,index,true));
   }
 }

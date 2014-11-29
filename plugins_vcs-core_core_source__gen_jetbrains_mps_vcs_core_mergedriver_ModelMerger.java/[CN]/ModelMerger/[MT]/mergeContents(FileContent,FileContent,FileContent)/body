@@ -1,5 +1,5 @@
 {
-  if (true) {
+  if (Boolean.getBoolean("mps.mergedriver.model.fail")) {
     return null;
   }
   RuntimeFlags.setPlayRefactoringsMode(false);
@@ -13,13 +13,10 @@
   if (LOG.isInfoEnabled()) {
     LOG.info("Reading models...");
   }
-  SModel baseModel=PersistenceUtil.loadModel(new String(baseContent.getData(),FileUtil.DEFAULT_CHARSET),ext);
-  SModel localModel=PersistenceUtil.loadModel(new String(localContent.getData(),FileUtil.DEFAULT_CHARSET),ext);
-  SModel latestModel=PersistenceUtil.loadModel(new String(latestContent.getData(),FileUtil.DEFAULT_CHARSET),ext);
+  final SModel baseModel=loadModel(baseContent,ext);
+  final SModel localModel=loadModel(localContent,ext);
+  final SModel latestModel=loadModel(latestContent,ext);
   if (baseModel == null || localModel == null || latestModel == null) {
-    if (LOG.isEnabledFor(Level.ERROR)) {
-      LOG.error("Error while reading models");
-    }
     return backup(baseContent,localContent,latestContent);
   }
   myModelName=baseModel.getModelName();
@@ -44,53 +41,59 @@
     if (LOG.isInfoEnabled()) {
       LOG.info("Merging " + baseModel.getReference() + "...");
     }
-    final MergeSession mergeSession=MergeSession.createMergeSession(baseModel,localModel,latestModel);
-    int conflictingChangesCount=Sequence.fromIterable(mergeSession.getAllChanges()).where(new IWhereFilter<ModelChange>(){
-      public boolean accept(      ModelChange c){
-        return Sequence.fromIterable(mergeSession.getConflictedWith(c)).isNotEmpty();
-      }
-    }
-).count();
-    if (conflictingChangesCount == 0) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info(String.format("%s: %d changes detected: %d local and %d latest.",myModelName,Sequence.fromIterable(mergeSession.getAllChanges()).count(),ListSequence.fromList(mergeSession.getMyChangeSet().getModelChanges()).count(),ListSequence.fromList(mergeSession.getRepositoryChangeSet().getModelChanges()).count()));
-      }
-      ModelAccess.instance().runReadAction(new Runnable(){
-        public void run(){
-          mergeSession.applyChanges(mergeSession.getAllChanges());
-        }
-      }
-);
-      if (mergeSession.hasIdsToRestore()) {
-        if (LOG.isInfoEnabled()) {
-          LOG.info(String.format("%s: node id duplication detected, should merge in UI.",myModelName));
-        }
-      }
- else {
-        String resultString;
-        if (MPSExtentions.MODEL_HEADER.equals(myExtension) || MPSExtentions.MODEL_ROOT.equals(myExtension)) {
-          resultString=PersistenceUtil.savePerRootModel(mergeSession.getResultModel(),MPSExtentions.MODEL_HEADER.equals(myExtension));
-        }
- else {
-          resultString=PersistenceUtil.saveModel(mergeSession.getResultModel(),ext);
-        }
-        if (resultString == null) {
-          if (LOG.isEnabledFor(Level.ERROR)) {
-            LOG.error("Error while saving result model");
+    final Wrappers._T<MergeSession> mergeSession=new Wrappers._T<MergeSession>(null);
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        mergeSession.value=MergeSession.createMergeSession(baseModel,localModel,latestModel);
+        int conflictingChangesCount=Sequence.fromIterable(mergeSession.value.getAllChanges()).where(new IWhereFilter<ModelChange>(){
+          public boolean accept(          ModelChange c){
+            return Sequence.fromIterable(mergeSession.value.getConflictedWith(c)).isNotEmpty();
           }
-          return backup(baseContent,localContent,latestContent);
         }
-        if (LOG.isInfoEnabled()) {
-          LOG.info(String.format("%s: merged successfully.",myModelName));
+).count();
+        if (conflictingChangesCount == 0) {
+          if (LOG.isInfoEnabled()) {
+            LOG.info(String.format("%s: %d changes detected: %d local and %d latest.",myModelName,Sequence.fromIterable(mergeSession.value.getAllChanges()).count(),ListSequence.fromList(mergeSession.value.getMyChangeSet().getModelChanges()).count(),ListSequence.fromList(mergeSession.value.getRepositoryChangeSet().getModelChanges()).count()));
+          }
+          mergeSession.value.applyChanges(mergeSession.value.getAllChanges());
         }
-        backup(baseContent,localContent,latestContent);
-        return MultiTuple.<Integer,byte[]>from(MERGED,resultString.getBytes(FileUtil.DEFAULT_CHARSET));
+ else {
+          if (LOG.isInfoEnabled()) {
+            LOG.info(String.format("%s: %d changes detected, %d of them are conflicting",myModelName,Sequence.fromIterable(mergeSession.value.getAllChanges()).count(),conflictingChangesCount));
+          }
+        }
+      }
+    }
+);
+    if (mergeSession.value.hasIdsToRestore()) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info(String.format("%s: node id duplication detected, should merge in UI.",myModelName));
       }
     }
  else {
+      String resultString;
+      SModel resultModel=mergeSession.value.getResultModel();
       if (LOG.isInfoEnabled()) {
-        LOG.info(String.format("%s: %d changes detected, %d of them are conflicting",myModelName,Sequence.fromIterable(mergeSession.getAllChanges()).count(),conflictingChangesCount));
+        LOG.info(String.format("%s: Saving merged model...",myModelName));
       }
+      updateMetaModelInfo(resultModel,baseModel,localModel,latestModel);
+      if (MPSExtentions.MODEL_HEADER.equals(myExtension) || MPSExtentions.MODEL_ROOT.equals(myExtension)) {
+        resultString=PersistenceUtil.savePerRootModel(resultModel,MPSExtentions.MODEL_HEADER.equals(myExtension));
+      }
+ else {
+        resultString=PersistenceUtil.saveModel(resultModel,ext);
+      }
+      if (resultString == null) {
+        if (LOG.isEnabledFor(Level.ERROR)) {
+          LOG.error("Error while saving result model");
+        }
+        return backup(baseContent,localContent,latestContent);
+      }
+      if (LOG.isInfoEnabled()) {
+        LOG.info(String.format("%s: merged successfully.",myModelName));
+      }
+      backup(baseContent,localContent,latestContent);
+      return MultiTuple.<Integer,byte[]>from(MERGED,resultString.getBytes(FileUtil.DEFAULT_CHARSET));
     }
   }
  catch (  Throwable e) {

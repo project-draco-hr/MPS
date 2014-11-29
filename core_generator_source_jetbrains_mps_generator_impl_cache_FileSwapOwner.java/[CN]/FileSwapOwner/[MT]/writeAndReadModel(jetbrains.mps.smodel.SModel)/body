@@ -1,24 +1,17 @@
 {
-  ByteArrayOutputStream os=new ByteArrayOutputStream();
-  ModelOutputStream mos=new ModelOutputStream(os);
-  ArrayList<SNode> roots=new ArrayList<SNode>();
-  for (  SNode next : model.getRootNodes()) {
-    roots.add(next);
-  }
+  final ByteArrayOutputStream os=new ByteArrayOutputStream(2048);
+  final ModelOutputStream mos=new ModelOutputStream(os);
   mos.writeInt(44);
-  new NodesWriter(model.getReference(),null).writeNodes(roots,mos);
+  new BareNodeWriter(model.getReference(),mos).writeNodes(IterableUtil.asCollection(model.getRootNodes()));
   mos.close();
   final jetbrains.mps.smodel.SModel resultModel=new jetbrains.mps.smodel.SModel(PersistenceFacade.getInstance().createModelReference("smodel.long.name.for.testing"));
   ByteArrayInputStream is=new ByteArrayInputStream(os.toByteArray());
   ModelInputStream mis=new ModelInputStream(is);
-  int version=mis.readInt();
+  final int version=mis.readInt();
   if (version != 44) {
     return null;
   }
-  List<Pair<SContainmentLink,jetbrains.mps.smodel.SNode>> resultRoots=new NodesReader(resultModel.getReference(),false).readNodes(mis);
-  for (  Pair<SContainmentLink,jetbrains.mps.smodel.SNode> root : resultRoots) {
-    resultModel.addRootNode(root.o2);
-  }
+  new BareNodeReader(resultModel.getReference(),mis).readNodesInto(resultModel);
   SModelBase result=new SModelBase(resultModel.getReference(),new NullDataSource()){
     @Override public jetbrains.mps.smodel.SModel getSModelInternal(){
       return getCurrentModelInternal();

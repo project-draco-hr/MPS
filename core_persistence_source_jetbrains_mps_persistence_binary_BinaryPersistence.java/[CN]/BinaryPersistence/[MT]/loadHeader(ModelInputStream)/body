@@ -1,18 +1,31 @@
 {
-  if (is.readInt() != HEADER) {
+  if (is.readInt() != HEADER_START) {
     throw new IOException("bad stream, no header");
   }
   int streamId=is.readInt();
+  if (streamId == STREAM_ID_V1) {
+    throw new IOException(String.format("Can't read old binary persistence version (%x), please re-save models",streamId));
+  }
   if (streamId != STREAM_ID) {
-    throw new IOException("bad stream, unknown version: " + Integer.toHexString(streamId));
+    throw new IOException(String.format("bad stream, unknown version: %x",streamId));
   }
   SModelReference modelRef=is.readModelReference();
   SModelHeader result=new SModelHeader();
   result.setModelReference(modelRef);
   result.setVersion(is.readInt());
-  result.setDoNotGenerate(is.readBoolean());
-  if (is.readInt() != 0xabab) {
-    throw new IOException("bad stream, no sync token");
+  is.mark(4);
+  if (is.readByte() == HEADER_ATTRIBUTES) {
+    result.setDoNotGenerate(is.readBoolean());
+    int propsCount=is.readShort();
+    for (; propsCount > 0; propsCount--) {
+      String key=is.readString();
+      String value=is.readString();
+      result.setOptionalProperty(key,value);
+    }
   }
+ else {
+    is.reset();
+  }
+  assertSyncToken(is,HEADER_END);
   return result;
 }

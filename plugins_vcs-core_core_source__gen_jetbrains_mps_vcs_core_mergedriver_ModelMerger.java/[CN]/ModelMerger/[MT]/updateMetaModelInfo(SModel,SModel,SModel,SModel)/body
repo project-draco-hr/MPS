@@ -1,0 +1,29 @@
+{
+  if (getPersistenceVersion(resultModel) < 9) {
+    return;
+  }
+  DefaultSModel resultModelInternal=tryInternalModelData(resultModel);
+  if (resultModelInternal == null) {
+    return;
+  }
+  DefaultSModel baseModelInternal=tryInternalModelData(baseModel);
+  DefaultSModel localModelInternal=tryInternalModelData(localModel);
+  DefaultSModel remoteModelInternal=tryInternalModelData(remoteModel);
+  if (baseModelInternal == null && localModelInternal == null && remoteModelInternal == null) {
+    return;
+  }
+  MetaModelInfoProvider delegate=resultModelInternal.getSModelHeader().getMetaInfoProvider();
+  if (delegate == null) {
+    delegate=new MetaModelInfoProvider.BaseMetaModelInfo();
+  }
+  for (  DefaultSModel m : new DefaultSModel[]{baseModelInternal,remoteModelInternal,localModelInternal}) {
+    MetaModelInfoProvider.StuffedMetaModelInfo provider;
+    if ((provider=tryStuffedProvider(m)) != null) {
+      MetaModelInfoProvider.StuffedMetaModelInfo nextInChain=new MetaModelInfoProvider.StuffedMetaModelInfo(delegate);
+      provider.populate(nextInChain);
+      delegate=nextInChain;
+    }
+  }
+  resultModelInternal.getSModelHeader().setMetaInfoProvider(delegate);
+  return;
+}
