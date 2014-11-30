@@ -1,3 +1,34 @@
 {
   Assert.assertFalse(ProjectHelper.toIdeaProject(project).getComponent(MigrationManager.class).isMigrationRequired());
+  final Wrappers._T<List<SProperty>> properties=new Wrappers._T<List<SProperty>>();
+  final Wrappers._T<SNode> root=new Wrappers._T<SNode>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      Iterable<? extends SModule> modules=project.getModules();
+      Solution migratingSolution=Sequence.fromIterable(modules).ofType(Solution.class).first();
+      SModel migratingModel=migratingSolution.getModels().get(0);
+      root.value=migratingModel.getRootNodes().iterator().next();
+      properties.value=ListSequence.fromList(ListSequence.fromListWithValues(new ArrayList<SProperty>(),root.value.getProperties())).sort(new ISelector<SProperty,String>(){
+        public String select(        SProperty it){
+          return it.getName();
+        }
+      }
+,false).toListSequence();
+    }
+  }
+);
+  Assert.assertTrue(ListSequence.fromList(properties.value).count() == 2);
+  final Wrappers._T<String> value0=new Wrappers._T<String>();
+  final Wrappers._T<String> value1=new Wrappers._T<String>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      value0.value=root.value.getProperty(ListSequence.fromList(properties.value).getElement(0));
+      value1.value=root.value.getProperty(ListSequence.fromList(properties.value).getElement(1));
+    }
+  }
+);
+  Assert.assertTrue(ListSequence.fromList(properties.value).getElement(0).getName().equals("value"));
+  Assert.assertTrue(value0.value.equals("239"));
+  Assert.assertTrue(ListSequence.fromList(properties.value).getElement(1).getName().equals("newvalue"));
+  Assert.assertTrue(value1.value.equals("239"));
 }
