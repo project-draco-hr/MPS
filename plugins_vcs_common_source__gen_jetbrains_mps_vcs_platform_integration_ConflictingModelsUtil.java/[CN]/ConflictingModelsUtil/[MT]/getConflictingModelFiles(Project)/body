@@ -1,0 +1,32 @@
+{
+  Set<VirtualFile> conflictedFiles=SetSequence.fromSet(new TreeSet<VirtualFile>(new Comparator<VirtualFile>(){
+    public int compare(    VirtualFile a,    VirtualFile b){
+      return a.getPresentableUrl().compareTo(b.getPresentableUrl());
+    }
+  }
+));
+  for (  Change change : CollectionSequence.fromCollection(ChangeListManager.getInstance(proj).getAllChanges())) {
+    if (change.getFileStatus() == FileStatus.MERGED_WITH_CONFLICTS) {
+      ContentRevision before=change.getBeforeRevision();
+      ContentRevision after=change.getAfterRevision();
+      if (before != null) {
+        VirtualFile file=before.getFile().getVirtualFile();
+        if (file != null) {
+          SetSequence.fromSet(conflictedFiles).addElement(file);
+        }
+      }
+      if (after != null) {
+        VirtualFile file=after.getFile().getVirtualFile();
+        if (file != null) {
+          SetSequence.fromSet(conflictedFiles).addElement(file);
+        }
+      }
+    }
+  }
+  return SetSequence.fromSet(conflictedFiles).where(new IWhereFilter<VirtualFile>(){
+    public boolean accept(    VirtualFile f){
+      return SetSequence.fromSet(ModelMergeTool.SUPPORTED_TYPES).contains(f.getFileType());
+    }
+  }
+).toListSequence();
+}
