@@ -1,0 +1,32 @@
+{
+  ModelInputStream mis=null;
+  try {
+    mis=new ModelInputStream(content);
+    SModelHeader modelHeader=loadHeader(mis);
+    SModel model=new DefaultSModel(modelHeader.getModelReference(),modelHeader);
+    BinaryPersistence bp=new BinaryPersistence(new StuffedMetaModelInfo(new BaseMetaModelInfo()),model);
+    final ReadHelper readHelper=bp.loadModelProperties(mis);
+    for (    ImportElement element : model.importedModels()) {
+      consumer.imports(element.getModelReference());
+    }
+    for (    SConceptId cid : readHelper.getParticipatingConcepts()) {
+      consumer.instances(cid);
+    }
+    readHelper.requestInterfaceOnly(false);
+    final NodesReader reader=new NodesReader(modelHeader.getModelReference(),mis,readHelper);
+    HashSet<SNodeId> externalNodes=new HashSet<SNodeId>();
+    HashSet<SNodeId> localNodes=new HashSet<SNodeId>();
+    reader.collectExternalTargets(externalNodes);
+    reader.collectLocalTargets(localNodes);
+    reader.readChildren(null);
+    for (    SNodeId n : externalNodes) {
+      consumer.externalNodeRef(n);
+    }
+    for (    SNodeId n : localNodes) {
+      consumer.localNodeRef(n);
+    }
+  }
+  finally {
+    FileUtil.closeFileSafe(mis);
+  }
+}

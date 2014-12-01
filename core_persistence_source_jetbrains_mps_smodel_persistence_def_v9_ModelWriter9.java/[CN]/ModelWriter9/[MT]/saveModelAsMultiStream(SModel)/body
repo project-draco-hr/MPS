@@ -1,49 +1,36 @@
 {
-  Map<String,Document> result=new HashMap<String,Document>();
-  myHelper=new MultiStreamStorageIndexHelper9(sourceModel.getReference());
-  Element headerRoot=new Element(ModelPersistence.MODEL);
-  headerRoot.setAttribute(ModelPersistence9.REF,sourceModel.getReference().toString());
+  myImportsHelper=new ImportsHelper(sourceModel.getReference());
+  Element headerRoot=new Element(ModelPersistence9.MODEL);
+  headerRoot.setAttribute(ModelPersistence9.REF,myIdEncoder.toText(sourceModel.getReference()));
   headerRoot.setAttribute(ModelPersistence9.FILE_CONTENT,"header");
   saveModelProperties(sourceModel,headerRoot);
+  final ImportsHelper wholeModelImports=myImportsHelper;
+  Map<String,Document> result=new HashMap<String,Document>();
   result.put(FilePerRootDataSource.HEADER_FILE,new Document(headerRoot));
   Map<SNodeId,String> rootToFile=FilePerRootFormatUtil.getStreamNames(sourceModel);
   for (  SNode root : sourceModel.getRootNodes()) {
-    Element rootElement=new Element(ModelPersistence.MODEL);
-    rootElement.setAttribute(ModelPersistence9.REF,sourceModel.getReference().toString());
+    Element rootElement=new Element(ModelPersistence9.MODEL);
+    rootElement.setAttribute(ModelPersistence9.REF,myIdEncoder.toText(sourceModel.getReference()));
     rootElement.setAttribute(ModelPersistence9.FILE_CONTENT,"root");
-    Element persistenceElement=new Element(ModelPersistence.PERSISTENCE);
-    persistenceElement.setAttribute(ModelPersistence.PERSISTENCE_VERSION,VERSION + "");
-    rootElement.addContent(persistenceElement);
-    Element childElement=new Element(ModelPersistence.NODE);
-    CollectConsumer<SModelReference> usedImports=new CollectConsumer<SModelReference>(new LinkedHashSet<SModelReference>());
-    CollectConsumer<SLanguageId> usedLangs=new CollectConsumer<SLanguageId>(new LinkedHashSet<SLanguageId>());
-    ((MultiStreamStorageIndexHelper9)myHelper).setUsedImportsListener(usedImports);
-    ((MultiStreamStorageIndexHelper9)myHelper).setLangConsumer(usedLangs);
-    saveNode(childElement,root,true);
-    ((MultiStreamStorageIndexHelper9)myHelper).setLangConsumer(null);
-    ((MultiStreamStorageIndexHelper9)myHelper).setUsedImportsListener(null);
+    rootElement.addContent(createPersistenceElement());
+    final LinkedHashSet<SModelReference> usedImports=new LinkedHashSet<SModelReference>();
+    myImportsHelper=new ImportsHelper(sourceModel.getReference()){
+      @Override public String getIndex(      @NotNull SModelReference modelReference){
+        usedImports.add(modelReference);
+        return wholeModelImports.getIndex(modelReference);
+      }
+    }
+;
+    myMetaInfo=new IdInfoCollector();
+    myMetaInfo.fill(Collections.singleton(root),myMetaInfoProvider);
+    Element childElement=saveNode(root);
     Element importsElement=new Element(ModelPersistence9.IMPORTS);
-    for (    SModelReference modelRef : usedImports.getResult()) {
-      Element elem=new Element(ModelPersistence9.IMPORT);
-      elem.setAttribute(ModelPersistence9.IMPORT_INDEX,"" + myHelper.getImportIndex(modelRef));
-      elem.setAttribute(ModelPersistence9.REF,modelRef.toString());
-      elem.setAttribute(ModelPersistence9.IMPLICIT,"true");
-      importsElement.addContent(elem);
+    for (    SModelReference modelRef : usedImports) {
+      importsElement.addContent(createImportElement(modelRef,wholeModelImports.getIndex(modelRef),true));
     }
     rootElement.addContent(importsElement);
-    Element langsElement=new Element(ModelPersistence9.LANGUAGES);
-    for (    SLanguageId lid : usedLangs.getResult()) {
-      Element languageElem=new Element(ModelPersistence9.USED_LANGUAGE);
-      languageElem.setAttribute(ModelPersistence9.ID,lid.serialize());
-      languageElem.setAttribute(ModelPersistence9.VERSION,"-1");
-      languageElem.setAttribute(ModelPersistence9.IMPLICIT,"true");
-      languageElem.setAttribute(ModelPersistence9.USE_INDEX,myHelper.getUsedLanguageIndex(lid));
-      langsElement.addContent(languageElem);
-    }
-    rootElement.addContent(langsElement);
-    Element contents=new Element("contents");
-    contents.addContent(childElement);
-    rootElement.addContent(contents);
+    rootElement.addContent(buildRegistry());
+    rootElement.addContent(childElement);
     result.put(rootToFile.get(root.getNodeId()),new Document(rootElement));
   }
   return result;

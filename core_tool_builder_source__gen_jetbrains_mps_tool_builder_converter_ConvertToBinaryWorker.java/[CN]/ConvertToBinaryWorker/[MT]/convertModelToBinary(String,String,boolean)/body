@@ -5,10 +5,21 @@
     modelFactory=PersistenceFacade.getInstance().getDefaultModelFactory();
   }
   try {
-    SModel model=modelFactory.load(new FileDataSource(source),Collections.singletonMap(DefaultModelPersistence.OPTION_STRIP_IMPLEMENTATION,Boolean.toString(stripImplementation)));
+    HashMap<String,String> options=new HashMap<String,String>();
+    options.put(DefaultModelPersistence.OPTION_STRIP_IMPLEMENTATION,Boolean.toString(stripImplementation));
+    options.put(MetaModelInfoProvider.OPTION_KEEP_READ_METAINFO,Boolean.TRUE.toString());
+    SModel model=modelFactory.load(new FileDataSource(source),options);
     PersistenceFacade.getInstance().getModelFactory(MPSExtentions.MODEL_BINARY).save(model,new FileDataSource(FileSystem.getInstance().getFileByPath(destFile)));
   }
- catch (  ModelSaveException e) {
-    throw new IOException(String.format("Failed to write model in binary format to file %s",destFile),e);
+ catch (  RuntimeException ex) {
+    System.out.printf("Conversion of %s\n",sourceFile);
+    ex.printStackTrace();
+    throw ex;
+  }
+catch (  IOException ex) {
+    throw new RuntimeException(String.format("Failed to read model from file %s",sourceFile),ex);
+  }
+catch (  ModelSaveException e) {
+    throw new RuntimeException(String.format("Failed to write model in binary format to file %s",destFile),e);
   }
 }
