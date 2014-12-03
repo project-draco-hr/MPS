@@ -1,8 +1,12 @@
 {
   boolean hasAnythingToCompile=false;
   List<IMessage> messages=new ArrayList<IMessage>();
+  Project project=null;
   for (  SModule m : modules) {
     if (isExcluded(m))     continue;
+    if (project == null) {
+      project=SModuleOperations.getProjectForModule(m);
+    }
     hasAnythingToCompile=true;
   }
   if (!hasAnythingToCompile) {
@@ -50,7 +54,13 @@
     listener=new MyCompilationResultAdapter(modules,classPathItems,messages);
     compiler.addCompilationResultListener(listener);
     myTracer.push("eclipse compiler",true);
-    compiler.compile(classPathItems);
+    if (project == null) {
+      compiler.compile(classPathItems);
+    }
+ else {
+      JavaCompilerOptions javaCompilerOptions=JavaCompilerOptionsComponent.getInstance().getJavaCompilerOptions(project);
+      compiler.compile(classPathItems,javaCompilerOptions);
+    }
     myTracer.pop();
     changedModules.addAll(listener.myChangedModules);
     compiler.removeCompilationResultListener(listener);
