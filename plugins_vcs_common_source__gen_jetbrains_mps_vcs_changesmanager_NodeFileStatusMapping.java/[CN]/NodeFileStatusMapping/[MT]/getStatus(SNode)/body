@@ -1,22 +1,17 @@
 {
-  final Wrappers._T<SNodeReference> nodePointer=new Wrappers._T<SNodeReference>();
-  ModelAccess.instance().runReadAction(new Runnable(){
+  final SNodeReference nodePointer=new SNodePointer(root);
+  myRegistry.getCommandQueue().runTask(new Runnable(){
     public void run(){
-      nodePointer.value=new SNodePointer(root);
-      myRegistry.getCommandQueue().runTask(new Runnable(){
+      myMPSProject.getModelAccess().runReadAction(new Runnable(){
         public void run(){
-          ModelAccess.instance().runReadAction(new Runnable(){
-            public void run(){
-              SModel md=null;
-              if (SNodeUtil.isAccessible(root,MPSModuleRepository.getInstance())) {
-                md=SNodeOperations.getModel(root);
-              }
-              if (md instanceof EditableSModel && !(md.isReadOnly())) {
-                myRegistry.getCurrentDifference((EditableSModel)md).setEnabled(true);
-              }
-            }
+          SModel md=null;
+          SNode node=nodePointer.resolve(MPSModuleRepository.getInstance());
+          if (node != null) {
+            md=SNodeOperations.getModel(root);
           }
-);
+          if (md instanceof EditableSModel && !(md.isReadOnly())) {
+            myRegistry.getCurrentDifference((EditableSModel)md).setEnabled(true);
+          }
         }
       }
 );
@@ -24,6 +19,6 @@
   }
 );
 synchronized (myFileStatusMap) {
-    return MapSequence.fromMap(myFileStatusMap).get(nodePointer.value);
+    return MapSequence.fromMap(myFileStatusMap).get(nodePointer);
   }
 }

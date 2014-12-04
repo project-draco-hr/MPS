@@ -1,5 +1,5 @@
 {
-  FileStatus status=ModelAccess.instance().runReadAction(new Computable<FileStatus>(){
+  ComputeRunnable<FileStatus> cr=new ComputeRunnable<FileStatus>(new Computable<FileStatus>(){
     public FileStatus compute(){
       SModel m=SModelRepository.getInstance().getModelDescriptor(root.getModelReference());
       if (m instanceof EditableSModel && m.getSource() instanceof FileDataSource && !(m.isReadOnly())) {
@@ -8,10 +8,10 @@
           return FileStatus.MERGED_WITH_CONFLICTS;
         }
         CurrentDifference diff=myRegistry.getCurrentDifference(model);
-        List<ModelChange> modelChanges=check_onkh7z_a0d0b0a0a0a0j(diff.getChangeSet());
+        List<ModelChange> modelChanges=check_onkh7z_a0d0b0a0a0a0k(diff.getChangeSet());
         List<ModelChange> rootChanges=ListSequence.fromList(modelChanges).where(new IWhereFilter<ModelChange>(){
           public boolean accept(          ModelChange ch){
-            return ((SNodePointer)root).getNodeId().equals(ch.getRootId());
+            return root.getNodeId().equals(ch.getRootId());
           }
         }
 ).toListSequence();
@@ -33,6 +33,8 @@
     }
   }
 );
+  myMPSProject.getModelAccess().runReadAction(cr);
+  FileStatus status=cr.getResult();
 synchronized (myFileStatusMap) {
     if (MapSequence.fromMap(myFileStatusMap).get(root) != status) {
       MapSequence.fromMap(myFileStatusMap).put(root,status);
