@@ -1,0 +1,28 @@
+{
+  StartupManager.getInstance(myProject).runWhenProjectIsInitialized(new Runnable(){
+    @Override public void run(){
+      ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
+        @Override public void run(){
+          for (          Module module : ModuleManager.getInstance(myProject).getModules()) {
+            MPSFacet facet=FacetManager.getInstance(module).getFacetByType(MPSFacetType.ID);
+            if (facet == null) {
+              continue;
+            }
+            for (            SModel model : facet.getSolution().getModels()) {
+              if (!((model instanceof DefaultSModelDescriptor))) {
+                continue;
+              }
+              DefaultSModelDescriptor ourModel=(DefaultSModelDescriptor)model;
+              if (ourModel.getPersistenceVersion() < LAST_VERSION) {
+                upgrade(ourModel);
+                Notifications.Bus.notify(new Notification("Model Persistence","Model re-saved","Model " + ourModel.getModelName() + " has been re-saved in newer persistence",NotificationType.INFORMATION),myProject);
+              }
+            }
+          }
+        }
+      }
+);
+    }
+  }
+);
+}
