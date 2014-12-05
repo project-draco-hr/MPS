@@ -1,0 +1,92 @@
+{
+  NodeReadAccessCasterInEditor.runReadTransparentAction(new Runnable(){
+    @Override public void run(){
+      myName=declaration.getProperty(SNodeUtil.property_INamedConcept_name);
+      myId=MetaIdByDeclaration.getConceptId((jetbrains.mps.smodel.SNode)declaration);
+      if (declaration == null || !SNodeUtil.isInstanceOfAbstractConceptDeclaration(declaration)) {
+        isLegal=false;
+        return;
+      }
+ else {
+        isLegal=true;
+      }
+      isInterface=SNodeUtil.isInstanceOfInterfaceConceptDeclaration(declaration);
+      isFinal=SPropertyOperations.getBoolean(declaration,"isFinal");
+      isAbstract=SPropertyOperations.getBoolean(declaration,"isAbstract");
+      helpURL=SPropertyOperations.getString(declaration,"helpUrl");
+      conceptAlias=SNodeUtil.getConceptAlias(declaration);
+      shortDescription=SNodeUtil.getConceptShortDescription(declaration);
+      String scopeVal=SPropertyOperations.getString(declaration,"staticScope");
+      staticScope="none".equals(scopeVal) ? StaticScope.NONE : ("root".equals(scopeVal) ? StaticScope.ROOT : StaticScope.GLOBAL);
+      if (SNodeUtil.isInstanceOfConceptDeclaration(declaration)) {
+        SNode superConceptNode=SNodeUtil.getConceptDeclaration_Extends(declaration);
+        if (superConceptNode == null && !SNodeUtil.conceptName_BaseConcept.equals(myName)) {
+          superConcept=SNodeUtil.conceptName_BaseConcept;
+          superConceptId=SNodeUtil.conceptId_BaseConcept;
+        }
+ else {
+          superConcept=conceptFQName(superConceptNode);
+          superConceptId=superConceptNode == null ? null : MetaIdByDeclaration.getConceptId(((jetbrains.mps.smodel.SNode)superConceptNode));
+        }
+      }
+      Set<String> parentsSet=new LinkedHashSet<String>();
+      Set<SConceptId> parentsIdsSet=new LinkedHashSet<SConceptId>();
+      if (SNodeUtil.isInstanceOfConceptDeclaration(declaration)) {
+        parentsSet.add(superConcept);
+        parentsIdsSet.add(superConceptId);
+        for (        SNode interfaceConcept : SNodeUtil.getConceptDeclaration_Implements(declaration)) {
+          parentsSet.add(conceptFQName(interfaceConcept));
+          parentsIdsSet.add(MetaIdByDeclaration.getConceptId(((jetbrains.mps.smodel.SNode)interfaceConcept)));
+        }
+      }
+ else       if (SNodeUtil.isInstanceOfInterfaceConceptDeclaration(declaration)) {
+        for (        SNode interfaceConcept : SNodeUtil.getInterfaceConceptDeclaration_Extends(declaration)) {
+          parentsSet.add(conceptFQName(interfaceConcept));
+          parentsIdsSet.add(MetaIdByDeclaration.getConceptId(((jetbrains.mps.smodel.SNode)interfaceConcept)));
+        }
+      }
+      parentsSet.remove(null);
+      if (superConcept == null && !SNodeUtil.conceptName_BaseConcept.equals(myName)) {
+        parentsSet.add(SNodeUtil.conceptName_BaseConcept);
+        parentsIdsSet.add(SNodeUtil.conceptId_BaseConcept);
+      }
+      parents=new ArrayList<String>(parentsSet);
+      parentsIds=new ArrayList<SConceptId>(parentsIdsSet);
+      for (      SNode property : SNodeUtil.getConcept_PropertyDeclarations(declaration)) {
+        String name=property.getName();
+        if (name != null) {
+          directProperties.add(name);
+          SPropertyId propId=MetaIdByDeclaration.getPropId(((jetbrains.mps.smodel.SNode)property));
+          BasePropertyDescriptor pd=new BasePropertyDescriptor(propId,name);
+          directPropertiesByIds.put(propId,pd);
+          directPropertiesByName.put(name,pd);
+        }
+      }
+      unorderedChildren=new HashSet<String>();
+      for (      SNode link : SNodeUtil.getConcept_LinkDeclarations(declaration)) {
+        String role=SModelUtil.getLinkDeclarationRole(link);
+        if (role != null) {
+          boolean unordered=SNodeUtil.getLinkDeclaration_IsUnordered(link);
+          if (unordered) {
+            unorderedChildren.add(role);
+          }
+          if (SNodeUtil.getLinkDeclaration_IsReference(link)) {
+            directReferences.add(role);
+            SReferenceLinkId refId=MetaIdByDeclaration.getRefRoleId(((jetbrains.mps.smodel.SNode)link));
+            BaseReferenceDescriptor pd=new BaseReferenceDescriptor(refId,role,MetaIdByDeclaration.getConceptId(((jetbrains.mps.smodel.SNode)SNodeUtil.getLinkTarget(link))),SNodeUtil.getLinkDeclaration_IsExactlyOneMultiplicity(link));
+            directReferencesByIds.put(refId,pd);
+            directReferencesByName.put(role,pd);
+          }
+ else {
+            childrenMap.put(role,!SNodeUtil.getLinkDeclaration_IsSingular(link));
+            SContainmentLinkId linkId=MetaIdByDeclaration.getLinkId(((jetbrains.mps.smodel.SNode)link));
+            BaseLinkDescriptor pd=new BaseLinkDescriptor(linkId,role,MetaIdByDeclaration.getConceptId(((jetbrains.mps.smodel.SNode)SNodeUtil.getLinkTarget(link))),SNodeUtil.getLinkDeclaration_IsExactlyOneMultiplicity(link),SNodeUtil.getLinkDeclaration_IsSingular(link),unordered);
+            directLinksByIds.put(linkId,pd);
+            directLinksByName.put(role,pd);
+          }
+        }
+      }
+    }
+  }
+);
+}
