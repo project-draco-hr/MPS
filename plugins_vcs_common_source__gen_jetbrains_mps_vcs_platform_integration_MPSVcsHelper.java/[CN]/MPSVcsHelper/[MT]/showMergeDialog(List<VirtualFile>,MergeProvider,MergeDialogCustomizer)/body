@@ -1,0 +1,18 @@
+{
+  if (ConflictingModelsUtil.hasResolvableConflicts(myProject,provider,files)) {
+    int answer=Messages.showYesNoCancelDialog(myProject,"Some conflicts in MPS models can be autoresolved. Resolve such conflicts automatically?","Conflict Resolver",Messages.getQuestionIcon());
+    if (answer == Messages.CANCEL) {
+      return Collections.emptyList();
+    }
+    if (answer == Messages.YES) {
+      MergeSession session=(provider instanceof MergeProvider2 ? ((MergeProvider2)provider).createMergeSession(files) : null);
+      ConflictingModelsUtil.ModelConflictResolver modelConflictResolverTask=ConflictingModelsUtil.getModelConflictResolverTask(myProject,provider,session,files);
+      ProgressManager.getInstance().run(modelConflictResolverTask);
+      List<VirtualFile> autoResolvedFiles=modelConflictResolverTask.getResolvedFiles();
+      List<VirtualFile> toResolve=ListSequence.fromList(((List<VirtualFile>)files)).subtract(ListSequence.fromList(autoResolvedFiles)).toListSequence();
+      List<VirtualFile> resolvedFiles=super.showMergeDialog(toResolve,provider,customizer);
+      return ListSequence.fromList(autoResolvedFiles).addSequence(ListSequence.fromList(resolvedFiles));
+    }
+  }
+  return super.showMergeDialog(files,provider,customizer);
+}
