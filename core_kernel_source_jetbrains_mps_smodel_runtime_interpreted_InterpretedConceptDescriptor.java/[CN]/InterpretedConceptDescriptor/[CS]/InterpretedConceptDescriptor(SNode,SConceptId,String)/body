@@ -4,13 +4,18 @@
   NodeReadAccessCasterInEditor.runReadTransparentAction(new Runnable(){
     @Override public void run(){
       isInterface=SNodeUtil.isInstanceOfInterfaceConceptDeclaration(declaration);
-      isFinal=SPropertyOperations.getBoolean(declaration,"isFinal");
-      isAbstract=SPropertyOperations.getBoolean(declaration,"isAbstract");
-      helpURL=SPropertyOperations.getString(declaration,"helpUrl");
-      conceptAlias=SNodeUtil.getConceptAlias(declaration);
-      shortDescription=SNodeUtil.getConceptShortDescription(declaration);
-      String scopeVal=SPropertyOperations.getString(declaration,"staticScope");
-      staticScope="none".equals(scopeVal) ? StaticScope.NONE : ("root".equals(scopeVal) ? StaticScope.ROOT : StaticScope.GLOBAL);
+      isFinal=SPropertyOperations.getBoolean(declaration,SNodeUtil.property_AbstractConceptDeclaration_final);
+      isAbstract=SPropertyOperations.getBoolean(declaration,SNodeUtil.property_AbstractConceptDeclaration_abstract);
+      helpURL=SPropertyOperations.getString(declaration,SNodeUtil.property_AbstractConceptDeclaration_helpURL);
+      conceptAlias=SPropertyOperations.getString(declaration,SNodeUtil.property_AbstractConceptDeclaration_conceptAlias);
+      shortDescription=SPropertyOperations.getString(declaration,SNodeUtil.property_AbstractConceptDeclaration_conceptShortDescription);
+      if (isInterface) {
+        staticScope=StaticScope.GLOBAL;
+      }
+ else {
+        String scopeVal=SPropertyOperations.getString(declaration,SNodeUtil.property_ConceptDeclaration_staticScope);
+        staticScope="none".equals(scopeVal) ? StaticScope.NONE : ("root".equals(scopeVal) ? StaticScope.ROOT : StaticScope.GLOBAL);
+      }
       Set<String> parentsSet=new LinkedHashSet<String>();
       Set<SConceptId> parentsIdsSet=new LinkedHashSet<SConceptId>();
       if (SNodeUtil.isInstanceOfConceptDeclaration(declaration)) {
@@ -21,19 +26,19 @@
         }
  else {
           superConcept=StructureAspectInterpreted.conceptFQName(superConceptNode);
-          superConceptId=superConceptNode == null ? null : MetaIdByDeclaration.getConceptId(((jetbrains.mps.smodel.SNode)superConceptNode));
+          superConceptId=superConceptNode == null ? null : MetaIdByDeclaration.getConceptId(superConceptNode);
         }
         parentsSet.add(superConcept);
         parentsIdsSet.add(superConceptId);
         for (        SNode interfaceConcept : SNodeUtil.getConceptDeclaration_Implements(declaration)) {
           parentsSet.add(StructureAspectInterpreted.conceptFQName(interfaceConcept));
-          parentsIdsSet.add(MetaIdByDeclaration.getConceptId(((jetbrains.mps.smodel.SNode)interfaceConcept)));
+          parentsIdsSet.add(MetaIdByDeclaration.getConceptId(interfaceConcept));
         }
       }
- else       if (SNodeUtil.isInstanceOfInterfaceConceptDeclaration(declaration)) {
+ else       if (isInterface) {
         for (        SNode interfaceConcept : SNodeUtil.getInterfaceConceptDeclaration_Extends(declaration)) {
           parentsSet.add(StructureAspectInterpreted.conceptFQName(interfaceConcept));
-          parentsIdsSet.add(MetaIdByDeclaration.getConceptId(((jetbrains.mps.smodel.SNode)interfaceConcept)));
+          parentsIdsSet.add(MetaIdByDeclaration.getConceptId(interfaceConcept));
         }
       }
       parentsSet.remove(null);
@@ -47,7 +52,7 @@
         String name=property.getName();
         if (name != null) {
           directProperties.add(name);
-          SPropertyId propId=MetaIdByDeclaration.getPropId(((jetbrains.mps.smodel.SNode)property));
+          SPropertyId propId=MetaIdByDeclaration.getPropId(property);
           BasePropertyDescriptor pd=new BasePropertyDescriptor(propId,name);
           directPropertiesByIds.put(propId,pd);
           directPropertiesByName.put(name,pd);
