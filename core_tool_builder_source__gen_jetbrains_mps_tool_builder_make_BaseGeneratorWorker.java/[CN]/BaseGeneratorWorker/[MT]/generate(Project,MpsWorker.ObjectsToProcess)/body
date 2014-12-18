@@ -16,7 +16,16 @@
   ProjectOperationContext ctx=new ProjectOperationContext(project);
   Iterable<MResource> resources=Sequence.fromIterable(collectResources(ctx,go)).toListSequence();
   ModelAccess.instance().flushEventQueue();
-  Future<IResult> res=new BuildMakeService().make(new MakeSession(ctx,myMessageHandler,true),resources,null,null,new EmptyProgressMonitor());
+  MakeSession session=new MakeSession(ctx,myMessageHandler,true);
+  DefaultMonitor defaultMonitor=new DefaultMonitor(session);
+  final JavaCompilerProperties properties=new JavaCompilerProperties(myWhatToDo);
+  Stub controller=new Stub(defaultMonitor,defaultMonitor){
+    @Override public void setup(    IPropertiesPool ppool){
+      new JavaCompileFacetInitializer().setJavaCompileOptions(new JavaCompilerOptions(JavaVersion.parse(properties.getTargetJavaVersion()))).populate(ppool);
+    }
+  }
+;
+  Future<IResult> res=new BuildMakeService().make(session,resources,null,controller,new EmptyProgressMonitor());
   try {
     if (!(res.get().isSucessful())) {
       myErrors.add("Make was not successful");
