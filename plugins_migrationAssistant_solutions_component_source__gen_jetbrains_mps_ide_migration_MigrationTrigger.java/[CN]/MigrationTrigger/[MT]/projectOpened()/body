@@ -1,0 +1,33 @@
+{
+  if (!(myState.migrationRequired)) {
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        MPSModuleRepository.getInstance().addRepositoryListener(MigrationTrigger.this.myRepoListener);
+        ClassLoaderManager.getInstance().addClassesHandler(MigrationTrigger.this.myClassesListener);
+      }
+    }
+);
+    ModelAccess.instance().runWriteAction(new Runnable(){
+      public void run(){
+        postponeMigrationIfNeededOnModuleChange(((Iterable<SModule>)myMpsProject.getModulesWithGenerators()));
+      }
+    }
+);
+    return;
+  }
+  if (!(myMigrationManager.isMigrationRequired())) {
+    return;
+  }
+  StartupManager.getInstance(myProject).registerPostStartupActivity(new Runnable(){
+    public void run(){
+      ApplicationManager.getApplication().runWriteAction(new Runnable(){
+        public void run(){
+          VirtualFileManager.getInstance().syncRefresh();
+        }
+      }
+);
+      executeWizard();
+    }
+  }
+);
+}
