@@ -17,11 +17,16 @@
   boolean doneSomething=false;
   Project project=createDummyProject();
   for (  IMapping<List<String>,Boolean> chunk : MapSequence.fromMap(myWhatToDo.getChunks())) {
-    List<String> modulePaths=chunk.key();
-    LinkedHashSet<SModule> modules=new LinkedHashSet<SModule>();
-    for (    String modulePath : modulePaths) {
-      processModuleFile(new File(modulePath),modules);
+    final List<String> modulePaths=chunk.key();
+    final Set<SModule> modules=new LinkedHashSet<SModule>();
+    project.getModelAccess().runWriteAction(new Runnable(){
+      public void run(){
+        for (        String modulePath : modulePaths) {
+          processModuleFile(new File(modulePath),modules);
+        }
+      }
     }
+);
     Boolean bootstrap=chunk.value();
     if (bootstrap) {
       warning("Found bootstrap chunk " + chunk.key() + ". Generation may be impossible.");
@@ -35,7 +40,6 @@
   if (!(doneSomething)) {
     error("Could not find anything to generate.");
   }
-  environment.dispose();
   dispose();
   showStatistic();
 }
