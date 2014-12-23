@@ -1,0 +1,34 @@
+{
+  if (myMigrationQueued) {
+    return;
+  }
+  final com.intellij.openapi.project.Project ideaProject=ProjectHelper.toIdeaProject(myMpsProject);
+  StartupManager.getInstance(ideaProject).runWhenProjectIsInitialized(new Runnable(){
+    public void run(){
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        public void run(){
+          String[] choises=new String[]{"Clean sources and migrate","Migrate","Postpone"};
+          final int result=Messages.showChooseDialog(ideaProject,"Some of the modules in project require migration.\n" + "It is advised to clean generated files before you start the migration.\n" + "Would you like to reload project and start the migration immediately?","Migration required",null,choises,choises[0]);
+          if (result == 2) {
+            return;
+          }
+          ApplicationManager.getApplication().runWriteAction(new Runnable(){
+            public void run(){
+              if (result == 0) {
+                removeGenSources();
+              }
+              removeClassesGen();
+              FSRecords.invalidateCaches();
+            }
+          }
+);
+          myState.migrationRequired=true;
+          ProjectManagerEx.getInstance().reloadProject(ideaProject);
+        }
+      }
+);
+    }
+  }
+);
+  myMigrationQueued=true;
+}

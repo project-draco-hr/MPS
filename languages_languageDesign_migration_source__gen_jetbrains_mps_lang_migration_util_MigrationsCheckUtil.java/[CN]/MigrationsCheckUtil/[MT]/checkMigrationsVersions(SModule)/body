@@ -1,0 +1,87 @@
+{
+  if (!(module instanceof Language)) {
+    return Collections.emptyMap();
+  }
+  SModel migModel=LanguageAspect.MIGRATION.get(((Language)module));
+  if (migModel == null) {
+    return Collections.emptyMap();
+  }
+  if (!(migModel.isLoaded())) {
+    return Collections.emptyMap();
+  }
+  List<SNode> allScripts=SModelOperations.roots(migModel,MetaAdapterFactory.getConcept(0x9074634404fd4286L,0x97d5b46ae6a81709L,0x73e8a2c68b62c6a3L,"jetbrains.mps.lang.migration.structure.MigrationScript"));
+  final Map<SNode,Collection<String>> result=MapSequence.fromMap(new HashMap<SNode,Collection<String>>());
+  Iterable<SNode> noVersionScripts=ListSequence.fromList(allScripts).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return !(MigrationsCheckUtil.isVersionSet(it));
+    }
+  }
+);
+  Sequence.fromIterable(noVersionScripts).visitAll(new IVisitor<SNode>(){
+    public void visit(    SNode it){
+      MigrationsCheckUtil.ensureInitialized(result,it);
+      CollectionSequence.fromCollection(MapSequence.fromMap(result).get(it)).addElement("Script does not have version");
+    }
+  }
+);
+  if (Sequence.fromIterable(noVersionScripts).count() == ListSequence.fromList(allScripts).count()) {
+    return result;
+  }
+  Iterable<SNode> scriptsWithVersions=ListSequence.fromList(allScripts).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return MigrationsCheckUtil.isVersionSet(it);
+    }
+  }
+);
+  final Map<Integer,Integer> versions=MapSequence.fromMap(new HashMap<Integer,Integer>());
+  Sequence.fromIterable(scriptsWithVersions).visitAll(new IVisitor<SNode>(){
+    public void visit(    SNode it){
+      if (MapSequence.fromMap(versions).get(SPropertyOperations.getInteger(it,MetaAdapterFactory.getProperty(0x9074634404fd4286L,0x97d5b46ae6a81709L,0x73e8a2c68b62c6a3L,0x50c63f9f4a0dac17L,"fromVersion"))) == null) {
+        MapSequence.fromMap(versions).put(SPropertyOperations.getInteger(it,MetaAdapterFactory.getProperty(0x9074634404fd4286L,0x97d5b46ae6a81709L,0x73e8a2c68b62c6a3L,0x50c63f9f4a0dac17L,"fromVersion")),0);
+      }
+      MapSequence.fromMap(versions).put(SPropertyOperations.getInteger(it,MetaAdapterFactory.getProperty(0x9074634404fd4286L,0x97d5b46ae6a81709L,0x73e8a2c68b62c6a3L,0x50c63f9f4a0dac17L,"fromVersion")),MapSequence.fromMap(versions).get(SPropertyOperations.getInteger(it,MetaAdapterFactory.getProperty(0x9074634404fd4286L,0x97d5b46ae6a81709L,0x73e8a2c68b62c6a3L,0x50c63f9f4a0dac17L,"fromVersion"))) + 1);
+    }
+  }
+);
+  final int minVersion=SetSequence.fromSet(MapSequence.fromMap(versions).keySet()).sort(new ISelector<Integer,Integer>(){
+    public Integer select(    Integer it){
+      return it;
+    }
+  }
+,true).first();
+  final int maxVersion=SetSequence.fromSet(MapSequence.fromMap(versions).keySet()).sort(new ISelector<Integer,Integer>(){
+    public Integer select(    Integer it){
+      return it;
+    }
+  }
+,false).first();
+  final int langVersion=((Language)module).getLanguageVersion();
+  if (maxVersion != langVersion - 1) {
+    Sequence.fromIterable(scriptsWithVersions).where(new IWhereFilter<SNode>(){
+      public boolean accept(      SNode it){
+        return SPropertyOperations.getInteger(it,MetaAdapterFactory.getProperty(0x9074634404fd4286L,0x97d5b46ae6a81709L,0x73e8a2c68b62c6a3L,0x50c63f9f4a0dac17L,"fromVersion")) == maxVersion;
+      }
+    }
+).visitAll(new IVisitor<SNode>(){
+      public void visit(      SNode it){
+        ensureInitialized(result,it);
+        CollectionSequence.fromCollection(MapSequence.fromMap(result).get(it)).addElement("Language version (" + langVersion + ") is greater than the targert version of last migration script ("+ maxVersion+ ")");
+      }
+    }
+);
+  }
+  Sequence.fromIterable(scriptsWithVersions).visitAll(new IVisitor<SNode>(){
+    public void visit(    SNode it){
+      if (MapSequence.fromMap(versions).get(SPropertyOperations.getInteger(it,MetaAdapterFactory.getProperty(0x9074634404fd4286L,0x97d5b46ae6a81709L,0x73e8a2c68b62c6a3L,0x50c63f9f4a0dac17L,"fromVersion"))) > 1) {
+        ensureInitialized(result,it);
+        CollectionSequence.fromCollection(MapSequence.fromMap(result).get(it)).addElement("Multiple scripts for version " + SPropertyOperations.getInteger(it,MetaAdapterFactory.getProperty(0x9074634404fd4286L,0x97d5b46ae6a81709L,0x73e8a2c68b62c6a3L,0x50c63f9f4a0dac17L,"fromVersion")) + " found");
+      }
+      if (SPropertyOperations.getInteger(it,MetaAdapterFactory.getProperty(0x9074634404fd4286L,0x97d5b46ae6a81709L,0x73e8a2c68b62c6a3L,0x50c63f9f4a0dac17L,"fromVersion")) != minVersion && MapSequence.fromMap(versions).get(SPropertyOperations.getInteger(it,MetaAdapterFactory.getProperty(0x9074634404fd4286L,0x97d5b46ae6a81709L,0x73e8a2c68b62c6a3L,0x50c63f9f4a0dac17L,"fromVersion")) - 1) == null) {
+        ensureInitialized(result,it);
+        CollectionSequence.fromCollection(MapSequence.fromMap(result).get(it)).addElement("Missing script for version " + (SPropertyOperations.getInteger(it,MetaAdapterFactory.getProperty(0x9074634404fd4286L,0x97d5b46ae6a81709L,0x73e8a2c68b62c6a3L,0x50c63f9f4a0dac17L,"fromVersion")) - 1));
+      }
+    }
+  }
+);
+  return result;
+}

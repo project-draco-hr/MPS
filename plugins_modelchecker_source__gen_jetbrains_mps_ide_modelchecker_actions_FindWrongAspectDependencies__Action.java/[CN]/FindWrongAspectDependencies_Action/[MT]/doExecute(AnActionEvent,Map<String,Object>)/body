@@ -1,12 +1,22 @@
 {
   try {
-    List<SModel> models=ListSequence.fromListWithValues(new ArrayList<SModel>(),Sequence.fromIterable(((Iterable<SModel>)SModelRepository.getInstance().getModelDescriptors())).where(new IWhereFilter<SModel>(){
+    List<SModel> models=ListSequence.fromListWithValues(new ArrayList<SModel>(),Sequence.fromIterable(((Iterable<SModule>)((MPSProject)MapSequence.fromMap(_params).get("mpsProject")).getModules())).where(new IWhereFilter<SModule>(){
+      public boolean accept(      SModule it){
+        return FindWrongAspectDependencies_Action.this.needsProcessing(it,_params);
+      }
+    }
+).translate(new ITranslator2<SModule,SModel>(){
+      public Iterable<SModel> translate(      SModule it){
+        return it.getModels();
+      }
+    }
+).where(new IWhereFilter<SModel>(){
       public boolean accept(      SModel md){
-        return FindWrongAspectDependencies_Action.this.needsProcessing(md,_params);
+        return SModelStereotype.isUserModel(md);
       }
     }
 ));
-    ModelCheckerTool.getInstance(((Project)MapSequence.fromMap(_params).get("project"))).checkModels(models,((IOperationContext)MapSequence.fromMap(_params).get("operationContext")),true,new ModelCheckerIssueFinder(new AspectDependenciesChecker()));
+    ModelCheckerTool.getInstance(((MPSProject)MapSequence.fromMap(_params).get("mpsProject")).getProject()).checkModels(models,null,true,new ModelCheckerIssueFinder(new AspectDependenciesChecker(((MPSProject)MapSequence.fromMap(_params).get("mpsProject")))));
   }
  catch (  Throwable t) {
     if (LOG.isEnabledFor(Level.ERROR)) {
