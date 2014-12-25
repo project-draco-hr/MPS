@@ -1,23 +1,12 @@
 {
-  assertCanRead();
-  ModuleDescriptor descriptor=getModuleDescriptor();
-  if (descriptor == null)   return new ArrayList<SDependency>();
-  List<SDependency> dependencies=new ArrayList<SDependency>();
-  for (  Dependency dependency : descriptor.getDependencies()) {
-    SModule target=ModuleRepositoryFacade.getInstance().getModule(dependency.getModuleRef());
-    if (target != null) {
-      dependencies.add(new SDependencyImpl(target,dependency.getScope(),dependency.isReexport()));
-    }
+  SRepository repository=getRepository();
+  if (repository == null)   throw new IllegalStateException("No repository to resolve dependencies references");
+  Iterable<Dependency> unresolvedDeps=getUnresolvedDependencies();
+  List<SDependency> resolvedDeps=new ArrayList<SDependency>();
+  for (  Dependency dep : unresolvedDeps) {
+    SModuleReference moduleRef=dep.getModuleRef();
+    SModule target=moduleRef.resolve(repository);
+    resolvedDeps.add(new SDependencyImpl(target,dep.getScope(),dep.isReexport()));
   }
-  for (  SModuleReference usedDevkit : getModuleDescriptor().getUsedDevkits()) {
-    DevKit devKit=ModuleRepositoryFacade.getInstance().getModule(usedDevkit,DevKit.class);
-    if (devKit != null) {
-      for (      Solution solution : devKit.getAllExportedSolutions()) {
-        if (solution != null) {
-          dependencies.add(new SDependencyImpl(solution,SDependencyScope.DEFAULT,false));
-        }
-      }
-    }
-  }
-  return dependencies;
+  return resolvedDeps;
 }
