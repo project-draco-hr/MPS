@@ -2,12 +2,20 @@
   if (myDescriptors != null)   return;
 synchronized (this) {
     if (myDescriptors != null)     return;
-    final SModel struct=LanguageAspect.STRUCTURE.get(myLanguage);
+    ConcurrentHashMap<SConceptId,ConceptDescriptor> descriptors=new ConcurrentHashMap<SConceptId,ConceptDescriptor>();
+    ConcurrentHashMap<String,ConceptDescriptor> descriptorsByName=new ConcurrentHashMap<String,ConceptDescriptor>();
+    final SModel structureModel=LanguageAspect.STRUCTURE.get(myLanguage);
+    if (structureModel == null) {
+      LOG.warn("Structure aspect is null in the language " + myLanguage);
+      myDescriptorByName=descriptorsByName;
+      myDescriptors=descriptors;
+      return;
+    }
     myLanguage.getRepository().getModelAccess().runReadAction(new Runnable(){
       @Override public void run(){
         ConcurrentHashMap<SConceptId,ConceptDescriptor> descriptors=new ConcurrentHashMap<SConceptId,ConceptDescriptor>();
         ConcurrentHashMap<String,ConceptDescriptor> descriptorsByName=new ConcurrentHashMap<String,ConceptDescriptor>();
-        for (        SNode root : struct.getRootNodes()) {
+        for (        SNode root : structureModel.getRootNodes()) {
           SConcept concept=root.getConcept();
           if (!isConceptDeclaration(concept)) {
             continue;
