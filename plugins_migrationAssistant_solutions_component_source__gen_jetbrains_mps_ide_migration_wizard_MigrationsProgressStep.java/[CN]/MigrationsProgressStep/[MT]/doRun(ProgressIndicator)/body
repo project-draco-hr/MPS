@@ -19,8 +19,17 @@
     }
   }
 );
-  addElementToMigrationList("Done!");
-  mySuccess=mySuccess && !(myManager.isMigrationRequired());
-  myFinished=true;
+  addElementToMigrationList("Checking models... Please wait.");
+  final Wrappers._boolean postProblems=new Wrappers._boolean();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      Iterable<SModule> modules=((Iterable<SModule>)ProjectHelper.toMPSProject(myProject).getModulesWithGenerators());
+      Iterable<SNode> problems=MigrationCheckUtil.getProblemNodes(modules);
+      postProblems.value=Sequence.fromIterable(problems).isNotEmpty();
+    }
+  }
+);
+  myFinishedState=new MigrationsProgressStep.FinishedState(false,myNoErrors && !(myManager.isMigrationRequired()),postProblems.value);
+  addElementToMigrationList((myFinishedState.isEverythingOk() ? "Done!" : "Finished with errors. Click 'Next' to continue."));
   PersistenceRegistry.getInstance().enableFastFindUsages();
 }
