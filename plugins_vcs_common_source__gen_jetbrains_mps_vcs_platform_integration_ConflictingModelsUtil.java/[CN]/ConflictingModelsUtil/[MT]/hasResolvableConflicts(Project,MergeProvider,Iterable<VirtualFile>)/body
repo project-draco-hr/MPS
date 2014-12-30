@@ -1,0 +1,44 @@
+{
+  for (  VirtualFile file : Sequence.fromIterable(conflictedFiles)) {
+    MergeData mergeData=null;
+    try {
+      mergeData=provider.loadRevisions(file);
+    }
+ catch (    VcsException e) {
+      if (LOG.isEnabledFor(Level.ERROR)) {
+        LOG.error("Error loading revisions to merge",e);
+      }
+    }
+    IFile iFile=FileSystem.getInstance().getFileByPath(file.getPath());
+    String ext=file.getExtension();
+    if (FilePerRootDataSource.isPerRootPersistenceFile(iFile)) {
+      ext=MPSExtentions.MODEL;
+    }
+    final SModel baseModel=PersistenceUtil.loadModel(mergeData.ORIGINAL,ext);
+    final SModel mineModel=PersistenceUtil.loadModel(mergeData.CURRENT,ext);
+    final SModel repoModel=PersistenceUtil.loadModel(mergeData.LAST,ext);
+    if (baseModel == null || mineModel == null || repoModel == null) {
+      if (LOG.isEnabledFor(Level.WARN)) {
+        LOG.warn("Couldn't read model " + file.getPath());
+      }
+      continue;
+    }
+    final Wrappers._T<MergeSession> mergeSession=new Wrappers._T<MergeSession>();
+    ProjectHelper.getModelAccess(project).runReadAction(new Runnable(){
+      public void run(){
+        mergeSession.value=MergeSession.createMergeSession(baseModel,mineModel,repoModel);
+      }
+    }
+);
+    int conflictingChangesCount=Sequence.fromIterable(mergeSession.value.getAllChanges()).where(new IWhereFilter<ModelChange>(){
+      public boolean accept(      ModelChange c){
+        return Sequence.fromIterable(mergeSession.value.getConflictedWith(c)).isNotEmpty();
+      }
+    }
+).count();
+    if (conflictingChangesCount == 0) {
+      return true;
+    }
+  }
+  return false;
+}
