@@ -1,0 +1,46 @@
+{
+  Element languageElement=new Element("language");
+  languageElement.setAttribute("namespace",descriptor.getNamespace());
+  if (descriptor.getId() != null) {
+    languageElement.setAttribute("uuid",descriptor.getId().toString());
+  }
+  if (descriptor.getGenPath() != null) {
+    languageElement.setAttribute("generatorOutputPath",macroHelper.shrinkPath(descriptor.getGenPath()));
+  }
+  languageElement.setAttribute("version",Integer.toString(descriptor.getVersion()));
+  Element models=new Element("models");
+  ModuleDescriptorPersistence.saveModelRoots(models,descriptor.getModelRootDescriptors(),macroHelper);
+  languageElement.addContent(models);
+  if (!(descriptor.getModuleFacetDescriptors().isEmpty())) {
+    Element facets=new Element("facets");
+    ModuleDescriptorPersistence.saveFacets(facets,descriptor.getModuleFacetDescriptors(),macroHelper);
+    languageElement.addContent(facets);
+  }
+  Element accessoryModels=new Element("accessoryModels");
+  for (  SModelReference model : SetSequence.fromSet(descriptor.getAccessoryModels())) {
+    XmlUtil.tagWithAttribute(accessoryModels,"model","modelUID",model.toString());
+  }
+  languageElement.addContent(accessoryModels);
+  Element generators=new Element("generators");
+  for (  GeneratorDescriptor generatorDescriptor : ListSequence.fromList(descriptor.getGenerators())) {
+    GeneratorDescriptorPersistence.saveGeneratorDescriptor(generators,generatorDescriptor,macroHelper);
+  }
+  languageElement.addContent(generators);
+  if (!(descriptor.getAdditionalJavaStubPaths().isEmpty())) {
+    Element stubModelEntries=new Element("stubModelEntries");
+    ModuleDescriptorPersistence.saveStubModelEntries(stubModelEntries,descriptor.getAdditionalJavaStubPaths(),macroHelper);
+    languageElement.addContent(stubModelEntries);
+  }
+  Element sourcePath=new Element("sourcePath");
+  for (  String p : descriptor.getSourcePaths()) {
+    XmlUtil.tagWithAttribute(sourcePath,"source","path",macroHelper.shrinkPath(p));
+  }
+  languageElement.addContent(sourcePath);
+  ModuleDescriptorPersistence.saveDependencies(languageElement,descriptor);
+  Element extendedLanguages=new Element("extendedLanguages");
+  for (  SModuleReference ref : SetSequence.fromSet(descriptor.getExtendedLanguages())) {
+    XmlUtil.tagWithText(extendedLanguages,"extendedLanguage",ref.toString());
+  }
+  languageElement.addContent(extendedLanguages);
+  return new Document(languageElement);
+}

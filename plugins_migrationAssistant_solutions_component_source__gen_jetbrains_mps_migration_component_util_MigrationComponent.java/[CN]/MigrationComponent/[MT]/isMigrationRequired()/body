@@ -3,30 +3,14 @@
   ModelAccess.instance().runWriteAction(new Runnable(){
     public void run(){
       List<ProjectMigration> pMig=ProjectMigrationsRegistry.getInstance().getMigrations();
-      Iterable<? extends SModule> modules=mpsProject.getModulesWithGenerators();
-      Sequence.fromIterable(modules).ofType(AbstractModule.class).visitAll(new IVisitor<AbstractModule>(){
-        public void visit(        AbstractModule it){
-          it.validateLanguageVersions();
-        }
-      }
-);
+      Iterable<SModule> modules=((Iterable<SModule>)mpsProject.getModulesWithGenerators());
       boolean projectMig=ListSequence.fromList(pMig).any(new IWhereFilter<ProjectMigration>(){
         public boolean accept(        ProjectMigration it){
           return it.shouldBeExecuted(mpsProject);
         }
       }
 );
-      boolean languageMig=Sequence.fromIterable(modules).ofType(AbstractModule.class).any(new IWhereFilter<AbstractModule>(){
-        public boolean accept(        final AbstractModule module){
-          return Sequence.fromIterable(MigrationsUtil.getNextStepScripts(module)).any(new IWhereFilter<MigrationScriptReference>(){
-            public boolean accept(            MigrationScriptReference item){
-              return MigrationsUtil.isMigrationNeeded(item.getLanguage(),item.getFromVersion(),module);
-            }
-          }
-);
-        }
-      }
-);
+      boolean languageMig=isLanguageMigrationRequired(modules);
       result.value=projectMig || languageMig;
     }
   }
