@@ -1,26 +1,47 @@
 {
   PersistenceRegistry.getInstance().disableFastFindUsages();
   double projectStepsFraction=0.3;
-  int projectStepsCount=myManager.projectStepsCount();
-  int languageStepsCount=myManager.languageStepsCount();
-  progress.setFraction(0);
-  while (executeSingleStep(myManager.nextProjectStep())) {
-    progress.setFraction(progress.getFraction() + projectStepsFraction / projectStepsCount);
-  }
-  progress.setFraction(projectStepsFraction);
-  while (executeSingleStep(myManager.nextLanguageStep())) {
-    progress.setFraction(progress.getFraction() + (1.0 - projectStepsFraction) / languageStepsCount);
-  }
-  progress.setFraction(1.0);
-  addElementToMigrationList("Saving changed models... Please wait.");
-  ModelAccess.instance().runWriteInEDT(new Runnable(){
+  addElementToMigrationList("Checking models... Please wait.");
+  final Wrappers._boolean preProblems=new Wrappers._boolean();
+  ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
-      MPSModuleRepository.getInstance().saveAll();
+      Iterable<SModule> modules=((Iterable<SModule>)ProjectHelper.toMPSProject(myProject).getModulesWithGenerators());
+      Iterable<SNode> problems=MigrationCheckUtil.getProblemNodes(modules);
+      preProblems.value=Sequence.fromIterable(problems).isNotEmpty();
     }
   }
 );
-  addElementToMigrationList("Done!");
-  mySuccess=mySuccess && !(myManager.isMigrationRequired());
-  myFinished=true;
+  int projectStepsCount=myManager.projectStepsCount();
+  int languageStepsCount=myManager.languageStepsCount();
+  progress.setFraction(0);
+  final Wrappers._boolean postProblems=new Wrappers._boolean(false);
+  if (!(preProblems.value)) {
+    while (executeSingleStep(myManager.nextProjectStep())) {
+      progress.setFraction(progress.getFraction() + projectStepsFraction / projectStepsCount);
+    }
+    progress.setFraction(projectStepsFraction);
+    while (executeSingleStep(myManager.nextLanguageStep())) {
+      progress.setFraction(progress.getFraction() + (1.0 - projectStepsFraction) / languageStepsCount);
+    }
+    progress.setFraction(1.0);
+    addElementToMigrationList("Saving changed models... Please wait.");
+    ModelAccess.instance().runWriteInEDT(new Runnable(){
+      public void run(){
+        MPSModuleRepository.getInstance().saveAll();
+      }
+    }
+);
+    addElementToMigrationList("Checking models... Please wait.");
+    ModelAccess.instance().runReadAction(new Runnable(){
+      public void run(){
+        Iterable<SModule> modules=((Iterable<SModule>)ProjectHelper.toMPSProject(myProject).getModulesWithGenerators());
+        Iterable<SNode> problems=MigrationCheckUtil.getProblemNodes(modules);
+        postProblems.value=Sequence.fromIterable(problems).isNotEmpty();
+      }
+    }
+);
+  }
+  myFinishedState=new MigrationsProgressStep.FinishedState(preProblems.value,myNoErrors && !(myManager.isMigrationRequired()),postProblems.value);
+  addElementToMigrationList((myFinishedState.isEverythingOk() ? "Done!" : "Finished with errors. Click 'Next' to continue."));
   PersistenceRegistry.getInstance().enableFastFindUsages();
 }
