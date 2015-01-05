@@ -1,18 +1,19 @@
 {
   String hash=myHash;
-  if (hash == null) {
-    IFile descriptorFile=myModule.getDescriptorFile();
-    hash=ModelDigestUtil.hash(new FileDataSource(descriptorFile),true);
-    if (hash == null)     return null;
-    BigInteger modelHash=new BigInteger(hash,Character.MAX_RADIX);
-    for (    LanguageAspect aspect : HASHED_LANGUAGE_ASPECTS) {
-      final SModel aspModel=aspect.get(myModule);
-      if (aspModel instanceof EditableSModel && !((EditableSModel)aspModel).isChanged() && aspModel instanceof GeneratableSModel) {
-        modelHash=modelHash.xor(new BigInteger(((GeneratableSModel)aspModel).getModelHash(),Character.MAX_RADIX));
-      }
+  if (hash != null)   return hash;
+  IFile descriptorFile=myModule.getDescriptorFile();
+  ByteArrayOutputStream output=new ByteArrayOutputStream();
+  LanguageDescriptorPersistence.saveLanguageDescriptor(output,myModule.getModuleDescriptor(),MacrosFactory.forModuleFile(descriptorFile));
+  hash=ModelDigestUtil.hashBytes(output.toByteArray());
+  if (hash == null)   return null;
+  BigInteger modelHash=new BigInteger(hash,Character.MAX_RADIX);
+  for (  LanguageAspect aspect : HASHED_LANGUAGE_ASPECTS) {
+    final SModel aspModel=aspect.get(myModule);
+    if (aspModel instanceof EditableSModel && !((EditableSModel)aspModel).isChanged() && aspModel instanceof GeneratableSModel) {
+      modelHash=modelHash.xor(new BigInteger(((GeneratableSModel)aspModel).getModelHash(),Character.MAX_RADIX));
     }
-    hash=modelHash.toString(Character.MAX_RADIX);
-    myHash=hash;
   }
+  hash=modelHash.toString(Character.MAX_RADIX);
+  myHash=hash;
   return hash;
 }
