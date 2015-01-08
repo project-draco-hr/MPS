@@ -1,21 +1,14 @@
 {
-  Set<SModule> significantModules=getPluginModules(loadedModules);
-  for (  SModule module : significantModules) {
-    ModuleLoadingState state=states.get(module);
-    if (state == null) {
-      states.put(module,ModuleLoadingState.LOAD);
-    }
-    if (state == ModuleLoadingState.UNLOAD) {
-      states.put(module,ModuleLoadingState.RELOAD);
-    }
-    if (state == ModuleLoadingState.RELOAD) {
-      throw new IllegalStateException();
-    }
-    if (state == ModuleLoadingState.LOAD) {
-      throw new IllegalStateException();
-    }
+  LOG.debug(String.format("Loading plugins from %d modules",loadedModules.size()));
+  long beginTime=System.currentTimeMillis();
+  Set<ReloadableModuleBase> pluginModules=getPluginModules(loadedModules);
+  if (pluginModules.isEmpty())   return;
+  try {
+    List<PluginContributor> toLoadContributors=calcContributorsToLoad(pluginModules);
+    myLoadedContributors.addAll(toLoadContributors);
+    loadPlugins(toLoadContributors);
   }
-  if (!significantModules.isEmpty()) {
-    schedulePluginsReload();
+  finally {
+    LOG.info(String.format("Loading of %d plugins took %s s",pluginModules.size(),(System.currentTimeMillis() - beginTime) / 1000.0));
   }
 }
