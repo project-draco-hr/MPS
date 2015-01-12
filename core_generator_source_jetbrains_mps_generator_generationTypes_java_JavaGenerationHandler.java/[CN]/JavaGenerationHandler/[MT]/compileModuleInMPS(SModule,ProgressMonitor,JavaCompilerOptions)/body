@@ -1,0 +1,37 @@
+{
+  JavaModuleFacet facet=module.getFacet(JavaModuleFacet.class);
+  if (facet == null) {
+    return true;
+  }
+  if (!facet.isCompileInMps()) {
+    error("Module is compiled in IntelliJ IDEA, can't compile it.");
+    return false;
+  }
+  boolean compiledSuccessfully=true;
+  checkMonitorCanceled(monitor);
+  String info="compiling in JetBrains MPS...";
+  try {
+    monitor.start(info,10);
+    info(info);
+    MPSCompilationResult compilationResult=new ModuleMaker().make(CollectionUtil.set(module),new EmptyProgressMonitor(),compilerOptions);
+    if (compilationResult == null || compilationResult.getErrors() > 0) {
+      compiledSuccessfully=false;
+    }
+    if (compilationResult != null) {
+      if (compilationResult.getErrors() > 0) {
+        error("" + compilationResult);
+      }
+ else       if (compilationResult.getWarnings() > 0) {
+        warning("" + compilationResult);
+      }
+ else {
+        info("" + compilationResult);
+      }
+    }
+  }
+  finally {
+    monitor.done();
+  }
+  checkMonitorCanceled(monitor);
+  return compiledSuccessfully;
+}
