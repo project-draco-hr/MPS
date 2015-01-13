@@ -1,6 +1,13 @@
 {
   PersistenceRegistry.getInstance().disableFastFindUsages();
+  Map<String,Object> options=InitialStep.getOptions();
   double projectStepsFraction=0.3;
+  int projectStepsCount=myManager.projectStepsCount();
+  progress.setFraction(0);
+  addElementToMigrationList("Cleaning project... Please wait.");
+  while (executeSingleStep(myManager.nextProjectStep(options,true))) {
+    progress.setFraction(progress.getFraction() + projectStepsFraction / projectStepsCount);
+  }
   addElementToMigrationList("Checking models... Please wait.");
   final Wrappers._boolean preProblems=new Wrappers._boolean();
   ModelAccess.instance().runReadAction(new Runnable(){
@@ -11,12 +18,9 @@
     }
   }
 );
-  int projectStepsCount=myManager.projectStepsCount();
-  progress.setFraction(0);
   final Wrappers._boolean postProblems=new Wrappers._boolean(false);
   if (!(preProblems.value)) {
-    Map<String,Object> options=InitialStep.getOptions();
-    while (executeSingleStep(myManager.nextProjectStep(options))) {
+    while (executeSingleStep(myManager.nextProjectStep(options,false))) {
       progress.setFraction(progress.getFraction() + projectStepsFraction / projectStepsCount);
     }
     progress.setFraction(projectStepsFraction);
