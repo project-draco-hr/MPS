@@ -1,2 +1,23 @@
 {
+  ThreadUtils.assertEDT();
+  removeAll();
+  ViewOptions viewOptions=new ViewOptions(true,false,false,false,false);
+  com.intellij.openapi.project.Project project=ProjectHelper.toIdeaProject(getProject());
+  myUsagesView=new UsagesView(project,viewOptions){
+    @Override public void close(){
+      getTool().makeUnavailableLater();
+    }
+  }
+;
+  add(myUsagesView.getComponent(),BorderLayout.CENTER);
+  myUsagesView.setRunOptions(FindUtils.makeProvider(new TodoFinder()),new SearchQuery(new ProjectScope(myProject)),new UsagesView.ButtonConfiguration(true),new SearchResults());
+  myUsagesView.setCustomNodeRepresentator(new TodoViewer.MyNodeRepresentator());
+  ProgressManager.getInstance().run(new Task.Modal(project,"Searching",true){
+    @Override public void run(    @NotNull final ProgressIndicator indicator){
+      indicator.setIndeterminate(true);
+      myUsagesView.run(indicator);
+      getTool().openToolLater(true);
+    }
+  }
+);
 }
