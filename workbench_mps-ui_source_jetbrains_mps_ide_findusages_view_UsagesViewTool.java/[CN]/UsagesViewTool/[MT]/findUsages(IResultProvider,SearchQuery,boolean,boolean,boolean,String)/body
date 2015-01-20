@@ -1,23 +1,17 @@
 {
+  final SearchTask searchTask=new SearchTask(provider,query);
   SwingUtilities.invokeLater(new Runnable(){
     @Override public void run(){
-      final SearchResults[] searchResults=new SearchResults[1];
-      final boolean[] isCancelled=new boolean[1];
-      ProgressManager.getInstance().run(new Modal(getProject(),"Searching",true){
+      new Backgroundable(getProject(),"Searching",true,PerformInBackgroundOption.DEAF){
+        private SearchResults searchResults;
         @Override public void run(        @NotNull final ProgressIndicator indicator){
-          searchResults[0]=FindUtils.getSearchResults(new ProgressMonitorAdapter(indicator),query,provider);
-          isCancelled[0]=indicator.isCanceled();
+          searchResults=searchTask.execute(ProjectHelper.toMPSProject(getProject()),new ProgressMonitorAdapter(indicator));
+        }
+        @Override public void onSuccess(){
+          showResults(searchTask,searchResults,showOne,forceNewTab,isRerunnable,notFoundMsg);
         }
       }
-);
-      if (!isCancelled[0]) {
-        SwingUtilities.invokeLater(new Runnable(){
-          @Override public void run(){
-            showResults(provider,query,searchResults[0],showOne,forceNewTab,isRerunnable,notFoundMsg);
-          }
-        }
-);
-      }
+.queue();
     }
   }
 );
