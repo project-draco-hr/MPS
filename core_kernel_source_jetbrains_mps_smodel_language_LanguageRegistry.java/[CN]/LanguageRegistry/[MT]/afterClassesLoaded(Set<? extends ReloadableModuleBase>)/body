@@ -1,2 +1,28 @@
 {
+  Set<LanguageRuntime> loadedRuntimes=new HashSet<LanguageRuntime>();
+  for (  Language language : collectLanguagesToLoad(loadedModules)) {
+    SLanguageId languageId=MetaIdByDeclaration.getLanguageId(language);
+    if (myLanguagesById.containsKey(languageId)) {
+      LOG.error("",new IllegalArgumentException("There is already a language " + myLanguagesById.get(languageId) + " with id "+ languageId));
+      continue;
+    }
+    try {
+      LanguageRuntime langRuntime=createRuntime(language);
+      if (langRuntime == null)       continue;
+      if (langRuntime.getId() == null)       langRuntime.setId(languageId);
+      String langName=langRuntime.getNamespace();
+      if (myLanguages.containsKey(langName)) {
+        LOG.error("",new IllegalArgumentException("There is already a language " + myLanguages.get(langName) + " with a name "+ langName));
+        continue;
+      }
+      myLanguages.put(langName,langRuntime);
+      myLanguagesById.put(languageId,langRuntime);
+      loadedRuntimes.add(langRuntime);
+    }
+ catch (    LinkageError le) {
+      processLinkageErrorForLanguage(language,le);
+    }
+  }
+  reinitialize();
+  notifyLoad(loadedRuntimes);
 }
