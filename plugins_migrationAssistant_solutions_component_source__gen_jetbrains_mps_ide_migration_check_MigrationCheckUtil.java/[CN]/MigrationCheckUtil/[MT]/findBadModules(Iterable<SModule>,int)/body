@@ -1,0 +1,26 @@
+{
+  final Map<SModuleReference,SModule> badModule2Dependant=MapSequence.fromMap(new HashMap<SModuleReference,SModule>());
+  Sequence.fromIterable(modules).visitAll(new IVisitor<SModule>(){
+    public void visit(    final SModule module){
+      Iterable<Dependency> deps=((AbstractModule)module).getUnresolvedDependencies();
+      Sequence.fromIterable(deps).where(new IWhereFilter<Dependency>(){
+        public boolean accept(        Dependency it){
+          return it.getModuleRef().resolve(MPSModuleRepository.getInstance()) == null;
+        }
+      }
+).visitAll(new IVisitor<Dependency>(){
+        public void visit(        Dependency dep){
+          MapSequence.fromMap(badModule2Dependant).put(dep.getModuleRef(),module);
+        }
+      }
+);
+    }
+  }
+);
+  return MapSequence.fromMap(badModule2Dependant).take(maxErrors).select(new ISelector<IMapping<SModuleReference,SModule>,DependencyProblem>(){
+    public DependencyProblem select(    IMapping<SModuleReference,SModule> it){
+      return new DependencyProblem(it.value(),"Unresolved dependency in module " + it.value().getModuleName() + ". "+ it.key().getModuleName()+ " not found in repository");
+    }
+  }
+).toListSequence();
+}
