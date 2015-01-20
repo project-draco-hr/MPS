@@ -1,0 +1,78 @@
+{
+  List<Problem> result=ListSequence.fromList(new ArrayList<Problem>());
+  Collection<DependencyProblem> badModuleProblems=findBadModules(modules,maxErrors);
+  ListSequence.fromList(result).addSequence(CollectionSequence.fromCollection(badModuleProblems));
+  maxErrors-=CollectionSequence.fromCollection(badModuleProblems).count();
+  if (maxErrors == 0) {
+    return result;
+  }
+  Collection<LanguageMissingProblem> missingLangProblems=findMissingLanguages(modules,maxErrors);
+  ListSequence.fromList(result).addSequence(CollectionSequence.fromCollection(missingLangProblems));
+  maxErrors-=CollectionSequence.fromCollection(missingLangProblems).count();
+  if (maxErrors == 0) {
+    return result;
+  }
+  Set<SLanguage> missingLangs=SetSequence.fromSet(new HashSet<SLanguage>());
+  SetSequence.fromSet(missingLangs).addSequence(CollectionSequence.fromCollection(missingLangProblems).select(new ISelector<LanguageMissingProblem,SLanguage>(){
+    public SLanguage select(    LanguageMissingProblem it){
+      return it.getLanguage();
+    }
+  }
+));
+  Set<SAbstractConcept> missingConcepts=SetSequence.fromSet(new HashSet<SAbstractConcept>());
+  Set<SConceptFeature> missingFeatures=SetSequence.fromSet(new HashSet<SConceptFeature>());
+  for (  SNode node : Sequence.fromIterable(MigrationCheckUtil.allNodes(modules))) {
+    SAbstractConceptAdapter concept=(SAbstractConceptAdapter)node.getConcept();
+    if (concept.getConceptDescriptor() == null) {
+      if (SetSequence.fromSet(missingLangs).contains(concept.getLanguage()) || SetSequence.fromSet(missingConcepts).contains(concept)) {
+        continue;
+      }
+      SetSequence.fromSet(missingConcepts).addElement(concept);
+      ListSequence.fromList(result).addElement(new ConceptMissingProblem(concept,node));
+      maxErrors--;
+      if (maxErrors == 0) {
+        return result;
+      }
+      continue;
+    }
+    List<SProperty> props=IterableUtil.asList(concept.getProperties());
+    for (    SProperty p : Sequence.fromIterable(node.getProperties())) {
+      if (props.contains(p) || SetSequence.fromSet(missingFeatures).contains(p)) {
+        continue;
+      }
+      SetSequence.fromSet(missingFeatures).addElement(p);
+      ListSequence.fromList(result).addElement(new ConceptFeatureMissingProblem(p,node));
+      maxErrors--;
+      if (maxErrors == 0) {
+        return result;
+      }
+    }
+    List<SContainmentLink> links=IterableUtil.asList(concept.getContainmentLinks());
+    for (    SNode n : Sequence.fromIterable(node.getChildren())) {
+      SContainmentLink l=n.getContainmentLink();
+      if (links.contains(l) || SetSequence.fromSet(missingFeatures).contains(l)) {
+        continue;
+      }
+      SetSequence.fromSet(missingFeatures).addElement(l);
+      ListSequence.fromList(result).addElement(new ConceptFeatureMissingProblem(l,node));
+      maxErrors--;
+      if (maxErrors == 0) {
+        return result;
+      }
+    }
+    List<SReferenceLink> refs=IterableUtil.asList(concept.getReferenceLinks());
+    for (    SReference r : Sequence.fromIterable(node.getReferences())) {
+      SReferenceLink l=r.getLink();
+      if (refs.contains(l) || SetSequence.fromSet(missingFeatures).contains(l)) {
+        continue;
+      }
+      SetSequence.fromSet(missingFeatures).addElement(l);
+      ListSequence.fromList(result).addElement(new ConceptFeatureMissingProblem(l,node));
+      maxErrors--;
+      if (maxErrors == 0) {
+        return result;
+      }
+    }
+  }
+  return result;
+}
