@@ -1,17 +1,15 @@
 {
-  ProjectOperationContext ctx=new ProjectOperationContext(project);
   ModelAccess.instance().flushEventQueue();
   Future<IResult> res;
-  IOperationContext context=new ProjectOperationContext(project);
   BuildMakeService bms=new BuildMakeService();
-  MakeSession ms=new MakeSession(context,getMyMessageHandler(),true){
+  MakeSession ms=new MakeSession(project,getMyMessageHandler(),true){
     @Override public IScript toScript(    ScriptBuilder scriptBuilder){
       scriptBuilder.withFacetNames(new IFacet.Name("jetbrains.mps.make.reduced.ReportFiles"),new IFacet.Name("jetbrains.mps.make.reduced.CollectHashes"));
       return scriptBuilder.toScript();
     }
   }
 ;
-  final Iterable<MResource> resources=Sequence.fromIterable(collectResources(ctx,go)).toListSequence();
+  final Iterable<MResource> resources=Sequence.fromIterable(collectResources(project,go)).toListSequence();
   this.myOutputPaths=new ModuleOutputPaths(Sequence.fromIterable(resources).select(new ISelector<MResource,SModule>(){
     public SModule select(    MResource r){
       return r.module();
@@ -31,7 +29,6 @@
   ReducedMakeFacetConfiguration facetConf=new ReducedMakeFacetConfiguration(myOutputRedirects);
   final List<String> writtenFiles=facetConf.getWrittenFiles();
   final List<String> deletedFiles=facetConf.getDeletedFiles();
-  final Map<String,String> fileHashes=facetConf.getFileHashes();
   IScriptController scriptCtl=facetConf.configureFacets(ms);
   try {
     res=bms.make(ms,resources,null,scriptCtl);

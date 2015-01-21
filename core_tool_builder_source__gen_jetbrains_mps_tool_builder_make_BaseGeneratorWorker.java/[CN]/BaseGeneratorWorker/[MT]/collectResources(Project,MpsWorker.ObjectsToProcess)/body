@@ -1,0 +1,30 @@
+{
+  final Wrappers._T<Iterable<SModel>> models=new Wrappers._T<Iterable<SModel>>(null);
+  project.getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      for (      Project p : go.getProjects()) {
+        for (        SModule mod : withGenerators((Iterable<SModule>)p.getModules())) {
+          models.value=Sequence.fromIterable(models.value).concat(Sequence.fromIterable((getModelsToGenerate(mod))));
+        }
+      }
+      for (      SModule mod : withGenerators(go.getModules())) {
+        models.value=Sequence.fromIterable(models.value).concat(Sequence.fromIterable(getModelsToGenerate(mod)));
+      }
+      if (go.getModels() != null) {
+        models.value=Sequence.fromIterable(models.value).concat(SetSequence.fromSet(go.getModels()));
+      }
+    }
+  }
+);
+  return Sequence.fromIterable(new ModelsToResources(Sequence.fromIterable(models.value).where(new IWhereFilter<SModel>(){
+    public boolean accept(    SModel smd){
+      return GenerationFacade.canGenerate(smd);
+    }
+  }
+)).resources(false)).select(new ISelector<IResource,MResource>(){
+    public MResource select(    IResource r){
+      return (MResource)r;
+    }
+  }
+);
+}

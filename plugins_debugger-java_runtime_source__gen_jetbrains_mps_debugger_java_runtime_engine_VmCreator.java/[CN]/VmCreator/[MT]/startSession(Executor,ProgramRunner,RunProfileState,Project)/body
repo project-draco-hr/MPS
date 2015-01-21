@@ -1,2 +1,28 @@
 {
+  ThreadUtils.assertEDT();
+  myConnectionSettings=createLocalConnectionSettings(state);
+  myEventsProcessor.getSystemMessagesReporter().setProcessName(getConnectionSettings().getPresentation());
+  createVirtualMachine();
+  try {
+synchronized (myProcessListeners) {
+      myExecutionResult=execute(executor,runner,state);
+      if (myExecutionResult == null) {
+        createVmFailed("Execution result created by " + runner + " is null.");
+        return null;
+      }
+      for (      ProcessListener processListener : myProcessListeners) {
+        myExecutionResult.getProcessHandler().addProcessListener(processListener);
+      }
+      myProcessListeners.clear();
+      @NotNull ProcessHandler processHandler=myExecutionResult.getProcessHandler();
+      myDebuggerSession.setProcessHandler(processHandler);
+      myEventsProcessor.getSystemMessagesReporter().setProcessHandler(processHandler);
+      fixStopBugUnderLinux(processHandler,myDebuggerSession);
+    }
+  }
+ catch (  ExecutionException e) {
+    createVmFailed(e);
+    throw e;
+  }
+  return myExecutionResult;
 }
