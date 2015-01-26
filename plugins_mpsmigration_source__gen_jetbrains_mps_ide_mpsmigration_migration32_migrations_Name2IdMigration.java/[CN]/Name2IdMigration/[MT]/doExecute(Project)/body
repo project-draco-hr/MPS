@@ -1,6 +1,7 @@
 {
   Iterable<? extends SModule> modules=p.getModulesWithGenerators();
   final ModelFactory defaultModelFactory=PersistenceFacade.getInstance().getDefaultModelFactory();
+  final ModelFactory perRootModelFactory=PersistenceRegistry.getInstance().getFolderModelFactory(FilePerRootModelPersistence.FACTORY_ID);
   Iterable<PersistenceVersionAware> models=Sequence.fromIterable(modules).translate(new ITranslator2<SModule,SModel>(){
     public Iterable<SModel> translate(    SModule it){
       return it.getModels();
@@ -13,7 +14,12 @@
   }
 ).ofType(PersistenceVersionAware.class).where(new IWhereFilter<PersistenceVersionAware>(){
     public boolean accept(    PersistenceVersionAware it){
-      return it.getModelFactory() == defaultModelFactory && it.getPersistenceVersion() < 9;
+      return it.getPersistenceVersion() < 9;
+    }
+  }
+).where(new IWhereFilter<PersistenceVersionAware>(){
+    public boolean accept(    PersistenceVersionAware it){
+      return it.getModelFactory() == defaultModelFactory || it.getModelFactory() == perRootModelFactory;
     }
   }
 );
