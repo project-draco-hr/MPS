@@ -32,8 +32,11 @@
   languagesTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
   myLangEngagedOnGenTM=new ModelsLangEngagedOnGenTM(myModelProperties);
   languagesTable.setModel(myLangEngagedOnGenTM);
-  ModuleTableCellRender engagedLanguages=new ModuleTableCellRender(myModelProperties.getModelDescriptor().getRepository());
-  engagedLanguages.addCellState(new NotCondition<SModuleReference>(myModelProperties.getUsedLanguageRemoveCondition()),DependencyCellState.SUPERFLUOUS_ENGAGED);
+  final SRepository contextRepo=myModelProperties.getModelDescriptor().getRepository();
+  ModuleTableCellRender engagedLanguages=new ModuleTableCellRender(contextRepo);
+  Set<SModuleReference> languagesInUse=new ModelComputeRunnable<Set<SModuleReference>>(new ComputeUsedLanguages(myModelDescriptor)).runRead(contextRepo.getModelAccess());
+  IsModuleInUse inUseCondition=new IsModuleInUse(languagesInUse,Collections.<SModuleReference>emptySet());
+  engagedLanguages.addCellState(inUseCondition,DependencyCellState.SUPERFLUOUS_ENGAGED);
   languagesTable.setDefaultRenderer(SModuleReference.class,engagedLanguages);
   ToolbarDecorator decorator=ToolbarDecorator.createDecorator(languagesTable);
   decorator.setAddAction(new AnActionButtonRunnable(){
