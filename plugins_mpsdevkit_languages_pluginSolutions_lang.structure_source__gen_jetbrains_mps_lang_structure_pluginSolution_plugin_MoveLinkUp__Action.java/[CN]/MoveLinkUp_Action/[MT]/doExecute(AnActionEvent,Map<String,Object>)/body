@@ -1,6 +1,43 @@
 {
   try {
-    Messages.showInfoMessage(((Project)MapSequence.fromMap(_params).get("project")),"This refactoring is not supported in MPS 3.2.\n" + "The right way to perform this change is to\n" + "1. Deprecate the old link\n"+ "2. Create a new link\n"+ "3. Write a migration to migrate the old link into the new one","Unsupported refactoring");
+    final SNode targetConcept=MoveUpDialog.getConcept(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject(),((SNode)MapSequence.fromMap(_params).get("target")),"link");
+    ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
+    if (targetConcept == null) {
+      return;
+    }
+    modelAccess.executeCommandInEDT(new Runnable(){
+      public void run(){
+        final SNode currentConcept=SNodeOperations.getNodeAncestor(((SNode)MapSequence.fromMap(_params).get("target")),MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x1103553c5ffL,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration"),false,false);
+        if (currentConcept == null) {
+          return;
+        }
+        if (!(SNodeUtil.isAccessible(((SNode)MapSequence.fromMap(_params).get("target")),((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository()))) {
+          return;
+        }
+        if (!(SNodeUtil.isAccessible(targetConcept,((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository()))) {
+          return;
+        }
+        Language targetLanguage=Language.getLanguageFor(SNodeOperations.getModel(targetConcept));
+        SNode newLink=SNodeOperations.copyNode(((SNode)MapSequence.fromMap(_params).get("target")));
+        ListSequence.fromList(SLinkOperations.getChildren(targetConcept,MetaAdapterFactory.getContainmentLink(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x1103553c5ffL,0xf979c3ba6bL,"linkDeclaration"))).addElement(newLink);
+        AttributeOperations.setAttribute(((SNode)MapSequence.fromMap(_params).get("target")),new IAttributeDescriptor.NodeAttribute(MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x11d0a70ae54L,"jetbrains.mps.lang.structure.structure.DeprecatedNodeAnnotation")),createDeprecatedNodeAnnotation_1o7xz7_a0h0a0a4a0("The link was moved to superconcept \"" + BehaviorReflection.invokeVirtual(String.class,targetConcept,"virtual_getFqName_1213877404258",new Object[]{}) + "\""));
+        String roleName=SPropertyOperations.getString(((SNode)MapSequence.fromMap(_params).get("target")),MetaAdapterFactory.getProperty(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0xf979bd086aL,0xf98052f333L,"role"));
+        SPropertyOperations.set(((SNode)MapSequence.fromMap(_params).get("target")),MetaAdapterFactory.getProperty(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0xf979bd086aL,0xf98052f333L,"role"),roleName + "_old");
+        SNode refactorInstances;
+        if (SPropertyOperations.hasValue(((SNode)MapSequence.fromMap(_params).get("target")),MetaAdapterFactory.getProperty(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0xf979bd086aL,0xf980556927L,"metaClass"),"reference","reference")) {
+          refactorInstances=_quotation_createNode_1o7xz7_a0a0m0a0a4a0(newLink,((SNode)MapSequence.fromMap(_params).get("target")),((SNode)MapSequence.fromMap(_params).get("target")));
+        }
+ else         if (LinkDeclaration_Behavior.call_isSingular_1213877254557(((SNode)MapSequence.fromMap(_params).get("target")))) {
+          refactorInstances=_quotation_createNode_1o7xz7_a0a0a21a0a0e0a(newLink,((SNode)MapSequence.fromMap(_params).get("target")));
+        }
+ else {
+          refactorInstances=_quotation_createNode_1o7xz7_a0a0a21a0a0e0a_0(newLink,((SNode)MapSequence.fromMap(_params).get("target")));
+        }
+        SNode executeMethod=_quotation_createNode_1o7xz7_a0n0a0a4a0(currentConcept,currentConcept,refactorInstances);
+        MigrationScriptBuilder.createMigrationScript(targetLanguage).setName("Move_link_" + roleName).setExecuteMethod(executeMethod);
+      }
+    }
+);
   }
  catch (  Throwable t) {
     if (LOG.isEnabledFor(Level.ERROR)) {
