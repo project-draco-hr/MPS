@@ -1,12 +1,21 @@
 {
-  Iterable<Dependency> unresolvedDeps=getUnresolvedDependencies();
-  List<SDependency> resolvedDeps=new ArrayList<SDependency>();
-  for (  Dependency dep : unresolvedDeps) {
-    SModuleReference moduleRef=dep.getModuleRef();
-    SModule target=ModuleRepositoryFacade.getInstance().getModule(moduleRef);
-    if (target != null) {
-      resolvedDeps.add(new SDependencyImpl(target,dep.getScope(),dep.isReexport()));
+  assertCanRead();
+  ModuleDescriptor descriptor=getModuleDescriptor();
+  if (descriptor == null) {
+    return Collections.emptyList();
+  }
+  HashSet<SDependency> result=new HashSet<SDependency>();
+  final SRepository repo=getRepository();
+  for (  Dependency d : descriptor.getDependencies()) {
+    result.add(new SDependencyImpl(d.getModuleRef(),repo,d.getScope(),d.isReexport()));
+  }
+  for (  SModuleReference usedDevkit : descriptor.getUsedDevkits()) {
+    final SModule devkit=usedDevkit.resolve(repo);
+    if (DevKit.class.isInstance(devkit)) {
+      for (      Solution solution : ((DevKit)devkit).getAllExportedSolutions()) {
+        result.add(new SDependencyImpl(solution.getModuleReference(),repo,SDependencyScope.DEFAULT,false));
+      }
     }
   }
-  return resolvedDeps;
+  return result;
 }
