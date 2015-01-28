@@ -4,26 +4,19 @@
   LOG.info("Making modules on startup");
   monitor.start("Making modules",10);
   try {
-    MPSCompilationResult mpsCompilationResult=ModelAccess.instance().runReadAction(new Computable<MPSCompilationResult>(){
+    MPSCompilationResult mpsCompilationResult=new ModelComputeRunnable<MPSCompilationResult>(new Computable<MPSCompilationResult>(){
       @Override public MPSCompilationResult compute(){
         monitor.advance(1);
-        MessagesViewTool mvt=myProject.getComponent(MessagesViewTool.class);
-        final ModuleMaker maker=new ModuleMaker(mvt.newHandler(),MessageKind.ERROR);
+        final ModuleMaker maker=new ModuleMaker(new DefaultMessageHandler(myProject),MessageKind.ERROR);
         return myReloadManager.computeNoReload(new Computable<MPSCompilationResult>(){
           @Override public MPSCompilationResult compute(){
-            jetbrains.mps.project.Project project=ProjectHelper.toMPSProject(myProject);
-            if (project == null) {
-              return maker.make(IterableUtil.asCollection(MPSModuleRepository.getInstance().getModules()),monitor.subTask(9));
-            }
- else {
-              return maker.make(IterableUtil.asCollection(MPSModuleRepository.getInstance().getModules()),monitor.subTask(9),JavaCompilerOptionsComponent.getInstance().getJavaCompilerOptions(project));
-            }
+            return maker.make(IterableUtil.asCollection(MPSModuleRepository.getInstance().getModules()),monitor.subTask(9),JavaCompilerOptionsComponent.getInstance().getJavaCompilerOptions(myMPSProject));
           }
         }
 );
       }
     }
-);
+).runRead(myMPSProject.getModelAccess());
     if (mpsCompilationResult.isReloadingNeeded()) {
       reloadClasses(mpsCompilationResult,indicator,early);
     }
