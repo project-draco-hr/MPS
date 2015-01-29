@@ -1,0 +1,51 @@
+{
+  ModelAccess.assertLegalRead();
+  myErrors=Collections.emptyList();
+  myWarnings=Collections.emptyList();
+  if (myModel instanceof TransientSModel || myModel.getModule() == null) {
+    return;
+  }
+  if (jetbrains.mps.util.SNodeOperations.isModelDisposed(myModel)) {
+    return;
+  }
+  List<String> errors=new ArrayList<String>();
+  if (myModel instanceof InvalidSModel) {
+    Iterable<SModel.Problem> problems=myModel.getProblems();
+    for (    SModel.Problem m : problems) {
+      if (m.isError()) {
+        errors.add(m.getText());
+      }
+    }
+    if (errors.isEmpty()) {
+      errors.add("Couldn't read model.");
+    }
+    myErrors=errors;
+    return;
+  }
+  List<String> warnings=new ArrayList<String>(5);
+  SModule module=myModel.getModule();
+  final SModelReference modelToValidateRef=myModel.getReference();
+  for (  SModelReference reference : SModelOperations.getImportedModelUIDs(myModel)) {
+    if (module.resolveInDependencies(reference.getModelId()) == null) {
+      errors.add("Can't find model: " + SModelStereotype.withoutStereotype(reference.getModelName()));
+    }
+    if (reference.equals(modelToValidateRef)) {
+      warnings.add(String.format("Model shall not import self, remove %s from imports",reference.getModelName()));
+    }
+  }
+  List<SModuleReference> langsToCheck=new ArrayList<SModuleReference>();
+  langsToCheck.addAll(SModelOperations.getAllImportedLanguages(myModel));
+  langsToCheck.addAll(((jetbrains.mps.smodel.SModelInternal)myModel).engagedOnGenerationLanguages());
+  for (  SModuleReference lang : langsToCheck) {
+    if (repository.getModule(lang.getModuleId()) == null) {
+      errors.add("Can't find language: " + lang.getModuleName());
+    }
+  }
+  for (  SModuleReference devKit : ((jetbrains.mps.smodel.SModelInternal)myModel).importedDevkits()) {
+    if (repository.getModule(devKit.getModuleId()) == null) {
+      errors.add("Can't find devkit: " + devKit.getModuleName());
+    }
+  }
+  myErrors=errors;
+  myWarnings=warnings;
+}
