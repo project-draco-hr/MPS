@@ -1,13 +1,17 @@
 {
   List<SNode> nodeFactories=new ArrayList<SNode>();
   for (  SAbstractConcept ancestor : new DepthFirstConceptIterator(nodeConcept)) {
-    SNode acd=ancestor.getDeclarationNode();
-    Language language=SModelUtil.getDeclaringLanguage(acd);
-    if (language == null)     break;
-    nodeFactories.addAll(NodeFactoryUtil.getApplicableNodeFactories(acd,language));
-  }
-  if (nodeFactories.isEmpty())   return;
-  for (  SNode factory : nodeFactories) {
-    NodeFactoryUtil.invokeNodeSetupFunction(factory,node,sampleNode,enclosingNode,model);
+    ActionAspectDescriptor actionAspectDescriptor=null;
+    LanguageRuntime languageRuntime=LanguageRegistry.getInstance().getLanguage(ancestor.getLanguage().getQualifiedName());
+    if (languageRuntime != null) {
+      actionAspectDescriptor=languageRuntime.getAspect(ActionAspectDescriptor.class);
+    }
+    if (actionAspectDescriptor == null) {
+      actionAspectDescriptor=new InterpretedActionDescriptor();
+    }
+    Collection<NodeFactory> factories=actionAspectDescriptor.getFactories(ancestor);
+    for (    NodeFactory factory : factories) {
+      factory.setup(node,sampleNode,enclosingNode,model);
+    }
   }
 }
