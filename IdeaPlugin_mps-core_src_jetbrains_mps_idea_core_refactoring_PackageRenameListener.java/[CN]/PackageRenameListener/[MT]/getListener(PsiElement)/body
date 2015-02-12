@@ -1,0 +1,37 @@
+{
+  if (!(element instanceof PsiPackage)) {
+    return null;
+  }
+  final PsiPackage pkg=(PsiPackage)element;
+  final List<SModel> models=new ArrayList<SModel>();
+  for (  PsiDirectory psiDir : pkg.getDirectories()) {
+    IFile iFile=VirtualFileUtils.toIFile(psiDir.getVirtualFile());
+    SModel model=SModelFileTracker.getInstance().findModel(iFile);
+    if (model != null) {
+      models.add(model);
+    }
+  }
+  return new RefactoringElementListener(){
+    boolean handled=false;
+    @Override public void elementMoved(    @NotNull PsiElement newElement){
+    }
+    @Override public void elementRenamed(    @NotNull final PsiElement newElement){
+      if (!handled) {
+        ProjectHelper.getModelAccess(newElement.getProject()).executeCommand(new Runnable(){
+          public void run(){
+            String newName=((PsiPackage)newElement).getQualifiedName();
+            for (            SModel model : models) {
+              if (!(model instanceof EditableSModel)) {
+                return;
+              }
+              ((EditableSModel)model).rename(newName,false);
+            }
+          }
+        }
+);
+        handled=true;
+      }
+    }
+  }
+;
+}
