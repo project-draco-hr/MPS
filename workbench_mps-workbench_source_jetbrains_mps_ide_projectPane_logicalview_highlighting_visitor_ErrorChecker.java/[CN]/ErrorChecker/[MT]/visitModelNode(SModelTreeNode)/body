@@ -1,13 +1,14 @@
 {
+  final SModelReference mr=node.getModel().getReference();
   scheduleModelRead(node,new Runnable(){
-    private List<String> getErrors(){
-      final SModel modelDescriptor=node.getModel();
-      if (modelDescriptor == null)       return Collections.emptyList();
-      if (!(modelDescriptor.isLoaded()))       return Collections.emptyList();
-      return new ModelValidator(modelDescriptor).validate();
-    }
     @Override public void run(){
-      schedule(node,new ErrorReport(node,getErrors(),null));
+      final SModel modelDescriptor=mr.resolve(myProject.getRepository());
+      if (modelDescriptor == null || !(modelDescriptor.isLoaded())) {
+        return;
+      }
+      final ModelValidator mv=new ModelValidator(modelDescriptor);
+      mv.validate(myProject.getRepository());
+      schedule(node,new ErrorReport(node,mv.errors(),mv.warnings()));
     }
   }
 );
