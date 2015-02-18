@@ -1,13 +1,17 @@
 {
+  if (refsToUnload.isEmpty())   return Collections.emptySet();
   myModelAccess.checkWriteAccess();
-  if (refsToUnload.size() == 0)   return Collections.emptySet();
   final Set<ReloadableModuleBase> modulesToUnload=new LinkedHashSet<ReloadableModuleBase>();
   for (  ReloadableModule loadedModule : myLoadedModules) {
     ReloadableModuleBase loadedModule1=(ReloadableModuleBase)loadedModule;
     SModuleReference mRef=loadedModule1.getModuleReference();
-    if (refsToUnload.contains(mRef))     modulesToUnload.add(loadedModule1);
+    if (refsToUnload.contains(mRef)) {
+      modulesToUnload.add(loadedModule1);
+    }
   }
-  if (modulesToUnload.size() != refsToUnload.size())   throw new IllegalArgumentException("Loaded modules do not match given refs");
+  if (modulesToUnload.size() < refsToUnload.size()) {
+    LOG.error("",new IllegalArgumentException("Broken contract : some of the passed module references have not been loaded"));
+  }
   myLoadedModules.removeAll(modulesToUnload);
   for (  MPSClassesListener listener : myClassesHandlers) {
     listener.beforeClassesUnloaded(modulesToUnload);

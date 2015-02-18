@@ -3,11 +3,15 @@
     monitor.start("Loading modules...",toLoad.size());
     for (    ReloadableModule module : toLoad) {
       SModuleReference moduleReference=module.getModuleReference();
-      if (getClassLoadingProgress(moduleReference) == ClassLoadingProgress.UNLOADED)       throw new IllegalStateException("Module " + moduleReference + " is in UNLOADED state, i.e. no listeners know about this module");
-      if (getClassLoadingProgress(moduleReference) == ClassLoadingProgress.LOADED)       continue;
-      ModuleClassLoader classLoader=createModuleClassLoader(module);
-      putClassLoader(moduleReference,classLoader);
-      onLoaded(moduleReference);
+      ClassLoadingProgress progress=getClassLoadingProgress(moduleReference);
+      if (progress == ClassLoadingProgress.UNLOADED) {
+        throw new IllegalStateException("Module " + moduleReference + " is in UNLOADED state, i.e. the class loading clients know nothing about this module");
+      }
+ else       if (progress == ClassLoadingProgress.LAZY_LOADED) {
+        ModuleClassLoader classLoader=createModuleClassLoader(module);
+        putClassLoader(moduleReference,classLoader);
+        onLoaded(moduleReference);
+      }
       monitor.advance(1);
     }
   }

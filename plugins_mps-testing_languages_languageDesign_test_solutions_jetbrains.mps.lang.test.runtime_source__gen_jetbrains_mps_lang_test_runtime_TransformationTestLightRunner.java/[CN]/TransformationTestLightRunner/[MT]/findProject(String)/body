@@ -1,10 +1,26 @@
 {
-  String expandedProjectPath=MacrosFactory.getGlobal().expandPath(projectPath);
-  File projectFile=new File(expandedProjectPath);
-  for (  Project project : ProjectManager.getInstance().getOpenProjects()) {
-    if (TransformationTestLightRunner.projectHasPath(project,projectFile)) {
-      return project;
+  SModel contextModel=findModel(modelName);
+  final SModule contextModule=check_1frbnp_a0b0f(contextModel);
+  if (contextModule == null) {
+    return null;
+  }
+  return ModelAccess.instance().runReadAction(new Computable<Project>(){
+    public Project compute(){
+      Collection<SModule> runtimeDeps=new GlobalModuleDependenciesManager(contextModule).getModules(GlobalModuleDependenciesManager.Deptype.EXECUTE);
+      for (      Project project : ProjectManager.getInstance().getOpenProjects()) {
+        SRepository repo=project.getRepository();
+        boolean found=true;
+        for (        SModule module : CollectionSequence.fromCollection(runtimeDeps)) {
+          if (repo.getModule(module.getModuleId()) == null) {
+            found=false;
+          }
+        }
+        if (found) {
+          return project;
+        }
+      }
+      return null;
     }
   }
-  return null;
+);
 }
