@@ -1,0 +1,23 @@
+{
+  final SNode outputSourceNode=ref.getSourceNode();
+  final TemplateGenerator generator=ref.getGenerator();
+  Status status=generator.getReferentRoleValidator(outputSourceNode,ref.getLink()).validate(outputTargetNode);
+  if (status != null) {
+    generator.getLogger().error(outputSourceNode.getReference(),status.getMessage(getClass().getSimpleName()),getErrorDescriptions());
+    return false;
+  }
+  SModel referentNodeModel=outputTargetNode.getModel();
+  if (referentNodeModel != null && referentNodeModel != outputSourceNode.getModel()) {
+    if (SModelStereotype.isGeneratorModel(referentNodeModel)) {
+      String msg="bad reference, cannot refer to a generator model: %s for role '%s' in %s";
+      generator.getLogger().error(outputSourceNode.getReference(),String.format(msg,SNodeOperations.getDebugText(outputTargetNode),ref.getLink(),SNodeOperations.getDebugText(outputSourceNode)),getErrorDescriptions());
+      return false;
+    }
+    if (referentNodeModel.getModule() instanceof TransientModelsModule) {
+      String msg="bad reference, cannot refer to an external transient model: %s  for role '%s' in %s";
+      generator.getLogger().error(outputSourceNode.getReference(),String.format(msg,SNodeOperations.getDebugText(outputTargetNode),ref.getLink(),SNodeOperations.getDebugText(outputSourceNode)),getErrorDescriptions());
+      return false;
+    }
+  }
+  return true;
+}
