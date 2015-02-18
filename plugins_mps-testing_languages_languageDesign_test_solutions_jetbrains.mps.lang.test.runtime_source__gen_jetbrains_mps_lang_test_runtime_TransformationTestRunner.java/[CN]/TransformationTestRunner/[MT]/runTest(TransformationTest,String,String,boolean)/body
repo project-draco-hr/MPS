@@ -1,2 +1,53 @@
 {
+  if (LOG.isInfoEnabled()) {
+    LOG.info("Running test " + methodName);
+  }
+  final Wrappers._T<Class> clazz=new Wrappers._T<Class>();
+  final Throwable[] error=new Throwable[1];
+  final SModule module=projectTest.getModelDescriptor().getModule();
+  if (!(module instanceof ReloadableModule)) {
+    throw new IllegalArgumentException("module " + module + " is not reloadable -- cannot run tests in it");
+  }
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      try {
+        clazz.value=((ReloadableModule)module).getOwnClass(className);
+      }
+ catch (      Throwable t) {
+        error[0]=t;
+      }
+    }
+  }
+);
+  if (error[0] != null) {
+    throw error[0];
+  }
+  final Object obj=clazz.value.newInstance();
+  clazz.value.getField("myModel").set(obj,projectTest.getTransientModelDescriptor());
+  clazz.value.getField("myProject").set(obj,projectTest.getProject());
+  if (runInCommand) {
+    SwingUtilities.invokeAndWait(new Runnable(){
+      public void run(){
+        projectTest.getProject().getModelAccess().executeCommand(new Runnable(){
+          public void run(){
+            error[0]=TransformationTestRunner.this.tryToRunTest(clazz.value,methodName,obj);
+          }
+        }
+);
+      }
+    }
+);
+  }
+ else {
+    error[0]=TransformationTestRunner.this.tryToRunTest(clazz.value,methodName,obj);
+  }
+  if (error[0] != null) {
+    if (LOG.isInfoEnabled()) {
+      LOG.info("Test failed");
+    }
+    throw error[0];
+  }
+  if (LOG.isInfoEnabled()) {
+    LOG.info("Test passed");
+  }
 }
