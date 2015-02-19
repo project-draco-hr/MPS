@@ -1,12 +1,17 @@
 {
-  CellProviderWithRole provider=new PropertyCellProvider(mySNode,myEditorContext);
-  provider.setRole(name);
-  provider.setNoTargetText("<no " + name + ">");
-  EditorCell editorCell;
-  editorCell=provider.createEditorCell(myEditorContext);
-  editorCell.setSubstituteInfo(provider.createDefaultSubstituteInfo());
+  EditorCell_Property editorCell=EditorCell_Property.create(myEditorContext,new SPropertyAccessor(mySNode,property,false,true),mySNode);
+  editorCell.setDefaultText("<no " + property.getName() + ">");
   if (editorCell.getCellId() == null) {
-    editorCell.setCellId("property_" + name);
+    editorCell.setCellId("property_" + property);
   }
-  addCellWithRole(provider,editorCell);
+  editorCell.setAction(CellActionType.DELETE,new CellAction_DeleteSPropertyOrNode(mySNode,property));
+  editorCell.setAction(CellActionType.BACKSPACE,new CellAction_DeleteSPropertyOrNode(mySNode,property));
+  SDataType type=property.getType();
+  if (type instanceof SPrimitiveDataType && ((SPrimitiveDataType)type).getType() == SPrimitiveDataType.BOOL) {
+    editorCell.setSubstituteInfo(new BooleanSPropertySubstituteInfo(mySNode,property,myEditorContext));
+  }
+  if (type instanceof SEnumeration) {
+    editorCell.setSubstituteInfo(new EnumSPropertySubstituteInfo(mySNode,property,myEditorContext));
+  }
+  addCellWithRole(IterableUtils.first(AttributeOperations.getPropertyAttributes(mySNode,property)),AttributeKind.Property.class,editorCell);
 }
