@@ -4,22 +4,32 @@
   Language editorLanguage=ModuleRepositoryFacade.getInstance().getModule("jetbrains.mps.lang.editor",Language.class);
   assertNotNull(editorLanguage);
   String[] usedLanguageStrings=new String[]{baseLanguage.getModuleReference().toString(),editorLanguage.getModuleReference().toString()};
-  Language[] usedLanguages=new Language[]{baseLanguage,editorLanguage};
+  final Language[] usedLanguages=new Language[]{baseLanguage,editorLanguage};
   MPSConfigurationBean configurationBean=myFacet.getConfiguration().getBean();
   configurationBean.setUsedLanguages(usedLanguageStrings);
   myFacet.setConfiguration(configurationBean);
   flushEDT();
-  Collection<SModuleReference> solutionUsedLanguageRefs=myFacet.getSolution().getUsedLanguagesReferences();
-  Set<Language> solutionUsedLanguages=new HashSet<Language>();
-  for (  SModuleReference solutionUsedLanguageRef : solutionUsedLanguageRefs) {
-    solutionUsedLanguages.add(ModuleRepositoryFacade.getInstance().getModule(solutionUsedLanguageRef,Language.class));
+  runModelRead(new Runnable(){
+    @Override public void run(){
+      Collection<SModuleReference> solutionUsedLanguageRefs=myFacet.getSolution().getUsedLanguagesReferences();
+      Set<Language> solutionUsedLanguages=new HashSet<Language>();
+      for (      SModuleReference solutionUsedLanguageRef : solutionUsedLanguageRefs) {
+        solutionUsedLanguages.add(ModuleRepositoryFacade.getInstance().getModule(solutionUsedLanguageRef,Language.class));
+      }
+      assertEquals(usedLanguages.length,solutionUsedLanguages.size());
+      for (      Language usedLanguage : usedLanguages) {
+        assertTrue(solutionUsedLanguages.contains(usedLanguage));
+      }
+    }
   }
-  assertEquals(usedLanguages.length,solutionUsedLanguages.size());
-  for (  Language usedLanguage : usedLanguages) {
-    assertTrue(solutionUsedLanguages.contains(usedLanguage));
-  }
+);
   configurationBean.setUsedLanguages(new String[0]);
   myFacet.setConfiguration(configurationBean);
   flushEDT();
-  assertEmpty(myFacet.getSolution().getUsedLanguagesReferences());
+  runModelRead(new Runnable(){
+    @Override public void run(){
+      assertEmpty(myFacet.getSolution().getUsedLanguagesReferences());
+    }
+  }
+);
 }
