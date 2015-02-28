@@ -1,12 +1,13 @@
 {
   SModel m1=new TestModelFactory().createModel(3,5,2,3);
   final int actualNodes=countTreeNodes(m1.getRootNodes());
+  final int rootsCount=IterableUtil.asCollection(m1.getRootNodes()).size();
   AccessCountListener1 cl1=new AccessCountListener1();
   AccessCountListener2 cl2=new AccessCountListener2();
   AccessCountListener3 cl3=new AccessCountListener3();
   attachAccessListeners(m1,cl1,cl2,cl3);
   readTreeNodes(m1.getRootNodes());
-  Assert.assertTrue(actualNodes * 3 < cl1.myVisitedNodes);
+  Assert.assertEquals(actualNodes * 3,cl1.myVisitedNodes);
   Assert.assertEquals(actualNodes * 2,cl1.myPropertiesRead);
   Assert.assertEquals(0,cl1.myReferencesRead);
   Assert.assertEquals(0,cl2.myVisitedNodes);
@@ -22,15 +23,16 @@
   myTestModelAccess.enableRead();
   ((SModelBase)m1).attach(myTestRepo);
   readTreeNodes(m1.getRootNodes());
-  myErrors.checkThat(cl1.myVisitedNodes,greaterThan(actualNodes * 3));
+  final int expectedNodeReadCount=actualNodes * 3 + rootsCount;
+  myErrors.checkThat(cl1.myVisitedNodes,equalTo(expectedNodeReadCount));
   myErrors.checkThat(cl1.myPropertiesRead,equalTo(actualNodes * 2));
   myErrors.checkThat(cl1.myReferencesRead,equalTo(0));
-  myErrors.checkThat(cl2.myVisitedNodes,greaterThan(actualNodes * 3));
+  myErrors.checkThat(cl2.myVisitedNodes,equalTo(expectedNodeReadCount));
   myErrors.checkThat(cl2.myVisitedNodes,equalTo(cl1.myVisitedNodes));
   myErrors.checkThat(cl2.myPropertiesRead,equalTo(actualNodes * 2));
   myErrors.checkThat(cl2.myReferencesRead,equalTo(0));
   myErrors.checkThat("NodeReadEventsCaster.fireNodeChildReadAccess is never used",cl2.myChildrenRead,equalTo(0));
-  myErrors.checkThat(cl3.myVisitedNodes,greaterThan(actualNodes * 3));
+  myErrors.checkThat(cl3.myVisitedNodes,equalTo(expectedNodeReadCount));
   myErrors.checkThat(cl3.myVisitedNodes,equalTo(cl1.myVisitedNodes));
   myErrors.checkThat(cl3.myPropertiesRead,equalTo(actualNodes * 2));
   myErrors.checkThat(cl3.myReferencesRead,equalTo(0));
