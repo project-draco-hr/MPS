@@ -1,0 +1,26 @@
+{
+  SModel m1=new TestModelFactory().createModel(3,5,2,3);
+  myModelAccess.enableWrite();
+  ((SModelBase)m1).attach(myRepo);
+  final int initialNodeCount=countTreeNodes(m1.getRootNodes());
+  SNode r1c2=m1.getRootNodes().iterator().next().getFirstChild().getNextSibling();
+  Assert.assertEquals(2,IterableUtil.asCollection(r1c2.getChildren()).size());
+  final SNode toRemove=r1c2.getChildren().iterator().next();
+  toRemove.delete();
+  final int expectedNodeCount=initialNodeCount - 4;
+  myUndo.flushCommand(null);
+  Assert.assertEquals(1,IterableUtil.asCollection(r1c2.getChildren()).size());
+  Assert.assertEquals(1,myUndo.myUndoStack.size());
+  final UndoUnit undoElement=myUndo.myUndoStack.peek();
+  Assert.assertEquals(1,undoElement.myActions.size());
+  final int withRemovedNodeCount=countTreeNodes(m1.getRootNodes());
+  Assert.assertEquals(expectedNodeCount,withRemovedNodeCount);
+  undoElement.undo();
+  Assert.assertEquals(1,myUndo.myUndoStack.size());
+  Assert.assertEquals(2,IterableUtil.asCollection(r1c2.getChildren()).size());
+  Assert.assertEquals(initialNodeCount,countTreeNodes(m1.getRootNodes()));
+  undoElement.redo();
+  Assert.assertEquals(1,myUndo.myUndoStack.size());
+  Assert.assertEquals(1,IterableUtil.asCollection(r1c2.getChildren()).size());
+  Assert.assertEquals(expectedNodeCount,countTreeNodes(m1.getRootNodes()));
+}

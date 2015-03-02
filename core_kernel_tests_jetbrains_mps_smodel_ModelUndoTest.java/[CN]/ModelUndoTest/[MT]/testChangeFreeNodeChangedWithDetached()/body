@@ -1,0 +1,29 @@
+{
+  SModel m1=new TestModelFactory().createModel(3,2);
+  myModelAccess.enableWrite();
+  ((SModelBase)m1).attach(myRepo);
+  final int initialNodeCount=countTreeNodes(m1.getRootNodes());
+  UnregisteredNodes.instance().enable();
+  final SNode r1=m1.getRootNodes().iterator().next();
+  final SNode r1c2=r1.getChildren().iterator().next().getNextSibling();
+  final jetbrains.mps.smodel.SNode freeFloatNode=new TestModelFactory().createNode();
+  r1c2.delete();
+  Assert.assertEquals(1,myUndo.actualUndoActionCount());
+  freeFloatNode.addChild(TestModelFactory.ourRole,r1c2);
+  Assert.assertEquals(2,myUndo.actualUndoActionCount());
+  r1.addChild(TestModelFactory.ourRole,freeFloatNode);
+  Assert.assertEquals(3,myUndo.actualUndoActionCount());
+  myUndo.flushCommand(null);
+  UnregisteredNodes.instance().disable();
+  Assert.assertEquals(initialNodeCount + 1,countTreeNodes(m1.getRootNodes()));
+  Assert.assertNotNull(m1.getNode(freeFloatNode.getNodeId()));
+  Assert.assertEquals(1,myUndo.myUndoStack.size());
+  final UndoUnit undoElement=myUndo.myUndoStack.peek();
+  undoElement.undo();
+  Assert.assertEquals(initialNodeCount,countTreeNodes(m1.getRootNodes()));
+  Assert.assertNull(m1.getNode(freeFloatNode.getNodeId()));
+  undoElement.redo();
+  Assert.assertEquals(initialNodeCount + 1,countTreeNodes(m1.getRootNodes()));
+  Assert.assertNotNull(m1.getNode(freeFloatNode.getNodeId()));
+  Assert.assertEquals(2,countTreeNodes(Collections.singleton(freeFloatNode)));
+}
