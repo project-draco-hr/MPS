@@ -5,21 +5,23 @@
       continue;
     }
     DataSource source=sm.getSource();
-    if (!(source instanceof FileDataSource)) {
+    if (!(source instanceof FileDataSource || source instanceof FilePerRootDataSource)) {
       continue;
     }
-    IFile modelFile=((FileDataSource)source).getFile();
-    String ext=FileUtil.getExtension(modelFile.getName());
-    if (ext == null || modelFile.isDirectory() || !(indexedFileExtensions.contains(ext.toLowerCase()))) {
-      continue;
+    Collection<IFile> modelFiles=getDataSourceFiles(source);
+    for (    IFile modelFile : modelFiles) {
+      String ext=FileUtil.getExtension(modelFile.getName());
+      if (ext == null || modelFile.isDirectory() || !(indexedFileExtensions.contains(ext.toLowerCase()))) {
+        continue;
+      }
+      VirtualFile vf=VirtualFileUtils.getVirtualFile(modelFile);
+      if (vf == null) {
+        LOG.warn("Model " + sm.getModelName() + ": virtual file not found for model file. Model file: "+ modelFile.getPath());
+        continue;
+      }
+      processedModels.consume(sm);
+      scopeFiles.addLink(sm,vf);
     }
-    VirtualFile vf=VirtualFileUtils.getVirtualFile(modelFile);
-    if (vf == null) {
-      LOG.warn("Model " + sm.getModelName() + ": virtual file not found for model file. Model file: "+ modelFile.getPath());
-      continue;
-    }
-    processedModels.consume(sm);
-    scopeFiles.addLink(sm,vf);
   }
   ConcreteFilesGlobalSearchScope allFiles=new ConcreteFilesGlobalSearchScope(scopeFiles.getSecond());
   MultiMap<SModel,T> result=new SetBasedMultiMap<SModel,T>();
