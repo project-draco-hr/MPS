@@ -1,3 +1,26 @@
 {
-  return createDefaultSubstituteActions(myLink.getTargetConcept(),myParentNode,myCurrentChild,new DefaultChildSetter(myLink));
+  String conceptFqName=NameUtil.nodeFQName(myTargetConcept.getDeclarationNode());
+  SContainmentLink link=mySetter.getLink();
+  if (!ModelConstraints.canBeChild(conceptFqName,myParentNode,link.getDeclarationNode(),null,null)) {
+    return Collections.emptyList();
+  }
+  if (myTargetConcept instanceof SConcept) {
+    SReferenceLink smartRef=ReferenceConceptUtil.getCharacteristicReference(((SConcept)myTargetConcept));
+    if (smartRef != null) {
+      return Collections.emptyList();
+    }
+  }
+  Set<SAbstractConcept> concepts=new HashSet<SAbstractConcept>();
+  for (  SLanguage language : SModelOperations.getSLanguages(this.myParentNode.getModel())) {
+    for (    SAbstractConcept concept : language.getConcepts()) {
+      if (concept.isSubConceptOf(this.myTargetConcept)) {
+        concepts.add(concept);
+      }
+    }
+  }
+  ArrayList<SubstituteAction> substituteActions=new ArrayList<SubstituteAction>();
+  for (  SAbstractConcept concept : concepts) {
+    substituteActions.add(new DefaultChildSubstituteAction(concept,concept,myParentNode,myCurrentChild,mySetter));
+  }
+  return substituteActions;
 }
