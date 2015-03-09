@@ -1,0 +1,21 @@
+{
+  if (myGenerator.getGeneratorSessionContext().getGenerationOptions().useDynamicReferences()) {
+    return;
+  }
+  for (  SReference dr : myRefs) {
+    final SNode srcNode=dr.getSourceNode();
+    String resolveInfo=dr instanceof jetbrains.mps.smodel.SReference ? ((jetbrains.mps.smodel.SReference)dr).getResolveInfo() : null;
+    if (srcNode == null) {
+      myGenerator.getLogger().warning(String.format("Attempt to replace dynamic reference '%s' with static counterpart failed: no source node; resolveInfo=%s. Dynamic reference is left intact.",dr.getLink().getRoleName(),resolveInfo));
+      continue;
+    }
+    SNode target=jetbrains.mps.smodel.SReference.getTargetNodeSilently(dr);
+    if (target == null) {
+      myGenerator.getLogger().warning(srcNode.getReference(),String.format("Failed to replace dynamic reference '%s' with static counterpart: no target; resolveInfo=%s. Dynamic reference is left intact.",dr.getLink().getRoleName(),resolveInfo));
+      continue;
+    }
+    final jetbrains.mps.smodel.SReference sr=jetbrains.mps.smodel.SReference.create(dr.getLink(),dr.getSourceNode(),target);
+    sr.setResolveInfo(resolveInfo);
+    srcNode.setReference(dr.getLink(),sr);
+  }
+}
