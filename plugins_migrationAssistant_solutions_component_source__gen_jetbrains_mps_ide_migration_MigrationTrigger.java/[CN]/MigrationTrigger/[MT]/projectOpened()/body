@@ -1,47 +1,40 @@
 {
   if (!(myState.migrationRequired)) {
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        myListenersAdded=true;
-        MPSModuleRepository.getInstance().addRepositoryListener(MigrationTrigger.this.myRepoListener);
-        ClassLoaderManager.getInstance().addClassesHandler(MigrationTrigger.this.myClassesListener);
-        myProperties.addListener(myPropertiesListener);
-      }
-    }
-);
+    addListeners();
     ModelAccess.instance().runWriteAction(new Runnable(){
       public void run(){
         tryMigratingProject();
       }
     }
 );
-    return;
   }
-  StartupManager.getInstance(myProject).registerPostStartupActivity(new Runnable(){
-    public void run(){
-      if (!(myMigrationManager.isMigrationRequired())) {
-        return;
-      }
-      ApplicationManager.getApplication().runWriteAction(new Runnable(){
-        public void run(){
-          VirtualFileUtils.refreshSynchronouslyRecursively(myProject.getBaseDir());
-          VirtualFileManager.getInstance().asyncRefresh(new Runnable(){
-            public void run(){
-              SwingUtilities.invokeLater(new Runnable(){
-                public void run(){
-                  ReloadManager.getInstance().flush();
-                  ProjectManagerEx.getInstanceEx().unblockReloadingProjectOnExternalChanges();
-                  executeWizard();
-                }
-              }
-);
-            }
-          }
-);
+ else {
+    StartupManager.getInstance(myProject).registerPostStartupActivity(new Runnable(){
+      public void run(){
+        if (!(myMigrationManager.isMigrationRequired())) {
+          return;
         }
+        ApplicationManager.getApplication().runWriteAction(new Runnable(){
+          public void run(){
+            VirtualFileUtils.refreshSynchronouslyRecursively(myProject.getBaseDir());
+            VirtualFileManager.getInstance().asyncRefresh(new Runnable(){
+              public void run(){
+                SwingUtilities.invokeLater(new Runnable(){
+                  public void run(){
+                    ReloadManager.getInstance().flush();
+                    ProjectManagerEx.getInstanceEx().unblockReloadingProjectOnExternalChanges();
+                    executeWizard();
+                  }
+                }
+);
+              }
+            }
+);
+          }
+        }
+);
       }
-);
     }
-  }
 );
+  }
 }
