@@ -1,14 +1,6 @@
 {
-  SNode referentNode=null;
   SReference reference=mySNode.getReference(link);
-  if (reference != null) {
-    referentNode=reference.getTargetNode();
-    if (referentNode == null || referentNode.getModel() == null || !VisibilityUtil.isVisible(myEditorContext.getModel(),referentNode.getModel())) {
-      String rinfo=((jetbrains.mps.smodel.SReference)reference).getResolveInfo();
-      addCell(createErrorCell(rinfo != null ? rinfo : "?" + link.getRoleName() + "?",link));
-    }
-  }
-  if (referentNode == null) {
+  if (reference == null) {
     String noTargetText="<no " + link.getRoleName() + ">";
     jetbrains.mps.nodeEditor.cells.EditorCell_Label noRefCell=link.isOptional() ? new EditorCell_Constant(myEditorContext,mySNode,"") : new EditorCell_Error(myEditorContext,mySNode,noTargetText);
     noRefCell.setText("");
@@ -22,5 +14,26 @@
     noRefCell.setSubstituteInfo(new DefaultSReferenceSubstituteInfo(mySNode,link,myEditorContext));
     setIndent(noRefCell);
     addCell(noRefCell);
+  }
+ else {
+    final SNode referentNode=reference.getTargetNode();
+    if (referentNode == null || referentNode.getModel() == null || !VisibilityUtil.isVisible(myEditorContext.getModel(),referentNode.getModel())) {
+      String rinfo=((jetbrains.mps.smodel.SReference)reference).getResolveInfo();
+      addCell(createErrorCell(rinfo != null ? rinfo : "?" + link.getRoleName() + "?",link));
+    }
+ else {
+      EditorCell cell=myEditorContext.getEditorComponent().getUpdater().getCurrentUpdateSession().updateReferencedNodeCell(new Computable<EditorCell>(){
+        @Override public EditorCell compute(){
+          return createReferentEditorCell(myEditorContext,link,referentNode);
+        }
+      }
+,referentNode,link.getRoleName());
+      CellUtil.setupIDeprecatableStyles(referentNode,cell);
+      setSemanticNodeToCells(cell,mySNode);
+      cell.setAction(CellActionType.DELETE,new CellAction_DeleteReference(mySNode,link.getRoleName()));
+      cell.setAction(CellActionType.BACKSPACE,new CellAction_DeleteReference(mySNode,link.getRoleName()));
+      cell.setSubstituteInfo(new DefaultSReferenceSubstituteInfo(mySNode,link,myEditorContext));
+      addCell(cell);
+    }
   }
 }
