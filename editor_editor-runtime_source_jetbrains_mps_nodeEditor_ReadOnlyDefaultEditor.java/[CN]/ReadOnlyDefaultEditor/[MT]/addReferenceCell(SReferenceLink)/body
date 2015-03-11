@@ -1,0 +1,26 @@
+{
+  SReference reference=mySNode.getReference(referenceLink);
+  if (reference == null) {
+    addLabel("<no target>");
+    return;
+  }
+  final SNode referentNode=reference.getTargetNode();
+  if (referentNode == null || referentNode.getModel() == null || !VisibilityUtil.isVisible(myEditorContext.getModel(),referentNode.getModel())) {
+    String resolveInfo=((jetbrains.mps.smodel.SReference)reference).getResolveInfo();
+    String myErrorText=resolveInfo != null ? resolveInfo : "?" + referenceLink.getRoleName() + "?";
+    addErrorCell(myErrorText);
+    return;
+  }
+  EditorCell cell=myEditorContext.getEditorComponent().getUpdater().getCurrentUpdateSession().updateReferencedNodeCell(new Computable<EditorCell>(){
+    @Override public EditorCell compute(){
+      return createReferentEditorCell(myEditorContext,referenceLink,referentNode);
+    }
+  }
+,referentNode,referenceLink.getRoleName());
+  setSemanticNodeToCells(cell,mySNode);
+  if (cell.getRole() == null) {
+    cell.setRole(referenceLink.getRoleName());
+    cell.setReferenceCell(true);
+  }
+  addCell(cell);
+}
