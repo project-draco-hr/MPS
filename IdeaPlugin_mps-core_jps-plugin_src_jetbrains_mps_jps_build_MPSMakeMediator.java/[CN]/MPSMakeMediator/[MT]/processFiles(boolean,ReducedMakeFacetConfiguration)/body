@@ -8,17 +8,27 @@
     }
   }
   for (  String writtenFile : makeFacetConfiguration.getWrittenFiles()) {
-    myContext.processMessage(new FileGeneratedEvent());
     SModel source=makeFacetConfiguration.getSource(writtenFile);
     ModuleBuildTarget target=myToMake.get(source);
     File file=new File(writtenFile);
-    if (!JavaBuilder.JAVA_SOURCES_FILTER.accept(file) && !myRedirects.isInCacheOutput(writtenFile)) {
+    if (JavaBuilder.JAVA_SOURCES_FILTER.accept(file)) {
       try {
-        copyResource(target,file);
+        FSOperations.markDirty(myContext,new File(writtenFile));
       }
  catch (      IOException e) {
-        myContext.processMessage(new CompilerMessage("MPS resources",Kind.ERROR,e.getMessage(),FileUtil.toSystemIndependentName(file.getParent())));
+        reportError(e);
         success=false;
+      }
+    }
+ else {
+      if (!myRedirects.isInCacheOutput(writtenFile)) {
+        try {
+          copyResource(target,file);
+        }
+ catch (        IOException e) {
+          myContext.processMessage(new CompilerMessage("MPS resources",Kind.ERROR,e.getMessage(),FileUtil.toSystemIndependentName(file.getParent())));
+          success=false;
+        }
       }
     }
     myRefreshComponent.refresh(writtenFile);
