@@ -1,2 +1,55 @@
 {
+  ExitCode status=ExitCode.NOTHING_DONE;
+  try {
+    final List<ModuleBuildTarget> targets=new ArrayList<ModuleBuildTarget>();
+    dirtyFilesHolder.processDirtyFiles(new FileProcessor<JavaSourceRootDescriptor,ModuleBuildTarget>(){
+      @Override public boolean apply(      ModuleBuildTarget target,      File file,      JavaSourceRootDescriptor javaSourceRootDescriptor) throws IOException {
+        LOG.info("TARGETS " + target + " file "+ file);
+        targets.add(target);
+        return true;
+      }
+    }
+);
+    boolean isMPSChunk=false;
+    boolean sourceGenNotInScope=false;
+    for (    JpsModule jpsModule : moduleChunk.getModules()) {
+      JpsMPSModuleExtension extension=JpsMPSExtensionService.getInstance().getExtension(jpsModule);
+      if (extension == null) {
+        continue;
+      }
+      isMPSChunk=true;
+      boolean inScope=false;
+      for (      ModuleBuildTarget target : targets) {
+        if (compileContext.getScope().isAffected(target,new File(extension.getConfiguration().getGeneratorOutputPath()))) {
+          inScope=true;
+          break;
+        }
+        if (!inScope) {
+          sourceGenNotInScope=true;
+          break;
+        }
+      }
+    }
+    if (!isMPSChunk) {
+      return status;
+    }
+    if (sourceGenNotInScope) {
+      compileContext.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.ERROR,"Compile scope is too narrow. MPS generated sources would be out of scope"));
+      return ExitCode.ABORT;
+    }
+    JpsMPSRepositoryFacade.getInstance().init(compileContext);
+    final Map<SModel,ModuleBuildTarget> toMake=collectChangedModels(compileContext,dirtyFilesHolder);
+    MPSMakeMediator makeMediator=new MPSMakeMediator(JpsMPSRepositoryFacade.getInstance().getProject(),toMake,compileContext,refreshComponent,outputConsumer);
+    boolean success=makeMediator.build();
+    if (success) {
+      status=ExitCode.OK;
+    }
+  }
+ catch (  Exception ex) {
+    throw new ProjectBuildException(ex);
+  }
+  if (MPSCompilerUtil.isTracingMode()) {
+    compileContext.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.WARNING,"<simple warning to show Messages tool>"));
+  }
+  return status;
 }

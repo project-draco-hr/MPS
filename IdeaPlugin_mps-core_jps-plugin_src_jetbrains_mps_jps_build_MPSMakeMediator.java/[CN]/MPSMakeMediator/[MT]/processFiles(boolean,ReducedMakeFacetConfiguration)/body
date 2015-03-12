@@ -1,5 +1,5 @@
 {
-  ProjectBuilderLogger logger=myContext.getCompileContext().getLoggingManager().getProjectBuilderLogger();
+  ProjectBuilderLogger logger=myContext.getLoggingManager().getProjectBuilderLogger();
   if (logger.isEnabled()) {
     try {
       logger.logCompiledPaths(makeFacetConfiguration.getWrittenFiles(),MPSMakeConstants.BUILDER_ID,"Written files:");
@@ -8,24 +8,23 @@
     }
   }
   for (  String writtenFile : makeFacetConfiguration.getWrittenFiles()) {
-    myContext.getCompileContext().processMessage(new FileGeneratedEvent());
+    myContext.processMessage(new FileGeneratedEvent());
     try {
       SModel source=makeFacetConfiguration.getSource(writtenFile);
       ModuleBuildTarget target=myToMake.get(source);
       File file=new File(writtenFile);
       if (source != null && source.getSource() instanceof FileDataSource) {
-        myOutputConsumer.registerOutputFile(target,file,Collections.singletonList(((FileDataSource)source.getSource()).getLocation()));
+        myOutputConsumer.registerOutputFile(target,file,Collections.singletonList((source.getSource()).getLocation()));
       }
       if (!JavaBuilder.JAVA_SOURCES_FILTER.accept(file) && !myRedirects.isInCacheOutput(writtenFile)) {
         try {
           copyResource(target,file);
         }
  catch (        IOException e) {
-          myContext.getCompileContext().processMessage(new CompilerMessage("MPS resources",Kind.ERROR,e.getMessage(),FileUtil.toSystemIndependentName(file.getParent())));
+          myContext.processMessage(new CompilerMessage("MPS resources",Kind.ERROR,e.getMessage(),FileUtil.toSystemIndependentName(file.getParent())));
           success=false;
         }
       }
-      FSOperations.markDirty(myContext.getCompileContext(),file);
       myRefreshComponent.refresh(writtenFile);
     }
  catch (    IOException e) {
@@ -35,7 +34,7 @@
   }
   for (  String keptFile : makeFacetConfiguration.getKeptFiles()) {
     try {
-      FSOperations.markDirty(myContext.getCompileContext(),new File(keptFile));
+      FSOperations.markDirty(myContext,new File(keptFile));
     }
  catch (    IOException e) {
       reportError(e);
@@ -44,7 +43,7 @@
     SModel source=makeFacetConfiguration.getSource(keptFile);
     if (source != null && source.getSource() instanceof FileDataSource) {
       try {
-        myOutputConsumer.registerOutputFile(myToMake.get(source),new File(keptFile),Collections.singletonList(((FileDataSource)source.getSource()).getLocation()));
+        myOutputConsumer.registerOutputFile(myToMake.get(source),new File(keptFile),Collections.singletonList((source.getSource()).getLocation()));
       }
  catch (      IOException e) {
         reportError(e);
@@ -57,7 +56,7 @@
   }
   for (  String deletedFile : makeFacetConfiguration.getDeletedFiles()) {
     try {
-      FSOperations.markDeleted(myContext.getCompileContext(),new File(deletedFile));
+      FSOperations.markDeleted(myContext,new File(deletedFile));
     }
  catch (    IOException e) {
       reportError(e);
