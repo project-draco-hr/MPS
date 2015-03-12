@@ -9,28 +9,19 @@
   }
   for (  String writtenFile : makeFacetConfiguration.getWrittenFiles()) {
     myContext.processMessage(new FileGeneratedEvent());
-    try {
-      SModel source=makeFacetConfiguration.getSource(writtenFile);
-      ModuleBuildTarget target=myToMake.get(source);
-      File file=new File(writtenFile);
-      if (source != null && source.getSource() instanceof FileDataSource) {
-        myOutputConsumer.registerOutputFile(target,file,Collections.singletonList((source.getSource()).getLocation()));
+    SModel source=makeFacetConfiguration.getSource(writtenFile);
+    ModuleBuildTarget target=myToMake.get(source);
+    File file=new File(writtenFile);
+    if (!JavaBuilder.JAVA_SOURCES_FILTER.accept(file) && !myRedirects.isInCacheOutput(writtenFile)) {
+      try {
+        copyResource(target,file);
       }
-      if (!JavaBuilder.JAVA_SOURCES_FILTER.accept(file) && !myRedirects.isInCacheOutput(writtenFile)) {
-        try {
-          copyResource(target,file);
-        }
- catch (        IOException e) {
-          myContext.processMessage(new CompilerMessage("MPS resources",Kind.ERROR,e.getMessage(),FileUtil.toSystemIndependentName(file.getParent())));
-          success=false;
-        }
+ catch (      IOException e) {
+        myContext.processMessage(new CompilerMessage("MPS resources",Kind.ERROR,e.getMessage(),FileUtil.toSystemIndependentName(file.getParent())));
+        success=false;
       }
-      myRefreshComponent.refresh(writtenFile);
     }
- catch (    IOException e) {
-      reportError(e);
-      success=false;
-    }
+    myRefreshComponent.refresh(writtenFile);
   }
   for (  String keptFile : makeFacetConfiguration.getKeptFiles()) {
     try {
@@ -39,16 +30,6 @@
  catch (    IOException e) {
       reportError(e);
       success=false;
-    }
-    SModel source=makeFacetConfiguration.getSource(keptFile);
-    if (source != null && source.getSource() instanceof FileDataSource) {
-      try {
-        myOutputConsumer.registerOutputFile(myToMake.get(source),new File(keptFile),Collections.singletonList((source.getSource()).getLocation()));
-      }
- catch (      IOException e) {
-        reportError(e);
-        success=false;
-      }
     }
   }
   if (logger.isEnabled()) {
