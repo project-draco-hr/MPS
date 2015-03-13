@@ -1,8 +1,18 @@
 {
-  BreakpointWithHighlighter locationBreakpoint=findBreakpoint(node);
-  if (locationBreakpoint != null) {
-    myDebuggerManager.getBreakpointManager().removeBreakpoint(locationBreakpoint);
-    return;
+  boolean breakpointWasSet=false;
+  GeneratedSourcePosition sourcePosition=GeneratedSourcePosition.fromNode(node);
+  if (sourcePosition != null) {
+    PsiFile psiFile=sourcePosition.getPsiFile(myProject);
+    if (psiFile != null) {
+      Document document=PsiDocumentManager.getInstance(myProject).getDocument(psiFile);
+      if (document != null) {
+        if (!hasMethodOrFieldsAtLine(document,psiFile,sourcePosition.getLineNumber())) {
+          breakpointWasSet=toggleAtLine(psiFile,sourcePosition.getLineNumber());
+        }
+      }
+    }
   }
-  addBreakpoint(node);
+  if (!breakpointWasSet) {
+    LOG.debug("Failed to create a breakpoint at this location");
+  }
 }

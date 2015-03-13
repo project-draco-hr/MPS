@@ -1,69 +1,76 @@
 {
-  ProjectBuilderLogger logger=myContext.getCompileContext().getLoggingManager().getProjectBuilderLogger();
+  ProjectBuilderLogger logger=myContext.getLoggingManager().getProjectBuilderLogger();
   if (logger.isEnabled()) {
     try {
       logger.logCompiledPaths(makeFacetConfiguration.getWrittenFiles(),MPSMakeConstants.BUILDER_ID,"Written files:");
     }
- catch (    IOException ignore) {
+ catch (    IOException ignored) {
     }
   }
   for (  String writtenFile : makeFacetConfiguration.getWrittenFiles()) {
-    myContext.getCompileContext().processMessage(new FileGeneratedEvent());
-    try {
-      SModel source=makeFacetConfiguration.getSource(writtenFile);
-      ModuleBuildTarget target=myToMake.get(source);
-      File file=new File(writtenFile);
-      if (source != null && source.getSource() instanceof FileDataSource) {
-        myOutputConsumer.registerOutputFile(target,file,Collections.singletonList(((FileDataSource)source.getSource()).getLocation()));
+    SModel source=makeFacetConfiguration.getSource(writtenFile);
+    ModuleBuildTarget target=myToMake.get(source);
+    File file=new File(writtenFile);
+    if (source != null) {
+      DataSource dataSource=source.getSource();
+      if (isJava(file)) {
+        List<String> modelSourceFiles=getFilesFromDataSource(dataSource);
+        try {
+          myOutputConsumer.registerOutputFile(target,file,modelSourceFiles);
+        }
+ catch (        IOException e) {
+          reportError("IO problem while registering output for source",e);
+          success=false;
+        }
       }
-      if (!JavaBuilder.JAVA_SOURCES_FILTER.accept(file) && !myRedirects.isInCacheOutput(writtenFile)) {
+    }
+    if (isJava(file)) {
+      try {
+        FSOperations.markDirty(myContext,CompilationRound.CURRENT,new File(writtenFile));
+      }
+ catch (      IOException e) {
+        reportError("IO problem while marking java sources dirty",e);
+        success=false;
+      }
+    }
+ else {
+      if (!myRedirects.isInCacheOutput(writtenFile)) {
         try {
           copyResource(target,file);
         }
  catch (        IOException e) {
-          myContext.getCompileContext().processMessage(new CompilerMessage("MPS resources",Kind.ERROR,e.getMessage(),FileUtil.toSystemIndependentName(file.getParent())));
+          reportError("IO problem during resources copying",e);
           success=false;
         }
       }
-      FSOperations.markDirty(myContext.getCompileContext(),file);
-      myRefreshComponent.refresh(writtenFile);
     }
- catch (    IOException e) {
-      reportError(e);
-      success=false;
-    }
+    myRefreshComponent.refresh(writtenFile);
   }
   for (  String keptFile : makeFacetConfiguration.getKeptFiles()) {
-    try {
-      FSOperations.markDirty(myContext.getCompileContext(),new File(keptFile));
-    }
- catch (    IOException e) {
-      reportError(e);
-      success=false;
-    }
-    SModel source=makeFacetConfiguration.getSource(keptFile);
-    if (source != null && source.getSource() instanceof FileDataSource) {
+    File file=new File(keptFile);
+    if (isJava(file)) {
       try {
-        myOutputConsumer.registerOutputFile(myToMake.get(source),new File(keptFile),Collections.singletonList(((FileDataSource)source.getSource()).getLocation()));
+        FSOperations.markDirty(myContext,CompilationRound.CURRENT,file);
       }
  catch (      IOException e) {
-        reportError(e);
+        reportError("IO problem during marking kept java sources dirty",e);
         success=false;
       }
     }
   }
+  List<String> deletedFiles=makeFacetConfiguration.getDeletedFiles();
   if (logger.isEnabled()) {
-    logger.logDeletedFiles(makeFacetConfiguration.getDeletedFiles());
+    logger.logDeletedFiles(deletedFiles);
   }
-  for (  String deletedFile : makeFacetConfiguration.getDeletedFiles()) {
+  for (  String deletedFile : deletedFiles) {
     try {
-      FSOperations.markDeleted(myContext.getCompileContext(),new File(deletedFile));
+      FSOperations.markDeleted(myContext,new File(deletedFile));
     }
  catch (    IOException e) {
-      reportError(e);
+      reportError("IO problem while deleting files with FS",e);
       success=false;
     }
   }
-  myRefreshComponent.removed(makeFacetConfiguration.getDeletedFiles());
+  myRefreshComponent.removed(deletedFiles);
   return success;
 }
