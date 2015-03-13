@@ -6,7 +6,6 @@
   if (module == null) {
     return;
   }
-  SNode concept=SNodeOperations.getConceptDeclaration(node);
   boolean executeImmediately=ReferenceResolverUtils.canExecuteImmediately(SNodeOperations.getModel(node),repository);
   for (  SReference ref : SNodeOperations.getReferences(node)) {
     SNode target=SLinkOperations.getTargetNode(ref);
@@ -21,16 +20,17 @@
     for (    SNode c : SNodeOperations.getChildren(node)) {
       component.addDependency(c);
     }
-    Scope refScope=ModelConstraints.getScope(ref);
+    ReferenceDescriptor refDescriptor=ModelConstraints.getReferenceDescriptor(ref);
+    Scope refScope=refDescriptor.getScope();
     if (refScope instanceof ErrorScope) {
       component.addError(node,((ErrorScope)refScope).getMessage(),null,new ReferenceMessageTarget(SLinkOperations.getRole(ref)));
     }
  else     if (!(refScope.contains(target))) {
       String name=target.getName();
-      ReferenceScopeProvider scopeProvider=ModelConstraintsManager.getNodeReferentSearchScopeProvider(concept,ref.getRole());
+      ReferenceScopeProvider scopeProvider=refDescriptor.getScopeProvider();
       SNode ruleNode=null;
       if (scopeProvider != null) {
-        ruleNode=(scopeProvider.getSearchScopeValidatorNode() != null ? ((SNodePointer)scopeProvider.getSearchScopeValidatorNode()).resolve(MPSModuleRepository.getInstance()) : null);
+        ruleNode=(scopeProvider.getSearchScopeValidatorNode() != null ? scopeProvider.getSearchScopeValidatorNode().resolve(repository) : null);
       }
       component.addError(node,"reference" + ((name == null ? "" : " " + name)) + " ("+ SLinkOperations.getRole(ref)+ ") is out of search scope",ruleNode,new ReferenceMessageTarget(SLinkOperations.getRole(ref)),createResolveReferenceQuickfix(ref,repository,executeImmediately));
     }
