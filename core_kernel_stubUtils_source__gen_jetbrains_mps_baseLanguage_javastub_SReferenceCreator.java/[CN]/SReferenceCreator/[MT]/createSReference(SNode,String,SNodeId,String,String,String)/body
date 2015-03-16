@@ -5,20 +5,21 @@
       return jetbrains.mps.smodel.SReference.create(role,source,model.getReference(),targetNodeId,resolveInfo);
     }
   }
-  Set<SModelReference> possibleModels=StubModelsResolver.getInstance().resolveModel(module,SModelStereotype.withStereotype(pack,SModelStereotype.JAVA_STUB),null);
-  if (SetSequence.fromSet(possibleModels).isEmpty()) {
+  Collection<org.jetbrains.mps.openapi.model.SModel> possibleModels=myModuleDeps.resolveModel(SModelStereotype.withStereotype(pack,SModelStereotype.JAVA_STUB));
+  if (possibleModels.isEmpty()) {
     return jetbrains.mps.smodel.SReference.create(role,source,null,targetNodeId,resolveInfo);
   }
-  Set<SModelReference> toImport=SetSequence.fromSetWithValues(new HashSet<SModelReference>(),possibleModels);
-  SetSequence.fromSet(toImport).removeElement(model.getReference());
-  for (  SModelReference m : toImport) {
-    new SModelLegacy(model).addModelImport(m,false);
+  for (  org.jetbrains.mps.openapi.model.SModel m : possibleModels) {
+    if (m == model) {
+      continue;
+    }
+    new SModelLegacy(model).addModelImport(m.getReference(),false);
   }
-  if (SetSequence.fromSet(possibleModels).count() > 1) {
+  if (possibleModels.size() > 1) {
     return DynamicReference.createDynamicReference(role,source,pack,resolveInfo);
   }
-  SModelReference targetModel=SetSequence.fromSet(possibleModels).first();
-  SModuleReference targetModule=SModelRepository.getInstance().getModelDescriptor(targetModel).getModule().getModuleReference();
+  org.jetbrains.mps.openapi.model.SModel targetModel=possibleModels.iterator().next();
+  SModuleReference targetModule=targetModel.getModule().getModuleReference();
   SModelReference targetModelStubReference=StubHelper.uidForPackageInStubs(targetModule,pack);
   return jetbrains.mps.smodel.SReference.create(role,source,targetModelStubReference,targetNodeId,resolveInfo);
 }
