@@ -1,0 +1,44 @@
+{
+  ModelAccess.assertLegalRead();
+  if (model instanceof TransientSModel)   return;
+  if (model.getModule() == null)   return;
+  if (jetbrains.mps.util.SNodeOperations.isModelDisposed(model))   return;
+  if (model instanceof InvalidSModel) {
+    Iterable<SModel.Problem> problems=model.getProblems();
+    if (!problems.iterator().hasNext()) {
+      consumer.consume(new ModelValidationProblem(model,Severity.ERROR,"Couldn't read model"));
+      return;
+    }
+    for (    SModel.Problem m : problems) {
+      if (!m.isError())       continue;
+      consumer.consume(new ModelValidationProblem(model,Severity.ERROR,m.getText()));
+    }
+    return;
+  }
+  SModule module=model.getModule();
+  final SModelReference modelToValidateRef=model.getReference();
+  for (  final SModelReference reference : SModelOperations.getImportedModelUIDs(model)) {
+    if (module.resolveInDependencies(reference.getModelId()) == null) {
+      String msg="Can't find model: " + SModelStereotype.withoutStereotype(reference.getModelName());
+      consumer.consume(new MissingModelError(model,msg,reference));
+    }
+    if (reference.equals(modelToValidateRef)) {
+      consumer.consume(new ImportSelfWarning(model,reference));
+    }
+  }
+  List<SModuleReference> langsToCheck=new ArrayList<SModuleReference>();
+  langsToCheck.addAll(SModelOperations.getAllImportedLanguages(model));
+  langsToCheck.addAll(((jetbrains.mps.smodel.SModelInternal)model).engagedOnGenerationLanguages());
+  for (  final SModuleReference lang : langsToCheck) {
+    if (model.getRepository().getModule(lang.getModuleId()) == null) {
+      consumer.consume(new MissingLanguageError(model,lang));
+    }
+  }
+  for (  SModuleReference devKit : ((jetbrains.mps.smodel.SModelInternal)model).importedDevkits()) {
+    if (model.getRepository().getModule(devKit.getModuleId()) == null) {
+      consumer.consume(new ModelValidationProblem(model,Severity.ERROR,"Can't find devkit: " + devKit.getModuleName()){
+      }
+);
+    }
+  }
+}
