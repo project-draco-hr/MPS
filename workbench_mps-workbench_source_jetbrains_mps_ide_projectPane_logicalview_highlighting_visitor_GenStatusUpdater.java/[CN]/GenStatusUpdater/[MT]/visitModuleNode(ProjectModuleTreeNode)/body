@@ -1,0 +1,21 @@
+{
+  if (node.isInitialized()) {
+    return;
+  }
+  scheduleModelRead(node,new Runnable(){
+    @Override public void run(){
+      if (node.getModule().isReadOnly()) {
+        new StatusUpdate(node).update(GenerationStatus.READONLY);
+        return;
+      }
+      final com.intellij.openapi.project.Project project=ProjectHelper.toIdeaProject(myProject);
+      if (project != null && DumbService.getInstance(project).isDumb()) {
+        propagateStatusToNamespaceNodes(node,GenerationStatus.UPDATING);
+        return;
+      }
+      GenerationStatus s=new StatusUpdate(node).update();
+      propagateStatusToNamespaceNodes(node,s);
+    }
+  }
+);
+}
