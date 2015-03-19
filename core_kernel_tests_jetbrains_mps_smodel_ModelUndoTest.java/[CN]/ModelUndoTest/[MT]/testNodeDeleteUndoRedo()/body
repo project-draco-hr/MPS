@@ -1,0 +1,27 @@
+{
+  final TestModelFactory m1f=new TestModelFactory();
+  m1f.createModel(3,5,2,3);
+  myModelAccess.enableWrite();
+  m1f.attachTo(myRepo);
+  final int initialNodeCount=m1f.countModelNodes();
+  SNode r1c2=m1f.getRoot(1).getFirstChild().getNextSibling();
+  Assert.assertEquals(2,IterableUtil.asCollection(r1c2.getChildren()).size());
+  final SNode toRemove=r1c2.getChildren().iterator().next();
+  toRemove.delete();
+  final int expectedNodeCount=initialNodeCount - 4;
+  myUndo.flushCommand(null);
+  Assert.assertEquals(1,IterableUtil.asCollection(r1c2.getChildren()).size());
+  Assert.assertEquals(1,myUndo.myUndoStack.size());
+  final UndoUnit undoElement=myUndo.myUndoStack.peek();
+  Assert.assertEquals(1,undoElement.myActions.size());
+  final int withRemovedNodeCount=m1f.countModelNodes();
+  Assert.assertEquals(expectedNodeCount,withRemovedNodeCount);
+  undoElement.undo();
+  Assert.assertEquals(1,myUndo.myUndoStack.size());
+  Assert.assertEquals(2,IterableUtil.asCollection(r1c2.getChildren()).size());
+  Assert.assertEquals(initialNodeCount,m1f.countModelNodes());
+  undoElement.redo();
+  Assert.assertEquals(1,myUndo.myUndoStack.size());
+  Assert.assertEquals(1,IterableUtil.asCollection(r1c2.getChildren()).size());
+  Assert.assertEquals(expectedNodeCount,m1f.countModelNodes());
+}

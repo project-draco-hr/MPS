@@ -1,17 +1,22 @@
 {
-  String normalized=path.replace('\\','/');
   FileSystemListenersContainer.Node curr=root;
   List<FileSystemListener> result=new ArrayList<FileSystemListener>();
-  root.storeListeners(result);
-  for (  String s : normalized.split("\\/")) {
-    if ((s == null || s.length() == 0)) {
-      continue;
+  myLock.readLock().lock();
+  try {
+    root.storeListeners(result);
+    for (    String s : normalizeAndSplit(path)) {
+      if ((s == null || s.length() == 0)) {
+        continue;
+      }
+      curr=curr.child(s,false);
+      if (curr == null) {
+        return result;
+      }
+      curr.storeListeners(result);
     }
-    curr=curr.child(s,false);
-    if (curr == null) {
-      return result;
-    }
-    curr.storeListeners(result);
+  }
+  finally {
+    myLock.readLock().unlock();
   }
   return result;
 }

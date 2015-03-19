@@ -1,46 +1,69 @@
 {
   if (!(myState.migrationRequired)) {
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        MPSModuleRepository.getInstance().addRepositoryListener(MigrationTrigger.this.myRepoListener);
-        ClassLoaderManager.getInstance().addClassesHandler(MigrationTrigger.this.myClassesListener);
-        myProject.getComponent(ProjectMigrationProperties.class).addListener(MigrationTrigger.this.myPropertiesListener);
-      }
-    }
-);
+    addListeners();
     ModelAccess.instance().runWriteAction(new Runnable(){
       public void run(){
-        tryMigratingProject();
+        checkMigrationNeeded();
       }
     }
 );
-    return;
   }
-  StartupManager.getInstance(myProject).registerPostStartupActivity(new Runnable(){
-    public void run(){
-      if (!(myMigrationManager.isMigrationRequired())) {
-        return;
-      }
-      ApplicationManager.getApplication().runWriteAction(new Runnable(){
-        public void run(){
-          VirtualFileUtils.refreshSynchronouslyRecursively(myProject.getBaseDir());
-          VirtualFileManager.getInstance().asyncRefresh(new Runnable(){
-            public void run(){
-              SwingUtilities.invokeLater(new Runnable(){
+ else {
+    saveAnsSetTipsState();
+    StartupManager.getInstance(myProject).registerPostStartupActivity(new Runnable(){
+      public void run(){
+        ApplicationManager.getApplication().runWriteAction(new Runnable(){
+          public void run(){
+            VirtualFileUtils.refreshSynchronouslyRecursively(myProject.getBaseDir());
+            VirtualFileManager.getInstance().syncRefresh();
+            ReloadManager.getInstance().flush();
+            ProjectManagerEx.getInstanceEx().unblockReloadingProjectOnExternalChanges();
+          }
+        }
+);
+        SwingUtilities.invokeLater(new Runnable(){
+          public void run(){
+            myState.migrationRequired=false;
+            final MigrationAssistantWizard wizard=new MigrationAssistantWizard(myProject,myMigrationManager);
+            boolean finished=wizard.showAndGet();
+            restoreTipsState();
+            if (!(finished)) {
+              return;
+            }
+            if (wizard.isFinishSuccessfull()) {
+              ApplicationManager.getApplication().runWriteAction(new Runnable(){
                 public void run(){
-                  ReloadManager.getInstance().flush();
-                  ProjectManagerEx.getInstanceEx().unblockReloadingProjectOnExternalChanges();
-                  executeWizard();
+                  ProjectManagerEx.getInstance().reloadProject(myProject);
+                }
+              }
+);
+            }
+ else {
+              MigrationErrorStep lastStep=as_feb5zp_a0a0a0i0a0a0a1a0a0a0a1a0a0q(wizard.getCurrentStepObject(),MigrationErrorStep.class);
+              if (lastStep == null) {
+                return;
+              }
+              final _FunctionTypes._void_P0_E0 afterProjectInitialized=lastStep.afterProjectInitialized();
+              if (afterProjectInitialized == null) {
+                return;
+              }
+              StartupManager.getInstance(myProject).runWhenProjectIsInitialized(new Runnable(){
+                public void run(){
+                  ApplicationManager.getApplication().invokeLater(new Runnable(){
+                    public void run(){
+                      afterProjectInitialized.invoke();
+                    }
+                  }
+,ModalityState.NON_MODAL);
                 }
               }
 );
             }
           }
-);
         }
+);
       }
-);
     }
-  }
 );
+  }
 }
