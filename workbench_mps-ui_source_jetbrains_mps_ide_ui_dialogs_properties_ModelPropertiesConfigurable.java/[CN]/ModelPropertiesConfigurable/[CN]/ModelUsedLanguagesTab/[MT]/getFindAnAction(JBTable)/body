@@ -4,13 +4,22 @@
       final SearchQuery[] query=new SearchQuery[1];
       final IResultProvider[] provider=new IResultProvider[1];
       final SearchScope scope=new ModelsScope(myModelDescriptor);
-      ModelAccess.instance().runReadAction(new Runnable(){
+      myProject.getModelAccess().runReadAction(new Runnable(){
         @Override public void run(){
           List<SModule> modules=new LinkedList<SModule>();
           for (          int i : myTable.getSelectedRows()) {
             Object value=myUsedLangsTableModel.getValueAt(i,UsedLangsTableModel.ITEM_COLUMN);
-            if (value instanceof SModuleReference) {
-              modules.add(MPSModuleRepository.getInstance().getModuleByFqName(((SModuleReference)value).getModuleName()));
+            if (value instanceof UsedLangsTableModel.Import) {
+              final Import entry=(Import)value;
+              if (entry.myLanguage != null) {
+                modules.add(entry.myLanguage.getSourceModule());
+              }
+ else {
+                final SModule devkit=entry.myDevKit.resolve(myProject.getRepository());
+                if (devkit instanceof DevKit) {
+                  modules.addAll(((DevKit)devkit).getAllExportedLanguages());
+                }
+              }
             }
           }
           query[0]=new SearchQuery(new MyModulesHolder(modules),scope);
@@ -30,7 +39,7 @@
         }
       }
 );
-      UsagesViewTool usagesViewTool=ProjectHelper.toIdeaProject(myProject).getComponent(UsagesViewTool.class);
+      UsagesViewTool usagesViewTool=myProject.getComponent(UsagesViewTool.class);
       usagesViewTool.findUsages(provider[0],query[0],true,true,true,"No usages found");
       forceCancelCloseDialog();
     }

@@ -41,19 +41,9 @@
       }
     }
   }
-).setRemoveAction(new AnActionButtonRunnable(){
-    @Override public void run(    AnActionButton anActionButton){
-      int first=importedModelsTable.getSelectionModel().getMinSelectionIndex();
-      int last=importedModelsTable.getSelectionModel().getMaxSelectionIndex();
-      for (      int i : importedModelsTable.getSelectedRows()) {
-        if (!confirmRemove(importedModelsTable.getValueAt(i,0))) {
-          return;
-        }
-      }
-      TableUtil.removeSelectedItems(importedModelsTable);
-      myImportedModels.fireTableRowsDeleted(first,last);
-      first=Math.max(0,first - 1);
-      importedModelsTable.getSelectionModel().setSelectionInterval(first,first);
+).setRemoveAction(new RemoveEntryAction(importedModelsTable){
+    @Override protected boolean confirmRemove(    int row){
+      return ModelDependenciesComponent.this.confirmRemove(importedModelsTable.getValueAt(row,0));
     }
   }
 ).addExtraAction(myFindAnActionButton=new FindAnActionButton(importedModelsTable){
@@ -104,37 +94,6 @@
   JPanel table=decorator.createPanel();
   table.setBorder(IdeBorderFactory.createBorder());
   myImportedModelsComponent.add(table,new GridConstraints(0,0,1,1,GridConstraints.ANCHOR_CENTER,GridConstraints.FILL_BOTH,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,null,null,null,0,false));
-  new SpeedSearchBase<JBTable>(importedModelsTable){
-    @Override public int getSelectedIndex(){
-      return importedModelsTable.getSelectedRow();
-    }
-    @Override protected int convertIndexToModel(    int viewIndex){
-      return importedModelsTable.convertRowIndexToModel(viewIndex);
-    }
-    @Override public Object[] getAllElements(){
-      final int count=myImportedModels.getRowCount();
-      Object[] elements=new Object[count];
-      for (int idx=0; idx < count; idx++) {
-        elements[idx]=myImportedModels.getValueAt(idx);
-      }
-      return elements;
-    }
-    @Override public String getElementText(    Object element){
-      if (!(element instanceof SModelReference))       return "";
-      return element.toString();
-    }
-    @Override public void selectElement(    Object element,    String selectedText){
-      final int count=myImportedModels.getRowCount();
-      for (int row=0; row < count; row++) {
-        if (element.equals(myImportedModels.getValueAt(row))) {
-          final int viewRow=importedModelsTable.convertRowIndexToView(row);
-          importedModelsTable.getSelectionModel().setSelectionInterval(viewRow,viewRow);
-          TableUtil.scrollSelectionToVisible(importedModelsTable);
-          break;
-        }
-      }
-    }
-  }
-.setComparator(new SpeedSearchComparator(false,true));
+  new TableColumnSearch(importedModelsTable,0).setComparator(new SpeedSearchComparator(false,true));
   setTabComponent(myImportedModelsComponent);
 }
