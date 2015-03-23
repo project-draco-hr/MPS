@@ -2,7 +2,6 @@
   return new FindAnActionButton(table){
     @Override public void actionPerformed(    AnActionEvent e){
       final SearchQuery[] query=new SearchQuery[1];
-      final IResultProvider[] provider=new IResultProvider[1];
       final SearchScope scope=myModule.getScope();
       ModelAccess.instance().runReadAction(new Runnable(){
         @Override public void run(){
@@ -14,25 +13,13 @@
             }
           }
           query[0]=new SearchQuery(new MyModulesHolder(modules),scope);
-          provider[0]=FindUtils.makeProvider(new ModuleUsagesFinder(){
-            @Override public SearchResults find(            SearchQuery query,            ProgressMonitor monitor){
-              SearchResults searchResults=new SearchResults();
-              ModulesHolder modulesHolder=(ModulesHolder)query.getObjectHolder();
-              for (              SModule searchedModule : modulesHolder.getObject()) {
-                searchResults.getSearchedNodes().add(searchedModule);
-                SearchQuery searchQuery=new SearchQuery(searchedModule,query.getScope());
-                searchResults.addAll(super.find(searchQuery,monitor));
-              }
-              return searchResults;
-            }
-          }
-);
         }
       }
 );
+      final IResultProvider provider=FindUtils.makeProvider(new CompositeFinder(new ModuleUsagesFinder()));
       UsagesViewTool usagesViewTool=ProjectHelper.toIdeaProject(myProject).getComponent(UsagesViewTool.class);
       if (usagesViewTool != null) {
-        usagesViewTool.findUsages(provider[0],query[0],true,true,true,"No usages found");
+        usagesViewTool.findUsages(provider,query[0],true,true,true,"No usages found");
       }
       forceCancelCloseDialog();
     }

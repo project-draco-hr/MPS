@@ -1,13 +1,20 @@
 {
   SearchResults searchResults=new SearchResults();
-  IHolder objectHolder=query.getObjectHolder();
-  if (!((objectHolder instanceof ModuleHolder))) {
+  Object value=query.getObjectHolder().getObject();
+  SModule searchedModule=null;
+  if (value instanceof SModule) {
+    searchedModule=((SModule)value);
+  }
+ else   if (value instanceof SModuleReference) {
+    SModuleReference moduleRef=(SModuleReference)value;
+    searchedModule=query.getScope().resolve(moduleRef);
+  }
+  if (searchedModule == null) {
     return searchResults;
   }
-  ModuleHolder moduleHolder=(ModuleHolder)objectHolder;
-  SModule searchedModule=moduleHolder.getObject();
-  SearchScope scope=query.getScope();
-  for (  SModule module : scope.getModules()) {
+  Collection<SModule> modules=IterableUtil.asCollection(query.getScope().getModules());
+  monitor.start("Looking up module uses",modules.size());
+  for (  SModule module : modules) {
     if (monitor.isCanceled()) {
       return searchResults;
     }
@@ -23,6 +30,8 @@
  else     if (module instanceof Generator) {
       collectUsagesInGenerator(searchedModule,(Generator)module,searchResults);
     }
+    monitor.advance(1);
   }
+  monitor.done();
   return searchResults;
 }

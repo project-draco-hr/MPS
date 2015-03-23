@@ -1,20 +1,19 @@
 {
-  final SearchQuery[] query=new SearchQuery[1];
-  final IResultProvider[] provider=new IResultProvider[1];
-  ModelAccess.instance().runReadAction(new Runnable(){
-    @Override public void run(){
-      if (value instanceof SModelReference) {
-        query[0]=new SearchQuery((jetbrains.mps.smodel.SModelReference)value,new ModulesScope(Arrays.asList(myModule)));
-        provider[0]=FindUtils.makeProvider(new ModelUsagesFinder());
-      }
- else       if (value instanceof SModuleReference) {
-        query[0]=new SearchQuery(MPSModuleRepository.getInstance().getModuleByFqName(((SModuleReference)value).getModuleName()),GlobalScope.getInstance());
-        provider[0]=FindUtils.makeProvider(new ModuleUsagesFinder());
-      }
-    }
+  final SearchQuery query;
+  final IResultProvider provider;
+  if (value instanceof SModelReference) {
+    query=new SearchQuery((SModelReference)value,new ModulesScope(Arrays.asList(myModule)));
+    provider=FindUtils.makeProvider(new ModelUsagesFinder());
   }
-);
+ else   if (value instanceof SModuleReference) {
+    final SModuleReference moduleReference=(SModuleReference)value;
+    query=new SearchQuery(new GenericHolder(moduleReference,moduleReference.getModuleName()),GlobalScope.getInstance());
+    provider=FindUtils.makeProvider(new ModuleUsagesFinder());
+  }
+ else {
+    return;
+  }
   UsagesViewTool usagesViewTool=ProjectHelper.toIdeaProject(myProject).getComponent(UsagesViewTool.class);
-  usagesViewTool.findUsages(provider[0],query[0],true,true,true,"No usages found");
+  usagesViewTool.findUsages(provider,query,true,true,true,"No usages found");
   forceCancelCloseDialog();
 }

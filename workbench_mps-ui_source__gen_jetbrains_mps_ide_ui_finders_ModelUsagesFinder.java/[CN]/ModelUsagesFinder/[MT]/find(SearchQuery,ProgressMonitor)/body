@@ -1,2 +1,32 @@
 {
+  SearchResults<SNode> searchResults=new SearchResults<SNode>();
+  Object value=query.getObjectHolder().getObject();
+  if (!(value instanceof SModelReference)) {
+    return searchResults;
+  }
+  SModelReference modelReference=(SModelReference)value;
+  Collection<SModel> models=IterableUtil.asCollection(query.getScope().getModels());
+  monitor.start("Looking up references to a model",models.size());
+  for (  SModel modelDescriptor : models) {
+    if (monitor.isCanceled()) {
+      return searchResults;
+    }
+    if (!(SModelStereotype.isUserModel(modelDescriptor))) {
+      continue;
+    }
+    for (    SNode node : SNodeUtil.getDescendants(modelDescriptor)) {
+      for (      SReference reference : node.getReferences()) {
+        SModelReference targetModelReference=reference.getTargetSModelReference();
+        if (targetModelReference == null) {
+          continue;
+        }
+        if (targetModelReference.equals(modelReference)) {
+          searchResults.getSearchResults().add(new SearchResult<SNode>(node,"nodes from model"));
+        }
+      }
+    }
+    monitor.advance(1);
+  }
+  monitor.done();
+  return searchResults;
 }
