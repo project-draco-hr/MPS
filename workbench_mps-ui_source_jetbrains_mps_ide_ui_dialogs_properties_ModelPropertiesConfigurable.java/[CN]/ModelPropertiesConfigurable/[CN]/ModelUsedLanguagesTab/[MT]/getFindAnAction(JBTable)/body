@@ -1,33 +1,34 @@
 {
   return new FindAnActionButton(table){
     @Override public void actionPerformed(    AnActionEvent e){
-      final SearchQuery[] query=new SearchQuery[1];
       final SearchScope scope=new ModelsScope(myModelDescriptor);
+      final List<SLanguage> languages=new LinkedList<SLanguage>();
       myProject.getModelAccess().runReadAction(new Runnable(){
         @Override public void run(){
-          List<SModule> modules=new LinkedList<SModule>();
           for (          int i : myTable.getSelectedRows()) {
             Object value=myUsedLangsTableModel.getValueAt(i,UsedLangsTableModel.ITEM_COLUMN);
             if (value instanceof UsedLangsTableModel.Import) {
               final Import entry=(Import)value;
               if (entry.myLanguage != null) {
-                modules.add(entry.myLanguage.getSourceModule());
+                languages.add(entry.myLanguage);
               }
  else {
                 final SModule devkit=entry.myDevKit.resolve(myProject.getRepository());
                 if (devkit instanceof DevKit) {
-                  modules.addAll(((DevKit)devkit).getAllExportedLanguages());
+                  for (                  Language l : ((DevKit)devkit).getAllExportedLanguages()) {
+                    languages.add(MetaAdapterByDeclaration.getLanguage(l));
+                  }
                 }
               }
             }
           }
-          query[0]=new SearchQuery(new MyModulesHolder(modules),scope);
         }
       }
 );
+      final SearchQuery query=new SearchQuery(new GenericHolder<Collection<SLanguage>>(languages,"Languages"),scope);
       final IResultProvider provider=FindUtils.makeProvider(new CompositeFinder(new LanguageUsagesFinder()));
       UsagesViewTool usagesViewTool=myProject.getComponent(UsagesViewTool.class);
-      usagesViewTool.findUsages(provider,query[0],true,true,true,"No usages found");
+      usagesViewTool.findUsages(provider,query,true,true,true,"No usages found");
       forceCancelCloseDialog();
     }
   }
