@@ -1,24 +1,20 @@
 {
   return new FindAnActionButton(table){
     @Override public void actionPerformed(    AnActionEvent e){
-      final SearchScope scope=myModule.getScope();
-      List<SModule> modules=new ModelAccessHelper(myProject.getModelAccess()).runReadAction(new Computable<List<SModule>>(){
-        @Override public List<SModule> compute(){
-          List<SModule> modules=new LinkedList<SModule>();
-          for (          int i : myTable.getSelectedRows()) {
-            Object value=myDependTableModel.getValueAt(i,myDependTableModel.getItemColumnIndex());
-            if (value instanceof SModuleReference) {
-              modules.add(MPSModuleRepository.getInstance().getModuleByFqName(((SModuleReference)value).getModuleName()));
-            }
-          }
-          return modules;
+      final SearchScope scope=new ModelAccessHelper(myProject.getModelAccess()).runReadAction(new Computable<SearchScope>(){
+        @Override public SearchScope compute(){
+          return myModule.getScope();
         }
       }
 );
-      final SearchQuery query=new SearchQuery(new ModulesHolder(modules),scope);
+      List<SModuleReference> modules=new ArrayList<SModuleReference>();
+      for (      int i : myTable.getSelectedRows()) {
+        final DependenciesTableItem valueAt=myDependTableModel.getValueAt(i);
+        modules.add(valueAt.getItem().getModuleRef());
+      }
+      final SearchQuery query=new SearchQuery(new GenericHolder<Collection<SModuleReference>>(modules),scope);
       final IResultProvider provider=FindUtils.makeProvider(new CompositeFinder(new ModuleUsagesFinder()));
-      final UsageToolOptions uvOpt=new UsageToolOptions().allowRunAgain(true).forceNewTab(true).navigateIfSingle(false).transientView(true);
-      UsagesViewTool.showUsages(ProjectHelper.toIdeaProject(myProject),provider,query,uvOpt);
+      showUsageImpl(query,provider);
       forceCancelCloseDialog();
     }
   }
