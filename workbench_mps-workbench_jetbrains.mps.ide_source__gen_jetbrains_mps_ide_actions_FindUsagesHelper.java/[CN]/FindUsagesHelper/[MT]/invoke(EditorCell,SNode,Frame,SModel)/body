@@ -1,7 +1,7 @@
 {
   final Wrappers._T<SNode> operationNode=new Wrappers._T<SNode>();
   final Wrappers._T<String> concept=new Wrappers._T<String>();
-  ModelAccess modelAccess=context.getProject().getRepository().getModelAccess();
+  final ModelAccess modelAccess=myProject.getModelAccess();
   modelAccess.runReadAction(new Runnable(){
     public void run(){
       operationNode.value=(cell == null ? node : APICellAdapter.getSNodeWRTReference(cell));
@@ -13,7 +13,7 @@
   final Wrappers._T<FindersEditor> findersEditor=new Wrappers._T<FindersEditor>();
   final Wrappers._T<ViewOptionsEditor> viewOptionsEditor=new Wrappers._T<ViewOptionsEditor>();
   final Wrappers._T<FindUsagesOptions> options=new Wrappers._T<FindUsagesOptions>(getDefaultOptions().getDefaultSearchOptions(concept.value));
-  ProjectHelper.toMPSProject(myProject).getRepository().getModelAccess().runReadAction(new Runnable(){
+  modelAccess.runReadAction(new Runnable(){
     public void run(){
       scopeEditor.value=new ScopeEditor(options.value.getOption(ScopeOptions.class));
       findersEditor.value=new FindersEditor(options.value.getOption(FindersOptions.class),node){
@@ -27,7 +27,7 @@
 );
   options.value=new FindUsagesOptions(findersEditor.value.getOptions(),scopeEditor.value.getOptions(),viewOptionsEditor.value.getOptions());
   if (myWithDialog) {
-    FindUsagesDialog dialog=new FindUsagesDialog(options.value,operationNode.value,myProject,myWithDialog);
+    FindUsagesDialog dialog=new FindUsagesDialog(options.value,operationNode.value,myIdeaProject,myWithDialog);
     dialog.show();
     if (dialog.isCancelled()) {
       return;
@@ -40,10 +40,11 @@
   modelAccess.runReadAction(new Runnable(){
     public void run(){
       provider.value=options.value.getOption(FindersOptions.class).getResult();
-      query.value=options.value.getOption(ScopeOptions.class).getResult(operationNode.value,context,model);
+      query.value=new SearchQuery(operationNode.value,options.value.getOption(ScopeOptions.class).getScope(myProject));
       viewOptions.value=options.value.getOption(ViewOptions.class);
     }
   }
 );
-  getTool().findUsages(provider.value,query.value,true,viewOptions.value.myShowOneResult,viewOptions.value.myNewTab,"No usages for that node");
+  UsageToolOptions opt=new UsageToolOptions().allowRunAgain(true).navigateIfSingle(!(viewOptions.value.myShowOneResult)).forceNewTab(viewOptions.value.myNewTab).notFoundMessage("No usages for that node");
+  UsagesViewTool.showUsages(myIdeaProject,provider.value,query.value,opt);
 }
