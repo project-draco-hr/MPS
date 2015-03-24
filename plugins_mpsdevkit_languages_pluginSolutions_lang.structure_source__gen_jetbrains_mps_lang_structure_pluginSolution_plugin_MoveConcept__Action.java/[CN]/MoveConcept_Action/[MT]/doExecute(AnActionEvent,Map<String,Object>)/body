@@ -1,0 +1,53 @@
+{
+  try {
+    final SModelReference targetModelReference;
+    List<SModelReference> myModels;
+    myModels=ListSequence.fromList(((List<SModel>)(SModelRepository.getInstance().getModelDescriptors()))).select(new ISelector<SModel,SModelReference>(){
+      public SModelReference select(      SModel it){
+        return it.getReference();
+      }
+    }
+).where(new IWhereFilter<SModelReference>(){
+      public boolean accept(      SModelReference it){
+        return Language.getModelAspect(SModelRepository.getInstance().getModelDescriptor(it)) == LanguageAspect.STRUCTURE;
+      }
+    }
+).toListSequence();
+    targetModelReference=SModelReferenceDialog.getSelectedModel(((MPSProject)MapSequence.fromMap(_params).get("project")).getProject(),myModels);
+    if (targetModelReference == null) {
+      return;
+    }
+    final SRepository repository=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository();
+    ModelAccess modelAccess=repository.getModelAccess();
+    final Wrappers._T<SModel> targetModel=new Wrappers._T<SModel>();
+    repository.getModelAccess().runReadInEDT(new Runnable(){
+      public void run(){
+        if (!(SNodeUtil.isAccessible(((SNode)MapSequence.fromMap(_params).get("concept")),repository))) {
+          return;
+        }
+        targetModel.value=targetModelReference.resolve(repository);
+        if (targetModel.value == null) {
+          return;
+        }
+      }
+    }
+);
+    modelAccess.executeCommandInEDT(new _Adapters._return_P0_E0_to_Runnable_adapter(new _FunctionTypes._return_P0_E0<MigrationScriptBuilder>(){
+      public MigrationScriptBuilder invoke(){
+        SNode newConcept=SNodeOperations.copyNode(((SNode)MapSequence.fromMap(_params).get("concept")));
+        SModelOperations.addRootNode(targetModel.value,newConcept);
+        AttributeOperations.setAttribute(((SNode)MapSequence.fromMap(_params).get("concept")),new IAttributeDescriptor.NodeAttribute(MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x11d0a70ae54L,"jetbrains.mps.lang.structure.structure.DeprecatedNodeAnnotation")),createDeprecatedNodeAnnotation_mqohi3_a0d0a0a91a0("The concept was moved to language \"" + targetModel.value.getModule().getModuleName() + "\""));
+        SNode nodeParameter=_quotation_createNode_mqohi3_a0f0a0a91a0();
+        SNode transformStatement=createTransformStatement_mqohi3_a0g0a0a91a0(Sequence.<SNode>singleton(nodeParameter),SNodeOperations.cast(HUtil.copyIfNecessary(_quotation_createNode_mqohi3_a0a0b0a0a0g0a0a91a0(newConcept,nodeParameter,((SNode)MapSequence.fromMap(_params).get("concept")),nodeParameter,((SNode)MapSequence.fromMap(_params).get("concept")),nodeParameter,((SNode)MapSequence.fromMap(_params).get("concept")),nodeParameter)),MetaAdapterFactory.getConcept(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0xf8cc56b200L,"jetbrains.mps.baseLanguage.structure.StatementList")),SNodeOperations.cast(HUtil.copyIfNecessary(((SNode)MapSequence.fromMap(_params).get("concept"))),MetaAdapterFactory.getConcept(0xceab519525ea4f22L,0x9b92103b95ca8c0cL,0x10802efe25aL,"jetbrains.mps.lang.core.structure.BaseConcept")));
+        MigrationScriptBuilder builder=MigrationScriptBuilder.createMigrationScript(Language.getLanguageFor(SNodeOperations.getModel(((SNode)MapSequence.fromMap(_params).get("concept")))));
+        return builder.setName("Move_concept_" + SPropertyOperations.getString(((SNode)MapSequence.fromMap(_params).get("concept")),MetaAdapterFactory.getProperty(0xceab519525ea4f22L,0x9b92103b95ca8c0cL,0x110396eaaa4L,0x110396ec041L,"name"))).appendExecuteStatements(transformStatement);
+      }
+    }
+));
+  }
+ catch (  Throwable t) {
+    if (LOG.isEnabledFor(Level.ERROR)) {
+      LOG.error("User's action execute method failed. Action:" + "MoveConcept",t);
+    }
+  }
+}
