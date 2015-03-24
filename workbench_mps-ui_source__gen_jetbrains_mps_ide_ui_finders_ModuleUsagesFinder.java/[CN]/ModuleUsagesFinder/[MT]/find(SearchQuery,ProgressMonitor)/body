@@ -1,18 +1,26 @@
 {
   SearchResults searchResults=new SearchResults();
   Object value=query.getObjectHolder().getObject();
-  SModule searchedModule=null;
+  SModuleReference searchedModule=null;
+  SLanguage searchLanguage=null;
   if (value instanceof SModule) {
-    searchedModule=((SModule)value);
+    SModule module=(SModule)value;
+    searchedModule=module.getModuleReference();
+    if (module instanceof Language) {
+      searchLanguage=MetaAdapterByDeclaration.getLanguage(((Language)module));
+    }
   }
  else   if (value instanceof SModuleReference) {
-    SModuleReference moduleRef=(SModuleReference)value;
-    searchedModule=query.getScope().resolve(moduleRef);
+    searchedModule=(SModuleReference)value;
+    if (query.getScope().resolve(searchedModule) instanceof Language) {
+      searchLanguage=MetaIdByDeclaration.ref2Id(searchedModule);
+    }
   }
   if (searchedModule == null) {
     return searchResults;
   }
   searchResults.getSearchedNodes().add(searchedModule);
+  searchResults.getSearchedNodes().add(searchLanguage);
   Collection<SModule> modules=IterableUtil.asCollection(query.getScope().getModules());
   monitor.start("Looking up module uses",modules.size());
   for (  SModule module : modules) {
@@ -21,15 +29,19 @@
     }
     if (module instanceof Solution) {
       collectUsagesInSolution(searchedModule,(Solution)module,searchResults);
+      collectUsagesInSolution(searchLanguage,(Solution)module,searchResults);
     }
  else     if (module instanceof Language) {
       collectUsagesInLanguage(searchedModule,(Language)module,searchResults);
+      collectUsagesInLanguage(searchLanguage,(Language)module,searchResults);
     }
  else     if (module instanceof DevKit) {
       collectUsagesInDevKit(searchedModule,(DevKit)module,searchResults);
+      collectUsagesInDevKit(searchLanguage,(DevKit)module,searchResults);
     }
  else     if (module instanceof Generator) {
       collectUsagesInGenerator(searchedModule,(Generator)module,searchResults);
+      collectUsagesInGenerator(searchLanguage,(Generator)module,searchResults);
     }
     monitor.advance(1);
   }
