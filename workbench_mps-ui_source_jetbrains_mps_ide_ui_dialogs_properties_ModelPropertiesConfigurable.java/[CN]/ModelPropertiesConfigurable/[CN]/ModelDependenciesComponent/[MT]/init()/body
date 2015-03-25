@@ -41,61 +41,21 @@
       }
     }
   }
-).setRemoveAction(new AnActionButtonRunnable(){
-    @Override public void run(    AnActionButton anActionButton){
-      int first=importedModelsTable.getSelectionModel().getMinSelectionIndex();
-      int last=importedModelsTable.getSelectionModel().getMaxSelectionIndex();
-      for (      int i : importedModelsTable.getSelectedRows()) {
-        if (!confirmRemove(importedModelsTable.getValueAt(i,0))) {
-          return;
-        }
-      }
-      TableUtil.removeSelectedItems(importedModelsTable);
-      myImportedModels.fireTableRowsDeleted(first,last);
-      first=Math.max(0,first - 1);
-      importedModelsTable.getSelectionModel().setSelectionInterval(first,first);
+).setRemoveAction(new RemoveEntryAction(importedModelsTable){
+    @Override protected boolean confirmRemove(    int row){
+      return ModelDependenciesComponent.this.confirmRemove(importedModelsTable.getValueAt(row,0));
     }
   }
 ).addExtraAction(myFindAnActionButton=new FindAnActionButton(importedModelsTable){
     @Override public void actionPerformed(    AnActionEvent e){
-      final SearchQuery[] query=new SearchQuery[1];
-      final IResultProvider[] provider=new IResultProvider[1];
       final SearchScope scope=new ModelsScope(myModelDescriptor);
-      ModelAccess.instance().runReadAction(new Runnable(){
-        @Override public void run(){
-          List<SModelReference> modelReferences=new LinkedList<SModelReference>();
-          for (          int i : myTable.getSelectedRows()) {
-            Object value=myImportedModels.getValueAt(i,0);
-            if (value instanceof SModelReference) {
-              modelReferences.add((SModelReference)value);
-            }
-          }
-          ModelsHolder modelsHolder=new ModelsHolder(modelReferences){
-            @Override public void read(            Element element,            Project project) throws CantLoadSomethingException {
-            }
-            @Override public void write(            Element element,            Project project) throws CantSaveSomethingException {
-            }
-          }
-;
-          query[0]=new SearchQuery(modelsHolder,scope);
-          provider[0]=FindUtils.makeProvider(new ModelUsagesFinder(){
-            @Override public SearchResults find(            SearchQuery query,            ProgressMonitor monitor){
-              SearchResults searchResults=new SearchResults();
-              ModelsHolder modelsHolder=(ModelsHolder)query.getObjectHolder();
-              for (              SModelReference searchedModelReference : modelsHolder.getObject()) {
-                searchResults.getSearchedNodes().add(searchedModelReference);
-                SearchQuery searchQuery=new SearchQuery(searchedModelReference,query.getScope());
-                searchResults.addAll(super.find(searchQuery,monitor));
-              }
-              return searchResults;
-            }
-          }
-);
-        }
+      final List<SModelReference> modelReferences=new ArrayList<SModelReference>();
+      for (      int i : myTable.getSelectedRows()) {
+        modelReferences.add(myImportedModels.getValueAt(i));
       }
-);
-      UsagesViewTool usagesViewTool=ProjectHelper.toIdeaProject(myProject).getComponent(UsagesViewTool.class);
-      usagesViewTool.findUsages(provider[0],query[0],true,true,true,"No usages found");
+      final SearchQuery query=new SearchQuery(new ModelsHolder(modelReferences),scope);
+      final IResultProvider provider=FindUtils.makeProvider(new CompositeFinder(new ModelUsagesFinder()));
+      showUsageImpl(query,provider);
       forceCancelCloseDialog();
     }
   }
@@ -104,37 +64,6 @@
   JPanel table=decorator.createPanel();
   table.setBorder(IdeBorderFactory.createBorder());
   myImportedModelsComponent.add(table,new GridConstraints(0,0,1,1,GridConstraints.ANCHOR_CENTER,GridConstraints.FILL_BOTH,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,null,null,null,0,false));
-  new SpeedSearchBase<JBTable>(importedModelsTable){
-    @Override public int getSelectedIndex(){
-      return importedModelsTable.getSelectedRow();
-    }
-    @Override protected int convertIndexToModel(    int viewIndex){
-      return importedModelsTable.convertRowIndexToModel(viewIndex);
-    }
-    @Override public Object[] getAllElements(){
-      final int count=myImportedModels.getRowCount();
-      Object[] elements=new Object[count];
-      for (int idx=0; idx < count; idx++) {
-        elements[idx]=myImportedModels.getValueAt(idx);
-      }
-      return elements;
-    }
-    @Override public String getElementText(    Object element){
-      if (!(element instanceof SModelReference))       return "";
-      return element.toString();
-    }
-    @Override public void selectElement(    Object element,    String selectedText){
-      final int count=myImportedModels.getRowCount();
-      for (int row=0; row < count; row++) {
-        if (element.equals(myImportedModels.getValueAt(row))) {
-          final int viewRow=importedModelsTable.convertRowIndexToView(row);
-          importedModelsTable.getSelectionModel().setSelectionInterval(viewRow,viewRow);
-          TableUtil.scrollSelectionToVisible(importedModelsTable);
-          break;
-        }
-      }
-    }
-  }
-.setComparator(new SpeedSearchComparator(false,true));
+  new TableColumnSearch(importedModelsTable,0).setComparator(new SpeedSearchComparator(false,true));
   setTabComponent(myImportedModelsComponent);
 }

@@ -1,28 +1,50 @@
 {
   SearchResults searchResults=new SearchResults();
-  IHolder objectHolder=query.getObjectHolder();
-  if (!((objectHolder instanceof ModuleHolder))) {
+  Object value=query.getObjectHolder().getObject();
+  SModuleReference searchedModule=null;
+  SLanguage searchLanguage=null;
+  if (value instanceof SModule) {
+    SModule module=(SModule)value;
+    searchedModule=module.getModuleReference();
+    if (module instanceof Language) {
+      searchLanguage=MetaAdapterByDeclaration.getLanguage(((Language)module));
+    }
+  }
+ else   if (value instanceof SModuleReference) {
+    searchedModule=(SModuleReference)value;
+    if (query.getScope().resolve(searchedModule) instanceof Language) {
+      searchLanguage=MetaIdByDeclaration.ref2Id(searchedModule);
+    }
+  }
+  if (searchedModule == null) {
     return searchResults;
   }
-  ModuleHolder moduleHolder=(ModuleHolder)objectHolder;
-  SModule searchedModule=moduleHolder.getObject();
-  SearchScope scope=query.getScope();
-  for (  SModule module : scope.getModules()) {
+  searchResults.getSearchedNodes().add(searchedModule);
+  searchResults.getSearchedNodes().add(searchLanguage);
+  Collection<SModule> modules=IterableUtil.asCollection(query.getScope().getModules());
+  monitor.start("Looking up module uses",modules.size());
+  for (  SModule module : modules) {
     if (monitor.isCanceled()) {
       return searchResults;
     }
     if (module instanceof Solution) {
       collectUsagesInSolution(searchedModule,(Solution)module,searchResults);
+      collectUsagesInSolution(searchLanguage,(Solution)module,searchResults);
     }
  else     if (module instanceof Language) {
       collectUsagesInLanguage(searchedModule,(Language)module,searchResults);
+      collectUsagesInLanguage(searchLanguage,(Language)module,searchResults);
     }
  else     if (module instanceof DevKit) {
       collectUsagesInDevKit(searchedModule,(DevKit)module,searchResults);
+      collectUsagesInDevKit(searchLanguage,(DevKit)module,searchResults);
     }
  else     if (module instanceof Generator) {
       collectUsagesInGenerator(searchedModule,(Generator)module,searchResults);
+      collectUsagesInGenerator(searchLanguage,(Generator)module,searchResults);
     }
+    monitor.advance(1);
   }
+  monitor.done();
   return searchResults;
 }
