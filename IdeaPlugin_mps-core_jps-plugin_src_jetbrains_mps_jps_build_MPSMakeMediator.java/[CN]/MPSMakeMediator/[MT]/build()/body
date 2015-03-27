@@ -1,10 +1,11 @@
 {
   GenerationSettingsProvider.getInstance().setGenerationSettings(new DefaultModifiableGenerationSettings());
-  Iterable<IMResource> resources=new ModelAccessHelper(myProject.getModelAccess()).runReadAction(new Computable<Iterable<IMResource>>(){
-    @Override public Iterable<IMResource> compute(){
-      Iterable<IMResource> resources=Sequence.fromIterable(collectResources(myToMake.keySet())).toListSequence();
-      ISequence<SModule> mpsModules=Sequence.fromIterable(resources).select(new ISelector<IMResource,SModule>(){
-        @Override public SModule select(        IMResource r){
+  final boolean isMake=JavaBuilderUtil.isCompileJavaIncrementally(myContext);
+  Iterable<MResource> resources=new ModelAccessHelper(myProject.getModelAccess()).runReadAction(new Computable<Iterable<MResource>>(){
+    @Override public Iterable<MResource> compute(){
+      Iterable<MResource> resources=collectResources(myToMake.keySet(),isMake);
+      ISequence<SModule> mpsModules=Sequence.fromIterable(resources).select(new ISelector<MResource,SModule>(){
+        @Override public SModule select(        MResource r){
           return r.module();
         }
       }
@@ -27,7 +28,7 @@
         myOutputRootsPerTarget.put(target,outputRoot);
         if (useTransientOutputFolder || !isGenOutputUnderSourceRoot(target,mpsModule)) {
           BuildRootIndex buildRootIndex=myContext.getProjectDescriptor().getBuildRootIndex();
-          buildRootIndex.associateTempRoot(myContext,target,new JavaSourceRootDescriptor(outputRoot,target,true,true,"",Collections.<File>emptySet()));
+          buildRootIndex.associateTempRoot(myContext,target,new JavaSourceRootDescriptor(outputRoot,target,true,false,"",Collections.<File>emptySet()));
         }
       }
       return resources;
@@ -48,7 +49,7 @@
 );
   BuildMakeService bms=new BuildMakeService();
   MakeSession ms=createCleanMakeSession();
-  ReducedMakeFacetConfiguration makeFacetConfiguration=new ReducedMakeFacetConfiguration(myRedirects,!JavaBuilderUtil.isCompileJavaIncrementally(myContext),new Stub(),new IJobMonitor.Stub(){
+  ReducedMakeFacetConfiguration makeFacetConfiguration=new ReducedMakeFacetConfiguration(myRedirects,!isMake,new Stub(),new IJobMonitor.Stub(){
     @Override public void reportFeedback(    IFeedback fdbk){
       myMessageFeedbackStrategy.reportFeedback(fdbk);
     }
@@ -62,11 +63,11 @@
     success=processFiles(success,makeFacetConfiguration);
   }
  catch (  InterruptedException e) {
-    reportError("Error while make",e);
+    reportError(BUNDLE.getString("error.while.make"),e);
     success=false;
   }
 catch (  ExecutionException e) {
-    reportError("Error while make",e);
+    reportError(BUNDLE.getString("error.while.make"),e);
     success=false;
   }
   return success;

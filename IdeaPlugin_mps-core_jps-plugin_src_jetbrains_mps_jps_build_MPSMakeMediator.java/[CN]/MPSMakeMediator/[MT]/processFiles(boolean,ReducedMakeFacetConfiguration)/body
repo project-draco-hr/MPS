@@ -2,7 +2,7 @@
   ProjectBuilderLogger logger=myContext.getLoggingManager().getProjectBuilderLogger();
   if (logger.isEnabled()) {
     try {
-      logger.logCompiledPaths(makeFacetConfiguration.getWrittenFiles(),MPSMakeConstants.BUILDER_ID,"Written files:");
+      logger.logCompiledPaths(makeFacetConfiguration.getWrittenFiles(),MPSMakeConstants.BUILDER_ID,"MPS generated files:");
     }
  catch (    IOException ignored) {
     }
@@ -11,26 +11,15 @@
     SModel source=makeFacetConfiguration.getSource(writtenFile);
     ModuleBuildTarget target=myToMake.get(source);
     File file=new File(writtenFile);
-    if (source != null) {
-      DataSource dataSource=source.getSource();
-      if (isJava(file)) {
-        List<String> modelSourceFiles=getFilesFromDataSource(dataSource);
+    if (isJava(file)) {
+      for (      String written : makeFacetConfiguration.getWrittenFiles()) {
         try {
-          myOutputConsumer.registerOutputFile(target,file,modelSourceFiles);
+          FSOperations.markDirty(myContext,CompilationRound.CURRENT,new File(written));
         }
  catch (        IOException e) {
-          reportError("IO problem while registering output for source",e);
+          reportError(BUNDLE.getString("io.problem.while.marking.java.sources.dirty"),e);
           success=false;
         }
-      }
-    }
-    if (isJava(file)) {
-      try {
-        FSOperations.markDirty(myContext,CompilationRound.CURRENT,new File(writtenFile));
-      }
- catch (      IOException e) {
-        reportError("IO problem while marking java sources dirty",e);
-        success=false;
       }
     }
  else {
@@ -39,24 +28,12 @@
           copyResource(target,file);
         }
  catch (        IOException e) {
-          reportError("IO problem during resources copying",e);
+          reportError(BUNDLE.getString("io.problem.during.resources.copying"),e);
           success=false;
         }
       }
     }
     myRefreshComponent.refresh(writtenFile);
-  }
-  for (  String keptFile : makeFacetConfiguration.getKeptFiles()) {
-    File file=new File(keptFile);
-    if (isJava(file)) {
-      try {
-        FSOperations.markDirty(myContext,CompilationRound.CURRENT,file);
-      }
- catch (      IOException e) {
-        reportError("IO problem during marking kept java sources dirty",e);
-        success=false;
-      }
-    }
   }
   List<String> deletedFiles=makeFacetConfiguration.getDeletedFiles();
   if (logger.isEnabled()) {
@@ -67,7 +44,7 @@
       FSOperations.markDeleted(myContext,new File(deletedFile));
     }
  catch (    IOException e) {
-      reportError("IO problem while deleting files with FS",e);
+      reportError(BUNDLE.getString("io.problem.while.deleting.files.with.fs"),e);
       success=false;
     }
   }
