@@ -1,70 +1,25 @@
 {
   GenerationSettingsProvider.getInstance().setGenerationSettings(new DefaultModifiableGenerationSettings());
-  final boolean isMake=JavaBuilderUtil.isCompileJavaIncrementally(myContext);
-  Iterable<MResource> resources=new ModelAccessHelper(myProject.getModelAccess()).runReadAction(new Computable<Iterable<MResource>>(){
-    @Override public Iterable<MResource> compute(){
-      Iterable<MResource> resources=collectResources(myToMake.keySet(),isMake);
-      ISequence<SModule> mpsModules=Sequence.fromIterable(resources).select(new ISelector<MResource,SModule>(){
-        @Override public SModule select(        MResource r){
-          return r.module();
-        }
-      }
-);
-      ModuleOutputPaths outputPaths=new ModuleOutputPaths(mpsModules);
-      myForeignRootPaths=new MyForeignRootPaths(outputPaths.getOutputPaths());
-      myRedirects=new JpsRedirects();
-      Set<ModuleBuildTarget> processed=new HashSet<ModuleBuildTarget>();
-      for (      ModuleBuildTarget target : myToMake.values()) {
-        if (processed.contains(target))         continue;
-        processed.add(target);
-        JpsMPSModuleExtension mpsModule=JpsMPSExtensionService.getInstance().getExtension(target.getModule());
-        if (mpsModule == null)         continue;
-        File outputTmpRoot=getTmpOutputRoot(mpsModule.getModule(),myContext.getProjectDescriptor().dataManager);
-        File cachesOutputRoot=getCachesOutputRoot(mpsModule.getModule(),myContext.getProjectDescriptor().dataManager);
-        boolean useTransientOutputFolder=mpsModule.getConfiguration().isUseTransientOutputFolder();
-        myRedirects.addRedirects(outputPaths,outputTmpRoot.getAbsolutePath(),cachesOutputRoot.getAbsolutePath(),useTransientOutputFolder);
-        File generatorOutputRoot=new File(mpsModule.getConfiguration().getGeneratorOutputPath());
-        File outputRoot=useTransientOutputFolder ? outputTmpRoot : generatorOutputRoot;
-        myOutputRootsPerTarget.put(target,outputRoot);
-      }
-      return resources;
-    }
-  }
-);
-  GenerationDependenciesCache.getInstance().registerCachePathRedirect(new GenerationDependenciesCache.CachePathRedirect(){
-    @Override public IFile redirectTo(    IFile outputPath){
-      return myRedirects.getRedirect(outputPath.getPath());
-    }
-  }
-);
-  GeneratorPathsComponent.getInstance().registerForeignPathsProvider(new ForeignPathsProvider(){
-    @Override public String belongsToForeignPath(    IFile path){
-      return myForeignRootPaths != null ? myForeignRootPaths.findForeignPrefix(path.getPath()) : null;
-    }
-  }
-);
-  BuildMakeService bms=new BuildMakeService();
-  MakeSession ms=createCleanMakeSession();
-  ReducedMakeFacetConfiguration makeFacetConfiguration=new ReducedMakeFacetConfiguration(myRedirects,!isMake,new Stub(),new IJobMonitor.Stub(){
-    @Override public void reportFeedback(    IFeedback fdbk){
-      myMessageFeedbackStrategy.reportFeedback(fdbk);
-    }
-  }
-);
-  IScriptController scriptCtl=makeFacetConfiguration.configureFacets(ms);
-  boolean success;
+  Iterable<MResource> resources=collectResources(myModelToTargetMap.keySet());
+  GenerationPathsController pathsController=new GenerationPathsController(myProject,myContext,resources);
+  pathsController.init(myModelToTargetMap.values());
+  BuildMakeService buildMakeService=new BuildMakeService();
+  MakeSession makeSession=createCleanMakeSession();
+  final MakeFacetWrapper makeFacetWrapper=new MakeFacetWrapper(myContext,makeSession,myMessageHandler,pathsController);
+  ReducedMakeFacetConfiguration makeFacetConfiguration=makeFacetWrapper.constructMakeFacetConfiguration();
+  IScriptController scriptCtl=makeFacetWrapper.configureFacets();
   try {
-    Future<IResult> res=bms.make(ms,resources,null,scriptCtl);
-    success=res.get().isSucessful();
-    success=processFiles(success,makeFacetConfiguration);
+    Future<IResult> res=buildMakeService.make(makeSession,resources,null,scriptCtl);
+    boolean success=res.get().isSucessful();
+    final MPSMakeFilesAfterProcessor afterProcessor=new MPSMakeFilesAfterProcessor(myModelToTargetMap,pathsController,myOutputConsumer,myContext);
+    success&=afterProcessor.process(makeFacetConfiguration);
+    return success;
   }
  catch (  InterruptedException e) {
     reportError(BUNDLE.getString("error.while.make"),e);
-    success=false;
   }
 catch (  ExecutionException e) {
     reportError(BUNDLE.getString("error.while.make"),e);
-    success=false;
   }
-  return success;
+  return false;
 }
