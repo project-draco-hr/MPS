@@ -1,0 +1,86 @@
+{
+  Map<String,Object> options=InitialStep.getOptions();
+  double projectStepsFraction=0.3;
+  int projectStepsCount=myManager.projectStepsCount();
+  setFraction(progress,0);
+  boolean cleanNotification=false;
+  List<MigrationManager.MigrationStep> cleanupMigrations=ListSequence.fromList(new ArrayList<MigrationManager.MigrationStep>());
+  while (true) {
+    MigrationManager.MigrationStep step=myManager.nextProjectStep(options,true);
+    if (step == null) {
+      break;
+    }
+    ListSequence.fromList(cleanupMigrations).addElement(step);
+    if (!(executeSingleStep(step))) {
+      break;
+    }
+    if (!(cleanNotification)) {
+      cleanNotification=true;
+      addElementToMigrationList("Cleaning project... Please wait.");
+    }
+    setFraction(progress,progress.getFraction() + projectStepsFraction / projectStepsCount);
+  }
+  addElementToMigrationList("Checking migrations consistency... Please wait.");
+  List<Tuples._2<SModule,SLanguage>> missingMigrations=myManager.getMissingMigrations();
+  if (ListSequence.fromList(missingMigrations).isNotEmpty()) {
+    myErrorContainer.setErrorDescriptor(new MigrationsProgressWizardStep.MigrationsMissingError(missingMigrations));
+    addElementToMigrationList("Some migrations are missing. Press 'Next' to continue.");
+    return;
+  }
+  addElementToMigrationList("Checking models... Please wait.");
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      Iterable<SModule> modules=((Iterable<SModule>)ProjectHelper.toMPSProject(myProject).getModulesWithGenerators());
+      if (MigrationCheckUtil.haveProblems(modules)) {
+        myErrorContainer.setErrorDescriptor(new MigrationsProgressWizardStep.PreCheckError());
+      }
+    }
+  }
+);
+  if (myErrorContainer.getErrorDescriptor() != null) {
+    for (    MigrationManager.MigrationStep cleanupMigration : ListSequence.fromList(cleanupMigrations)) {
+      cleanupMigration.forceExecutionNextTime();
+    }
+    addElementToMigrationList("Can't start migration: errors detected. Press 'Next' to continue.");
+    return;
+  }
+  while (executeSingleStep(myManager.nextProjectStep(options,false))) {
+    setFraction(progress,progress.getFraction() + projectStepsFraction / projectStepsCount);
+  }
+  setFraction(progress,projectStepsFraction);
+  if (myErrorContainer.getErrorDescriptor() != null) {
+    addElementToMigrationList("Exception while running migration. Press 'Next' to continue.");
+    return;
+  }
+  int languageStepsCount=myManager.languageStepsCount();
+  while (executeSingleStep(myManager.nextLanguageStep())) {
+    setFraction(progress,progress.getFraction() + (1.0 - projectStepsFraction) / languageStepsCount);
+  }
+  setFraction(progress,1.0);
+  if (myErrorContainer.getErrorDescriptor() != null) {
+    addElementToMigrationList("Exception while running migration. Press 'Next' to continue.");
+    return;
+  }
+  addElementToMigrationList("Saving changed models... Please wait.");
+  ModelAccess.instance().runWriteInEDT(new Runnable(){
+    public void run(){
+      MPSModuleRepository.getInstance().saveAll();
+    }
+  }
+);
+  addElementToMigrationList("Checking models... Please wait.");
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      Iterable<SModule> modules=((Iterable<SModule>)ProjectHelper.toMPSProject(myProject).getModulesWithGenerators());
+      if (MigrationCheckUtil.haveProblems(modules)) {
+        myErrorContainer.setErrorDescriptor(new MigrationsProgressWizardStep.PostCheckError());
+      }
+    }
+  }
+);
+  if (myErrorContainer.getErrorDescriptor() != null) {
+    addElementToMigrationList("Errors are detected in project after executing migrations. Press 'Next' to continue.");
+    return;
+  }
+  addElementToMigrationList("Done!");
+}
