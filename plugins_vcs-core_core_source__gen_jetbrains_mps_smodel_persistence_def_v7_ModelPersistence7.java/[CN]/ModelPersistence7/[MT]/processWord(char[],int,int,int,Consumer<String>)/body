@@ -1,0 +1,40 @@
+{
+  if (chars[offset + len] != '=' || chars[offset] != 't' && chars[offset] != 'm') {
+    return;
+  }
+  if (contains(chars,charsLength,offset,TARGET_NODE_ID_PREFIX)) {
+    offset+=TARGET_NODE_ID_PREFIX.length();
+    int end=indexOfClosingQuote(chars,charsLength,offset);
+    if (end > offset) {
+      int e=offset;
+      while (e < end && chars[e] != '.') {
+        e++;
+      }
+      if (e > offset && e + 1 < end && chars[e] == '.') {
+        offset=e + 1;
+      }
+      String test=WriteHelper.decode(JDOMUtil.unescapeText(new String(chars,offset,end - offset)));
+      consumer.consume(test);
+    }
+  }
+ else   if (contains(chars,charsLength,offset,TYPE_PREFIX)) {
+    offset+=TYPE_PREFIX.length();
+    int end=indexOfClosingQuote(chars,charsLength,offset);
+    int start=end;
+    while (start >= offset && chars[start] != '.') {
+      --start;
+    }
+    offset=start + 1;
+    if (end > offset) {
+      consumer.consume(JDOMUtil.unescapeText(new String(chars,offset,end - offset)));
+    }
+  }
+ else   if (contains(chars,charsLength,offset,MODEL_UID_PREFIX)) {
+    offset+=MODEL_UID_PREFIX.length();
+    int end=indexOfClosingQuote(chars,charsLength,offset);
+    if (end > offset) {
+      String modelRef=JDOMUtil.unescapeText(new String(chars,offset,end - offset));
+      consumer.consume(PersistenceFacade.getInstance().createModelReference(modelRef).getModelName());
+    }
+  }
+}
