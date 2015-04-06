@@ -1,10 +1,10 @@
 {
   Map<String,Object> options=InitialStep.getOptions();
-  double projectStepsFraction=0.3;
-  int projectStepsCount=myManager.projectStepsCount();
-  setFraction(progress,0);
+  setFraction(progress,ProgressEstimation.initial());
   boolean cleanNotification=false;
   List<MigrationManager.MigrationStep> cleanupMigrations=ListSequence.fromList(new ArrayList<MigrationManager.MigrationStep>());
+  int cleanupStepsCount=myManager.projectStepsCount(true);
+  int stepNum=0;
   while (true) {
     MigrationManager.MigrationStep step=myManager.nextProjectStep(options,true);
     if (step == null) {
@@ -18,10 +18,12 @@
       cleanNotification=true;
       addElementToMigrationList("Cleaning project... Please wait.");
     }
-    setFraction(progress,progress.getFraction() + projectStepsFraction / projectStepsCount);
+    stepNum++;
+    setFraction(progress,ProgressEstimation.cleanupMigrations(1.0 * stepNum / cleanupStepsCount));
   }
   addElementToMigrationList("Checking migrations consistency... Please wait.");
   List<Tuples._3<SModule,SLanguage,Integer>> missingMigrations=myManager.getMissingMigrations();
+  setFraction(progress,ProgressEstimation.migrationsCheck(1.0));
   if (ListSequence.fromList(missingMigrations).isNotEmpty()) {
     myErrorContainer.setErrorDescriptor(new MigrationsProgressWizardStep.MigrationsMissingError(missingMigrations));
     addElementToMigrationList("Some migrations are missing. Press 'Next' to continue.");
@@ -31,7 +33,12 @@
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
       Iterable<SModule> modules=((Iterable<SModule>)ProjectHelper.toMPSProject(myProject).getModulesWithGenerators());
-      if (MigrationCheckUtil.haveProblems(modules)) {
+      if (MigrationCheckUtil.haveProblems(modules,new _FunctionTypes._void_P1_E0<Double>(){
+        public void invoke(        Double fraction){
+          setFraction(progress,ProgressEstimation.preCheck(fraction));
+        }
+      }
+)) {
         myErrorContainer.setErrorDescriptor(new MigrationsProgressWizardStep.PreCheckError());
       }
     }
@@ -44,19 +51,22 @@
     addElementToMigrationList("Can't start migration: errors detected. Press 'Next' to continue.");
     return;
   }
+  int projectStepsCount=myManager.projectStepsCount(false);
+  stepNum=0;
   while (executeSingleStep(myManager.nextProjectStep(options,false))) {
-    setFraction(progress,progress.getFraction() + projectStepsFraction / projectStepsCount);
+    stepNum++;
+    setFraction(progress,ProgressEstimation.projectMigrations(1.0 * stepNum / projectStepsCount));
   }
-  setFraction(progress,projectStepsFraction);
   if (myErrorContainer.getErrorDescriptor() != null) {
     addElementToMigrationList("Exception while running migration. Press 'Next' to continue.");
     return;
   }
   int languageStepsCount=myManager.languageStepsCount();
+  stepNum=0;
   while (executeSingleStep(myManager.nextLanguageStep())) {
-    setFraction(progress,progress.getFraction() + (1.0 - projectStepsFraction) / languageStepsCount);
+    stepNum++;
+    setFraction(progress,ProgressEstimation.languageMigrations(1.0 * stepNum / languageStepsCount));
   }
-  setFraction(progress,1.0);
   if (myErrorContainer.getErrorDescriptor() != null) {
     addElementToMigrationList("Exception while running migration. Press 'Next' to continue.");
     return;
@@ -68,11 +78,19 @@
     }
   }
 );
+  setFraction(progress,ProgressEstimation.saving(1.0));
   addElementToMigrationList("Checking models... Please wait.");
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
       Iterable<SModule> modules=((Iterable<SModule>)ProjectHelper.toMPSProject(myProject).getModulesWithGenerators());
-      if (MigrationCheckUtil.haveProblems(modules)) {
+      final Wrappers._int moduleNum=new Wrappers._int(0);
+      if (MigrationCheckUtil.haveProblems(modules,new _FunctionTypes._void_P1_E0<Double>(){
+        public void invoke(        Double fraction){
+          moduleNum.value++;
+          setFraction(progress,ProgressEstimation.postCheck(fraction));
+        }
+      }
+)) {
         myErrorContainer.setErrorDescriptor(new MigrationsProgressWizardStep.PostCheckError());
       }
     }
