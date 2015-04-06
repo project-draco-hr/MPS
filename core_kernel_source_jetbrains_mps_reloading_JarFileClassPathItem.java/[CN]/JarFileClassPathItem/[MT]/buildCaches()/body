@@ -5,16 +5,7 @@
     Enumeration<? extends ZipEntry> entries=zf.entries();
     while (entries.hasMoreElements()) {
       ZipEntry entry=entries.nextElement();
-      if (entry.isDirectory()) {
-        String name=entry.getName();
-        if (name.endsWith("/")) {
-          name=name.substring(0,name.length() - 1);
-        }
-        if (name.contains("."))         continue;
-        String pack=name.replace('/','.');
-        buildPackageCaches(pack);
-      }
- else {
+      if (!entry.isDirectory()) {
         String name=entry.getName();
         if (!name.endsWith(MPSExtentions.DOT_CLASSFILE))         continue;
         int packEnd=name.lastIndexOf('/');
@@ -26,17 +17,14 @@
         }
  else {
           pack=packEnd > 0 ? name.substring(0,packEnd).replace('/','.') : name;
-          className=name.substring(packEnd + 1,name.length() - ".class".length());
+          className=name.substring(packEnd + 1,name.length() - MPSExtentions.DOT_CLASSFILE.length());
         }
-        buildPackageCaches(pack);
-        myCache.addClass(InternUtil.intern(pack),InternUtil.intern(className));
-        String fullClassName=pack.length() > 0 ? pack + "." + className : className;
-        myEntries.put(InternUtil.intern(fullClassName),entry);
+        myCache.addClass(pack,InternUtil.intern(className));
       }
     }
   }
  catch (  IOException e) {
-    LOG.error("Path " + myFile.getPath() + " ("+ myFile.getAbsolutePath()+ ") \n"+ "File exists: "+ myFile.exists(),e);
+    LOG.error(String.format("Path %s (%s) \nFile exists: %s",myFile.getPath(),myFile.getAbsolutePath(),myFile.exists()),e);
   }
  finally {
     if (zf != null) {

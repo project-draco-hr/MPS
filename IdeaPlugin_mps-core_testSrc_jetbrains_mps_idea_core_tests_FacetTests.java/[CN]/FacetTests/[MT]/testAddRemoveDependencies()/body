@@ -1,12 +1,13 @@
 {
   final Module module2=addModuleAndSetupFixture(myProjectBuilder);
   final MPSFacet mpsFacet2=addMPSFacet(module2);
-  int originalDependCount=runModelRead(new Computable<Integer>(){
-    @Override public Integer compute(){
-      return mpsFacet2.getSolution().getDependencies().size();
+  Computable<List<SDependency>> getDependencies=new Computable<List<SDependency>>(){
+    @Override public List<SDependency> compute(){
+      return IterableUtil.asList(mpsFacet2.getSolution().getDeclaredDependencies());
     }
   }
-);
+;
+  int originalDependCount=runModelRead(getDependencies).size();
   ApplicationManager.getApplication().runWriteAction(new Runnable(){
     @Override public void run(){
       ModifiableRootModel rootModel=ModuleRootManager.getInstance(module2).getModifiableModel();
@@ -16,16 +17,11 @@
   }
 );
   flushEDT();
-  List<Dependency> solution2Dependencies=runModelRead(new Computable<List<Dependency>>(){
-    @Override public List<Dependency> compute(){
-      return mpsFacet2.getSolution().getDependencies();
-    }
-  }
-);
+  List<SDependency> solution2Dependencies=runModelRead(getDependencies);
   assertEquals(originalDependCount + 1,solution2Dependencies.size());
   boolean found=false;
-  for (  Dependency dependency : solution2Dependencies) {
-    if (myFacet.getSolution().getModuleReference().equals(dependency.getModuleRef())) {
+  for (  SDependency dependency : solution2Dependencies) {
+    if (myFacet.getSolution().getModuleReference().equals(dependency.getTargetModule())) {
       found=true;
       break;
     }
@@ -45,11 +41,6 @@
   }
 );
   flushEDT();
-  int finalDependenciesCount=runModelRead(new Computable<Integer>(){
-    @Override public Integer compute(){
-      return mpsFacet2.getSolution().getDependencies().size();
-    }
-  }
-);
+  int finalDependenciesCount=runModelRead(getDependencies).size();
   assertEquals(originalDependCount,finalDependenciesCount);
 }
