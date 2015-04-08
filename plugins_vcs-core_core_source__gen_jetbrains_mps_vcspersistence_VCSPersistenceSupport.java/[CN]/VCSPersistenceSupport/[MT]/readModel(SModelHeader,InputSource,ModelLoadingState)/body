@@ -1,21 +1,22 @@
 {
-  IModelPersistence mp=getModelPersistence(header.getPersistenceVersion());
+  IModelPersistence mp=getPersistence(header.getPersistenceVersion());
   if (header.getPersistenceVersion() < 0) {
     throw new ModelReadException("Couldn't read model because of unknown persistence version",null);
   }
-  if (mp != null) {
-    XMLSAXHandler<ModelLoadResult> handler=mp.getModelReaderHandler(state,header);
-    if (handler != null) {
-      parseAndHandleExceptions(source,handler,"model");
-      final ModelLoadResult result=handler.getResult();
-      return result;
-    }
-    IModelReader reader=mp.getModelReader();
-    if (reader != null) {
-      Document document=loadModelDocument(source);
-      return new ModelLoadResult((SModel)reader.readModel(document,header),ModelLoadingState.FULLY_LOADED);
-    }
+  String m="Can not find appropriate persistence version for model " + header.getModelReference() + "\n Use newer version of JetBrains MPS to load this model.";
+  if (mp == null) {
+    throw new PersistenceVersionNotFoundException(m);
   }
-  String m="Can not find appropriate persistence version for model %s\n Use newer version of JetBrains MPS to load this model.";
-  throw new PersistenceVersionNotFoundException(String.format(m,header.getModelReference()));
+  XMLSAXHandler<ModelLoadResult> handler=mp.getModelReaderHandler(state,header);
+  if (handler != null) {
+    parseAndHandleExceptions(source,handler,"model");
+    final ModelLoadResult result=handler.getResult();
+    return result;
+  }
+  IModelReader reader=mp.getModelReader();
+  if (reader == null) {
+    throw new PersistenceVersionNotFoundException(m);
+  }
+  Document document=loadModelDocument(source);
+  return new ModelLoadResult((SModel)reader.readModel(document,header),ModelLoadingState.FULLY_LOADED);
 }
