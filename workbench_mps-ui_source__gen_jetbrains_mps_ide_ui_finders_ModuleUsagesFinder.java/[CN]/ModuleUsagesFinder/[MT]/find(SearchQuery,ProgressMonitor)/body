@@ -1,50 +1,64 @@
 {
   SearchResults searchResults=new SearchResults();
   Object value=query.getObjectHolder().getObject();
-  SModuleReference searchedModule=null;
+  SModule searchedModule=null;
+  SModuleReference searchedModuleRef=null;
   SLanguage searchLanguage=null;
   if (value instanceof SModule) {
-    SModule module=(SModule)value;
-    searchedModule=module.getModuleReference();
-    if (module instanceof Language) {
-      searchLanguage=MetaAdapterByDeclaration.getLanguage(((Language)module));
-    }
+    searchedModule=((SModule)value);
+    searchedModuleRef=searchedModule.getModuleReference();
   }
  else   if (value instanceof SModuleReference) {
-    searchedModule=(SModuleReference)value;
-    if (query.getScope().resolve(searchedModule) instanceof Language) {
-      searchLanguage=MetaIdByDeclaration.ref2Id(searchedModule);
-    }
+    searchedModuleRef=(SModuleReference)value;
+    searchedModule=query.getScope().resolve(searchedModuleRef);
   }
-  if (searchedModule == null) {
+  if (searchedModule instanceof Language) {
+    searchLanguage=MetaAdapterByDeclaration.getLanguage(((Language)searchedModule));
+  }
+  if (searchedModuleRef == null) {
     return searchResults;
   }
-  searchResults.getSearchedNodes().add(searchedModule);
-  searchResults.getSearchedNodes().add(searchLanguage);
+  searchResults.getSearchedNodes().add(searchedModuleRef);
+  if (searchLanguage != null) {
+    searchResults.getSearchedNodes().add(searchLanguage);
+  }
   Collection<SModule> modules=IterableUtil.asCollection(query.getScope().getModules());
-  monitor.start("Looking up module uses",modules.size());
+  myModels2Visit=new HashSet<SModel>(IterableUtil.asCollection(query.getScope().getModels()));
+  monitor.start("",2);
+  ProgressMonitor subTask=monitor.subTask(1,SubProgressKind.REPLACING);
+  subTask.start("Looking up uses in modules",modules.size());
   for (  SModule module : modules) {
     if (monitor.isCanceled()) {
       return searchResults;
     }
     if (module instanceof Solution) {
-      collectUsagesInSolution(searchedModule,(Solution)module,searchResults);
+      collectUsagesInSolution(searchedModuleRef,(Solution)module,searchResults);
       collectUsagesInSolution(searchLanguage,(Solution)module,searchResults);
     }
  else     if (module instanceof Language) {
-      collectUsagesInLanguage(searchedModule,(Language)module,searchResults);
+      collectUsagesInLanguage(searchedModuleRef,(Language)module,searchResults);
       collectUsagesInLanguage(searchLanguage,(Language)module,searchResults);
     }
  else     if (module instanceof DevKit) {
-      collectUsagesInDevKit(searchedModule,(DevKit)module,searchResults);
+      collectUsagesInDevKit(searchedModuleRef,(DevKit)module,searchResults);
       collectUsagesInDevKit(searchLanguage,(DevKit)module,searchResults);
     }
  else     if (module instanceof Generator) {
-      collectUsagesInGenerator(searchedModule,(Generator)module,searchResults);
+      collectUsagesInGenerator(searchedModuleRef,(Generator)module,searchResults);
       collectUsagesInGenerator(searchLanguage,(Generator)module,searchResults);
     }
-    monitor.advance(1);
+    subTask.advance(1);
+  }
+  subTask=monitor.subTask(1,SubProgressKind.REPLACING);
+  subTask.start("Looking up uses in models",myModels2Visit.size());
+  if (searchedModule != null) {
+    ModuleUsagesFinder.ModuleUseInModel f=new ModuleUsagesFinder.ModuleUseInModel(searchedModule,searchResults);
+    for (    SModel model : myModels2Visit) {
+      f.collect(model);
+      subTask.advance(1);
+    }
   }
   monitor.done();
+  myModels2Visit=null;
   return searchResults;
 }
