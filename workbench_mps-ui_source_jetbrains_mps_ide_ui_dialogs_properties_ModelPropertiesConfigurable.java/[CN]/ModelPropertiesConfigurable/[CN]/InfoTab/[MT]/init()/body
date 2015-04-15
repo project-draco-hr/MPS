@@ -30,14 +30,18 @@
   languagesTable.setAutoCreateRowSorter(false);
   languagesTable.setAutoscrolls(true);
   languagesTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-  myLangEngagedOnGenTM=new ModelsLangEngagedOnGenTM(myModelProperties);
-  languagesTable.setModel(myLangEngagedOnGenTM);
-  final SRepository contextRepo=myModelProperties.getModelDescriptor().getRepository();
-  ModuleTableCellRender engagedLanguages=new ModuleTableCellRender(contextRepo);
-  Set<SModuleReference> languagesInUse=new ModelComputeRunnable<Set<SModuleReference>>(new ComputeUsedLanguages(myModelDescriptor)).runRead(contextRepo.getModelAccess());
-  IsModuleInUse inUseCondition=new IsModuleInUse(languagesInUse,Collections.<SModuleReference>emptySet());
-  engagedLanguages.addCellState(inUseCondition,DependencyCellState.SUPERFLUOUS_ENGAGED);
-  languagesTable.setDefaultRenderer(SModuleReference.class,engagedLanguages);
+  myEngagedLanguagesModel=new UsedLangsTableModel(myProject.getRepository(),"Languages engaged on generation");
+  ArrayList<SLanguage> engagedLanguages=new ArrayList<SLanguage>();
+  for (  SModuleReference moduleReference : myModelProperties.getLanguagesEngagedOnGeneration()) {
+    engagedLanguages.add(MetaIdByDeclaration.ref2Id(moduleReference));
+  }
+  myEngagedLanguagesModel.init(engagedLanguages,Collections.<SModuleReference>emptyList());
+  languagesTable.setModel(myEngagedLanguagesModel);
+  LanguageTableCellRenderer cellRenderer=new LanguageTableCellRenderer(myProject.getRepository());
+  Set<SLanguage> languagesInUse=new ModelAccessHelper(myProject.getModelAccess()).runReadAction(new ComputeUsedLanguages(myModelDescriptor));
+  IsLanguageInUse inUseCondition=new IsLanguageInUse(languagesInUse,Collections.<SLanguage>emptySet());
+  cellRenderer.addCellState(inUseCondition,DependencyCellState.SUPERFLUOUS_ENGAGED);
+  cellRenderer.registerIn(languagesTable);
   ToolbarDecorator decorator=ToolbarDecorator.createDecorator(languagesTable);
   decorator.setAddAction(new AnActionButtonRunnable(){
     @Override public void run(    AnActionButton anActionButton){
@@ -47,56 +51,16 @@
       myProject.getModelAccess().runReadAction(c);
       List<SModuleReference> list=CommonChoosers.showModuleSetChooser(myProject,"Choose languages",c.getResult());
       for (      SModuleReference reference : list) {
-        myLangEngagedOnGenTM.addItem(reference);
+        myEngagedLanguagesModel.addItem(reference);
       }
+      myEngagedLanguagesModel.fireTableDataChanged();
     }
   }
-).setRemoveAction(new AnActionButtonRunnable(){
-    @Override public void run(    AnActionButton anActionButton){
-      int first=languagesTable.getSelectionModel().getMinSelectionIndex();
-      int last=languagesTable.getSelectionModel().getMaxSelectionIndex();
-      TableUtil.removeSelectedItems(languagesTable);
-      myLangEngagedOnGenTM.fireTableRowsDeleted(first,last);
-      first=Math.max(0,first - 1);
-      languagesTable.getSelectionModel().setSelectionInterval(first,first);
-    }
-  }
-);
+).setRemoveAction(new RemoveEntryAction(languagesTable));
   decorator.setPreferredSize(new Dimension(500,150));
   JPanel table=decorator.createPanel();
   table.setBorder(IdeBorderFactory.createBorder());
   panel.add(table,new GridConstraints(rowIndex,0,1,1,GridConstraints.ANCHOR_NORTHWEST,GridConstraints.FILL_BOTH,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,null,null,null,0,false));
-  new SpeedSearchBase<JBTable>(languagesTable){
-    @Override public int getSelectedIndex(){
-      return languagesTable.getSelectedRow();
-    }
-    @Override protected int convertIndexToModel(    int viewIndex){
-      return languagesTable.convertRowIndexToModel(viewIndex);
-    }
-    @Override public Object[] getAllElements(){
-      final int count=myLangEngagedOnGenTM.getRowCount();
-      Object[] elements=new Object[count];
-      for (int idx=0; idx < count; idx++) {
-        elements[idx]=myLangEngagedOnGenTM.getValueAt(idx);
-      }
-      return elements;
-    }
-    @Override public String getElementText(    Object element){
-      if (!(element instanceof SModuleReference))       return "";
-      return ((SModuleReference)element).getModuleName();
-    }
-    @Override public void selectElement(    Object element,    String selectedText){
-      final int count=myLangEngagedOnGenTM.getRowCount();
-      for (int row=0; row < count; row++) {
-        if (element.equals(myLangEngagedOnGenTM.getValueAt(row))) {
-          final int viewRow=languagesTable.convertRowIndexToView(row);
-          languagesTable.getSelectionModel().setSelectionInterval(viewRow,viewRow);
-          TableUtil.scrollSelectionToVisible(languagesTable);
-          break;
-        }
-      }
-    }
-  }
-.setComparator(new SpeedSearchComparator(false,true));
+  new TableColumnSearch(languagesTable,0).setComparator(new SpeedSearchComparator(false,true));
   setTabComponent(panel);
 }

@@ -1,0 +1,30 @@
+{
+  Collection<String> writtenPaths=makeConfig.getWrittenFiles();
+  boolean success=true;
+  logGenerated(makeConfig);
+  for (  String writtenPath : writtenPaths) {
+    SModel source=makeConfig.getSource(writtenPath);
+    ModuleBuildTarget target=myModelToTargetMap.get(source);
+    File writtenFile=new File(writtenPath);
+    try {
+      FSOperations.markDirty(myContext,CompilationRound.CURRENT,new File(writtenPath));
+      myOutputConsumer.registerOutputFile(target,writtenFile,getFilesFromDataSource(source.getSource()));
+    }
+ catch (    IOException e) {
+      reportError(BUNDLE.getString("io.problem.while.marking.java.sources.dirty"),e);
+      success=false;
+    }
+    if (!isJava(writtenFile)) {
+      if (!myPathsController.getRedirects().isInCacheOutput(writtenPath)) {
+        try {
+          copyResource(target,writtenFile);
+        }
+ catch (        IOException e) {
+          reportError(BUNDLE.getString("io.problem.during.resources.copying"),e);
+          success=false;
+        }
+      }
+    }
+  }
+  return success;
+}

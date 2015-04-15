@@ -1,0 +1,38 @@
+{
+  final SNode[] newNode=new SNode[1];
+  Runnable runnable=new Runnable(){
+    @Override public void run(){
+      if (context != null) {
+        jetbrains.mps.nodeEditor.cells.EditorCell selectedCell=(jetbrains.mps.nodeEditor.cells.EditorCell)context.getSelectedCell();
+        if (selectedCell != null) {
+          selectedCell.synchronizeViewWithModel();
+        }
+      }
+      newNode[0]=doSubstitute(context,pattern);
+      if (context != null && newNode[0] != null) {
+        jetbrains.mps.nodeEditor.EditorComponent editorComponent=((jetbrains.mps.nodeEditor.EditorComponent)context.getEditorComponent());
+        if (editorComponent != null) {
+          editorComponent.getUpdater().flushModelEvents();
+          EditorCell cell=editorComponent.findNodeCell(newNode[0]);
+          if (cell != null) {
+            EditorCell errorCell=CellFinderUtil.findFirstError(cell,true);
+            if (errorCell != null) {
+              editorComponent.changeSelectionWRTFocusPolicy(((jetbrains.mps.nodeEditor.cells.EditorCell)errorCell));
+            }
+ else {
+              editorComponent.changeSelectionWRTFocusPolicy((jetbrains.mps.nodeEditor.cells.EditorCell)cell);
+            }
+          }
+        }
+      }
+    }
+  }
+;
+  if (context != null) {
+    context.getRepository().getModelAccess().executeCommand(new EditorCommandAdapter(runnable,context));
+  }
+ else {
+    runnable.run();
+  }
+  return newNode[0];
+}
