@@ -1,17 +1,14 @@
 {
-  CollectConsumer<NavigationTarget> consumer=new CollectConsumer(new HashSet<NavigationTarget>());
+  CollectConsumer<NavigationTarget> consumer=new CollectConsumer<NavigationTarget>(new HashSet<NavigationTarget>());
   Collection<NavigationParticipant> participants=PersistenceFacade.getInstance().getNavigationParticipants();
   monitor.start("Finding targets...",participants.size() + 5);
   try {
     Collection<SModel> current=IterableUtil.asCollection(scope.getModels());
     for (    NavigationParticipant participant : participants) {
       final Set<SModel> next=new HashSet<SModel>(current);
-      participant.findTargets(kind,current,consumer,new Consumer<SModel>(){
-        @Override public void consume(        SModel sModel){
-          next.remove(sModel);
-        }
-      }
-);
+      CollectConsumer<SModel> processedModels=new CollectConsumer<SModel>(new HashSet<SModel>());
+      participant.findTargets(kind,current,consumer,processedModels);
+      next.removeAll(processedModels.getResult());
       current=next;
       monitor.advance(1);
     }
