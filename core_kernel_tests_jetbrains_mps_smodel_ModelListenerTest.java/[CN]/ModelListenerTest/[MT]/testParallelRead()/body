@@ -1,0 +1,41 @@
+{
+  final TestModelFactory m1f=new TestModelFactory();
+  m1f.createModel(20,100,10,5);
+  final int initialNodeCount=m1f.countModelNodes();
+  myTestModelAccess.enableRead();
+  m1f.attachTo(myTestRepo);
+  final long baselineMillis=500 * 2;
+  final int parallelThreads=4;
+  final CountDownLatch stopLatch=new CountDownLatch(3);
+  CyclicBarrier b=new CyclicBarrier(parallelThreads,new Runnable(){
+    @Override public void run(){
+      stopLatch.countDown();
+    }
+  }
+);
+  ModelReadThread[] threads=new ModelReadThread[parallelThreads];
+  for (int i=0; i < parallelThreads; i++) {
+    threads[i]=new ModelReadThread(b,m1f);
+    threads[i].start();
+  }
+  boolean finishOk=stopLatch.await(10,TimeUnit.SECONDS);
+  if (finishOk) {
+    final int expectedNodeCount=3 * initialNodeCount;
+    for (int i=0; i < parallelThreads; i++) {
+      myErrors.checkThat(threads[i].getName(),threads[i].getAllThreadListenerCount(),equalTo(expectedNodeCount * parallelThreads));
+      myErrors.checkThat(threads[i].getName(),threads[i].getThisThreadCount1(),equalTo(expectedNodeCount));
+      myErrors.checkThat(threads[i].getName(),threads[i].getThisThreadCount2(),equalTo(expectedNodeCount));
+      myErrors.checkThat(threads[i].getName(),threads[i].getElapsedMillis(),lessThan(baselineMillis));
+      myErrors.checkThat(threads[i].getName(),threads[i].getElapsedMillis(),greaterThan(baselineMillis / 4));
+    }
+    return;
+  }
+  for (int i=0; i < parallelThreads; i++) {
+    if (threads[i].isAlive()) {
+      Throwable th=new Throwable("Hanging thread " + threads[i].getName());
+      th.setStackTrace(threads[i].getStackTrace());
+      myErrors.addError(th);
+      threads[i].interrupt();
+    }
+  }
+}

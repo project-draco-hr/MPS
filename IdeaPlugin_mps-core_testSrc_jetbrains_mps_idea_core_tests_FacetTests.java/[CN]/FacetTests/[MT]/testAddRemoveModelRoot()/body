@@ -1,7 +1,7 @@
 {
   @NonNls final File modelRootDir=new File(getModuleHome(),"modelRoot");
   assertTrue(modelRootDir.mkdir());
-  SModuleReference solutionReference=myFacet.getSolution().getModuleReference();
+  final SModuleReference solutionReference=myFacet.getSolution().getModuleReference();
   String modelRootPath=modelRootDir.getPath();
   MPSConfigurationBean configurationBean=myFacet.getConfiguration().getBean();
   DefaultModelRoot root=new DefaultModelRoot();
@@ -10,17 +10,28 @@
   configurationBean.setModelRoots(Arrays.<ModelRoot>asList(root));
   myFacet.setConfiguration(configurationBean);
   flushEDT();
-  Solution repositorySolution=ModuleRepositoryFacade.getInstance().getModule(solutionReference,Solution.class);
-  assertEquals(myFacet.getSolution(),repositorySolution);
-  Iterable<ModelRoot> modelRoots=repositorySolution.getModelRoots();
-  Iterator<ModelRoot> iterator=modelRoots.iterator();
-  assertTrue(iterator.hasNext());
-  ModelRoot theModelRoot=iterator.next();
-  assertFalse(iterator.hasNext());
-  assertEquals(modelRootDir.getPath(),((DefaultModelRoot)theModelRoot).getFiles(DefaultModelRoot.SOURCE_ROOTS).iterator().next());
+  runModelRead(new Runnable(){
+    @Override public void run(){
+      Solution repositorySolution=ModuleRepositoryFacade.getInstance().getModule(solutionReference,Solution.class);
+      assertEquals(myFacet.getSolution(),repositorySolution);
+      Iterable<ModelRoot> modelRoots=repositorySolution.getModelRoots();
+      Iterator<ModelRoot> iterator=modelRoots.iterator();
+      assertTrue(iterator.hasNext());
+      ModelRoot theModelRoot=iterator.next();
+      assertFalse(iterator.hasNext());
+      assertEquals(modelRootDir.getPath(),((DefaultModelRoot)theModelRoot).getFiles(DefaultModelRoot.SOURCE_ROOTS).iterator().next());
+    }
+  }
+);
   configurationBean=myFacet.getConfiguration().getBean();
   configurationBean.setModelRoots(new ArrayList<ModelRoot>());
   myFacet.setConfiguration(configurationBean);
   flushEDT();
-  assertFalse(repositorySolution.getModelRoots().iterator().hasNext());
+  runModelRead(new Runnable(){
+    @Override public void run(){
+      Solution repositorySolution=ModuleRepositoryFacade.getInstance().getModule(solutionReference,Solution.class);
+      assertFalse(repositorySolution.getModelRoots().iterator().hasNext());
+    }
+  }
+);
 }

@@ -1,2 +1,28 @@
 {
+  getModelAccess().checkWriteAccess();
+  SModuleId moduleId=moduleToRegister.getModuleReference().getModuleId();
+  String moduleFqName=moduleToRegister.getModuleName();
+  AbstractModule aModuleToRegister=(AbstractModule)moduleToRegister;
+  if (moduleId == null)   throw new NullModuleIdException(aModuleToRegister);
+  SModule existing=getModule(moduleId);
+  if (existing != null) {
+    myModuleToOwners.addLink(existing,owner);
+    return (T)existing;
+  }
+  if (moduleFqName != null) {
+    if (myFqNameToModulesMap.containsKey(moduleFqName)) {
+      AbstractModule existingModule=(AbstractModule)myFqNameToModulesMap.get(moduleFqName);
+      LOG.error("",new ModuleWithSuchNameAlreadyExistsInTheRepositoryException(aModuleToRegister,existingModule));
+      return (T)existingModule;
+    }
+    myFqNameToModulesMap.put(moduleFqName,moduleToRegister);
+  }
+  myIdToModuleMap.put(moduleToRegister.getModuleId(),moduleToRegister);
+  myModules.add(moduleToRegister);
+  checkModelsAreNotChanged(aModuleToRegister);
+  aModuleToRegister.attach(this);
+  myModuleToOwners.addLink(moduleToRegister,owner);
+  invalidateCaches();
+  fireModuleAdded(moduleToRegister);
+  return moduleToRegister;
 }
