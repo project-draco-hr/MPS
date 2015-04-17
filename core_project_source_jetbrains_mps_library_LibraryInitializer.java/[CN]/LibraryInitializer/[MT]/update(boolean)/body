@@ -1,34 +1,40 @@
 {
-  myRepo.getModelAccess().checkWriteAccess();
   final Set<SLibrary> toUnload=new HashSet<SLibrary>(myLibraries);
   final Set<SLibrary> toLoad=new HashSet<SLibrary>();
   myParentLoaders.clear();
-  for (  LibraryContributor lc : myContributors) {
-    for (    LibDescriptor s : lc.getLibraries()) {
-      IFile path=FileSystem.getInstance().getFileByPath(s.path);
-      SLibrary lib=new SLibrary(path,s.parentLoader,lc.hiddenLanguages());
+  for (  LibraryContributor libraryContributor : myContributors) {
+    for (    LibDescriptor libDescriptor : libraryContributor.getLibraries()) {
+      IFile path=FileSystem.getInstance().getFileByPath(libDescriptor.getPath());
+      ClassLoader libClassLoader=libDescriptor.getParentClassLoader();
+      SLibrary lib=new SLibrary(path,libClassLoader,libraryContributor.hiddenLanguages());
       toUnload.remove(lib);
       if (!myLibraries.contains(lib)) {
         myLibraries.add(lib);
         toLoad.add(lib);
       }
       IFile bundlePath=FileSystem.getInstance().isPackaged(path) ? FileSystem.getInstance().getBundleHome(path) : null;
-      myParentLoaders.put(bundlePath != null ? bundlePath.getPath() : s.path,s.parentLoader != null ? s.parentLoader : LibraryInitializer.class.getClassLoader());
+      ClassLoader classLoader=libClassLoader != null ? libClassLoader : LibraryInitializer.class.getClassLoader();
+      myParentLoaders.put(bundlePath != null ? bundlePath.getPath() : libDescriptor.getPath(),classLoader);
     }
   }
   myLibraries.removeAll(toUnload);
-  if (toUnload.size() + toLoad.size() == 0)   return;
-  if (toLoad.size() > 0)   LOG.info("Loading " + toLoad.size() + " libraries");
-  if (toUnload.size() > 0)   LOG.info("Unloading " + toUnload.size() + " libraries");
-  ArrayList<SLibrary> toUnloadList=new ArrayList<SLibrary>(toUnload);
-  ArrayList<SLibrary> toLoadList=new ArrayList<SLibrary>(toLoad);
+  if (toUnload.isEmpty() && toLoad.isEmpty())   return;
+  if (!toLoad.isEmpty())   LOG.info("Loading " + toLoad.size() + " libraries");
+  if (!toUnload.isEmpty())   LOG.info("Unloading " + toUnload.size() + " libraries");
+  List<SLibrary> toUnloadList=new ArrayList<SLibrary>(toUnload);
+  final List<SLibrary> toLoadList=new ArrayList<SLibrary>(toLoad);
   Collections.sort(toUnloadList);
   Collections.sort(toLoadList);
   for (  SLibrary unloadLib : toUnloadList) {
     unloadLib.dispose();
   }
-  for (  SLibrary loadLib : toLoadList) {
-    loadLib.attach(refreshFiles);
+  myModelAccess.runWriteAction(new Runnable(){
+    @Override public void run(){
+      for (      SLibrary loadLib : toLoadList) {
+        loadLib.attach(refreshFiles);
+      }
+    }
   }
-  CleanupManager.getInstance().cleanup();
+);
+  myCleanupManager.cleanup();
 }
