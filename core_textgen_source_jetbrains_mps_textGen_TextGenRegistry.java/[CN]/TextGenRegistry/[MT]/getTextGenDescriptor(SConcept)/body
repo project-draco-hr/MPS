@@ -4,20 +4,22 @@
   if (descriptor != null) {
     return descriptor;
   }
-  LanguageRuntime languageRuntime=myLanguageRegistry.getLanguage(concept.getLanguage());
-  TextGenAspectDescriptor textGenAspectDescriptor=null;
-  if (languageRuntime == null) {
-    Logger.getLogger(ConceptRegistry.class).warn(String.format("No language for concept %s, while looking for textgen descriptor.",fqName));
+  for (  SConcept next : new ImmediateParentConceptIterator(concept,SNodeUtil.concept_BaseConcept)) {
+    TextGenAspectDescriptor textGenAspectDescriptor=getAspect(next);
+    if (textGenAspectDescriptor == null) {
+      continue;
+    }
+    descriptor=textGenAspectDescriptor.getDescriptor(MetaIdHelper.getConcept(next));
+    if (descriptor != null) {
+      break;
+    }
   }
- else {
-    textGenAspectDescriptor=languageRuntime.getAspect(TextGenAspectDescriptor.class);
-  }
-  if (textGenAspectDescriptor == null) {
-    textGenAspectDescriptor=new TextGenAspectInterpreted();
-  }
-  descriptor=textGenAspectDescriptor.getDescriptor(concept);
   if (descriptor == null) {
-    descriptor=new DefaultTextGenDescriptor();
+    final Class<? extends SNodeTextGen> legacyTextGenClass=getLegacyTextGenClass(concept);
+    if (legacyTextGenClass != null) {
+      return new LegacyTextGenAdapter(legacyTextGenClass);
+    }
+    descriptor=new MissingTextGenDescriptor();
   }
   textGenDescriptors.put(fqName,descriptor);
   return descriptor;

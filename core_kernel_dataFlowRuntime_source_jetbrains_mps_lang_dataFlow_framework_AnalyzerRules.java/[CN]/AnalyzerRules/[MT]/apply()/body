@@ -1,0 +1,26 @@
+{
+  SModel model=myNodeToApply.getModel();
+  if (!(model instanceof SModelInternal)) {
+    LOG.warning(model == null ? "Checking node which is not attached to the model: " + myNodeToApply.getPresentation() + " "+ myNodeToApply.getNodeId() : "Model " + model.getModelName() + " is not instance of SModelInternal");
+    return;
+  }
+  SModelInternal modelInternal=(SModelInternal)model;
+  for (  SLanguage language : modelInternal.getModelDepsManager().getAllImportedLanguagesIds()) {
+    LanguageRuntime languageRuntime=LanguageRegistry.getInstance().getLanguage(language.getQualifiedName());
+    if (languageRuntime == null) {
+      continue;
+    }
+    DataFlowAspectDescriptor aspect=languageRuntime.getAspect(DataFlowAspectDescriptor.class);
+    if (aspect == null) {
+      continue;
+    }
+    for (    DataFlowConstructor rule : aspect.getConstructors(myAnalyzerId)) {
+      myConceptRules.add(rule);
+    }
+  }
+  for (  SNode descendant : SNodeOperations.getNodeDescendants(myNodeToApply,null,false,new SAbstractConcept[]{})) {
+    for (    DataFlowConstructor rule : getRules(descendant)) {
+      rule.performActions(myProgram,descendant);
+    }
+  }
+}
