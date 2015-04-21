@@ -7,23 +7,22 @@
   }
   myLoadingDisabled=true;
   try {
-    ModelAccess.instance().runReadAction(new Runnable(){
-      @Override public void run(){
-        final List<String> expansion=getExpandedPaths();
-        final List<String> selection=getSelectedPaths();
-        rebuildAction.run();
-        if (saveExpansion) {
-          runWithoutExpansion(new Runnable(){
-            @Override public void run(){
-              expandPaths(expansion);
-              selectPaths(selection);
-            }
-          }
-);
+    Runnable restoreExpansion=null;
+    if (saveExpansion) {
+      final List<String> expansion=getExpandedPaths();
+      final List<String> selection=getSelectedPaths();
+      restoreExpansion=new Runnable(){
+        @Override public void run(){
+          expandPaths(expansion);
+          selectPaths(selection);
         }
       }
+;
     }
-);
+    ModelAccess.instance().runReadAction(rebuildAction);
+    if (restoreExpansion != null) {
+      runWithoutExpansion(restoreExpansion);
+    }
   }
   finally {
     myLoadingDisabled=false;

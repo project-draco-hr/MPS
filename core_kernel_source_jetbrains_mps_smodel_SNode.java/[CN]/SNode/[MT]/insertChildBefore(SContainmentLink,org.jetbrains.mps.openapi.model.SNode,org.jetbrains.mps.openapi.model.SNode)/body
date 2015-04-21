@@ -3,38 +3,33 @@
   final SNode schild=(SNode)child;
   SNode parentOfChild=schild.getParent();
   if (parentOfChild != null) {
-    throw new RuntimeException(SNodeOperations.getDebugText(schild) + " already has parent: " + SNodeOperations.getDebugText(parentOfChild)+ "\n"+ "Couldn't add it to: "+ SNodeOperations.getDebugText(this));
+    final String fmt="%s already has parent: %s\nCouldn't add it to: %s";
+    final String m=String.format(fmt,getDebugText(schild),getDebugText(parentOfChild),getDebugText(this));
+    throw new IllegalModelAccessException(m);
+  }
+  final SModel childModel=schild.getNodeOwner().getModel();
+  if (childModel != null) {
+    if (childModel.isRoot(schild)) {
+      final String fmt="Attempt to add root %s from model %s to node %s.";
+      throw new IllegalModelAccessException(String.format(fmt,getDebugText(schild),childModel,getDebugText(this)));
+    }
+ else {
+      final String fmt="Node to add (%s) belongs to a model. Couldn't add it to %s. Shall detach it/remove from the model %s first.";
+      throw new IllegalModelAccessException(String.format(fmt,getDebugText(schild),getDebugText(this),childModel));
+    }
   }
   if (getContainingRoot() == child) {
-    throw new RuntimeException("Trying to create a cyclic tree");
+    throw new IllegalModelAccessException("Trying to create a cyclic tree");
   }
   if (anchor != null) {
     if (anchor.getParent() != this) {
-      throw new RuntimeException("anchor is not a child of this node" + " | " + "this: " + SNodeOperations.getDebugText(this) + " | "+ "anchor: "+ SNodeOperations.getDebugText(anchor));
+      throw new IllegalModelAccessException("anchor is not a child of this node" + " | " + "this: " + getDebugText(this) + " | "+ "anchor: "+ getDebugText(anchor));
     }
   }
   schild.myRoleInParent=role;
   children_insertBefore(((SNode)anchor),schild);
-  UnregisteredNodes un=UnregisteredNodes.instance();
-  if (un.contains(child) && myModelForUndo == null && !un.contains(this)) {
-    startUndoTracking(getContainingRoot(),((SNode)child).myRepository);
-  }
-  if (myModel == null) {
-    if (schild.myModel != null) {
-      schild.clearModel();
-    }
-  }
- else {
-    schild.registerInModel(myModel);
-  }
-  performUndoableAction(new Computable<SNodeUndoableAction>(){
-    @Override public SNodeUndoableAction compute(){
-      return new InsertChildAtUndoableAction(SNode.this,anchor,role.getRole(),schild);
-    }
-  }
-);
-  if (needFireEvent()) {
-    myModel.fireChildAddedEvent(this,role.getRole(),schild,((SNode)anchor));
-  }
-  nodeAdded(role,child);
+  myOwner.startUndoTracking(this,schild);
+  schild.attach(myOwner);
+  myOwner.performUndoableAction(this,new InsertChildAtUndoableAction(this,anchor,role,child));
+  myOwner.fireNodeAdd(this,role,schild,(SNode)anchor);
 }

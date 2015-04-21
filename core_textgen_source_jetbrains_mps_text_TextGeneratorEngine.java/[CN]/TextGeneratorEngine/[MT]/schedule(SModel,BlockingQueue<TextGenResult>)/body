@@ -1,0 +1,29 @@
+{
+  final List<TextUnit> textUnits=breakdownToUnits(model);
+  if (textUnits.size() == 0) {
+    resultQueue.offer(new TextGenResult(model,textUnits));
+  }
+  final AtomicInteger unitsCount=new AtomicInteger(textUnits.size());
+  for (  final TextUnit tu : textUnits) {
+    myExecutor.execute(new Runnable(){
+      @Override public void run(){
+        final boolean oldFlag=ModelAccess.instance().setReadEnabledFlag(true);
+        try {
+          tu.generate();
+          if (unitsCount.decrementAndGet() == 0) {
+            try {
+              resultQueue.put(new TextGenResult(model,textUnits));
+            }
+ catch (            InterruptedException ex) {
+              myMessages.handle(new Message(MessageKind.WARNING,String.format("TextGen interrupted for model %s",model.getModelName())).setException(ex));
+            }
+          }
+        }
+  finally {
+          ModelAccess.instance().setReadEnabledFlag(oldFlag);
+        }
+      }
+    }
+);
+  }
+}

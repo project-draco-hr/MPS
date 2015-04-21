@@ -1,21 +1,25 @@
 {
-  if (SwingUtilities.isEventDispatchThread()) {
-    try {
-      r.run();
-    }
- catch (    Exception e) {
-      LOG.error(null,e);
-      return false;
-    }
+  LogExceptionsRunnable wrap=new LogExceptionsRunnable(LogManager.getLogger(ThreadUtils.class),r);
+  if (ApplicationManager.getApplication() != null) {
+    ApplicationManager.getApplication().invokeAndWait(wrap,ModalityState.any());
   }
  else {
-    try {
-      SwingUtilities.invokeAndWait(r);
+    if (isInEDT()) {
+      wrap.run();
     }
- catch (    Exception e) {
-      LOG.error(null,e);
-      return false;
+ else {
+      try {
+        SwingUtilities.invokeAndWait(wrap);
+      }
+ catch (      InterruptedException e) {
+        LogManager.getLogger(ThreadUtils.class).error(e.getMessage(),e);
+        return false;
+      }
+catch (      InvocationTargetException e) {
+        LogManager.getLogger(ThreadUtils.class).error(e.getMessage(),e);
+        return false;
+      }
     }
   }
-  return true;
+  return wrap.getException() == null;
 }
