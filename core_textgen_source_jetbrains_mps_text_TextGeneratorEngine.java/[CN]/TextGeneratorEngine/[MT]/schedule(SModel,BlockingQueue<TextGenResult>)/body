@@ -3,27 +3,23 @@
   if (textUnits.size() == 0) {
     resultQueue.offer(new TextGenResult(model,textUnits));
   }
+  final ModelAccess modelAccess=model.getRepository() != null ? model.getRepository().getModelAccess() : null;
   final AtomicInteger unitsCount=new AtomicInteger(textUnits.size());
   for (  final TextUnit tu : textUnits) {
-    myExecutor.execute(new Runnable(){
+    final Runnable tuGenerate=new Runnable(){
       @Override public void run(){
-        final boolean oldFlag=ModelAccess.instance().setReadEnabledFlag(true);
-        try {
-          tu.generate();
-          if (unitsCount.decrementAndGet() == 0) {
-            try {
-              resultQueue.put(new TextGenResult(model,textUnits));
-            }
- catch (            InterruptedException ex) {
-              myMessages.handle(new Message(MessageKind.WARNING,String.format("TextGen interrupted for model %s",model.getModelName())).setException(ex));
-            }
+        tu.generate();
+        if (unitsCount.decrementAndGet() == 0) {
+          try {
+            resultQueue.put(new TextGenResult(model,textUnits));
           }
-        }
-  finally {
-          ModelAccess.instance().setReadEnabledFlag(oldFlag);
+ catch (          InterruptedException ex) {
+            myMessages.handle(new Message(MessageKind.WARNING,String.format("TextGen interrupted for model %s",model.getModelName())).setException(ex));
+          }
         }
       }
     }
-);
+;
+    myExecutor.execute(modelAccess == null ? tuGenerate : new ModelReadRunnable(modelAccess,tuGenerate));
   }
 }
