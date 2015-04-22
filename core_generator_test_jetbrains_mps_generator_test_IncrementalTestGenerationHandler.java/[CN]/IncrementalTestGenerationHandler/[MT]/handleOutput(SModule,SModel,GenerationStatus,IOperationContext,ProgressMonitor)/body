@@ -23,12 +23,22 @@
     myLastDependencies=status.getDependencies();
     myFilesDir=FileGenerationUtil.getDefaultOutputDir(inputModel,targetDir);
     CollectingStreamHandler toStringHandler=new CollectingStreamHandler(generatedContent,getExistingContent());
-    TextFacility tf=new TextFacility(status);
-    tf.failNoTextGen(false).generateDebug(false).generateBaseLangDeps(true);
-    tf.produceTextModel();
-    tf.serializeOutcome(toStringHandler);
-    tf.dispose();
-    Assert.assertTrue(tf.getErrors().isEmpty());
+    TextGeneratorEngine tgEngine=new TextGeneratorEngine(new LogHandler(Logger.getLogger(getClass())));
+    IStatus textGenStatus=new Status.ERROR("");
+    try {
+      final TextGenResult tgr=tgEngine.generateText(status.getOutputModel()).get();
+      TextFacility2 tf=new TextFacility2(status,tgr);
+      tf.prepare();
+      textGenStatus=tf.serializeOutcome(toStringHandler);
+    }
+ catch (    Exception ex) {
+      ex.printStackTrace();
+      Assert.fail(ex.toString());
+    }
+ finally {
+      tgEngine.shutdown();
+    }
+    Assert.assertFalse(textGenStatus.isError());
   }
   return true;
 }
