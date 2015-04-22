@@ -1,0 +1,29 @@
+{
+  makeChangeAndWait(new Runnable(){
+    public void run(){
+      SNodeOperations.deleteNode(SNodeOperations.getNode("r:296ba97d-4b26-4d06-be61-297d86180cce(jetbrains.mps.ide.vcs.test.testModel)","5876208808348821705"));
+      getTestModel().save();
+    }
+  }
+);
+  myChangeListManager.ensureUpToDate(false);
+  VirtualFile modelFile=getTestModelFile();
+  Change change=myChangeListManager.getChange(modelFile);
+  Assert.assertTrue(change != null);
+  myGitVcs.getCheckinEnvironment().commit(Arrays.asList(change),"dumb commit");
+  myWaitHelper.waitForFileStatusChange(modelFile,null);
+  myWaitHelper.waitForChangesManager();
+  Assert.assertNull(myDiff.getChangeSet());
+  try {
+    GitSimpleHandler h=new GitSimpleHandler(myIdeaProject,myIdeaProject.getBaseDir(),GitCommand.RESET);
+    h.addParameters("--mixed","HEAD^");
+    h.run();
+  }
+ catch (  VcsException e) {
+    throw new AssertionError(e);
+  }
+  myWaitHelper.waitForFileStatusChange(modelFile,null);
+  myWaitHelper.waitForChangesManager();
+  Assert.assertTrue(ListSequence.fromList(check_2jv4hj_a0a91a0(myDiff.getChangeSet())).isNotEmpty());
+  revertDiskChangesAndWait(getTestModelFile());
+}

@@ -1,0 +1,20 @@
+{
+  final Wrappers._T<EditableSModel> newModel=new Wrappers._T<EditableSModel>();
+  ModelAccess.instance().runWriteInEDT(new Runnable(){
+    public void run(){
+      SModule module=myDiff.getModelDescriptor().getModule();
+      ModelRoot modelRoot=module.getModelRoots().iterator().next();
+      newModel.value=SModuleOperations.createModelWithAdjustments("jetbrains.mps.ide.vcs.test.newTestModel",modelRoot);
+      newModel.value.load();
+      newModel.value.save();
+    }
+  }
+);
+  ModelAccess.instance().flushEventQueue();
+  CurrentDifference newModelDiff=CurrentDifferenceRegistry.getInstance(myIdeaProject).getCurrentDifference(newModel.value);
+  newModelDiff.setEnabled(true);
+  VirtualFile vf=VirtualFileUtils.getVirtualFile(((FileDataSource)newModel.value.getSource()).getFile());
+  myWaitHelper.waitForFileStatusChange(vf,FileStatus.UNKNOWN);
+  myWaitHelper.waitForChangesManager();
+  Assert.assertTrue(ListSequence.fromList(check_2jv4hj_a0a01a4(newModelDiff.getChangeSet())).isEmpty());
+}
