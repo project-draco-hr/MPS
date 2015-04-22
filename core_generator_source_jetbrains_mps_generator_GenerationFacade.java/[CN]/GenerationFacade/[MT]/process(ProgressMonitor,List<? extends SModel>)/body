@@ -2,7 +2,7 @@
   final boolean[] result=new boolean[1];
   myTransientModelsProvider.startGeneration(myGenerationOptions.getNumberOfModelsToKeep());
   final GeneratorLoggerAdapter logger=new GeneratorLoggerAdapter(myMessageHandler,myGenerationOptions.isShowInfo(),myGenerationOptions.isShowWarnings());
-  ModelAccess.instance().requireWrite(new Runnable(){
+  myProject.getModelAccess().runWriteAction(new Runnable(){
     @Override public void run(){
       for (      SModel d : inputModels) {
         if (d instanceof EditableSModel && ((EditableSModel)d).needsReloading()) {
@@ -16,7 +16,7 @@
 );
   GenControllerContext ctx=new GenControllerContext(myProject,myGenerationOptions,myTransientModelsProvider,myStreamProvider);
   final GenerationController gc=new GenerationController(inputModels,ctx,myGenerationHandler,logger);
-  ModelAccess.instance().requireRead(new Runnable(){
+  myProject.getModelAccess().runReadAction(new Runnable(){
     @Override public void run(){
       result[0]=UndoHelper.getInstance().runNonUndoableAction(new Computable<Boolean>(){
         @Override public Boolean compute(){
@@ -27,19 +27,8 @@
     }
   }
 );
-  ModelAccess.instance().requireWrite(new Runnable(){
-    @Override public void run(){
-      CleanupManager.getInstance().cleanup();
-    }
-  }
-);
-  ModelAccess.instance().requireWrite(new Runnable(){
-    @Override public void run(){
-      myTransientModelsProvider.publishAll();
-      CleanupManager.getInstance().cleanup();
-    }
-  }
-);
+  myTransientModelsProvider.publishAll();
+  CleanupManager.getInstance().cleanup();
   myGenerationHandler.generationCompleted();
   return result[0];
 }
