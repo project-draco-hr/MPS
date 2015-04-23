@@ -2,53 +2,59 @@
   return new IJob.Stub(){
     @Override public IResult execute(    final Iterable<IResource> rawInput,    final IJobMonitor monitor,    final IPropertiesAccessor pa,    @NotNull final ProgressMonitor progressMonitor){
       Iterable<IResource> _output_ixa0pj_a0a=null;
-      final Iterable<TResource> input=(Iterable<TResource>)(Iterable)rawInput;
+      final Iterable<TextGenOutcomeResource> input=(Iterable<TextGenOutcomeResource>)(Iterable)rawInput;
 switch (0) {
 case 0:
-        progressMonitor.start("Copying resources",2);
-      progressMonitor.step("Build language ANT files");
-    try {
-      for (      TResource tres : Sequence.fromIterable(input)) {
-        final List<Tuples._2<IFile,IFile>> toCopy=ListSequence.fromList(new ArrayList<Tuples._2<IFile,IFile>>());
-        final TResource ftres=tres;
-        new DeltaReconciler(tres.delta()).visitAll(new FilesDelta.Visitor(){
-          @Override public boolean acceptWritten(          IFile file){
-            if (!(Sequence.fromIterable(Sequence.fromArray(new String[]{"dependencies","generated","trace.info"})).contains(file.getName()))) {
-              String destPath=MapSequence.fromMap(MapSequence.fromMap(CopyGeneratedScripts_Facet.Target_collectScriptDirectories.vars(pa.global()).fileNameToDestination()).get(ftres.modelDescriptor().getReference())).get(file.getName());
-              if ((destPath != null && destPath.length() > 0)) {
-                IFile destFile=FileSystem.getInstance().getFileByPath(destPath);
-                ListSequence.fromList(toCopy).addElement(MultiTuple.<IFile,IFile>from(file,destFile));
-                monitor.reportFeedback(new IFeedback.INFORMATION(String.valueOf("Copying " + ListSequence.fromList(toCopy).last())));
-              }
-            }
-            return true;
+        final FileProcessor fp=new FileProcessor();
+      List<FilesDelta> deltas=ListSequence.fromList(new ArrayList<FilesDelta>());
+    monitor.currentProgress().beginWork("Build language ANT files",Sequence.fromIterable(input).count() + 2,monitor.currentProgress().workLeft());
+  for (  TextGenOutcomeResource res : Sequence.fromIterable(input)) {
+    monitor.currentProgress().advanceWork("Build language ANT files",1,res.getModel().getModelName());
+    TextGenResult textGenResult=res.getTextGenResult();
+    for (    TextUnit tu : textGenResult.getUnits()) {
+      Object userObject=tu.getStartNode().getUserObject(GenerationUtil.SCRIPTS_TARGET_PROPERTY);
+      if (userObject instanceof String) {
+        String fileName=tu.getFileName();
+        String targetXml=((String)userObject);
+        if (!(fileName.endsWith(".xml"))) {
+          String ext=Utils.getExtensionWithDot(fileName);
+          if ((ext == null || ext.length() == 0)) {
+            monitor.reportFeedback(new IFeedback.WARNING(String.valueOf("Ignored " + fileName)));
+            continue;
           }
+          targetXml=Utils.withoutExtension(targetXml) + ext;
         }
-);
-        FileSystem.getInstance().runWriteTransaction(new Runnable(){
-          public void run(){
-            ModelAccess.instance().requireWrite(new Runnable(){
-              @Override public void run(){
-                ListSequence.fromList(toCopy).visitAll(new IVisitor<Tuples._2<IFile,IFile>>(){
-                  public void visit(                  Tuples._2<IFile,IFile> ftc){
-                    IFileUtils.copyFileContent(ftc._0(),ftc._1());
-                  }
-                }
-);
-              }
-            }
-);
-          }
+        monitor.reportFeedback(new IFeedback.INFORMATION(String.valueOf(String.format("copy generated script: %s --> %s",fileName,targetXml))));
+        IFile destFile=FileSystem.getInstance().getFileByPath(targetXml);
+        boolean changed=fp.saveContent(destFile,tu.getBytes());
+        FilesDelta d=new FilesDelta(destFile.getParent());
+        if (changed) {
+          d.written(destFile);
         }
-);
-        _output_ixa0pj_a0a=Sequence.fromIterable(_output_ixa0pj_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(tres)));
+ else {
+          d.kept(destFile);
+        }
+        ListSequence.fromList(deltas).addElement(d);
       }
     }
-  finally {
-      progressMonitor.done();
-    }
+  }
+IDelta folded=ListSequence.fromList(deltas).ofType(IDelta.class).reduceLeft(new ILeftCombinator<IDelta,IDelta>(){
+  public IDelta combine(  IDelta a,  IDelta b){
+    return a.merge(b);
+  }
+}
+);
+_output_ixa0pj_a0a=Sequence.fromIterable(_output_ixa0pj_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(new DResource(Sequence.<IDelta>singleton(folded)))));
+monitor.currentProgress().advanceWork("Build language ANT files",1,"writing...");
+FileSystem.getInstance().runWriteTransaction(new Runnable(){
+@Override public void run(){
+fp.flushChanges();
+}
+}
+);
+monitor.currentProgress().finishWork("Build language ANT files");
 default :
-  return new IResult.SUCCESS(_output_ixa0pj_a0a);
+return new IResult.SUCCESS(_output_ixa0pj_a0a);
 }
 }
 }
