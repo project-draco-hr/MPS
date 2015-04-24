@@ -1,55 +1,48 @@
 {
-  try {
-    final List<SModule> modules=ListSequence.fromList(new ArrayList<SModule>());
-    final ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
-    modelAccess.runReadAction(new Runnable(){
-      public void run(){
-        ListSequence.fromList(modules).addSequence(Sequence.fromIterable(MPSModuleRepository.getInstance().getModules()));
-      }
+  final List<SModule> modules=ListSequence.fromList(new ArrayList<SModule>());
+  final ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
+  modelAccess.runReadAction(new Runnable(){
+    public void run(){
+      ListSequence.fromList(modules).addSequence(Sequence.fromIterable(MPSModuleRepository.getInstance().getModules()));
     }
+  }
 );
-    BaseModuleModel baseSolutionModel=new BaseModuleModel(((Project)MapSequence.fromMap(_params).get("ideaProject")),"runtime module"){
-      @Override public SModuleReference[] find(      SearchScope scope){
-        return ListSequence.fromList(modules).select(new ISelector<SModule,SModuleReference>(){
-          public SModuleReference select(          SModule it){
-            return it.getModuleReference();
-          }
+  BaseModuleModel baseSolutionModel=new BaseModuleModel(((Project)MapSequence.fromMap(_params).get("ideaProject")),"runtime module"){
+    @Override public SModuleReference[] find(    SearchScope scope){
+      return ListSequence.fromList(modules).select(new ISelector<SModule,SModuleReference>(){
+        public SModuleReference select(        SModule it){
+          return it.getModuleReference();
         }
+      }
 ).toGenericArray(SModuleReference.class);
-      }
-      @Override public NavigationItem doGetNavigationItem(      final SModuleReference module){
-        return new BaseModuleItem(module){
-          @Override public void navigate(          boolean p0){
-            if (module == null) {
-              return;
-            }
-            final Language language=(Language)((SModule)MapSequence.fromMap(_params).get("contextModule"));
-            language.getModuleDescriptor().getRuntimeModules().add((ModuleReference)module);
-            final MPSTree mpsTree=((MPSTreeNode)((TreeNode)MapSequence.fromMap(_params).get("treeNode"))).getTree();
-            modelAccess.runWriteInEDT(new Runnable(){
-              public void run(){
-                language.save();
-                mpsTree.rebuildLater();
-              }
-            }
-);
+    }
+    @Override public NavigationItem doGetNavigationItem(    final SModuleReference module){
+      return new BaseModuleItem(module){
+        @Override public void navigate(        boolean p0){
+          if (module == null) {
+            return;
           }
+          final Language language=(Language)((SModule)MapSequence.fromMap(_params).get("contextModule"));
+          language.getModuleDescriptor().getRuntimeModules().add((ModuleReference)module);
+          final MPSTree mpsTree=((MPSTreeNode)((TreeNode)MapSequence.fromMap(_params).get("treeNode"))).getTree();
+          modelAccess.runWriteInEDT(new Runnable(){
+            public void run(){
+              language.save();
+              mpsTree.rebuildLater();
+            }
+          }
+);
         }
-;
       }
-    }
 ;
-    ChooseByNamePopup popup=MpsPopupFactory.createPackagePopup(((Project)MapSequence.fromMap(_params).get("ideaProject")),baseSolutionModel,NewRuntimeModule_Action.this);
-    popup.invoke(new ChooseByNamePopupComponent.Callback(){
-      @Override public void elementChosen(      Object p0){
-        ((NavigationItem)p0).navigate(true);
-      }
     }
+  }
+;
+  ChooseByNamePopup popup=MpsPopupFactory.createPackagePopup(((Project)MapSequence.fromMap(_params).get("ideaProject")),baseSolutionModel,NewRuntimeModule_Action.this);
+  popup.invoke(new ChooseByNamePopupComponent.Callback(){
+    @Override public void elementChosen(    Object p0){
+      ((NavigationItem)p0).navigate(true);
+    }
+  }
 ,ModalityState.current(),true);
-  }
- catch (  Throwable t) {
-    if (LOG.isEnabledFor(Level.ERROR)) {
-      LOG.error("User's action execute method failed. Action:" + "NewRuntimeModule",t);
-    }
-  }
 }

@@ -1,28 +1,21 @@
 {
-  try {
-    final Iterable<SModule> allModules=MigrationsUtil.getMigrateableModulesFromProject(((MPSProject)MapSequence.fromMap(_params).get("mpsProject")));
-    final Wrappers._boolean migrationRequired=new Wrappers._boolean();
-    ModelAccess.instance().runReadAction(new Runnable(){
+  final Iterable<SModule> allModules=MigrationsUtil.getMigrateableModulesFromProject(((MPSProject)MapSequence.fromMap(_params).get("mpsProject")));
+  final Wrappers._boolean migrationRequired=new Wrappers._boolean();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      migrationRequired.value=MigrationComponent.isMigrationRequired(((MPSProject)MapSequence.fromMap(_params).get("mpsProject")),allModules);
+    }
+  }
+);
+  if (!(migrationRequired.value)) {
+    ApplicationManager.getApplication().invokeLater(new Runnable(){
       public void run(){
-        migrationRequired.value=MigrationComponent.isMigrationRequired(((MPSProject)MapSequence.fromMap(_params).get("mpsProject")),allModules);
+        Messages.showMessageDialog(((Project)MapSequence.fromMap(_params).get("project")),"None of the modules in project require migration.\n" + "Migration assistant will not be started.","Migration not required",null);
       }
     }
 );
-    if (!(migrationRequired.value)) {
-      ApplicationManager.getApplication().invokeLater(new Runnable(){
-        public void run(){
-          Messages.showMessageDialog(((Project)MapSequence.fromMap(_params).get("project")),"None of the modules in project require migration.\n" + "Migration assistant will not be started.","Migration not required",null);
-        }
-      }
-);
-      return;
-    }
-    MigrationTrigger mt=((MigrationTrigger)((Project)MapSequence.fromMap(_params).get("project")).getComponent(IStartupMigrationExecutor.class));
-    mt.postponeMigration();
+    return;
   }
- catch (  Throwable t) {
-    if (LOG.isEnabledFor(Level.ERROR)) {
-      LOG.error("User's action execute method failed. Action:" + "ExecuteMigrationAssistant",t);
-    }
-  }
+  MigrationTrigger mt=((MigrationTrigger)((Project)MapSequence.fromMap(_params).get("project")).getComponent(IStartupMigrationExecutor.class));
+  mt.postponeMigration();
 }

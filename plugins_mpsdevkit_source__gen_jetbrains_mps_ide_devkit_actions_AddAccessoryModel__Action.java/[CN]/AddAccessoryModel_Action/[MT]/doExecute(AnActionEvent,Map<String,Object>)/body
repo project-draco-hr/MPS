@@ -1,46 +1,39 @@
 {
-  try {
-    final Language language=((Language)((SModule)MapSequence.fromMap(_params).get("module")));
-    final List<SModelReference> models=ListSequence.fromList(new ArrayList<SModelReference>());
-    ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
-    modelAccess.runReadAction(new Runnable(){
-      public void run(){
-        List<SModel> descriptors=SModelRepository.getInstance().getModelDescriptors();
-        ListSequence.fromList(models).addSequence(ListSequence.fromList(descriptors).select(new ISelector<SModel,SModelReference>(){
-          public SModelReference select(          SModel it){
-            return it.getReference();
-          }
+  final Language language=((Language)((SModule)MapSequence.fromMap(_params).get("module")));
+  final List<SModelReference> models=ListSequence.fromList(new ArrayList<SModelReference>());
+  ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
+  modelAccess.runReadAction(new Runnable(){
+    public void run(){
+      List<SModel> descriptors=SModelRepository.getInstance().getModelDescriptors();
+      ListSequence.fromList(models).addSequence(ListSequence.fromList(descriptors).select(new ISelector<SModel,SModelReference>(){
+        public SModelReference select(        SModel it){
+          return it.getReference();
         }
+      }
 ));
-      }
     }
+  }
 );
-    final SModelReference result=CommonChoosers.showDialogModelChooser(((Project)MapSequence.fromMap(_params).get("ideaProject")),models,null);
-    if (result == null) {
-      return;
-    }
-    modelAccess.executeCommand(new Runnable(){
-      public void run(){
-        MPSModuleRepository.getInstance().saveAll();
-        LanguageDescriptor descriptor;
-        descriptor=language.getModuleDescriptor();
-        descriptor.getAccessoryModels().add(result);
-        language.setLanguageDescriptor(descriptor);
-        if (!(VisibilityUtil.isVisible(language,result.resolve(MPSModuleRepository.getInstance())))) {
-          int res=JOptionPane.showConfirmDialog(((Frame)MapSequence.fromMap(_params).get("frame")),"<html>Model <b>" + SModelStereotype.withoutStereotype(result.getModelName()) + "</b> is added to accessories</html>\n\n"+ "Do you want to automatically the module add to dependency?","Add Dependency",JOptionPane.YES_NO_OPTION);
-          if (res == JOptionPane.YES_OPTION) {
-            SModel md=SModelRepository.getInstance().getModelDescriptor(result);
-            language.addDependency(md.getModule().getModuleReference(),false);
-          }
+  final SModelReference result=CommonChoosers.showDialogModelChooser(((Project)MapSequence.fromMap(_params).get("ideaProject")),models,null);
+  if (result == null) {
+    return;
+  }
+  modelAccess.executeCommand(new Runnable(){
+    public void run(){
+      MPSModuleRepository.getInstance().saveAll();
+      LanguageDescriptor descriptor;
+      descriptor=language.getModuleDescriptor();
+      descriptor.getAccessoryModels().add(result);
+      language.setLanguageDescriptor(descriptor);
+      if (!(VisibilityUtil.isVisible(language,result.resolve(MPSModuleRepository.getInstance())))) {
+        int res=JOptionPane.showConfirmDialog(((Frame)MapSequence.fromMap(_params).get("frame")),"<html>Model <b>" + SModelStereotype.withoutStereotype(result.getModelName()) + "</b> is added to accessories</html>\n\n"+ "Do you want to automatically the module add to dependency?","Add Dependency",JOptionPane.YES_NO_OPTION);
+        if (res == JOptionPane.YES_OPTION) {
+          SModel md=SModelRepository.getInstance().getModelDescriptor(result);
+          language.addDependency(md.getModule().getModuleReference(),false);
         }
-        language.save();
       }
+      language.save();
     }
+  }
 );
-  }
- catch (  Throwable t) {
-    if (LOG.isEnabledFor(Level.ERROR)) {
-      LOG.error("User's action execute method failed. Action:" + "AddAccessoryModel",t);
-    }
-  }
 }

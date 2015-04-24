@@ -1,38 +1,31 @@
 {
-  try {
-    String path=((VirtualFile)MapSequence.fromMap(_params).get("selectedFile")).getParent().getPath();
-    MoveFileDialog dialog=new MoveFileDialog(((Project)MapSequence.fromMap(_params).get("ideaProject")),path,((VirtualFile)MapSequence.fromMap(_params).get("selectedFile")).isDirectory());
-    dialog.show();
-    if (!(dialog.isOK())) {
-      return;
-    }
-    final String result=dialog.getResult();
-    ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
-    modelAccess.executeCommand(new Runnable(){
-      public void run(){
-        try {
-          if (MoveFileOrDirectory_Action.this.isNotValid(result,_params)) {
-            return;
+  String path=((VirtualFile)MapSequence.fromMap(_params).get("selectedFile")).getParent().getPath();
+  MoveFileDialog dialog=new MoveFileDialog(((Project)MapSequence.fromMap(_params).get("ideaProject")),path,((VirtualFile)MapSequence.fromMap(_params).get("selectedFile")).isDirectory());
+  dialog.show();
+  if (!(dialog.isOK())) {
+    return;
+  }
+  final String result=dialog.getResult();
+  ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
+  modelAccess.executeCommand(new Runnable(){
+    public void run(){
+      try {
+        if (MoveFileOrDirectory_Action.this.isNotValid(result,_params)) {
+          return;
+        }
+        VirtualFile virtualFile=LocalFileSystem.getInstance().findFileByPath(result);
+        ((VirtualFile)MapSequence.fromMap(_params).get("selectedFile")).move(null,virtualFile);
+        ProjectView.getInstance(((Project)MapSequence.fromMap(_params).get("ideaProject"))).refresh();
+        SwingUtilities.invokeLater(new Runnable(){
+          public void run(){
+            ProjectView.getInstance(((Project)MapSequence.fromMap(_params).get("ideaProject"))).getProjectViewPaneById(FileViewProjectPane.ID).select(null,((VirtualFile)MapSequence.fromMap(_params).get("selectedFile")),true);
           }
-          VirtualFile virtualFile=LocalFileSystem.getInstance().findFileByPath(result);
-          ((VirtualFile)MapSequence.fromMap(_params).get("selectedFile")).move(null,virtualFile);
-          ProjectView.getInstance(((Project)MapSequence.fromMap(_params).get("ideaProject"))).refresh();
-          SwingUtilities.invokeLater(new Runnable(){
-            public void run(){
-              ProjectView.getInstance(((Project)MapSequence.fromMap(_params).get("ideaProject"))).getProjectViewPaneById(FileViewProjectPane.ID).select(null,((VirtualFile)MapSequence.fromMap(_params).get("selectedFile")),true);
-            }
-          }
+        }
 );
-        }
- catch (        IOException e) {
-        }
+      }
+ catch (      IOException e) {
       }
     }
+  }
 );
-  }
- catch (  Throwable t) {
-    if (LOG.isEnabledFor(Level.ERROR)) {
-      LOG.error("User's action execute method failed. Action:" + "MoveFileOrDirectory",t);
-    }
-  }
 }
