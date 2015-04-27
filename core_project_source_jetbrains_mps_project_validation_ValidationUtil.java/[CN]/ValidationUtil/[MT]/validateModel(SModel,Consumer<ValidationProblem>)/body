@@ -1,6 +1,11 @@
 {
-  ModelAccess.assertLegalRead();
-  if (model instanceof TransientSModel)   return;
+  final SRepository repository=model.getRepository();
+  if (repository != null) {
+    repository.getModelAccess().checkReadAccess();
+  }
+  if (model instanceof TransientSModel) {
+    return;
+  }
   if (model.getModule() == null)   return;
   if (jetbrains.mps.util.SNodeOperations.isModelDisposed(model))   return;
   if (model instanceof InvalidSModel) {
@@ -18,6 +23,10 @@
   if (!model.isReadOnly() && (model instanceof PersistenceVersionAware) && ((PersistenceVersionAware)model).getPersistenceVersion() < ModelPersistence.LAST_VERSION) {
     consumer.consume(new ValidationProblem(Severity.WARNING,"Outdated model persistence is used: " + ((PersistenceVersionAware)model).getPersistenceVersion() + ". Please run Tools->Migration 3.2->Migrate from Names to Ids"));
   }
+  if (repository == null) {
+    consumer.consume(new ValidationProblem(Severity.WARNING,"Model is detached from a repository, could not process further"));
+    return;
+  }
   SModule module=model.getModule();
   final SModelReference modelToValidateRef=model.getReference();
   for (  final SModelReference reference : SModelOperations.getImportedModelUIDs(model)) {
@@ -33,12 +42,12 @@
   langsToCheck.addAll(SModelOperations.getAllImportedLanguages(model));
   langsToCheck.addAll(((jetbrains.mps.smodel.SModelInternal)model).engagedOnGenerationLanguages());
   for (  final SModuleReference lang : langsToCheck) {
-    if (model.getRepository().getModule(lang.getModuleId()) == null) {
+    if (repository.getModule(lang.getModuleId()) == null) {
       consumer.consume(new MissingLanguageError(model,lang));
     }
   }
   for (  SModuleReference devKit : ((jetbrains.mps.smodel.SModelInternal)model).importedDevkits()) {
-    if (model.getRepository().getModule(devKit.getModuleId()) == null) {
+    if (repository.getModule(devKit.getModuleId()) == null) {
       consumer.consume(new ValidationProblem(Severity.ERROR,"Can't find devkit: " + devKit.getModuleName()){
       }
 );
