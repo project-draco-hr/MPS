@@ -1,0 +1,39 @@
+{
+  final RuleManager ruleManager=myStepArguments.ruleManager;
+  if (ruleManager.getPostProcessScripts().isEmpty()) {
+    return currentModel;
+  }
+  final boolean needToCloneModel=myGenerationOptions.isSaveTransientModels();
+  SModel toRecycle=null;
+  if (needToCloneModel) {
+    ttrace.push("model clone",false);
+    SModel currentOutputModel_clone=createTransientModel();
+    if (myLogger.needsInfo()) {
+      myLogger.info("clone model '" + currentModel.getReference().getModelName() + "' --> '"+ currentOutputModel_clone.getReference().getModelName()+ "'");
+    }
+    new CloneUtil(currentModel,currentOutputModel_clone).cloneModelWithImports();
+    ttrace.pop();
+    myNewTrace.nextStep(currentModel.getReference(),currentOutputModel_clone.getReference());
+    toRecycle=currentModel;
+    currentModel=currentOutputModel_clone;
+    myDependenciesBuilder.scriptApplied(currentModel);
+  }
+ else {
+    myNewTrace.nextStep(currentModel.getReference(),currentModel.getReference());
+    FastNodeFinderManager.dispose(currentModel);
+  }
+  TemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,currentModel,currentModel,myStepArguments);
+  for (  TemplateMappingScript postMappingScript : ruleManager.getPostProcessScripts().getScripts()) {
+    if (myLogger.needsInfo()) {
+      myLogger.info(postMappingScript.getScriptNode(),"post-process " + postMappingScript.getLongName());
+    }
+    templateGenerator.executeScript(postMappingScript);
+  }
+  myDependenciesBuilder.scriptApplied(currentModel);
+  if (needToCloneModel) {
+    myIntermediateCache.store(myMajorStep,myMinorStep,templateGenerator,myDependenciesBuilder);
+    recycleWasteModel(toRecycle);
+  }
+  myLogger.info("post-processing finished");
+  return currentModel;
+}
