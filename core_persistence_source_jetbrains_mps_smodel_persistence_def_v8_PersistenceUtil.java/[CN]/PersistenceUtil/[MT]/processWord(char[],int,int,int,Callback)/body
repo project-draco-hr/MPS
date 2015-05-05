@@ -13,8 +13,11 @@
       if (e > offset && e + 1 < end && chars[e] == '.') {
         offset=e + 1;
       }
-      String test=WriteHelper.decode(JDOMUtil.unescapeText(new String(chars,offset,end - offset)));
-      consumer.consume(test);
+      String nodeId=WriteHelper.decode(JDOMUtil.unescapeText(new String(chars,offset,end - offset)));
+      SNodeId id=SNodeId.fromString(nodeId);
+      if (id != null) {
+        consumer.externalNodeRef(id);
+      }
     }
   }
  else   if (contains(chars,charsLength,offset,TYPE_PREFIX)) {
@@ -26,7 +29,12 @@
     }
     offset=start + 1;
     if (end > offset) {
-      consumer.consume(JDOMUtil.unescapeText(new String(chars,offset,end - offset)));
+      String cid=JDOMUtil.unescapeText(new String(chars,offset,end - offset));
+      try {
+        consumer.instances(MetaIdFactory.conceptId(0,0,Long.parseLong(cid)));
+      }
+ catch (      NumberFormatException e) {
+      }
     }
   }
  else   if (contains(chars,charsLength,offset,MODEL_UID_PREFIX)) {
@@ -34,7 +42,11 @@
     int end=indexOfClosingQuote(chars,charsLength,offset);
     if (end > offset) {
       String modelRef=JDOMUtil.unescapeText(new String(chars,offset,end - offset));
-      consumer.consume(PersistenceFacade.getInstance().createModelReference(modelRef).getModelName());
+      try {
+        consumer.imports(PersistenceFacade.getInstance().createModelReference(modelRef));
+      }
+ catch (      IllegalArgumentException e) {
+      }
     }
   }
 }
