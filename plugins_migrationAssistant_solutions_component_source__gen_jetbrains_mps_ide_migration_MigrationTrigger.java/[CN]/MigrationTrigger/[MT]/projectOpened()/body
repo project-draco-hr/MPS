@@ -3,13 +3,19 @@
     addListeners();
     ModelAccess.instance().runWriteAction(new Runnable(){
       public void run(){
+        Sequence.fromIterable(MigrationsUtil.getMigrateableModulesFromProject(myMpsProject)).ofType(AbstractModule.class).visitAll(new IVisitor<AbstractModule>(){
+          public void visit(          AbstractModule it){
+            it.validateLanguageVersions();
+          }
+        }
+);
         checkMigrationNeeded();
       }
     }
 );
   }
  else {
-    saveAnsSetTipsState();
+    saveAndSetTipsState();
     StartupManager.getInstance(myProject).registerPostStartupActivity(new Runnable(){
       public void run(){
         ApplicationManager.getApplication().runWriteAction(new Runnable(){
@@ -24,6 +30,17 @@
         SwingUtilities.invokeLater(new Runnable(){
           public void run(){
             myState.migrationRequired=false;
+            ModelAccess.instance().runWriteAction(new Runnable(){
+              public void run(){
+                Sequence.fromIterable(MigrationsUtil.getMigrateableModulesFromProject(myMpsProject)).ofType(AbstractModule.class).visitAll(new IVisitor<AbstractModule>(){
+                  public void visit(                  AbstractModule it){
+                    it.validateLanguageVersions();
+                  }
+                }
+);
+              }
+            }
+);
             final MigrationAssistantWizard wizard=new MigrationAssistantWizard(myProject,myMigrationManager,MigrationTrigger.this);
             boolean finished=wizard.showAndGet();
             restoreTipsState();
@@ -39,7 +56,7 @@
 );
             }
  else {
-              MigrationErrorWizardStep lastStep=as_feb5zp_a0a0a0i0a0a0a1a0a0a0a1a0a0s(wizard.getCurrentStepObject(),MigrationErrorWizardStep.class);
+              MigrationErrorWizardStep lastStep=as_feb5zp_a0a0a0k0a0a0a1a0a0a0a1a0a0s(wizard.getCurrentStepObject(),MigrationErrorWizardStep.class);
               if (lastStep == null) {
                 return;
               }
