@@ -1,0 +1,25 @@
+{
+  final List<String> errors=new ArrayList<String>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      SModel sm : extractModels(true)) {
+        MessageCollectConsumer collector=new MessageCollectConsumer();
+        ValidationUtil.validateModel(sm,collector);
+        if (collector.getErrors().isEmpty()) {
+          continue;
+        }
+        final StringBuilder errorMessages=new StringBuilder();
+        errorMessages.append("errors in model: ").append(sm.getReference().toString()).append("\n");
+        ListSequence.fromList(((List<String>)collector.getErrors())).visitAll(new IVisitor<String>(){
+          public void visit(          String it){
+            errorMessages.append("\t").append(it).append("\n");
+          }
+        }
+);
+        errors.add("Broken References: " + errorMessages.toString());
+      }
+    }
+  }
+);
+  Assert.assertTrue("Model errors:\n" + CheckingTestsUtil.formatErrors(errors),errors.isEmpty());
+}
