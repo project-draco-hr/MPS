@@ -3,7 +3,16 @@
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
       for (      SModel sm : extractModels(true)) {
-        MessageCollectProcessor collector=new MessageCollectProcessor();
+        MessageCollectProcessor collector=new MessageCollectProcessor(false){
+          @Override protected String formatMessage(          ValidationProblem problem){
+            String err=super.formatMessage(problem);
+            if (!((problem instanceof NodeValidationProblem))) {
+              return err;
+            }
+            return err + " in node " + ((NodeValidationProblem)problem).getNode().getNodeId();
+          }
+        }
+;
         ValidationUtil.validateModelContent(sm.getRootNodes(),new TemplatesModelProcessorDecorator(sm,collector));
         if (collector.getErrors().isEmpty()) {
           continue;
@@ -16,7 +25,7 @@
           }
         }
 );
-        errors.add("Broken References: " + errorMessages.toString());
+        errors.add(errorMessages.toString());
       }
     }
   }
