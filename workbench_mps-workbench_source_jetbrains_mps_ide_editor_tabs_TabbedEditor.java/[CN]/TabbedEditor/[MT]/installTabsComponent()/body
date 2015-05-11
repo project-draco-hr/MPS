@@ -2,20 +2,37 @@
   if (myTabsComponent != null) {
     myTabsComponent.dispose();
   }
-  myTabsComponent=TabComponentFactory.createTabsComponent(myBaseNode,myPossibleTabs,getEditorPanel(),new NodeChangeCallback(){
+  final NodeChangeCallback nodeChangeCallback=new NodeChangeCallback(){
     @Override public void changeNode(    SNode newNode){
+      if (getCurrentEditorComponent() == null) {
+        showEditor();
+      }
       showNodeInternal(newNode,true,true);
     }
   }
-,new CreateModeCallback(){
-    @Override public void exitCreateMode(){
-      showEditor();
-    }
-    @Override public void enterCreateMode(    JComponent replace){
-      showComponent(replace);
+;
+  final CreateModeCallback createAspectCallback=new CreateModeCallback(){
+    @Override public void create(    RelationDescriptor tab){
+      final CreatePanel cp=new CreatePanel(myProject,myBaseNode,new NodeChangeCallback(){
+        @Override public void changeNode(        SNode newNode){
+          myTabsComponent.updateTabs();
+          myTabsComponent.setLastNode(newNode.getReference());
+          nodeChangeCallback.changeNode(newNode);
+        }
+      }
+,tab);
+      showComponent(cp);
+      final IdeFocusManager fm=IdeFocusManager.getInstance(ProjectHelper.toIdeaProject(myProject));
+      fm.doWhenFocusSettlesDown(new Runnable(){
+        @Override public void run(){
+          fm.requestFocus(cp,false);
+        }
+      }
+);
     }
   }
-,ProjectHelper.toIdeaProject(myProject));
+;
+  myTabsComponent=TabComponentFactory.createTabsComponent(myBaseNode,myPossibleTabs,getEditorPanel(),nodeChangeCallback,createAspectCallback,ProjectHelper.toIdeaProject(myProject));
   myRepoChangeListener.setTabController(myTabsComponent);
   myFileStatusListener.setTabController(myTabsComponent,myBaseNode);
   JComponent c=myTabsComponent.getComponent();
