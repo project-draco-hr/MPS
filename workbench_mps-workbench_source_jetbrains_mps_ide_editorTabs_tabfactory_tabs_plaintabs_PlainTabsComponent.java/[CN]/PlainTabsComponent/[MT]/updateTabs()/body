@@ -1,23 +1,21 @@
 {
-  if (isDisposed())   return;
-  SNodeReference selNode=null;
-  RelationDescriptor selRel=null;
+  if (isDisposed()) {
+    return;
+  }
+  SNodeReference selectedNode=null;
+  RelationDescriptor selectedAspect=null;
   int selected=myTabs.getTabCount() > 0 ? myTabs.getIndexOf(myTabs.getSelectedInfo()) : -1;
   if (selected != -1) {
-    selNode=myRealTabs.get(selected).getNode();
-    if (selNode == null) {
-      selRel=myRealTabs.get(selected).getTab();
-    }
+    selectedNode=myRealTabs.get(selected).getNode();
+    selectedAspect=myRealTabs.get(selected).getTab();
   }
   boolean oldRebuilding=myRebuilding;
   myRebuilding=true;
   try {
     myTabs.removeAllTabs();
     myRealTabs.clear();
-    ArrayList<RelationDescriptor> tabs=new ArrayList<RelationDescriptor>(myPossibleTabs);
-    Collections.sort(tabs,new RelationComparator());
     TabEditorLayout newContent=updateDocumentsAndNodes();
-    for (    RelationDescriptor tab : tabs) {
+    for (    RelationDescriptor tab : myPossibleTabs) {
       if (newContent.covers(tab)) {
         for (        Entry tabDescriptor : newContent.get(tab)) {
           final PlainEditorTab pet=new PlainEditorTab(tabDescriptor);
@@ -38,30 +36,30 @@
   finally {
     myRebuilding=oldRebuilding;
   }
-  SNode selNodeResolved;
-  if (selNode != null && (selNodeResolved=selNode.resolve(getProject().getRepository())) != null) {
+  boolean selectionRestored=false;
+  if (selectedNode != null && selectedNode.resolve(getProject().getRepository()) != null) {
     for (    PlainEditorTab tab : myRealTabs) {
-      if (EqualUtil.equals(tab.getNode(),selNode)) {
+      if (EqualUtil.equals(tab.getNode(),selectedNode)) {
         myTabs.select(myTabs.getTabAt(myRealTabs.indexOf(tab)),true);
-        onNodeChange(selNodeResolved);
+        selectionRestored=true;
         break;
       }
     }
   }
- else   if (selRel != null) {
+  if (!selectionRestored && selectedAspect != null) {
     for (    PlainEditorTab tab : myRealTabs) {
-      if (tab.getTab() == selRel) {
+      if (tab.getTab() == selectedAspect) {
         myTabs.select(myTabs.getTabAt(myRealTabs.indexOf(tab)),true);
+        selectionRestored=true;
         break;
       }
     }
   }
- else {
-    if (myTabs.getTabCount() > 0) {
-      myTabs.select(myTabs.getTabAt(0),true);
-      if (selNode != null) {
-        onTabIndexChange();
-      }
-    }
+  if (!selectionRestored && myTabs.getTabCount() > 0) {
+    myTabs.select(myTabs.getTabAt(0),true);
+    selectionRestored=true;
+  }
+  if (selectionRestored) {
+    onTabIndexChange();
   }
 }
