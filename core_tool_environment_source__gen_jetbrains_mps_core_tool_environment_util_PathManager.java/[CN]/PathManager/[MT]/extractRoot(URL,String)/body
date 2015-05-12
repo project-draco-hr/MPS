@@ -1,0 +1,33 @@
+{
+  if (!((StringUtil.startsWithChar(resourcePath,'/') || StringUtil.startsWithChar(resourcePath,'\\')))) {
+    System.err.println("precondition failed: " + resourcePath);
+    return null;
+  }
+  String protocol=resourceURL.getProtocol();
+  String resultPath=null;
+  if (PathManager.FILE.equals(protocol)) {
+    String path=resourceURL.getFile();
+    final String testPath=path.replace('\\','/');
+    final String testResourcePath=resourcePath.replace('\\','/');
+    if (jetbrains.mps.core.tool.environment.common.StringUtil.endsWithIgnoreCase(testPath,testResourcePath)) {
+      resultPath=path.substring(0,path.length() - resourcePath.length());
+    }
+  }
+ else   if (PathManager.JAR.equals(protocol)) {
+    String fullPath=resourceURL.getFile();
+    int delimiter=fullPath.indexOf(PathManager.JAR_DELIMITER);
+    if (delimiter >= 0) {
+      String archivePath=fullPath.substring(0,delimiter);
+      if (jetbrains.mps.core.tool.environment.common.StringUtil.startsWithConcatenationOf(archivePath,PathManager.FILE,PathManager.PROTOCOL_DELIMITER)) {
+        resultPath=archivePath.substring(PathManager.FILE.length() + PathManager.PROTOCOL_DELIMITER.length());
+      }
+    }
+  }
+  if (resultPath == null) {
+    System.err.println("cannot extract: " + resultPath + " from "+ resourceURL);
+    return null;
+  }
+  resultPath=jetbrains.mps.core.tool.environment.common.StringUtil.trimEnd(resultPath,File.separator);
+  resultPath=URLUtil.unescapePercentSequences(resultPath);
+  return resultPath;
+}

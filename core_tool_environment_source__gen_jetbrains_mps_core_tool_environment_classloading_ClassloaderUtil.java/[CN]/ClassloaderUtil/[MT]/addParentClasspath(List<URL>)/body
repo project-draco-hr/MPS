@@ -1,0 +1,38 @@
+{
+  final ClassLoader loader=ClassloaderUtil.class.getClassLoader();
+  if (loader instanceof URLClassLoader) {
+    URLClassLoader urlClassLoader=(URLClassLoader)loader;
+    ContainerUtil.addAll(aClasspathElements,urlClassLoader.getURLs());
+  }
+ else {
+    try {
+      Class antClassLoaderClass=Class.forName("org.apache.tools.ant.AntClassLoader");
+      if (antClassLoaderClass.isInstance(loader) || loader.getClass().getName().equals("org.apache.tools.ant.AntClassLoader") || loader.getClass().getName().equals("org.apache.tools.ant.loader.AntClassLoader2")) {
+        final String classpath=(String)antClassLoaderClass.getDeclaredMethod("getClasspath",ClassloaderUtil.EMPTY_CLASS_ARRAY).invoke(loader,ClassloaderUtil.EMPTY_CLASS_ARRAY);
+        final StringTokenizer tokenizer=new StringTokenizer(classpath,File.separator,false);
+        while (tokenizer.hasMoreTokens()) {
+          final String token=tokenizer.nextToken();
+          aClasspathElements.add(new File(token).toURI().toURL());
+        }
+      }
+ else {
+        ClassloaderUtil.getLogger().warn("Unknown classloader: " + loader.getClass().getName());
+      }
+    }
+ catch (    ClassCastException e) {
+      ClassloaderUtil.getLogger().warn("Unknown classloader [CCE]: " + e.getMessage());
+    }
+catch (    ClassNotFoundException e) {
+      ClassloaderUtil.getLogger().warn("Unknown classloader [CNFE]: " + loader.getClass().getName());
+    }
+catch (    NoSuchMethodException e) {
+      ClassloaderUtil.getLogger().warn("Unknown classloader [NSME]: " + e.getMessage());
+    }
+catch (    IllegalAccessException e) {
+      ClassloaderUtil.getLogger().warn("Unknown classloader [IAE]: " + e.getMessage());
+    }
+catch (    InvocationTargetException e) {
+      ClassloaderUtil.getLogger().warn("Unknown classloader [ITE]: " + e.getMessage());
+    }
+  }
+}
