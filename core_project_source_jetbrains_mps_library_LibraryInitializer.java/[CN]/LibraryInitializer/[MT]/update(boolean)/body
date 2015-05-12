@@ -1,40 +1,15 @@
 {
-  final Set<SLibrary> toUnload=new HashSet<SLibrary>(myLibraries);
-  final Set<SLibrary> toLoad=new HashSet<SLibrary>();
-  myParentLoaders.clear();
-  for (  LibraryContributor libraryContributor : myContributors) {
-    for (    LibDescriptor libDescriptor : libraryContributor.getLibraries()) {
-      IFile path=FileSystem.getInstance().getFileByPath(libDescriptor.getPath());
-      ClassLoader libClassLoader=libDescriptor.getParentClassLoader();
-      SLibrary lib=new SLibrary(path,libClassLoader,libraryContributor.hiddenLanguages());
-      toUnload.remove(lib);
-      if (!myLibraries.contains(lib)) {
-        myLibraries.add(lib);
-        toLoad.add(lib);
-      }
-      IFile bundlePath=FileSystem.getInstance().isPackaged(path) ? FileSystem.getInstance().getBundleHome(path) : null;
-      ClassLoader classLoader=libClassLoader != null ? libClassLoader : LibraryInitializer.class.getClassLoader();
-      myParentLoaders.put(bundlePath != null ? bundlePath.getPath() : libDescriptor.getPath(),classLoader);
+  final Set<SLibrary> currentLibs=new HashSet<SLibrary>();
+  List<LibraryContributor> contributors=myContributors;
+  for (  LibraryContributor contributor : contributors) {
+    boolean hidden=contributor.hiddenLanguages();
+    for (    LibDescriptor pathDescriptor : contributor.getPaths()) {
+      SLibrary lib=new SLibrary(pathDescriptor,hidden);
+      currentLibs.add(lib);
     }
   }
-  myLibraries.removeAll(toUnload);
-  if (toUnload.isEmpty() && toLoad.isEmpty())   return;
-  if (!toLoad.isEmpty())   LOG.info("Loading " + toLoad.size() + " libraries");
-  if (!toUnload.isEmpty())   LOG.info("Unloading " + toUnload.size() + " libraries");
-  List<SLibrary> toUnloadList=new ArrayList<SLibrary>(toUnload);
-  final List<SLibrary> toLoadList=new ArrayList<SLibrary>(toLoad);
-  Collections.sort(toUnloadList);
-  Collections.sort(toLoadList);
-  for (  SLibrary unloadLib : toUnloadList) {
-    unloadLib.dispose();
-  }
-  myModelAccess.runWriteAction(new Runnable(){
-    @Override public void run(){
-      for (      SLibrary loadLib : toLoadList) {
-        loadLib.attach(refreshFiles);
-      }
-    }
-  }
-);
-  myCleanupManager.cleanup();
+  final Delta<SLibrary> libraryDelta=Delta.construct(myLibraries,currentLibs);
+  if (libraryDelta.isEmpty())   return;
+  updateState(refreshFiles,libraryDelta);
+  libraryDelta.apply(myLibraries);
 }
