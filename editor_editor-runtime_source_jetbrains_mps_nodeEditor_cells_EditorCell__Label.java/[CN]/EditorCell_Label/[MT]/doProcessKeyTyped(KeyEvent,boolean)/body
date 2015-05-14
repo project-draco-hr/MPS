@@ -1,10 +1,13 @@
 {
-  final int wasPosition=getCaretPosition();
-  final CellSide side;
-  if (wasPosition == 0) {
+  if (!isTextTypedEvent(keyEvent)) {
+    return false;
+  }
+  int caretPosition=getCaretPosition();
+  CellSide side;
+  if (caretPosition == 0) {
     side=CellSide.LEFT;
   }
- else   if (wasPosition == getRenderedText().length()) {
+ else   if (caretPosition == getRenderedText().length()) {
     side=CellSide.RIGHT;
   }
  else {
@@ -12,44 +15,14 @@
   }
   ModelAccess modelAccess=getContext().getRepository().getModelAccess();
   if (isEditable()) {
-    final boolean result[]=new boolean[1];
-    String groupId=new ModelAccessHelper(modelAccess).runReadAction(new Computable<String>(){
-      @Override public String compute(){
-        return getCellId() + "_" + getSNode().getNodeId().toString();
-      }
-    }
-);
-    modelAccess.executeCommand(new UndoRunnable.Base(null,groupId){
-      @Override public void run(){
-        if (processMutableKeyTyped(keyEvent,allowErrors)) {
-          getContext().flushEvents();
-          if (isErrorState() && side != null) {
-            if (allowsIntelligentInputKeyStroke(keyEvent)) {
-              String pattern=getRenderedText();
-              IntelligentInputUtil.processCell(EditorCell_Label.this,getContext(),pattern,side);
-            }
-          }
-          result[0]=true;
-        }
- else         if (isErrorState() && wasPosition == 0 && keyEvent.getKeyChar() == ' ') {
-          result[0]=true;
-        }
-      }
-    }
-);
+    ProcessKeyTypedCommand keyTypedCommand=new ProcessKeyTypedCommand(keyEvent,allowErrors,side);
+    modelAccess.executeCommand(keyTypedCommand);
     getEditor().relayout();
-    if (result[0]) {
-      return true;
-    }
+    return keyTypedCommand.getResult();
   }
-  if (!isEditable() && allowsIntelligentInputKeyStroke(keyEvent)) {
-    String pattern=new ModelAccessHelper(modelAccess).runReadAction(new Computable<String>(){
-      @Override public String compute(){
-        return getRenderedTextOn(keyEvent);
-      }
-    }
-);
-    if (!pattern.equals(getRenderedText()) && side != null) {
+ else   if (side != null) {
+    String pattern=getTextOnEvent(keyEvent);
+    if (!pattern.equals(getRenderedText())) {
       return IntelligentInputUtil.processCell(this,getContext(),pattern,side);
     }
   }
