@@ -1,20 +1,13 @@
 {
-  try {
-    final Wrappers._T<SearchQuery> query=new Wrappers._T<SearchQuery>();
-    final Wrappers._T<IResultProvider> provider=new Wrappers._T<IResultProvider>();
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        SearchScope scope=((AbstractModule)SNodeOperations.getModel(((SNode)MapSequence.fromMap(_params).get("node"))).getModule()).getScope();
-        query.value=new SearchQuery(((SNode)MapSequence.fromMap(_params).get("node")),scope);
-        provider.value=FindUtils.makeProvider(new AffectingRulesFinder());
-      }
+  final Wrappers._T<SearchQuery> query=new Wrappers._T<SearchQuery>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      SearchScope scope=((AbstractModule)SNodeOperations.getModel(((SNode)MapSequence.fromMap(_params).get("node"))).getModule()).getScope();
+      query.value=new SearchQuery(((SNode)MapSequence.fromMap(_params).get("node")),scope);
     }
+  }
 );
-    ((IOperationContext)MapSequence.fromMap(_params).get("operationContext")).getComponent(UsagesViewTool.class).findUsages(provider.value,query.value,false,true,false,"no rules found");
-  }
- catch (  Throwable t) {
-    if (LOG.isEnabledFor(Level.ERROR)) {
-      LOG.error("User's action execute method failed. Action:" + "ShowRulesWhichAffectNodeType",t);
-    }
-  }
+  IResultProvider provider=FindUtils.makeProvider(new AffectingRulesFinder());
+  UsageToolOptions opt=new UsageToolOptions().allowRunAgain(false).navigateIfSingle(false).forceNewTab(false).notFoundMessage("no rules found");
+  UsagesViewTool.showUsages(((Project)MapSequence.fromMap(_params).get("ideaProject")),provider,query.value,opt);
 }

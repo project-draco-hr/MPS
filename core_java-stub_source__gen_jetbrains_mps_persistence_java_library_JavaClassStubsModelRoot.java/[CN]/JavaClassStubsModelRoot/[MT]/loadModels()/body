@@ -1,0 +1,37 @@
+{
+  final List<SModel> result=ListSequence.fromList(new ArrayList<SModel>());
+  final Collection<String> files=getFiles(FileBasedModelRoot.SOURCE_ROOTS);
+  final Collection<String> excludedFiles=getFiles(FileBasedModelRoot.EXCLUDED);
+  Set<IFile> jarsToLoad=new HashSet<IFile>();
+  Set<IFile> cpRootsToLoad=new HashSet<IFile>();
+  for (  IFile file : CollectionSequence.fromCollection(files).select(new ISelector<String,IFile>(){
+    public IFile select(    String it){
+      return FileSystem.getInstance().getFileByPath(it);
+    }
+  }
+)) {
+    collectJarFiles(file,excludedFiles,jarsToLoad);
+    if (SetSequence.fromSet(jarsToLoad).isNotEmpty()) {
+      continue;
+    }
+    SetSequence.fromSet(cpRootsToLoad).addElement(file);
+  }
+  SetSequence.fromSet(jarsToLoad).select(new ISelector<IFile,IFile>(){
+    public IFile select(    IFile it){
+      return FileSystem.getInstance().getFileByPath(it.getPath() + "!/");
+    }
+  }
+).visitAll(new IVisitor<IFile>(){
+    public void visit(    IFile it){
+      getModelDescriptors(result,it,"",getModule());
+    }
+  }
+);
+  SetSequence.fromSet(cpRootsToLoad).visitAll(new IVisitor<IFile>(){
+    public void visit(    IFile it){
+      getModelDescriptors(result,it,"",getModule());
+    }
+  }
+);
+  return result;
+}

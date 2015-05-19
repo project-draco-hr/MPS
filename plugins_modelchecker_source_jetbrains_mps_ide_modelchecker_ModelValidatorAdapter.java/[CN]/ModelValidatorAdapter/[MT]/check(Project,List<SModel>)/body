@@ -1,0 +1,25 @@
+{
+  com.intellij.openapi.project.Project ideaProject=ProjectHelper.toIdeaProject(p);
+  ModelCheckerTool tool=ModelCheckerTool.getInstance(ideaProject);
+  if (tool == null) {
+    return true;
+  }
+  final IModifiableGenerationSettings generationSettings=GenerationSettingsProvider.getInstance().getGenerationSettings();
+  ModelCheckerViewer viewer=tool.checkModels(modelDescriptors);
+  SearchResults<ModelCheckerIssue> issues=viewer.getSearchResults();
+  int warnings=ModelCheckerUtils.getIssueCountForSeverity(issues,ModelChecker.SEVERITY_WARNING);
+  int errors=ModelCheckerUtils.getIssueCountForSeverity(issues,ModelChecker.SEVERITY_ERROR);
+  if (errors != 0) {
+    String msg=String.format("Model checker found %d errors and %d warnings. " + "Review them and don't generate models or ignore them?",errors,warnings);
+    CheckBeforeGenerationDialog dialog=new CheckBeforeGenerationDialog(ideaProject,msg,generationSettings);
+    dialog.show();
+    if (dialog.isOK()) {
+      tool.showTabWithResults(viewer,"Pre-generate validation",IdeIcons.MODEL_ICON);
+      return false;
+    }
+ else {
+      return true;
+    }
+  }
+  return true;
+}

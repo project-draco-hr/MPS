@@ -1,0 +1,37 @@
+{
+  final jetbrains.mps.project.Project mpsProject=ProjectHelper.toMPSProject(getProject());
+  int resCount=searchResults.getSearchResults().size();
+  if (resCount == 0) {
+    final ToolWindowManager manager=ToolWindowManager.getInstance(getProject());
+    manager.notifyByBalloon(TOOL_WINDOW_ID,MessageType.INFO,options.myNotFoundMessage,null,null);
+    return;
+  }
+ else   if (resCount == 1 && options.myNavigateIfSingle) {
+    final SearchResult<?> searchResult=searchResults.getSearchResults().get(0);
+    if (searchResult.getObject() instanceof SNode) {
+      final SNode node=(SNode)searchResult.getObject();
+      mpsProject.getModelAccess().runWriteInEDT(new Runnable(){
+        @Override public void run(){
+          NavigationSupport.getInstance().openNode(mpsProject,node,true,!(node.getModel() != null && node.getParent() == null));
+        }
+      }
+);
+      return;
+    }
+  }
+  int index=getCurrentTabIndex();
+  UsagesView usagesView=createUsageView(options.myRunAgain ? searchTask : null);
+  UsageViewData usageViewData=new UsageViewData(usagesView,options.myRunAgain ? searchTask : null);
+  usageViewData.setTransientView(options.myTransientView);
+  register(usageViewData);
+  usagesView.setContents(searchResults);
+  Icon icon=usagesView.getIcon();
+  String caption=usagesView.getCaption();
+  JComponent component=usagesView.getComponent();
+  Content content=addContent(component,caption,icon,true);
+  getContentManager().setSelectedContent(content);
+  if (!options.myForceNewTab) {
+    closeLastUnpinnedTab(index);
+  }
+  openTool(true);
+}

@@ -1,70 +1,63 @@
 {
-  try {
-    List<SModel> m=((List<SModel>)MapSequence.fromMap(_params).get("models"));
-    final Iterable<SModel> seq=ListSequence.fromList(m).where(new IWhereFilter<SModel>(){
-      public boolean accept(      SModel it){
-        return !(it.isReadOnly()) && it.getSource() instanceof FileDataSource;
-      }
+  List<SModel> m=((List<SModel>)MapSequence.fromMap(_params).get("models"));
+  final Iterable<SModel> seq=ListSequence.fromList(m).where(new IWhereFilter<SModel>(){
+    public boolean accept(    SModel it){
+      return !(it.isReadOnly()) && it.getSource() instanceof FileDataSource;
     }
+  }
 );
-    ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
-    final FolderModelFactory filePerRootFactory=PersistenceRegistry.getInstance().getFolderModelFactory("file-per-root");
-    modelAccess.runWriteAction(new Runnable(){
-      public void run(){
-        MPSModuleRepository.getInstance().saveAll();
-        for (        SModel smodel : Sequence.fromIterable(seq)) {
-          IFile oldFile=((FileDataSource)smodel.getSource()).getFile();
-          ModelRoot modelRoot=smodel.getModelRoot();
-          if (!(modelRoot instanceof FileBasedModelRoot)) {
-            continue;
+  ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
+  final FolderModelFactory filePerRootFactory=PersistenceRegistry.getInstance().getFolderModelFactory("file-per-root");
+  modelAccess.runWriteAction(new Runnable(){
+    public void run(){
+      MPSModuleRepository.getInstance().saveAll();
+      for (      SModel smodel : Sequence.fromIterable(seq)) {
+        IFile oldFile=((FileDataSource)smodel.getSource()).getFile();
+        ModelRoot modelRoot=smodel.getModelRoot();
+        if (!(modelRoot instanceof FileBasedModelRoot)) {
+          continue;
+        }
+        SModel newModel=PersistenceUtil.loadModel(oldFile);
+        if (newModel == null) {
+          if (LOG.isEnabledFor(Level.ERROR)) {
+            LOG.error("cannot read " + smodel);
           }
-          SModel newModel=PersistenceUtil.loadModel(oldFile);
-          if (newModel == null) {
-            if (LOG.isEnabledFor(Level.ERROR)) {
-              LOG.error("cannot read " + smodel);
-            }
-            continue;
+          continue;
+        }
+        Iterable<SModel.Problem> problems=Sequence.fromIterable(((Iterable<SModel.Problem>)newModel.getProblems())).where(new IWhereFilter<SModel.Problem>(){
+          public boolean accept(          SModel.Problem it){
+            return it.isError();
           }
-          Iterable<SModel.Problem> problems=Sequence.fromIterable(((Iterable<SModel.Problem>)newModel.getProblems())).where(new IWhereFilter<SModel.Problem>(){
-            public boolean accept(            SModel.Problem it){
-              return it.isError();
-            }
-          }
+        }
 );
-          if (Sequence.fromIterable(problems).isNotEmpty()) {
-            if (LOG.isEnabledFor(Level.ERROR)) {
-              LOG.error("cannot read " + smodel + ": "+ Sequence.fromIterable(problems).first().getText());
-            }
-            continue;
+        if (Sequence.fromIterable(problems).isNotEmpty()) {
+          if (LOG.isEnabledFor(Level.ERROR)) {
+            LOG.error("cannot read " + smodel + ": "+ Sequence.fromIterable(problems).first().getText());
           }
-          try {
-            DataSource newSource=filePerRootFactory.createNewSource((FileBasedModelRoot)modelRoot,null,newModel.getModelName(),new HashMap<String,String>());
-            SModule module=smodel.getModule();
-            filePerRootFactory.save(newModel,newSource);
-            if (module != null) {
-              ((SModuleBase)module).unregisterModel((SModelBase)smodel);
-            }
-            oldFile.delete();
-            ((AbstractModule)module).updateModelsSet();
+          continue;
+        }
+        try {
+          DataSource newSource=filePerRootFactory.createNewSource((FileBasedModelRoot)modelRoot,null,newModel.getModelName(),new HashMap<String,String>());
+          SModule module=smodel.getModule();
+          filePerRootFactory.save(newModel,newSource);
+          if (module != null) {
+            ((SModuleBase)module).unregisterModel((SModelBase)smodel);
           }
- catch (          IOException ex) {
-            if (LOG.isEnabledFor(Level.ERROR)) {
-              LOG.error("cannot write " + smodel,ex);
-            }
+          oldFile.delete();
+          ((AbstractModule)module).updateModelsSet();
+        }
+ catch (        IOException ex) {
+          if (LOG.isEnabledFor(Level.ERROR)) {
+            LOG.error("cannot write " + smodel,ex);
           }
-catch (          ModelSaveException ex) {
-            if (LOG.isEnabledFor(Level.ERROR)) {
-              LOG.error("cannot write " + smodel,ex);
-            }
+        }
+catch (        ModelSaveException ex) {
+          if (LOG.isEnabledFor(Level.ERROR)) {
+            LOG.error("cannot write " + smodel,ex);
           }
         }
       }
     }
+  }
 );
-  }
- catch (  Throwable t) {
-    if (LOG.isEnabledFor(Level.ERROR)) {
-      LOG.error("User's action execute method failed. Action:" + "ConvertToFilePerRootPersistence",t);
-    }
-  }
 }

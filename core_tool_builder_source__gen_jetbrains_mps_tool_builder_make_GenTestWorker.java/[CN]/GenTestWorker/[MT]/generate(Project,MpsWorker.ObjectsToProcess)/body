@@ -25,6 +25,18 @@
     }
   }
 ;
+  final MakeSession ms=new MakeSession(project,myMessageHandler,true){
+    @Override public IScript toScript(    ScriptBuilder scriptBuilder){
+      if (isInvokeTestsSet()) {
+        scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.tool.gentest.Test"));
+      }
+      if (isShowDiff()) {
+        scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.tool.gentest.Diff"));
+      }
+      return scriptBuilder.toScript();
+    }
+  }
+;
   IScriptController ctl=new IScriptController.Stub(new IConfigMonitor.Stub(),new GenTestWorker.MyJobMonitor(new GenTestWorker.MyProgress(startTestFormat,finishTestFormat))){
     @Override public void setup(    IPropertiesPool ppool,    Iterable<ITarget> toExecute,    Iterable<? extends IResource> input){
       super.setup(ppool,toExecute,input);
@@ -34,7 +46,7 @@
         }
       }
 ).populate(ppool);
-      new TextGenFacetInitializer().failNoTextGen(false).populate(ppool);
+      new TextGenFacetInitializer(ms).failNoTextGen(false).populate(ppool);
       Tuples._2<_FunctionTypes._return_P1_E0<? extends String,? super IFile>,Set<File>> dparams=(Tuples._2<_FunctionTypes._return_P1_E0<? extends String,? super IFile>,Set<File>>)ppool.properties(new ITarget.Name("jetbrains.mps.tool.gentest.Diff.diff"),Object.class);
       if (dparams != null && isShowDiff()) {
         dparams._0(new _FunctionTypes._return_P1_E0<String,IFile>(){
@@ -57,18 +69,6 @@
 ;
   try {
     BuildMakeService bms=new BuildMakeService();
-    MakeSession ms=new MakeSession(project,myMessageHandler,true){
-      @Override public IScript toScript(      ScriptBuilder scriptBuilder){
-        if (isInvokeTestsSet()) {
-          scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.tool.gentest.Test"));
-        }
-        if (isShowDiff()) {
-          scriptBuilder.withFacetName(new IFacet.Name("jetbrains.mps.tool.gentest.Diff"));
-        }
-        return scriptBuilder.toScript();
-      }
-    }
-;
     Future<IResult> result=bms.make(ms,collectResources(project,go.getModules(),go.getModels()),null,ctl,new GenTestWorker.MyProgressMonitorBase(startTestFormat,finishTestFormat));
     if (!(result.get().isSucessful())) {
       myErrors.add("Make was not successful " + result.get().output());

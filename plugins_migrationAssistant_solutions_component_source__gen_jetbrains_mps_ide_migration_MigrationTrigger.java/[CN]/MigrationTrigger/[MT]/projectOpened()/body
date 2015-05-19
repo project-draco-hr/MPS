@@ -1,55 +1,103 @@
 {
   if (!(myState.migrationRequired)) {
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        MPSModuleRepository.getInstance().addRepositoryListener(MigrationTrigger.this.myRepoListener);
-        ClassLoaderManager.getInstance().addClassesHandler(MigrationTrigger.this.myClassesListener);
-        myProject.getComponent(ProjectMigrationProperties.class).addListener(MigrationTrigger.this.myPropertiesListener);
-      }
-    }
-);
+    addListeners();
     ModelAccess.instance().runWriteAction(new Runnable(){
       public void run(){
-        MigrationTrigger.updateLanguageVersions(MigrationsUtil.getMigrateableModulesFromProject(myMpsProject));
-        tryMigratingProject();
+        updateUsedLanguagesVersions(MigrationsUtil.getMigrateableModulesFromProject(myMpsProject));
+        checkMigrationNeeded();
       }
     }
 );
-    return;
   }
-  saveAndSetTipsState();
-  StartupManager.getInstance(myProject).registerPostStartupActivity(new Runnable(){
-    public void run(){
-      ModelAccess.instance().runWriteAction(new Runnable(){
-        public void run(){
-          MigrationTrigger.updateLanguageVersions(MigrationsUtil.getMigrateableModulesFromProject(myMpsProject));
+ else {
+    saveAndSetTipsState();
+    StartupManager.getInstance(myProject).registerPostStartupActivity(new Runnable(){
+      public void run(){
+        ApplicationManager.getApplication().runWriteAction(new Runnable(){
+          public void run(){
+            VirtualFileUtils.refreshSynchronouslyRecursively(myProject.getBaseDir());
+            VirtualFileManager.getInstance().syncRefresh();
+            ReloadManager.getInstance().flush();
+            ProjectManagerEx.getInstanceEx().unblockReloadingProjectOnExternalChanges();
+          }
         }
-      }
 );
-      if (!(myMigrationManager.isMigrationRequired())) {
-        restoreTipsState();
-        return;
-      }
-      ApplicationManager.getApplication().runWriteAction(new Runnable(){
-        public void run(){
-          VirtualFileUtils.refreshSynchronouslyRecursively(myProject.getBaseDir());
-          VirtualFileManager.getInstance().asyncRefresh(new Runnable(){
-            public void run(){
-              SwingUtilities.invokeLater(new Runnable(){
+        SwingUtilities.invokeLater(new Runnable(){
+          public void run(){
+            myState.migrationRequired=false;
+            ModelAccess.instance().runWriteAction(new Runnable(){
+              public void run(){
+                updateUsedLanguagesVersions(MigrationsUtil.getMigrateableModulesFromProject(myMpsProject));
+              }
+            }
+);
+            final MigrationAssistantWizard wizard=new MigrationAssistantWizard(myProject,myMigrationManager,MigrationTrigger.this);
+            boolean finished=wizard.showAndGet();
+            restoreTipsState();
+            if (!(finished)) {
+              return;
+            }
+            if (myErrors == null) {
+              ApplicationManager.getApplication().runWriteAction(new Runnable(){
                 public void run(){
-                  ReloadManager.getInstance().flush();
-                  ProjectManagerEx.getInstanceEx().unblockReloadingProjectOnExternalChanges();
-                  executeWizard();
+                  ProjectManagerEx.getInstance().reloadProject(myProject);
+                }
+              }
+);
+            }
+ else {
+              MigrationErrorWizardStep lastStep=as_feb5zp_a0a0a0k0a0a0a1a0a0a0a1a0a0s(wizard.getCurrentStepObject(),MigrationErrorWizardStep.class);
+              if (lastStep == null) {
+                return;
+              }
+              StartupManager.getInstance(myProject).runWhenProjectIsInitialized(new Runnable(){
+                public void run(){
+                  ApplicationManager.getApplication().invokeLater(new Runnable(){
+                    public void run(){
+                      ModelAccess.instance().runReadAction(new Runnable(){
+                        public void run(){
+                          ModelCheckerViewer v=new ModelCheckerViewer(myProject){
+                            @Override protected void close(){
+                              ModelCheckerTool.getInstance(myProject).closeTab(this);
+                              super.close();
+                            }
+                          }
+;
+                          final SearchResults<ModelCheckerIssue> result=new SearchResults<ModelCheckerIssue>();
+                          Sequence.fromIterable(myErrors.getProblems()).visitAll(new IVisitor<Problem>(){
+                            public void visit(                            Problem it){
+                              Object r=it.getReason();
+                              ModelCheckerIssue mci;
+                              if (r instanceof SNode) {
+                                mci=new ModelCheckerIssue.NodeIssue(((org.jetbrains.mps.openapi.model.SNode)r),it.getMessage(),null);
+                              }
+ else                               if (r instanceof SModule) {
+                                mci=new ModelCheckerIssue.ModuleIssue(it.getMessage(),null);
+                              }
+ else {
+                                throw new IllegalArgumentException(r.getClass().getName());
+                              }
+                              result.add(new SearchResult<ModelCheckerIssue>(mci,r,it.getCategory()));
+                            }
+                          }
+);
+                          v.setSearchResults(result);
+                          ModelCheckerTool.getInstance(myProject).showTabWithResults(v,"Migration issues",IdeIcons.MODULE_GROUP_CLOSED);
+                        }
+                      }
+);
+                    }
+                  }
+,ModalityState.NON_MODAL);
                 }
               }
 );
             }
           }
-);
         }
+);
       }
-);
     }
-  }
 );
+  }
 }

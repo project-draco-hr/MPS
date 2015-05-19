@@ -1,9 +1,8 @@
 {
   ModelChange.assertLegalChange_new(model);
   final SModule module=model.getModule();
-  final Collection<SModule> declaredDependencies=module != null ? new GlobalModuleDependenciesManager(module).getModules(Deptype.VISIBLE) : null;
-  final Collection<Language> declaredUsedLanguages=module != null ? new GlobalModuleDependenciesManager(module).getUsedLanguages() : null;
-  Set<SModuleReference> usedLanguages=getAllImportedLanguages(model);
+  final Collection<SModule> moduleDeclaredDependencies=module != null ? new GlobalModuleDependenciesManager(module).getModules(Deptype.VISIBLE) : null;
+  Set<SLanguage> modelDeclaredUsedLanguages=getAllLanguageImports(model);
   Set<SModelReference> importedModels=new HashSet<SModelReference>();
   for (  SModel sm : allImportedModels(model)) {
     importedModels.add(sm.getReference());
@@ -11,29 +10,17 @@
   final ModelDependencyScanner modelScanner=new ModelDependencyScanner();
   modelScanner.crossModelReferences(true).usedLanguages(true).walk(model);
   for (  SLanguage language : modelScanner.getUsedLanguages()) {
-    Language lang=findModule(language);
-    if (lang == null) {
-      LOG.error("Can't find language " + language.getQualifiedName());
-      continue;
-    }
-    SModuleReference ref=lang.getModuleReference();
-    int version=lang.getLanguageVersion();
-    if (!usedLanguages.contains(ref)) {
-      if (module != null) {
-        if (respectModulesScopes && !declaredUsedLanguages.contains(lang)) {
-          ((AbstractModule)module).addUsedLanguage(ref);
-        }
-      }
-      usedLanguages.add(ref);
-      ((jetbrains.mps.smodel.SModelInternal)model).addLanguageId(MetaIdByDeclaration.ref2Id(ref),version);
+    if (!modelDeclaredUsedLanguages.contains(language)) {
+      modelDeclaredUsedLanguages.add(language);
+      ((jetbrains.mps.smodel.SModelInternal)model).addLanguage(language);
     }
   }
   for (  SModelReference targetModelReference : modelScanner.getCrossModelReferences()) {
     if (importedModels.add(targetModelReference)) {
-      if (respectModulesScopes && module != null) {
+      if (updateModuleImports && module != null) {
         SModel targetModelDescriptor=SModelRepository.getInstance().getModelDescriptor(targetModelReference);
         SModule targetModule=targetModelDescriptor == null ? null : targetModelDescriptor.getModule();
-        if (targetModule != null && !declaredDependencies.contains(targetModule)) {
+        if (targetModule != null && !moduleDeclaredDependencies.contains(targetModule)) {
           ((AbstractModule)module).addDependency(targetModule.getModuleReference(),false);
         }
       }

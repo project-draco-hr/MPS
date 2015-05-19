@@ -1,101 +1,79 @@
 {
-  List<Problem> result=ListSequence.fromList(new ArrayList<Problem>());
-  Collection<DependencyProblem> badModuleProblems=findBadModules(modules,maxErrors);
+  final Wrappers._int _maxErrors=new Wrappers._int(maxErrors);
+  final List<Problem> result=ListSequence.fromList(new ArrayList<Problem>());
+  Collection<DependencyProblem> badModuleProblems=findBadModules(modules,_maxErrors.value);
   ListSequence.fromList(result).addSequence(CollectionSequence.fromCollection(badModuleProblems));
-  maxErrors-=CollectionSequence.fromCollection(badModuleProblems).count();
-  if (maxErrors == 0) {
+  _maxErrors.value-=CollectionSequence.fromCollection(badModuleProblems).count();
+  if (_maxErrors.value == 0) {
     return result;
   }
-  Collection<BinaryModelProblem> badModelProblems=findBinaryModels(modules,maxErrors);
+  Collection<BinaryModelProblem> badModelProblems=findBinaryModels(modules,_maxErrors.value);
   ListSequence.fromList(result).addSequence(CollectionSequence.fromCollection(badModelProblems));
-  maxErrors-=CollectionSequence.fromCollection(badModelProblems).count();
-  if (maxErrors == 0) {
+  _maxErrors.value-=CollectionSequence.fromCollection(badModelProblems).count();
+  if (_maxErrors.value == 0) {
     return result;
   }
   if (progressCallback != null) {
     progressCallback.invoke(0.1);
   }
-  Collection<LanguageMissingProblem> missingLangProblems=findMissingLanguages(modules,maxErrors,new _FunctionTypes._void_P1_E0<Double>(){
-    public void invoke(    Double fraction){
-      if (progressCallback != null) {
-        progressCallback.invoke(0.1 + 0.45 * fraction);
-      }
+  final Set<SLanguage> missingLangs=SetSequence.fromSet(new HashSet<SLanguage>());
+  final Set<SAbstractConcept> missingConcepts=SetSequence.fromSet(new HashSet<SAbstractConcept>());
+  final Set<SConceptFeature> missingFeatures=SetSequence.fromSet(new HashSet<SConceptFeature>());
+  Iterable<SModel> models=Sequence.fromIterable(modules).translate(new ITranslator2<SModule,SModel>(){
+    public Iterable<SModel> translate(    SModule it){
+      return it.getModels();
     }
   }
 );
-  ListSequence.fromList(result).addSequence(CollectionSequence.fromCollection(missingLangProblems));
-  maxErrors-=CollectionSequence.fromCollection(missingLangProblems).count();
-  if (maxErrors == 0) {
-    return result;
-  }
-  Set<SLanguage> missingLangs=SetSequence.fromSet(new HashSet<SLanguage>());
-  SetSequence.fromSet(missingLangs).addSequence(CollectionSequence.fromCollection(missingLangProblems).select(new ISelector<LanguageMissingProblem,SLanguage>(){
-    public SLanguage select(    LanguageMissingProblem it){
-      return it.getLanguage();
-    }
-  }
-));
-  Set<SAbstractConcept> missingConcepts=SetSequence.fromSet(new HashSet<SAbstractConcept>());
-  Set<SConceptFeature> missingFeatures=SetSequence.fromSet(new HashSet<SConceptFeature>());
-  int modulesCount=Sequence.fromIterable(modules).count();
-  int processedModules=0;
-  for (  SModule module : Sequence.fromIterable(modules)) {
-    for (    SNode node : Sequence.fromIterable(allNodes(module.getModels()))) {
-      SConcept concept=node.getConcept();
-      if (!(concept.isValid())) {
-        if (SetSequence.fromSet(missingLangs).contains(concept.getLanguage()) || SetSequence.fromSet(missingConcepts).contains(concept)) {
-          continue;
+  int modelsCount=Sequence.fromIterable(models).count();
+  int processedModels=0;
+  for (  SModel model : Sequence.fromIterable(models)) {
+    ValidationUtil.validateModelContent(model.getRootNodes(),new Processor<ValidationProblem>(){
+      public boolean process(      ValidationProblem vp){
+        if (vp instanceof LanguageMissingError) {
+          LanguageMissingError err=(LanguageMissingError)vp;
+          if (SetSequence.fromSet(missingLangs).contains(err.getLanguage())) {
+            return true;
+          }
+          SetSequence.fromSet(missingLangs).addElement(err.getLanguage());
+          if (err.isCompletelyAbsent()) {
+            ListSequence.fromList(result).addElement(new LanguageAbsentInRepoProblem(err.getLanguage(),err.getNode()));
+          }
+ else {
+            ListSequence.fromList(result).addElement(new LanguageNotLoadedProblem(err.getLanguage(),err.getNode()));
+          }
         }
-        SetSequence.fromSet(missingConcepts).addElement(concept);
-        ListSequence.fromList(result).addElement(new ConceptMissingProblem(concept,node));
-        maxErrors--;
-        if (maxErrors == 0) {
-          return result;
+ else         if (vp instanceof ConceptMissingError) {
+          ConceptMissingError err=(ConceptMissingError)vp;
+          SConcept concept=err.getConcept();
+          if (SetSequence.fromSet(missingLangs).contains(concept.getLanguage()) || SetSequence.fromSet(missingConcepts).contains(concept)) {
+            return true;
+          }
+          SetSequence.fromSet(missingConcepts).addElement(concept);
+          ListSequence.fromList(result).addElement(new ConceptMissingProblem(concept,err.getNode()));
         }
-        continue;
-      }
-      List<SProperty> props=IterableUtil.asList(concept.getProperties());
-      for (      SProperty p : Sequence.fromIterable(node.getProperties())) {
-        if (props.contains(p) || SetSequence.fromSet(missingFeatures).contains(p)) {
-          continue;
+ else         if (vp instanceof ConceptFeatureMissingError) {
+          ConceptFeatureMissingError err=(ConceptFeatureMissingError)vp;
+          SAbstractConcept concept=err.getFeature().getContainingConcept();
+          if (SetSequence.fromSet(missingLangs).contains(concept.getLanguage()) || SetSequence.fromSet(missingConcepts).contains(concept) || SetSequence.fromSet(missingFeatures).contains(err.getFeature())) {
+            return true;
+          }
+          SetSequence.fromSet(missingFeatures).addElement(err.getFeature());
+          ListSequence.fromList(result).addElement(new ConceptFeatureMissingProblem(err.getFeature(),err.getNode()));
         }
-        SetSequence.fromSet(missingFeatures).addElement(p);
-        ListSequence.fromList(result).addElement(new ConceptFeatureMissingProblem(p,node));
-        maxErrors--;
-        if (maxErrors == 0) {
-          return result;
+ else {
         }
-      }
-      List<SContainmentLink> links=IterableUtil.asList(concept.getContainmentLinks());
-      for (      SNode n : Sequence.fromIterable(node.getChildren())) {
-        SContainmentLink l=n.getContainmentLink();
-        if (links.contains(l) || SetSequence.fromSet(missingFeatures).contains(l)) {
-          continue;
-        }
-        SetSequence.fromSet(missingFeatures).addElement(l);
-        ListSequence.fromList(result).addElement(new ConceptFeatureMissingProblem(l,node));
-        maxErrors--;
-        if (maxErrors == 0) {
-          return result;
-        }
-      }
-      List<SReferenceLink> refs=IterableUtil.asList(concept.getReferenceLinks());
-      for (      SReference r : Sequence.fromIterable(node.getReferences())) {
-        SReferenceLink l=r.getLink();
-        if (refs.contains(l) || SetSequence.fromSet(missingFeatures).contains(l)) {
-          continue;
-        }
-        SetSequence.fromSet(missingFeatures).addElement(l);
-        ListSequence.fromList(result).addElement(new ConceptFeatureMissingProblem(l,node));
-        maxErrors--;
-        if (maxErrors == 0) {
-          return result;
-        }
+        _maxErrors.value--;
+        return _maxErrors.value > 0;
       }
     }
-    processedModules++;
+);
+    if (_maxErrors.value == 0) {
+      return result;
+    }
+    processedModels++;
     if (progressCallback != null) {
-      progressCallback.invoke(0.55 + 0.45 * processedModules / modulesCount);
+      progressCallback.invoke(0.1 + 0.9 * processedModels / modelsCount);
     }
   }
   return result;

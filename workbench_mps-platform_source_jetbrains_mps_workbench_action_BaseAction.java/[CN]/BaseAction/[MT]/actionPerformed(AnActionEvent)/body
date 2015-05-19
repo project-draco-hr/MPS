@@ -1,27 +1,30 @@
 {
-  final THashMap<String,Object> params=new THashMap<String,Object>();
-  ModelAccess.instance().runReadAction(new Runnable(){
+  final Map<String,Object> params=new ModelAccessHelper(getModelAccess(event)).runReadAction(new CollectActionData(event));
+  final Runnable r=new UndoRunnable.Base(getTemplatePresentation().getText(),null){
     @Override public void run(){
-      collectActionData(event,params);
-    }
-  }
-);
-  if (myExecuteOutsideCommand) {
-    doExecute(event,params);
-  }
- else {
-    final Runnable r=new UndoRunnable.Base(getTemplatePresentation().getText(),null){
-      @Override public void run(){
+      try {
         doExecute(event,params);
       }
+ catch (      Exception ex) {
+        final Logger log=LogManager.getLogger(getClass());
+        if (log.isEnabledFor(Level.ERROR)) {
+          log.error(String.format("User's action execute method failed. Action: %s. Class: %s",getName(),BaseAction.this.getClass().getName()),ex);
+        }
+      }
     }
+  }
 ;
+  if (myExecuteOutsideCommand) {
+    r.run();
+  }
+ else {
     Project project=getEventProject(event);
     if (project != null) {
-      ProjectHelper.getModelAccess(project).executeCommand(r);
+      getModelAccess(event).executeCommand(r);
     }
  else {
-      MPSModuleRepository.getInstance().getModelAccess().runWriteAction(r);
+      Logger.getLogger(BaseAction.class).error(String.format("Action %s needs a command but is executed without project.",getClass().getName()));
+      getModelAccess(event).runWriteAction(r);
     }
   }
 }

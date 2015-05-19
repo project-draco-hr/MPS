@@ -1,0 +1,35 @@
+{
+  final SearchResults[] results=new SearchResults[1];
+  if (targetScope == null) {
+    myReferencesView.setContents(new SearchResults());
+    return results[0];
+  }
+  ProgressManager.getInstance().run(new Task.Modal(myProject,"Analyzing dependencies",true){
+    @Override public void run(    @NotNull ProgressIndicator indicator){
+      final ProgressMonitor monitor=new ProgressMonitorAdapter(indicator);
+      final Wrappers._T<SearchResults> result=new Wrappers._T<SearchResults>();
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          try {
+            if (myIsMeta) {
+              monitor.start("filtering nodes",Sequence.fromIterable(mySourceNodes).count());
+              result.value=myReferencesFinder.getLanguageUsagesSearchResults(mySourceNodes,myScope,targetScope,monitor);
+            }
+ else {
+              monitor.start("filtering references",Sequence.fromIterable(mySourceNodes).count());
+              result.value=myReferencesFinder.getRefsBetweenScopes(mySourceNodes,myScope,targetScope,monitor);
+            }
+          }
+  finally {
+            monitor.done();
+          }
+        }
+      }
+);
+      results[0]=result.value;
+      myReferencesView.setContents(result.value);
+    }
+  }
+);
+  return results[0];
+}

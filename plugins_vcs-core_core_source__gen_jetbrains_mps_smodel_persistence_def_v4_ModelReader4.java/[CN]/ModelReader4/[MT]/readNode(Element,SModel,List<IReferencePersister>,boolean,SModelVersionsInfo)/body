@@ -1,0 +1,47 @@
+{
+  String rawFqName=nodeElement.getAttributeValue(VCSPersistenceSupport.TYPE);
+  String conceptFqName=VersionUtil.getConceptFQName(rawFqName);
+  jetbrains.mps.smodel.SNode node=SNodeFactory.newRegular(conceptFqName);
+  VersionUtil.fetchConceptVersion(rawFqName,node,versionsInfo);
+  String idValue=nodeElement.getAttributeValue(VCSPersistenceSupport.ID);
+  if (idValue != null) {
+    SNodeId id=jetbrains.mps.smodel.SNodeId.fromString(idValue);
+    if (id == null) {
+      LOG.error("invalid id string");
+      return null;
+    }
+    node.setId(id);
+  }
+  List properties=nodeElement.getChildren(VCSPersistenceSupport.PROPERTY);
+  for (  Object property : properties) {
+    Element propertyElement=(Element)property;
+    String raw=propertyElement.getAttributeValue(VCSPersistenceSupport.NAME);
+    String propertyName=VersionUtil.getPropertyName(raw,node,versionsInfo);
+    String propertyValue=propertyElement.getAttributeValue(VCSPersistenceSupport.VALUE);
+    if (propertyValue != null) {
+      SNodeAccessUtil.setProperty(node,propertyName,propertyValue);
+    }
+  }
+  List links=nodeElement.getChildren(VCSPersistenceSupport.LINK);
+  for (  Object link : links) {
+    Element linkElement=(Element)link;
+    ReferencePersister4 referencePersister=createReferencePersister();
+    referencePersister.fillFields(linkElement,node,useUIDs,versionsInfo);
+    referenceDescriptors.add(referencePersister);
+  }
+  List childNodes=nodeElement.getChildren(VCSPersistenceSupport.NODE);
+  for (  Object childNode1 : childNodes) {
+    Element childNodeElement=(Element)childNode1;
+    String rawRole=childNodeElement.getAttributeValue(VCSPersistenceSupport.ROLE);
+    String role=VersionUtil.getRole(rawRole);
+    SNode childNode=readNode(childNodeElement,model,referenceDescriptors,useUIDs,versionsInfo);
+    if (role == null || childNode == null) {
+      LOG.errorWithTrace("Error reading child node in node " + SNodeOperations.getDebugText(node));
+    }
+ else {
+      node.addChild(role,childNode);
+      VersionUtil.fetchChildNodeRoleVersion(rawRole,childNode,versionsInfo);
+    }
+  }
+  return node;
+}

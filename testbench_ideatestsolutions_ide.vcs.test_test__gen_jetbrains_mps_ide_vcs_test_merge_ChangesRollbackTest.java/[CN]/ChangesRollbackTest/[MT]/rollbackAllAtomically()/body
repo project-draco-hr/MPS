@@ -1,0 +1,35 @@
+{
+  makeChanges();
+  final SModel model=getTestModel();
+  final List<ModelChange> oppositeChanges=ListSequence.fromList(check_p3cuek_a0a0c0c(myDiff.getChangeSet())).select(new ISelector<ModelChange,ModelChange>(){
+    public ModelChange select(    ModelChange ch){
+      return ch.getOppositeChange();
+    }
+  }
+).toListSequence();
+  testChanges(new Runnable(){
+    public void run(){
+      final NodeCopier nc=new NodeCopier(model);
+      ListSequence.fromList(oppositeChanges).where(new IWhereFilter<ModelChange>(){
+        public boolean accept(        ModelChange ch){
+          return ch instanceof NodeGroupChange;
+        }
+      }
+).visitAll(new IVisitor<ModelChange>(){
+        public void visit(        ModelChange ch){
+          ((NodeGroupChange)ch).prepare();
+        }
+      }
+);
+      ListSequence.fromList(oppositeChanges).visitAll(new IVisitor<ModelChange>(){
+        public void visit(        ModelChange ch){
+          ch.apply(model,nc);
+        }
+      }
+);
+      nc.restoreIds(true);
+    }
+  }
+);
+  Assert.assertTrue(ListSequence.fromList(myDiff.getChangeSet().getModelChanges()).isEmpty());
+}

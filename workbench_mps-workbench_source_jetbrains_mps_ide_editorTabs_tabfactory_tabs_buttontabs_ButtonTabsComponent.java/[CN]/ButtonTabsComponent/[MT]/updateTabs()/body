@@ -1,22 +1,22 @@
 {
-  if (isDisposedNode())   return;
-  if (getLastNode() != null && getLastNode().resolve(MPSModuleRepository.getInstance()) == null) {
-    onNodeChange(myBaseNode.resolve(MPSModuleRepository.getInstance()));
+  if (isDisposed()) {
+    return;
+  }
+  if (getEditedNode() != null && getEditedNode().resolve(getProject().getRepository()) == null) {
+    editNode(myBaseNode);
   }
   myRealTabs.clear();
-  ArrayList<RelationDescriptor> tabs=new ArrayList<RelationDescriptor>(myPossibleTabs);
-  Collections.sort(tabs,new RelationComparator());
   final NodeChangeCallback callback=new NodeChangeCallback(){
-    @Override public void changeNode(    SNode newNode){
-      onNodeChange(newNode);
+    @Override public void changeNode(    SNodeReference newNode){
+      editNode(newNode);
     }
   }
 ;
   TabEditorLayout newContent=updateDocumentsAndNodes();
-  for (  RelationDescriptor tabDescriptor : tabs) {
+  for (  RelationDescriptor tabDescriptor : myPossibleTabs) {
     if (newContent.covers(tabDescriptor)) {
       final ButtonEditorTab tab=new ButtonEditorTab(this,myRealTabs.size(),tabDescriptor,newContent.get(tabDescriptor));
-      final SelectTabAction action=new SelectTabAction(tab,callback);
+      final SelectTabAction action=new SelectTabAction(getProject(),tab,callback);
       tab.setSelectTabAction(action);
       action.registerShortcut(myEditor);
       myRealTabs.add(tab);
@@ -28,13 +28,13 @@
     group.add(tab.getSelectTabAction());
   }
   if (myToolbar != null) {
-    getComponent().remove(myToolbar.getComponent());
+    removeContent(myToolbar.getComponent());
   }
   ActionToolbar actionToolbar=ActionManager.getInstance().createActionToolbar(ActionPlaces.UNKNOWN,group,true);
   actionToolbar.setLayoutPolicy(ActionToolbar.WRAP_LAYOUT_POLICY);
   myToolbar=actionToolbar;
-  getComponent().add(myToolbar.getComponent(),BorderLayout.CENTER);
-  if (getLastNode() != null) {
-    onNodeChange(getLastNode().resolve(MPSModuleRepository.getInstance()));
+  setContent(myToolbar.getComponent());
+  if (getEditedNode() != null) {
+    editNode(getEditedNode());
   }
 }

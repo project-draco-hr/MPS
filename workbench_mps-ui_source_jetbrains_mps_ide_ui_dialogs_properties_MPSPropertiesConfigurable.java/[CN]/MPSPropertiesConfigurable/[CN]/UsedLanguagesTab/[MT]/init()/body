@@ -9,79 +9,12 @@
   usedLangsTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
   myUsedLangsTableModel=getUsedLangsTableModel();
   usedLangsTable.setModel(myUsedLangsTableModel);
-  usedLangsTable.setDefaultRenderer(SModuleReference.class,getTableCellRender());
-  JComboBox roleEditor=new JComboBox(new EnumComboBoxModel<DependenciesTableItemRole>(DependenciesTableItemRole.class));
-  usedLangsTable.setDefaultEditor(DependenciesTableItemRole.class,new DefaultCellEditor(roleEditor));
-  usedLangsTable.setDefaultRenderer(DependenciesTableItemRole.class,new ComboBoxTableRenderer<DependenciesTableItemRole>(DependenciesTableItemRole.values()){
-    @Override protected String getTextFor(    @NotNull final DependenciesTableItemRole value){
-      return value.toString();
-    }
-  }
-);
-  ToolbarDecorator decorator=ToolbarDecorator.createDecorator(usedLangsTable);
-  decorator.setAddAction(new AnActionButtonRunnable(){
-    @Override public void run(    AnActionButton anActionButton){
-      Iterable<SModule> modules=new ConditionalIterable<SModule>(getProjectModules(),new ModuleInstanceCondition(Language.class,DevKit.class));
-      modules=new ConditionalIterable<SModule>(modules,new VisibleModuleCondition());
-      ComputeRunnable<List<SModuleReference>> c=new ComputeRunnable<List<SModuleReference>>(new ModuleCollector(modules));
-      myProject.getModelAccess().runReadAction(c);
-      List<SModuleReference> list=CommonChoosers.showModuleSetChooser(myProject,"Choose Language or DevKit",c.getResult());
-      for (      SModuleReference reference : list) {
-        myUsedLangsTableModel.addItem(reference);
-      }
-    }
-  }
-).setRemoveAction(new AnActionButtonRunnable(){
-    @Override public void run(    AnActionButton anActionButton){
-      int first=usedLangsTable.getSelectionModel().getMinSelectionIndex();
-      int last=usedLangsTable.getSelectionModel().getMaxSelectionIndex();
-      for (      int i : usedLangsTable.getSelectedRows()) {
-        if (!confirmRemove(myUsedLangsTableModel.getValueAt(i,UsedLangsTableModel.ITEM_COLUMN)))         return;
-      }
-      TableUtil.removeSelectedItems(usedLangsTable);
-      myUsedLangsTableModel.fireTableRowsDeleted(first,last);
-      first=Math.max(0,first - 1);
-      usedLangsTable.getSelectionModel().setSelectionInterval(first,first);
-    }
-  }
-);
-  FindAnActionButton findAnActionButton=getFindAnAction(usedLangsTable);
-  if (findAnActionButton != null)   decorator.addExtraAction(findAnActionButton);
+  usedLangsTable.setDefaultRenderer(UsedLangsTableModel.Import.class,getTableCellRender());
+  ToolbarDecorator decorator=createToolbar(usedLangsTable);
   decorator.setPreferredSize(new Dimension(500,300));
   JPanel table=decorator.createPanel();
   table.setBorder(IdeBorderFactory.createBorder());
   usedLangsTab.add(table,new GridConstraints(0,0,1,1,GridConstraints.ANCHOR_CENTER,GridConstraints.FILL_BOTH,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW,null,null,null,0,false));
   setTabComponent(usedLangsTab);
-  new SpeedSearchBase<JBTable>(usedLangsTable){
-    @Override public int getSelectedIndex(){
-      return usedLangsTable.getSelectedRow();
-    }
-    @Override protected int convertIndexToModel(    int viewIndex){
-      return usedLangsTable.convertRowIndexToModel(viewIndex);
-    }
-    @Override public Object[] getAllElements(){
-      final int count=myUsedLangsTableModel.getRowCount();
-      Object[] elements=new Object[count];
-      for (int idx=0; idx < count; idx++) {
-        elements[idx]=myUsedLangsTableModel.getValueAt(idx,UsedLangsTableModel.ITEM_COLUMN);
-      }
-      return elements;
-    }
-    @Override public String getElementText(    Object element){
-      if (!(element instanceof SModuleReference))       return "";
-      return ((SModuleReference)element).getModuleName();
-    }
-    @Override public void selectElement(    Object element,    String selectedText){
-      final int count=myUsedLangsTableModel.getRowCount();
-      for (int row=0; row < count; row++) {
-        if (element.equals(myUsedLangsTableModel.getValueAt(row,UsedLangsTableModel.ITEM_COLUMN))) {
-          final int viewRow=usedLangsTable.convertRowIndexToView(row);
-          usedLangsTable.getSelectionModel().setSelectionInterval(viewRow,viewRow);
-          TableUtil.scrollSelectionToVisible(usedLangsTable);
-          break;
-        }
-      }
-    }
-  }
-.setComparator(new SpeedSearchComparator(false,true));
+  new TableColumnSearch(usedLangsTable,UsedLangsTableModel.ITEM_COLUMN).setComparator(new SpeedSearchComparator(false,true));
 }
