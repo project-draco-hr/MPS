@@ -6,29 +6,21 @@
   final String filePath=projectFile.getAbsolutePath();
   final com.intellij.openapi.project.Project[] project=new com.intellij.openapi.project.Project[1];
   final Exception[] exc=new Exception[]{null};
-  try {
-    GuiUtils.runOrInvokeAndWait(new Runnable(){
-      public void run(){
-        try {
-          if (LOG.isInfoEnabled()) {
-            LOG.info("Load and open the project with path '" + filePath + "'");
-          }
-          project[0]=projectManager.loadAndOpenProject(filePath);
-          VirtualFileManager.getInstance().syncRefresh();
+  ThreadUtils.runInUIThreadAndWait(new Runnable(){
+    public void run(){
+      try {
+        if (LOG.isInfoEnabled()) {
+          LOG.info("Load and open the project with path '" + filePath + "'");
         }
- catch (        Exception e) {
-          exc[0]=e;
-        }
+        project[0]=projectManager.loadAndOpenProject(filePath);
+        VirtualFileManager.getInstance().syncRefresh();
+      }
+ catch (      Exception e) {
+        exc[0]=e;
       }
     }
+  }
 );
-  }
- catch (  InterruptedException e) {
-    throw new RuntimeException(e);
-  }
-catch (  InvocationTargetException e) {
-    throw new RuntimeException(e);
-  }
   if (exc[0] != null) {
     throw new RuntimeException("ProjectManager could not load project from " + projectFile.getAbsolutePath(),exc[0]);
   }
