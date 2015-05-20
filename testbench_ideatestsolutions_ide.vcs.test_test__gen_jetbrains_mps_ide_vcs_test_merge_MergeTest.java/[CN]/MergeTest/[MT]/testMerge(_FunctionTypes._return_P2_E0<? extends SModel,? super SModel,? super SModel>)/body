@@ -1,0 +1,23 @@
+{
+  final Wrappers._T<SModel> mine=new Wrappers._T<SModel>();
+  final Wrappers._T<SModel> theirs=new Wrappers._T<SModel>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      String baseString=PersistenceUtil.saveModel(getTestModel(),getDefaultExt());
+      mine.value=PersistenceUtil.loadModel(baseString,getDefaultExt());
+      theirs.value=PersistenceUtil.loadModel(baseString,getDefaultExt());
+      SModel result=changer.invoke(mine.value,theirs.value);
+      final MergeSession session=MergeSession.createMergeSession(getTestModel(),mine.value,theirs.value);
+      Assert.assertTrue(Sequence.fromIterable(session.getAllChanges()).all(new IWhereFilter<ModelChange>(){
+        public boolean accept(        ModelChange c){
+          return Sequence.fromIterable(session.getConflictedWith(c)).isEmpty();
+        }
+      }
+));
+      session.applyChanges(Sequence.fromIterable(session.getAllChanges()).toListSequence());
+      ModelChangeSet changes=ChangeSetBuilder.buildChangeSet(result,session.getResultModel());
+      Assert.assertTrue(dumpChangeSet(changes,session),ListSequence.fromList(changes.getModelChanges()).isEmpty());
+    }
+  }
+);
+}

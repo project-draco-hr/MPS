@@ -1,4 +1,29 @@
 {
-  List<String> errors=CheckingTestsUtil.checkGenerationStatus(myModule);
+  final List<String> errors=new ArrayList<String>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      SModel sm : extractModels(false)) {
+        SModule module=sm.getModule();
+        if (module == null) {
+          errors.add("Model without a module: " + sm.getReference().toString());
+          continue;
+        }
+        String genHash=ModelGenerationStatusManager.getLastGenerationHash(((GeneratableSModel)sm));
+        if (genHash == null) {
+          errors.add("No generated hash for " + sm.getReference().toString());
+          continue;
+        }
+        String realHash=((GeneratableSModel)sm).getModelHash();
+        if (realHash == null) {
+          errors.add("cannot gen cache for " + sm.getReference().toString());
+          continue;
+        }
+        if (!(realHash.equals(genHash))) {
+          errors.add("model requires generation: " + sm.getReference().toString() + " last genHash:"+ genHash+ " modelHash:"+ realHash);
+        }
+      }
+    }
+  }
+);
   Assert.assertTrue("Try to regenerate models:\n" + CheckingTestsUtil.formatErrors(errors),errors.isEmpty());
 }

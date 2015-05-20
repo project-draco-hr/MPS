@@ -1,25 +1,18 @@
 {
-  try {
-    final EditorCell editorCell=EditorActionUtils.getEditorCellToInsert(((EditorComponent)MapSequence.fromMap(_params).get("editorComponent")));
-    if (((jetbrains.mps.nodeEditor.cells.EditorCell)editorCell).isFirstCaretPosition()) {
-      if (!(((jetbrains.mps.nodeEditor.cells.EditorCell)editorCell).isLastCaretPosition()) || !(StyleAttributesUtil.isLastPositionAllowed(editorCell.getStyle()))) {
-        EditorActionUtils.callInsertBeforeAction(editorCell);
+  final EditorCell editorCell=EditorActionUtils.getEditorCellToInsert(((EditorComponent)MapSequence.fromMap(_params).get("editorComponent")));
+  if (((jetbrains.mps.nodeEditor.cells.EditorCell)editorCell).isFirstCaretPosition()) {
+    if (!(((jetbrains.mps.nodeEditor.cells.EditorCell)editorCell).isLastCaretPosition()) || !(StyleAttributesUtil.isLastPositionAllowed(editorCell.getStyle()))) {
+      EditorActionUtils.callInsertBeforeAction(editorCell);
+      return;
+    }
+  }
+  ModelAccess.instance().runWriteInEDT(new Runnable(){
+    public void run(){
+      if (editorCell instanceof EditorCell_Property && ((EditorCell_Property)editorCell).commit()) {
         return;
       }
+      EditorActionUtils.callInsertAction(editorCell);
     }
-    ModelAccess.instance().runWriteInEDT(new Runnable(){
-      public void run(){
-        if (editorCell instanceof EditorCell_Property && ((EditorCell_Property)editorCell).commit()) {
-          return;
-        }
-        EditorActionUtils.callInsertAction(editorCell);
-      }
-    }
+  }
 );
-  }
- catch (  Throwable t) {
-    if (LOG.isEnabledFor(Level.ERROR)) {
-      LOG.error("User's action execute method failed. Action:" + "Insert",t);
-    }
-  }
 }

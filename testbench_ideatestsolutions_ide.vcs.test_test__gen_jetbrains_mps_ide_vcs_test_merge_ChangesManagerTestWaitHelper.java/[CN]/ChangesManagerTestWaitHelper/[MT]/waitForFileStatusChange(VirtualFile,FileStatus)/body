@@ -1,0 +1,37 @@
+{
+  final FileStatusManager fsm=FileStatusManager.getInstance(myProject);
+  waitForSomething(new Runnable(){
+    public void run(){
+      final Wrappers._T<FileStatusListener> listener=new Wrappers._T<FileStatusListener>();
+      final _FunctionTypes._void_P0_E0 stopIfNeeded=new _FunctionTypes._void_P0_E0(){
+        public void invoke(){
+          if (expectedFileStatus == fsm.getStatus(file)) {
+            fsm.removeFileStatusListener(listener.value);
+            try {
+              Thread.sleep(100);
+            }
+ catch (            InterruptedException e) {
+              e.printStackTrace();
+            }
+            waitCompleted();
+          }
+        }
+      }
+;
+      listener.value=new FileStatusListener(){
+        @Override public void fileStatusesChanged(){
+          stopIfNeeded.invoke();
+        }
+        @Override public void fileStatusChanged(        @NotNull VirtualFile f){
+          stopIfNeeded.invoke();
+        }
+      }
+;
+      fsm.addFileStatusListener(listener.value);
+      VcsDirtyScopeManager.getInstance(myProject).fileDirty(file);
+      ChangeListManagerImpl.getInstanceImpl(myProject).scheduleUpdate();
+      stopIfNeeded.invoke();
+    }
+  }
+);
+}

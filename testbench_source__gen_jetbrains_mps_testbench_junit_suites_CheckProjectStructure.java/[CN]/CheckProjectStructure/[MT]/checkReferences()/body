@@ -1,4 +1,29 @@
 {
-  List<String> errors=CheckingTestsUtil.checkReferences(myModule);
+  final List<String> errors=new ArrayList<String>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      SModel sm : extractModels(true)) {
+        StringBuilder errorMessages=new StringBuilder();
+        errorMessages.append("errors in model: ").append(sm.getReference().toString()).append("\n");
+        boolean withErrors=false;
+        for (        SNode node : SNodeUtil.getDescendants(sm)) {
+          for (          SReference ref : node.getReferences()) {
+            if (jetbrains.mps.smodel.SNodeUtil.hasReferenceMacro(node,ref.getRole())) {
+              continue;
+            }
+            if (SNodeOperations.getTargetNodeSilently(ref) != null) {
+              continue;
+            }
+            withErrors=true;
+            errorMessages.append("Broken reference in model {").append(SNodeOperations.getModelLongName(node.getModel())).append("}").append(" node ").append(node.getNodeId().toString()).append("(").append(node).append(")\n");
+          }
+        }
+        if (withErrors) {
+          errors.add("Broken References: " + errorMessages.toString());
+        }
+      }
+    }
+  }
+);
   Assert.assertTrue("Reference errors:\n" + CheckingTestsUtil.formatErrors(errors),errors.isEmpty());
 }

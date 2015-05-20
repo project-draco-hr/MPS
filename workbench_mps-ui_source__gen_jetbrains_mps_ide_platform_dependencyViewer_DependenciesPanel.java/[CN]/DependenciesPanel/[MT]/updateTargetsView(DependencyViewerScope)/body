@@ -6,11 +6,16 @@
       ModelAccess.instance().runReadAction(new Runnable(){
         public void run(){
           ProgressMonitor monitor=new ProgressMonitorAdapter(indicator);
+          mySourceNodes=myReferencesFinder.getNodes(sourceScope);
           try {
-            monitor.start(null,100);
-            List<SNode> nodes=myReferencesFinder.getNodes(sourceScope,monitor.subTask(20));
-            mySourceNodes=nodes;
-            results.value=(myIsMeta ? myReferencesFinder.getUsedLanguagesSearchResults(nodes,sourceScope,monitor.subTask(80)) : myReferencesFinder.getTargetSearchResults(nodes,sourceScope,monitor.subTask(80)));
+            if (myIsMeta) {
+              monitor.start("computing used languages",Sequence.fromIterable(mySourceNodes).count());
+              results.value=myReferencesFinder.getUsedConcepts(mySourceNodes,sourceScope,monitor);
+            }
+ else {
+              monitor.start("computing references' targets",Sequence.fromIterable(mySourceNodes).count());
+              results.value=myReferencesFinder.findRefsFromScopeToOuter(mySourceNodes,sourceScope,monitor);
+            }
           }
   finally {
             monitor.done();

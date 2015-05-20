@@ -1,36 +1,29 @@
 {
-  try {
-    for (    File backupFile : Sequence.fromIterable(ReRunMergeFromBackup_Action.this.getBackupFiles(_params))) {
-      try {
-        String[] modelsAsText=MergeBackupUtil.loadZippedModelsAsText(backupFile,MergeVersion.values());
-        String mine=modelsAsText[MergeVersion.MINE.ordinal()];
-        String base=modelsAsText[MergeVersion.BASE.ordinal()];
-        String repository=modelsAsText[MergeVersion.REPOSITORY.ordinal()];
-        SModelReference uid=ModelPersistence.loadDescriptor(new InputSource(new StringReader(mine))).getModelReference();
-        if (uid == null || !(uid.equals(((SModel)MapSequence.fromMap(_params).get("model")).getReference()))) {
-          continue;
-        }
-        mine=ReRunMergeFromBackup_Action.this.selectMineModel(ModelPersistence.modelToString(((SModelBase)((SModel)MapSequence.fromMap(_params).get("model"))).getSModelInternal()),mine,_params);
-        if (mine == null) {
-          return;
-        }
-        MergeRequest mergeRequest=DiffRequestFactory.getInstance().createMergeRequest(mine,repository,base,VirtualFileUtils.getVirtualFile(ReRunMergeFromBackup_Action.this.getModelFile(_params)),((Project)MapSequence.fromMap(_params).get("project")),null,null);
-        mergeRequest.setVersionTitles(new String[]{"Mine","Base version","Repository"});
-        DiffManager.getInstance().getDiffTool().show(mergeRequest);
-        return;
-      }
- catch (      IOException e) {
-        if (LOG.isEnabledFor(Level.WARN)) {
-          LOG.warn("",e);
-        }
+  for (  File backupFile : Sequence.fromIterable(ReRunMergeFromBackup_Action.this.getBackupFiles(_params))) {
+    try {
+      String[] modelsAsText=MergeBackupUtil.loadZippedModelsAsText(backupFile,MergeVersion.values());
+      String mine=modelsAsText[MergeVersion.MINE.ordinal()];
+      String base=modelsAsText[MergeVersion.BASE.ordinal()];
+      String repository=modelsAsText[MergeVersion.REPOSITORY.ordinal()];
+      SModelReference uid=VCSPersistenceSupport.loadDescriptor(new InputSource(new StringReader(mine))).getModelReference();
+      if (uid == null || !(uid.equals(((SModel)MapSequence.fromMap(_params).get("model")).getReference()))) {
         continue;
       }
+      mine=ReRunMergeFromBackup_Action.this.selectMineModel(ModelPersistence.modelToString(((SModelBase)((SModel)MapSequence.fromMap(_params).get("model"))).getSModelInternal()),mine,_params);
+      if (mine == null) {
+        return;
+      }
+      MergeRequest mergeRequest=DiffRequestFactory.getInstance().createMergeRequest(mine,repository,base,VirtualFileUtils.getVirtualFile(ReRunMergeFromBackup_Action.this.getModelFile(_params)),((Project)MapSequence.fromMap(_params).get("project")),null,null);
+      mergeRequest.setVersionTitles(new String[]{"Mine","Base version","Repository"});
+      DiffManager.getInstance().getDiffTool().show(mergeRequest);
+      return;
     }
-    Messages.showInfoMessage("No suitable backup files for " + ((SModel)MapSequence.fromMap(_params).get("model")).getReference().getModelName() + "was not found.","No Backup Files Found");
-  }
- catch (  Throwable t) {
-    if (LOG.isEnabledFor(Level.ERROR)) {
-      LOG.error("User's action execute method failed. Action:" + "ReRunMergeFromBackup",t);
+ catch (    IOException e) {
+      if (LOG.isEnabledFor(Level.WARN)) {
+        LOG.warn("",e);
+      }
+      continue;
     }
   }
+  Messages.showInfoMessage("No suitable backup files for " + ((SModel)MapSequence.fromMap(_params).get("model")).getReference().getModelName() + "was not found.","No Backup Files Found");
 }

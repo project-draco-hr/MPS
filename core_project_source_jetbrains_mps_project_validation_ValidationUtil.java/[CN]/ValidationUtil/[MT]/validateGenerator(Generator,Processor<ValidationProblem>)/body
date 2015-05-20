@@ -1,0 +1,25 @@
+{
+  if (!validateAbstractModule(generator,processor))   return;
+  for (  SModuleReference gen : generator.getModuleDescriptor().getDepGenerators()) {
+    if (ModuleRepositoryFacade.getInstance().getModule(gen) != null)     continue;
+    if (!processor.process(new ValidationProblem(Severity.ERROR,"Can't find generator dependency: " + gen.getModuleName())))     return;
+  }
+  Set<String> usedLanguages=new HashSet<String>();
+  ModelDependencyScanner depScan=new ModelDependencyScanner();
+  depScan.crossModelReferences(true).usedLanguages(false);
+  boolean anyGeneratorModelNotLoaded=false;
+  for (  SModel model : generator.getModels()) {
+    if (!model.isLoaded()) {
+      anyGeneratorModelNotLoaded|=SModelStereotype.isGeneratorModel(model);
+      continue;
+    }
+    if (SModelStereotype.isGeneratorModel(model)) {
+      usedLanguages.addAll(ModelContentUtil.getUsedLanguageNamespacesInTemplateModel(model));
+    }
+    depScan.walk(model);
+  }
+  if (!warnMissingTargetLangRuntime(generator,usedLanguages,processor))   return;
+  if (!anyGeneratorModelNotLoaded) {
+    warnStrictGeneratorDependencies(generator,depScan,processor);
+  }
+}

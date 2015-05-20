@@ -9,18 +9,27 @@
       }
     }
   }
-  ModelAccess.instance().runReadAction(new Runnable(){
+  if (myDisableOnNoProject && getEventProject(e) == null) {
+    disable(e.getPresentation());
+    return;
+  }
+  getModelAccess(e).runReadAction(new Runnable(){
     @Override public void run(){
-      if (myDisableOnNoProject && e.getData(PlatformDataKeys.PROJECT) == null) {
+      Map<String,Object> params=new CollectActionData(e).compute();
+      if (params == null) {
         disable(e.getPresentation());
         return;
       }
-      THashMap<String,Object> params=new THashMap<String,Object>();
-      if (!collectActionData(e,params)) {
-        disable(e.getPresentation());
-        return;
+      try {
+        doUpdate(e,params);
       }
-      doUpdate(e,params);
+ catch (      Exception ex) {
+        final Logger log=LogManager.getLogger(getClass());
+        if (log.isEnabledFor(Level.ERROR)) {
+          log.error(String.format("User's action doUpdate method failed. Action: %s. Class: %s",getTemplatePresentation().getText(),BaseAction.this.getClass().getName()),ex);
+        }
+        disable(e.getPresentation());
+      }
     }
   }
 );

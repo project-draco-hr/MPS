@@ -1,33 +1,20 @@
 {
-  try {
-    if (!(((SModule)MapSequence.fromMap(_params).get("module")) instanceof AbstractModule)) {
-      return;
-    }
-    final Language language=((Language)((SModule)MapSequence.fromMap(_params).get("module")));
-    final Wrappers._T<NewModelDialog> d=new Wrappers._T<NewModelDialog>();
-    ((MPSProject)MapSequence.fromMap(_params).get("project")).getModelAccess().runReadAction(new Runnable(){
-      public void run(){
-        d.value=new NewModelDialog(((MPSProject)MapSequence.fromMap(_params).get("project")),((AbstractModule)((SModule)MapSequence.fromMap(_params).get("module"))),language.getModuleName(),SModelStereotype.NONE,true);
-      }
-    }
-);
-    d.value.show();
-    final SModel result=d.value.getResult();
-    if (result == null) {
-      return;
-    }
-    ((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess().executeCommand(new Runnable(){
-      public void run(){
-        LanguageDescriptor descriptor=language.getModuleDescriptor();
-        descriptor.getAccessoryModels().add(result.getReference());
-        language.save();
-      }
-    }
-);
+  if (!(event.getData(MPSCommonDataKeys.CONTEXT_MODULE) instanceof AbstractModule)) {
+    return;
   }
- catch (  Throwable t) {
-    if (LOG.isEnabledFor(Level.ERROR)) {
-      LOG.error("User's action execute method failed. Action:" + "NewAccessoryModel",t);
+  final Language language=((Language)event.getData(MPSCommonDataKeys.CONTEXT_MODULE));
+  NewModelDialog d=new NewModelDialog(event.getData(MPSCommonDataKeys.MPS_PROJECT),((AbstractModule)event.getData(MPSCommonDataKeys.CONTEXT_MODULE)),language.getModuleName(),SModelStereotype.NONE,true);
+  d.show();
+  final SModel result=d.getResult();
+  if (result == null) {
+    return;
+  }
+  event.getData(MPSCommonDataKeys.MPS_PROJECT).getModelAccess().executeCommand(new Runnable(){
+    public void run(){
+      LanguageDescriptor descriptor=language.getModuleDescriptor();
+      descriptor.getAccessoryModels().add(result.getReference());
+      language.save();
     }
   }
+);
 }
