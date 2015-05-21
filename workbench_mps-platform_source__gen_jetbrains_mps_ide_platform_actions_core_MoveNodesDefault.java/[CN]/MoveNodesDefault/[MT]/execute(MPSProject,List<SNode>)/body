@@ -1,7 +1,7 @@
 {
   final Wrappers._T<SModel> targetModelDescriptor=new Wrappers._T<SModel>();
   final SRepository repository=project.getRepository();
-  ModelAccess modelAccess=repository.getModelAccess();
+  final ModelAccess modelAccess=repository.getModelAccess();
   modelAccess.runReadAction(new Runnable(){
     public void run(){
       targetModelDescriptor.value=SNodeOperations.getModel(ListSequence.fromList(target).first());
@@ -33,7 +33,30 @@
       if (!(canBeInserted(newLocation,target))) {
         return;
       }
-      RefactoringAccess.getInstance().getRefactoringFacade().execute(RefactoringContext.createRefactoringContextByName("jetbrains.mps.lang.core.refactorings.MoveNodes",Arrays.asList("target"),Arrays.asList(newLocation),target,project));
+      final Map<SNode,List<SReference>> usages=MapSequence.fromMap(new HashMap<SNode,List<SReference>>());
+      Set<SReference> allUsages=findUsages(project,target);
+      for (      SReference ref : SetSequence.fromSet(allUsages)) {
+        if (MapSequence.fromMap(usages).get(ref.getTargetNode()) == null) {
+          MapSequence.fromMap(usages).put(ref.getTargetNode(),ListSequence.fromList(new ArrayList<SReference>()));
+        }
+        ListSequence.fromList(MapSequence.fromMap(usages).get(ref.getTargetNode())).addElement(ref);
+      }
+      SearchResults<SNode> searchResults=usagesToSearchResults(target,usages);
+      RefactoringAccessEx.getInstance().showRefactoringView(ProjectHelper.toIdeaProject(project),new RefactoringViewAction(){
+        public void performAction(        RefactoringViewItem refactoringViewItem){
+          modelAccess.executeCommand(new Runnable(){
+            public void run(){
+              moveNodes(newLocation,target);
+              for (              SNode node : SetSequence.fromSet(MapSequence.fromMap(usages).keySet())) {
+                updateUsages(MapSequence.fromMap(usages).get(node),node);
+              }
+            }
+          }
+);
+          refactoringViewItem.close();
+        }
+      }
+,searchResults,false,"Move nodes");
     }
   }
 );
