@@ -1,0 +1,24 @@
+{
+  Iterable<TemplateWeavingRule> rules=myGenerator.getRuleManager().getWeaving_MappingRules();
+  myReadyRules.clear();
+  final BlockedReductionsData ruleBlocks=myGenerator.getBlockedReductionsData();
+  final FastNodeFinder nodeFinder=FastNodeFinderManager.get(inputModel);
+  for (  TemplateWeavingRule rule : rules) {
+    boolean includeInheritors=rule.applyToInheritors();
+    for (    SNode applicableNode : nodeFinder.getNodes(rule.getApplicableConcept2(),includeInheritors)) {
+      if (ruleBlocks.isWeavingBlocked(applicableNode,rule)) {
+        continue;
+      }
+      QueryExecutionContext executionContext=myGenerator.getExecutionContext(applicableNode);
+      if (executionContext == null) {
+        continue;
+      }
+      TemplateExecutionEnvironment environment=new TemplateExecutionEnvironmentImpl(new TemplateProcessor(myGenerator),executionContext,new ReductionTrack(myGenerator.getBlockedReductionsData()));
+      DefaultTemplateContext context=new DefaultTemplateContext(environment,applicableNode,null);
+      if (executionContext.isApplicable(rule,context)) {
+        myReadyRules.add(new ArmedWeavingRule(rule,environment,applicableNode));
+        ruleBlocks.blockWeaving(applicableNode,rule);
+      }
+    }
+  }
+}
