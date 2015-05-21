@@ -1,6 +1,7 @@
 {
   final Wrappers._T<SModel> targetModelDescriptor=new Wrappers._T<SModel>();
-  ModelAccess modelAccess=project.getRepository().getModelAccess();
+  final SRepository repository=project.getRepository();
+  ModelAccess modelAccess=repository.getModelAccess();
   modelAccess.runReadAction(new Runnable(){
     public void run(){
       targetModelDescriptor.value=SNodeOperations.getModel(ListSequence.fromList(target).first());
@@ -16,20 +17,23 @@
   if (newLocation == null) {
     return;
   }
-  modelAccess.runReadInEDT(new Runnable(){
-    @Override public void run(){
+  modelAccess.runReadAction(new Runnable(){
+    public void run(){
       for (      SNode node : ListSequence.fromList(target)) {
-        if (!(SNodeUtil.isAccessible(node,MPSModuleRepository.getInstance()))) {
+        if (!(SNodeUtil.isAccessible(node,repository))) {
           return;
         }
       }
-      if (newLocation instanceof SNode && !(SNodeUtil.isAccessible(((SNode)newLocation),MPSModuleRepository.getInstance()))) {
+      if (newLocation instanceof SNode && !(SNodeUtil.isAccessible(((SNode)newLocation),repository))) {
         return;
       }
-      if (newLocation instanceof SModel && (((SModel)newLocation).getReference().resolve(MPSModuleRepository.getInstance()) != newLocation)) {
+      if (newLocation instanceof SModel && (((SModel)newLocation).getReference().resolve(repository) != newLocation)) {
         return;
       }
-      executeRefactoring.run(newLocation);
+      if (!(canBeInserted(newLocation,target))) {
+        return;
+      }
+      RefactoringAccess.getInstance().getRefactoringFacade().execute(RefactoringContext.createRefactoringContextByName("jetbrains.mps.lang.core.refactorings.MoveNodes",Arrays.asList("target"),Arrays.asList(newLocation),target,project));
     }
   }
 );
