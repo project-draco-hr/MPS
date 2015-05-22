@@ -1,10 +1,19 @@
 {
-  for (  Change executeMapSrcNodeMacroChange : myExecuteMapSrcNodeMacroChanges) {
-    executeMapSrcNodeMacroChange.doChange(generator);
+  SNode[] newOutputNodes=new SNode[myPostProcessors.size()];
+  int i=0;
+  for (  NodePostProcessor p : myPostProcessors) {
+    SNode child=p.substitute();
+    if (child != p.getOutputAnchor()) {
+      ChildAdopter ca=new ChildAdopter(generator);
+      ca.checkIsExpectedLanguage(Collections.singletonList(child),p.getTemplateNode(),p.getTemplateContext());
+      child=ca.adopt(child,p.getTemplateContext());
+      generator.replacePlaceholderNode(p,child);
+    }
+    newOutputNodes[i++]=child;
   }
-  myExecuteMapSrcNodeMacroChanges.clear();
-  for (  Change executeMapSrcNodeMacroPostProcChange : myExecuteMapSrcNodeMacroPostProcChanges) {
-    executeMapSrcNodeMacroPostProcChange.doChange(generator);
+  i=0;
+  for (  NodePostProcessor p : myPostProcessors) {
+    p.postProcess(newOutputNodes[i++]);
   }
-  myExecuteMapSrcNodeMacroPostProcChanges.clear();
+  myPostProcessors.clear();
 }

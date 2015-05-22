@@ -1,5 +1,4 @@
 {
-  SNode macro_mapperFunction=RuleUtil.getMapSrc_MapperFunction(macro);
   final Collection<SNode> newInputNodes;
   if (myIsSoleInput) {
     newInputNodes=wrapAsList(getNewInputNode(templateContext));
@@ -12,18 +11,20 @@
   }
   ArrayList<SNode> outputNodes=new ArrayList<SNode>(newInputNodes.size());
   final TemplateExecutionEnvironment env=templateContext.getEnvironment();
+  SNode macro_mapperFunction=RuleUtil.getMapSrc_MapperFunction(macro);
+  final DelayedChanges delayedChanges=myTemplateProcessor.getGenerator().getDelayedChanges();
   for (  SNode newInputNode : newInputNodes) {
     TemplateContext newcontext=templateContext.subContext(newInputNode);
     if (macro_mapperFunction != null) {
       SNode childToReplaceLater=env.createOutputNode(templateNode.getConcept());
       outputNodes.add(childToReplaceLater);
-      myTemplateProcessor.getGenerator().getDelayedChanges().addExecuteMapSrcNodeMacroChange(macro,childToReplaceLater,newcontext,env.getQueryExecutor());
+      delayedChanges.add(new MapSrcMacroProcessorInterpreted(macro,childToReplaceLater,newcontext));
     }
  else {
       List<SNode> _outputNodes=nextMacro(newcontext);
       outputNodes.addAll(_outputNodes);
       for (      SNode outputNode : _outputNodes) {
-        myTemplateProcessor.getGenerator().getDelayedChanges().addExecuteMapSrcNodeMacroPostProcChange(macro,outputNode,newcontext,env.getQueryExecutor());
+        delayedChanges.add(new MapSrcMacroProcessorInterpreted(macro,outputNode,newcontext));
       }
     }
   }
