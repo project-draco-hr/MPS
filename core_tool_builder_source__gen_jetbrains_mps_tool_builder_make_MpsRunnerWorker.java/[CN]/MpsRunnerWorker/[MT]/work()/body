@@ -14,21 +14,20 @@
   Environment environment=new MpsEnvironment(config);
   setupEnvironment();
   Project project=createDummyProject();
-  final Set<SModule> modules=new LinkedHashSet<SModule>();
-  for (  final File module : SetSequence.fromSet(myWhatToDo.getModules())) {
-    project.getModelAccess().runWriteAction(new Runnable(){
-      public void run(){
-        processModuleFile(module,modules);
-      }
-    }
-);
-  }
   MpsRunnerProperties properties=new MpsRunnerProperties(myWhatToDo);
   String className=properties.getStartClass();
   String methodName=properties.getStartMethod();
-  boolean isClassFound=runClass(className,methodName,project);
+  final SModuleReference solutionRef=ModuleReference.parseReference(properties.getSolution());
+  final Wrappers._T<SModule> module=new Wrappers._T<SModule>();
+  project.getModelAccess().runWriteAction(new Runnable(){
+    public void run(){
+      module.value=GlobalScope.getInstance().resolve(solutionRef);
+    }
+  }
+);
+  boolean isClassFound=runClass(module.value,className,methodName);
   if (!(isClassFound)) {
-    error("cannot find class " + className + " to run.");
+    error("cannot find class " + className + " in solution "+ solutionRef);
   }
   dispose();
 }
