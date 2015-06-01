@@ -1,0 +1,52 @@
+{
+  final SRepository repository=project.getRepository();
+  final ModelAccess modelAccess=repository.getModelAccess();
+  init();
+  showChooseDialog();
+  if (newLocation == null) {
+    return;
+  }
+  modelAccess.runReadAction(new Runnable(){
+    public void run(){
+      for (      SNode node : ListSequence.fromList(target)) {
+        if (!(SNodeUtil.isAccessible(node,repository))) {
+          return;
+        }
+      }
+      if (newLocation instanceof SNode && !(SNodeUtil.isAccessible(((SNode)newLocation),repository))) {
+        return;
+      }
+      if (newLocation instanceof SModel && (((SModel)newLocation).getReference().resolve(repository) != newLocation)) {
+        return;
+      }
+      if (!(canBeInserted(newLocation,target))) {
+        return;
+      }
+      final Map<SNode,List<SReference>> usages=MapSequence.fromMap(new HashMap<SNode,List<SReference>>());
+      Set<SReference> allUsages=findUsages(project,target);
+      for (      SReference ref : SetSequence.fromSet(allUsages)) {
+        if (MapSequence.fromMap(usages).get(ref.getTargetNode()) == null) {
+          MapSequence.fromMap(usages).put(ref.getTargetNode(),ListSequence.fromList(new ArrayList<SReference>()));
+        }
+        ListSequence.fromList(MapSequence.fromMap(usages).get(ref.getTargetNode())).addElement(ref);
+      }
+      SearchResults<SNode> searchResults=usagesToSearchResults(target,usages);
+      RefactoringAccessEx.getInstance().showRefactoringView(ProjectHelper.toIdeaProject(project),new RefactoringViewAction(){
+        public void performAction(        RefactoringViewItem refactoringViewItem){
+          modelAccess.executeCommand(new Runnable(){
+            public void run(){
+              moveNodes(newLocation,target);
+              for (              SNode node : SetSequence.fromSet(MapSequence.fromMap(usages).keySet())) {
+                updateUsages(MapSequence.fromMap(usages).get(node),node);
+              }
+            }
+          }
+);
+          refactoringViewItem.close();
+        }
+      }
+,searchResults,false,"Move nodes");
+    }
+  }
+);
+}
