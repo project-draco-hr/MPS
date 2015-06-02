@@ -1,27 +1,17 @@
 {
-  CompilerManager compilerManager=CompilerManager.getInstance(project);
+  CompilerManager compilerManager=CompilerManager.getInstance(myProject);
   final List<String> errorMessages=new ArrayList<String>();
-  project.getMessageBus().connect().subscribe(CustomBuilderMessageHandler.TOPIC,new RefreshFilesCompilationStatusListener());
-  project.getMessageBus().connect().subscribe(CustomBuilderMessageHandler.TOPIC,new NavigateToNodesWithErrors(errorMessages));
+  myProject.getMessageBus().connect().subscribe(CustomBuilderMessageHandler.TOPIC,new RefreshFilesCompilationStatusListener());
+  myProject.getMessageBus().connect().subscribe(CustomBuilderMessageHandler.TOPIC,new NavigateToNodesWithErrors(errorMessages));
   compilerManager.addCompilableFileType(MPSFileTypeFactory.MPS_FILE_TYPE);
   compilerManager.addCompilableFileType(MPSFileTypeFactory.MPS_ROOT_FILE_TYPE);
   compilerManager.addBeforeTask(new CompileTask(){
     @Override public boolean execute(    final CompileContext context){
       final CompileScope compileScope=context.getCompileScope();
       if (compileScope == null)       return true;
-      StringBuilder sb=new StringBuilder();
-      PluginLibraryContributor pluginLibContributor=ApplicationManager.getApplication().getComponent(PluginLibraryContributor.class);
-      for (      LibDescriptor library : pluginLibContributor.getPaths()) {
-        String path=FileUtil.toSystemDependentName(library.getPath());
-        if (sb.length() > 0) {
-          sb.append(";");
-        }
-        sb.append(path);
-      }
-      compileScope.putUserData(MPSMakeConstants.MPS_LANGUAGES,sb.toString());
-      final File repositoryCache=new File(CompilerPaths.getCompilerSystemDirectory(project),"mps_repository.dat");
+      final File repositoryCache=new File(CompilerPaths.getCompilerSystemDirectory(myProject),"mps_repository.dat");
       final long start=System.nanoTime();
-      ModelAccess.instance().runReadAction(new Runnable(){
+      ProjectHelper.toMPSProject(myProject).getModelAccess().runReadAction(new Runnable(){
         @Override public void run(){
           CachedRepositoryData cachedRepositoryData=MPSRepositoryUtil.buildData(LibraryInitializer.getInstance().getModuleHandles());
           ModelOutputStream mos=null;
@@ -40,7 +30,7 @@
       }
 );
       long result=(System.nanoTime() - start) / 1000000;
-      if (CompilerWorkspaceConfiguration.getInstance(project).COMPILER_PROCESS_ADDITIONAL_VM_OPTIONS.contains("-Dmps.jps.debug=true")) {
+      if (CompilerWorkspaceConfiguration.getInstance(myProject).COMPILER_PROCESS_ADDITIONAL_VM_OPTIONS.contains("-Dmps.jps.debug=true")) {
         context.addMessage(CompilerMessageCategory.INFORMATION,"repository cache saved in " + result + " ms",null,0,0);
       }
       return true;
