@@ -1,0 +1,65 @@
+{
+  final SNode inputNode=context.getInput();
+  TemplateReductionRule reductionRule=null;
+  List<TemplateReductionRule> conceptRules=ruleFinder.findReductionRules(inputNode);
+  if (conceptRules == null) {
+    return null;
+  }
+  try {
+    for (    TemplateReductionRule rule : conceptRules) {
+      reductionRule=rule;
+      if (!myReductionTrack.isReductionBlocked(inputNode,rule)) {
+        if (rule instanceof TemplateRuleWithCondition) {
+          if (!getQueryExecutor().isApplicable((TemplateRuleWithCondition)rule,context)) {
+            continue;
+          }
+        }
+        try {
+          myReductionTrack.enter(inputNode,rule);
+          Collection<SNode> outputNodes=getQueryExecutor().applyRule(rule,context);
+          if (outputNodes != null) {
+            SNodeId in=context.getInput() == null ? null : context.getInput().getNodeId();
+            getTrace().trace(in,GenerationTracerUtil.translateOutput(outputNodes),rule.getRuleNode());
+            return outputNodes;
+          }
+        }
+ catch (        DismissTopMappingRuleException ex) {
+          if (ex.isLoggingNeeded() && reductionRule != null) {
+            SNodeReference ruleNode=reductionRule.getRuleNode();
+            String messageText=String.format("-- dismissed reduction rule: %s",ex.getMessage() == null ? "<no message>" : ex.getMessage());
+            if (ex.isInfo()) {
+              getLogger().info(ruleNode,messageText);
+            }
+ else             if (ex.isWarning()) {
+              getLogger().warning(ruleNode,messageText);
+            }
+ else {
+              getLogger().error(ruleNode,messageText);
+            }
+          }
+        }
+ finally {
+          myReductionTrack.leave();
+        }
+      }
+    }
+  }
+ catch (  AbandonRuleInputException ex) {
+    return Collections.emptyList();
+  }
+catch (  TemplateProcessingFailureException ex) {
+    SNodeReference ruleNode=reductionRule.getRuleNode();
+    if (myFailedRules.add(ruleNode)) {
+      getLogger().error(ruleNode,String.format("Reduction rule failed: %s",ex.getMessage()),ex.asProblemDescription());
+    }
+  }
+catch (  GenerationFailureException ex) {
+    throw ex;
+  }
+catch (  GenerationCanceledException ex) {
+    throw ex;
+  }
+catch (  GenerationException ex) {
+  }
+  return null;
+}
