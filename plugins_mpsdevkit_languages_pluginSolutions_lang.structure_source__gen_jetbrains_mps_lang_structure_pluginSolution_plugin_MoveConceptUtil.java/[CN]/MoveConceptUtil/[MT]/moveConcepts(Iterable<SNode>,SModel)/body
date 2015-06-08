@@ -1,0 +1,33 @@
+{
+  SModel sourceModel=SNodeOperations.getModel(Sequence.fromIterable(conceptsToMove).first());
+  Language sourceLanguage=Language.getLanguageFor(sourceModel);
+  Language targetLanguage=Language.getLanguageFor(targetModel);
+  Map<LanguageAspect,List<SNode>> aspectNodes=MoveConceptUtil.getAspectNodes(sourceLanguage,conceptsToMove);
+  Map<SNode,SModel> moveAspects=MapSequence.fromMap(new HashMap<SNode,SModel>());
+  for (  SNode concept : Sequence.fromIterable(conceptsToMove)) {
+    MapSequence.fromMap(moveAspects).put(concept,targetModel);
+  }
+  for (  LanguageAspect aspect : SetSequence.fromSet(MapSequence.fromMap(aspectNodes).keySet())) {
+    SModel toModel=aspect.getOrCreate(targetLanguage);
+    for (    SNode aspectNode : ListSequence.fromList(MapSequence.fromMap(aspectNodes).get(aspect))) {
+      MapSequence.fromMap(moveAspects).put(aspectNode,toModel);
+    }
+  }
+  Map<SNode,SNode> copyMap=MapSequence.fromMap(new HashMap<SNode,SNode>());
+  copyNodesToModels(moveAspects,copyMap);
+  for (  SNode concept : Sequence.fromIterable(conceptsToMove)) {
+    moveConcept(concept,SNodeOperations.cast(MapSequence.fromMap(copyMap).get(concept),MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x1103553c5ffL,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration")),targetModel);
+  }
+  Iterable<SNode> conceptsToRest=ListSequence.fromList(SModelOperations.roots(sourceModel,MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x1103553c5ffL,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration"))).subtract(Sequence.fromIterable(conceptsToMove));
+  if (Sequence.fromIterable(conceptsToRest).translate(new ITranslator2<SNode,SNode>(){
+    public Iterable<SNode> translate(    SNode it){
+      return BehaviorReflection.invokeVirtual((Class<List<SNode>>)((Class)Object.class),it,"virtual_getImmediateSuperconcepts_1222430305282",new Object[]{});
+    }
+  }
+).intersect(Sequence.fromIterable(conceptsToMove)).isNotEmpty()) {
+    sourceLanguage.addExtendedLanguage(targetLanguage.getModuleReference());
+  }
+  for (  SModuleReference ext : ListSequence.fromList(calculateExtendsDependencies(conceptsToMove))) {
+    targetLanguage.addExtendedLanguage(ext);
+  }
+}

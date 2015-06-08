@@ -1,0 +1,41 @@
+{
+  Iterable<ExtensionFunction<T,R>> objects=getObjects();
+  List<ExtensionFunction<T,R>> allApplicable=new ArrayList<ExtensionFunction<T,R>>();
+  for (  ExtensionFunction<T,R> ext : objects) {
+    if (ext.applicable(arg)) {
+      allApplicable.add(ext);
+    }
+  }
+  if (allApplicable.isEmpty()) {
+    throw new IllegalStateException("No applicable extensions for extension point " + toString());
+  }
+  for (  ExtensionFunction<T,R> ext1 : allApplicable) {
+    Set<ExtensionFunction<T,R>> allOverridden=new HashSet<ExtensionFunction<T,R>>(ext1.getOverridden());
+    ExtensionFunction<T,R> notIncluded;
+    do {
+      notIncluded=null;
+      for (      ExtensionFunction<T,R> item : allOverridden) {
+        if (!allOverridden.containsAll(item.getOverridden())) {
+          notIncluded=item;
+          break;
+        }
+      }
+      if (notIncluded != null) {
+        allOverridden.addAll(notIncluded.getOverridden());
+      }
+    }
+ while (notIncluded != null);
+    boolean ext1OverridesAll=true;
+    for (    ExtensionFunction<T,R> ext2 : allApplicable) {
+      if (ext2 != ext1 && !allOverridden.contains(ext2)) {
+        ext1OverridesAll=false;
+        break;
+      }
+    }
+    if (ext1OverridesAll) {
+      allApplicable.remove(ext1);
+      return ext1.apply(arg);
+    }
+  }
+  throw new IllegalStateException("Multiple applicable extensions for extension point " + toString());
+}
