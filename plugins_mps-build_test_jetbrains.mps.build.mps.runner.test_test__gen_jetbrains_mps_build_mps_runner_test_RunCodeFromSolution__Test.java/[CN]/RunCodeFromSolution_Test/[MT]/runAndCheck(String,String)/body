@@ -1,2 +1,31 @@
 {
+  File scriptFile=new File(scriptPath,scriptFilename);
+  File okFile=new File(scriptPath,"ok.log");
+  if (okFile.exists() && !(okFile.delete())) {
+    Assert.fail("Cannot delete " + okFile.getAbsolutePath());
+  }
+  ProcessHandler process=null;
+  try {
+    process=new Ant_Command().createProcess(scriptFile.getPath());
+  }
+ catch (  ExecutionException ex) {
+    ex.printStackTrace();
+    Assert.fail("Exception during execution.");
+  }
+  OutputRedirector.redirect(process,new ProcessAdapter(){
+    @Override public void onTextAvailable(    ProcessEvent event,    Key key){
+      if (ProcessOutputTypes.STDERR.equals(key)) {
+        System.err.print(event.getText());
+      }
+    }
+  }
+);
+  int exitCode=ProcessHandlerBuilder.startAndWait(process);
+  if (exitCode != 0) {
+    Assert.fail("Exit with code " + exitCode);
+  }
+  if (!(okFile.exists())) {
+    Assert.fail("Test failed.");
+  }
+  okFile.delete();
 }
