@@ -1,0 +1,34 @@
+{
+  Layout realLayout=(Layout)layout;
+  LinkedHashMap<TextAreaToken,StringBuilder> textMap=new LinkedHashMap<TextAreaToken,StringBuilder>();
+  Map<TextAreaImpl,TextAreaToken> chunk2token=new HashMap<TextAreaImpl,TextAreaToken>();
+  for (  Entry<TextAreaToken,TextAreaImpl> e : myChunks.entrySet()) {
+    final StringBuilder sb=new StringBuilder(e.getValue().value());
+    textMap.put(e.getKey(),sb);
+    chunk2token.put(e.getValue(),e.getKey());
+  }
+  Set<TextAreaToken> consumedChunks=new HashSet<TextAreaToken>();
+  for (  Entry<TextMark,TextAreaToken> e : realLayout.mySubstitutions.entrySet()) {
+    Marker m=(Marker)e.getKey();
+    StringBuilder target=textMap.get(chunk2token.get(m.myTextArea));
+    StringBuilder replacement=textMap.get(e.getValue());
+    target.replace(m.myStartOffset,m.myStartOffset + m.myLength,replacement.toString());
+    m.myLength=replacement.length();
+    consumedChunks.add(e.getValue());
+  }
+  for (  TextAreaToken t : consumedChunks) {
+    textMap.remove(t);
+  }
+  StringBuilder result=new StringBuilder();
+  for (  StringBuilder chunkText : textMap.values()) {
+    result.append(chunkText);
+  }
+  final TextSnapshot s=new TextSnapshot(result);
+  s.addMarks(myMarkers);
+  int chunkOffset=0;
+  for (  Entry<TextAreaToken,StringBuilder> e : textMap.entrySet()) {
+    s.setOffset(myChunks.get(e.getKey()),chunkOffset);
+    chunkOffset+=e.getValue().length();
+  }
+  return s;
+}
