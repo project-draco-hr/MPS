@@ -2,19 +2,26 @@
   TextGenBuffer buffer=new TextGenBuffer(withDebugInfo,buffers);
   buffer.putUserObject(PACKAGE_NAME,jetbrains.mps.util.SNodeOperations.getModelLongName(node.getModel()));
   buffer.putUserObject(ROOT_NODE,node);
+  final TraceInfoCollector tic;
+  if (withDebugInfo) {
+    tic=TraceInfoGenerationUtil.init(buffer);
+  }
+ else {
+    tic=null;
+  }
   appendNodeText(buffer,node);
   Map<SNode,TraceablePositionInfo> positionInfo=null;
   Map<SNode,ScopePositionInfo> scopeInfo=null;
   Map<SNode,UnitPositionInfo> unitInfo=null;
-  if (withDebugInfo) {
-    positionInfo=TraceInfoGenerationUtil.getUserObjects(buffer,TraceInfoGenerationUtil.POSITION_INFO);
-    scopeInfo=TraceInfoGenerationUtil.getUserObjects(buffer,TraceInfoGenerationUtil.SCOPE_INFO);
-    unitInfo=TraceInfoGenerationUtil.getUserObjects(buffer,TraceInfoGenerationUtil.UNIT_INFO);
+  if (tic != null) {
+    positionInfo=tic.getTracePositions();
+    scopeInfo=tic.getScopePositions();
+    unitInfo=tic.getUnitPositions();
     int topLength=buffer.getTopBufferLineCount();
     topLength++;
-    adjustPositions(topLength,positionInfo);
-    adjustPositions(topLength,scopeInfo);
-    adjustPositions(topLength,unitInfo);
+    adjustPositions(topLength,positionInfo.values());
+    adjustPositions(topLength,scopeInfo.values());
+    adjustPositions(topLength,unitInfo.values());
   }
   List<String> dependencies=getUserObjectCollection(DEPENDENCY,node,buffer,(Set<String>)buffer.getUserObject(EXTENDS));
   List<String> extend=getUserObjectCollection(EXTENDS,node,buffer,null);
