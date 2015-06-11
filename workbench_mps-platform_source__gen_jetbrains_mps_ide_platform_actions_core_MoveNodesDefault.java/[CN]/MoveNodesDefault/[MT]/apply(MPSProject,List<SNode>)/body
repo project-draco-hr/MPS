@@ -1,0 +1,55 @@
+{
+  final Wrappers._T<SModel> currentModel=new Wrappers._T<SModel>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      currentModel.value=SNodeOperations.getModel(ListSequence.fromList(nodesToMove).first());
+    }
+  }
+);
+  final NodeLocation newLocation=MoveNodesDialog.getSelectedObject(project.getProject(),currentModel.value,new MoveNodesDialog.ModelFilter("Choose Node or Model"){
+    @Override public boolean check(    NodeLocation selectedObject,    SModel model){
+      return true;
+    }
+  }
+);
+  if (newLocation == null) {
+    return;
+  }
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      SNode node : ListSequence.fromList(nodesToMove)) {
+        if (!(SNodeUtil.isAccessible(node,project.getRepository()))) {
+          return;
+        }
+      }
+      if (!(newLocation.isValid(project,nodesToMove))) {
+        return;
+      }
+      final Map<SNode,List<SReference>> usages=MapSequence.fromMap(new HashMap<SNode,List<SReference>>());
+      Set<SReference> allUsages=findUsages(project,nodesToMove);
+      for (      SReference ref : SetSequence.fromSet(allUsages)) {
+        if (MapSequence.fromMap(usages).get(ref.getTargetNode()) == null) {
+          MapSequence.fromMap(usages).put(ref.getTargetNode(),ListSequence.fromList(new ArrayList<SReference>()));
+        }
+        ListSequence.fromList(MapSequence.fromMap(usages).get(ref.getTargetNode())).addElement(ref);
+      }
+      SearchResults<SNode> searchResults=usagesToSearchResults(nodesToMove,usages);
+      RefactoringAccessEx.getInstance().showRefactoringView(ProjectHelper.toIdeaProject(project),new RefactoringViewAction(){
+        public void performAction(        RefactoringViewItem refactoringViewItem){
+          ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+            public void run(){
+              newLocation.insertNodes(nodesToMove);
+              for (              SNode node : SetSequence.fromSet(MapSequence.fromMap(usages).keySet())) {
+                updateUsages(MapSequence.fromMap(usages).get(node),node);
+              }
+            }
+          }
+);
+          refactoringViewItem.close();
+        }
+      }
+,searchResults,false,"Move nodes");
+    }
+  }
+);
+}
