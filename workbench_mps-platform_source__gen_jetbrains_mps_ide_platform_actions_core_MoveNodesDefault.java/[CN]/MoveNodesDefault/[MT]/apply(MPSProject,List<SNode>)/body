@@ -25,30 +25,23 @@
       if (!(newLocation.isValid(project,nodesToMove))) {
         return;
       }
-      final Map<SNode,List<SReference>> usages=MapSequence.fromMap(new HashMap<SNode,List<SReference>>());
-      Set<SReference> allUsages=findUsages(project,nodesToMove);
-      for (      SReference ref : SetSequence.fromSet(allUsages)) {
-        if (MapSequence.fromMap(usages).get(ref.getTargetNode()) == null) {
-          MapSequence.fromMap(usages).put(ref.getTargetNode(),ListSequence.fromList(new ArrayList<SReference>()));
+      final Set<SReference> refUsages=findUsages(project,nodesToMove);
+      SearchResults<SNode> searchResults=nodesToRefactoringResult(nodesToMove,SetSequence.fromSet(refUsages).select(new ISelector<SReference,SNode>(){
+        public SNode select(        SReference it){
+          return it.getSourceNode();
         }
-        ListSequence.fromList(MapSequence.fromMap(usages).get(ref.getTargetNode())).addElement(ref);
       }
-      SearchResults<SNode> searchResults=usagesToSearchResults(nodesToMove,usages);
-      RefactoringAccessEx.getInstance().showRefactoringView(ProjectHelper.toIdeaProject(project),new RefactoringViewAction(){
-        public void performAction(        RefactoringViewItem refactoringViewItem){
-          ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-            public void run(){
-              newLocation.insertNodes(nodesToMove);
-              for (              SNode node : SetSequence.fromSet(MapSequence.fromMap(usages).keySet())) {
-                updateUsages(MapSequence.fromMap(usages).get(node),node);
-              }
-            }
+),"reference");
+      RefactoringViewUtil.refactor(project,searchResults,new _FunctionTypes._void_P1_E0<Set<SNode>>(){
+        public void invoke(        Set<SNode> included){
+          Map<SReference,SNode> usagesMap=classifyUsages(refUsages);
+          newLocation.insertNodes(nodesToMove);
+          for (          IMapping<SReference,SNode> mapping : MapSequence.fromMap(usagesMap)) {
+            updateUsage(mapping.key(),mapping.value());
           }
-);
-          refactoringViewItem.close();
         }
       }
-,searchResults,false,"Move nodes");
+,"Move nodes");
     }
   }
 );
