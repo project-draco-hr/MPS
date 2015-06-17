@@ -1,5 +1,7 @@
 {
   final List<SNode> conceptsToMove=(List<SNode>)target;
+  final SModel sourceModel=SNodeOperations.getModel(ListSequence.fromList(conceptsToMove).first());
+  final Language sourceLanguage=Language.getLanguageFor(sourceModel);
   MoveNodesUI moveNodesUI=MoveNodesUI.MoveNodesUIImpl.getIsntance();
   final Wrappers._boolean hasGenerator=new Wrappers._boolean(false);
   ModelAccess.instance().runReadAction(new Runnable(){
@@ -48,17 +50,27 @@
       if (targetModel == null) {
         return;
       }
+      final Language targetLanguage=(Language)targetModel.getModule();
       if (writeMigration == MoveNodesUI.WhetherWriteMigration.WRITE_MIGRATION) {
         MoveConceptUtil.moveConcepts(conceptsToMove,targetModel);
       }
       if (writeMigration == MoveNodesUI.WhetherWriteMigration.LOCALLY) {
-        final Set<SReference> refUsages=findUsages(project,conceptsToMove);
-        SearchResults<SNode> searchResults=nodesToRefactoringResult(conceptsToMove,SetSequence.fromSet(refUsages).select(new ISelector<SReference,SNode>(){
+        SearchResults<SNode> searchResults=new SearchResults<SNode>();
+        final Map<LanguageAspect,List<SNode>> aspectsMap=MoveConceptUtil.getAspectNodes(sourceLanguage,conceptsToMove);
+        Iterable<SNode> aspectNodes=MapSequence.fromMap(aspectsMap).translate(new ITranslator2<IMapping<LanguageAspect,List<SNode>>,SNode>(){
+          public Iterable<SNode> translate(          IMapping<LanguageAspect,List<SNode>> it){
+            return it.value();
+          }
+        }
+);
+        searchResults.addAll(nodesToRefactoringResult(conceptsToMove,aspectNodes,"concept aspect"));
+        final Set<SReference> refUsages=findUsages(project,ListSequence.fromList(conceptsToMove).concat(Sequence.fromIterable(aspectNodes)));
+        searchResults.addAll(nodesToRefactoringResult(conceptsToMove,SetSequence.fromSet(refUsages).select(new ISelector<SReference,SNode>(){
           public SNode select(          SReference it){
             return it.getSourceNode();
           }
         }
-),"reference");
+),"reference"));
         final Set<SNode> instances=FindUsagesManager.getInstance().findInstances(GlobalScope.getInstance(),SetSequence.fromSetWithValues(new HashSet<SAbstractConcept>(),ListSequence.fromList(conceptsToMove).select(new ISelector<SNode,SAbstractConcept>(){
           public SAbstractConcept select(          SNode it){
             return SNodeOperations.asSConcept(it);
@@ -67,8 +79,13 @@
 )),false,new EmptyProgressMonitor());
         searchResults.addAll(nodesToRefactoringResult(conceptsToMove,instances,"instance"));
         RefactoringViewUtil.refactor(project,searchResults,new _FunctionTypes._void_P1_E0<Set<SNode>>(){
-          public void invoke(          Set<SNode> included){
-            Map<SReference,SNode> usagesMap=classifyUsages(refUsages);
+          public void invoke(          final Set<SNode> included){
+            Map<SReference,SNode> usagesMap=classifyUsages(SetSequence.fromSet(refUsages).where(new IWhereFilter<SReference>(){
+              public boolean accept(              SReference it){
+                return SetSequence.fromSet(included).contains(it.getSourceNode());
+              }
+            }
+));
             Map<SAbstractConcept,Tuples._2<MoveConcepts.ConceptInfo,MoveConcepts.ConceptInfo>> sConceptMap=MapSequence.fromMap(new HashMap<SAbstractConcept,Tuples._2<MoveConcepts.ConceptInfo,MoveConcepts.ConceptInfo>>());
             for (            SNode concept : ListSequence.fromList(conceptsToMove)) {
               SAbstractConcept oldConcept=SNodeOperations.asSConcept(concept);
@@ -117,14 +134,27 @@
               }
               MapSequence.fromMap(sConceptMap).put(oldConcept,MultiTuple.<MoveConcepts.ConceptInfo,MoveConcepts.ConceptInfo>from(oldConceptInfo,newConceptInfo));
             }
+            for (            LanguageAspect aspect : SetSequence.fromSet(MapSequence.fromMap(aspectsMap).keySet())) {
+              SModel toModel=aspect.getOrCreate(targetLanguage);
+              for (              SNode aspectNode : ListSequence.fromList(MapSequence.fromMap(aspectsMap).get(aspect)).where(new IWhereFilter<SNode>(){
+                public boolean accept(                SNode it){
+                  return SetSequence.fromSet(included).contains(it);
+                }
+              }
+)) {
+                aspectNode.getModel().removeRootNode(aspectNode);
+                toModel.addRootNode(aspectNode);
+              }
+            }
             for (            IMapping<SReference,SNode> mapping : MapSequence.fromMap(usagesMap)) {
               updateUsage(mapping.key(),mapping.value());
             }
-            for (            final SNode instance : SetSequence.fromSet(instances)) {
-              if (MapSequence.fromMap(sConceptMap).containsKey(instance.getConcept())) {
-                SNode newInstance=RefactoringRuntime.copyWithNewConcept(instance,MapSequence.fromMap(sConceptMap).get(instance.getConcept())._1().concept);
-                SNodeOperations.replaceWithAnother(((SNode)instance),newInstance);
+            for (            final SNode instance : SetSequence.fromSet(instances).where(new IWhereFilter<SNode>(){
+              public boolean accept(              SNode it){
+                return SetSequence.fromSet(included).contains(it);
               }
+            }
+)) {
               for (              SAbstractConcept concept : SetSequence.fromSet(MapSequence.fromMap(sConceptMap).keySet()).where(new IWhereFilter<SAbstractConcept>(){
                 public boolean accept(                SAbstractConcept it){
                   return instance.isInstanceOfConcept(it);
@@ -139,6 +169,9 @@
                 }
                 for (int i=0; i < ListSequence.fromList(MapSequence.fromMap(sConceptMap).get(concept)._0().childMap).count(); i++) {
                   RefactoringRuntime.changeContainmentLinkInstance(instance,ListSequence.fromList(MapSequence.fromMap(sConceptMap).get(concept)._0().childMap).getElement(i),ListSequence.fromList(MapSequence.fromMap(sConceptMap).get(concept)._1().childMap).getElement(i));
+                }
+                if (instance.getConcept().equals(concept)) {
+                  RefactoringRuntime.replaceWithNewConcept(instance,MapSequence.fromMap(sConceptMap).get(instance.getConcept())._1().concept);
                 }
               }
             }
