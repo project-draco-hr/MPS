@@ -1,0 +1,34 @@
+{
+  Logger.getRootLogger().setLevel(myWhatToDo.getLogLevel());
+  EnvironmentConfig config=EnvironmentConfig.emptyEnvironment();
+  for (  String jar : myWhatToDo.getLibraryJars()) {
+    File jarFile=new File(jar);
+    if (!(jarFile.exists())) {
+      warning("Library " + jar + " does not exist.");
+    }
+    config=config.addLib(jar);
+  }
+  for (  IMapping<String,String> macro : MapSequence.fromMap(myWhatToDo.getMacro())) {
+    config=config.addMacro(macro.key(),new File(macro.value()));
+  }
+  Environment environment=new MpsRunnerWorker.MyEnvironment(config);
+  environment.init();
+  setupEnvironment();
+  final Project project=createDummyProject();
+  MpsRunnerProperties properties=new MpsRunnerProperties(myWhatToDo);
+  String className=properties.getStartClass();
+  String methodName=properties.getStartMethod();
+  final SModuleReference solutionRef=ModuleReference.parseReference(properties.getSolution());
+  final Wrappers._T<SModule> module=new Wrappers._T<SModule>();
+  project.getModelAccess().runWriteAction(new Runnable(){
+    public void run(){
+      module.value=solutionRef.resolve(project.getRepository());
+    }
+  }
+);
+  boolean isClassFound=runClass(module.value,className,methodName);
+  if (!(isClassFound)) {
+    error("cannot find class " + className + " in solution "+ solutionRef);
+  }
+  dispose();
+}

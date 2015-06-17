@@ -1,0 +1,41 @@
+{
+  Layout realLayout=(Layout)layout;
+  LinkedHashMap<TextAreaToken,StringBuilder> textMap=new LinkedHashMap<TextAreaToken,StringBuilder>();
+  Map<TextArea,TextAreaToken> chunk2token=new HashMap<TextArea,TextAreaToken>();
+  LinkedHashMap<TextArea,Deque<LiveLocation>> actualMarkers=new LinkedHashMap<TextArea,Deque<LiveLocation>>();
+  LinkedHashMap<TextMark,LiveLocation> marker2liveLocation=new LinkedHashMap<TextMark,LiveLocation>();
+  for (  Entry<TextAreaToken,TextArea> e : myChunks.entrySet()) {
+    final StringBuilder sb=new StringBuilder(myChunkFactory.value(e.getValue()));
+    textMap.put(e.getKey(),sb);
+    chunk2token.put(e.getValue(),e.getKey());
+    actualMarkers.put(e.getValue(),new ArrayDeque<LiveLocation>());
+  }
+  for (  Marker m : myMarkers) {
+    final Deque<LiveLocation> ll=actualMarkers.get(m.myTextArea);
+    LiveLocation liveLoc=new LiveLocation(m,ll.peekLast());
+    ll.addLast(liveLoc);
+    marker2liveLocation.put(m,liveLoc);
+  }
+  Set<TextAreaToken> consumedChunks=new HashSet<TextAreaToken>();
+  for (  Entry<TextMark,TextAreaToken> e : realLayout.mySubstitutions.entrySet()) {
+    LiveLocation loc=marker2liveLocation.get(e.getKey());
+    StringBuilder target=textMap.get(chunk2token.get(loc.getTextArea()));
+    StringBuilder replacement=textMap.get(e.getValue());
+    loc.replaceText(target,replacement);
+    consumedChunks.add(e.getValue());
+  }
+  for (  TextAreaToken t : consumedChunks) {
+    textMap.remove(t);
+  }
+  StringBuilder result=new StringBuilder();
+  for (  StringBuilder chunkText : textMap.values()) {
+    result.append(chunkText);
+  }
+  final TextSnapshot s=new TextSnapshot(result,marker2liveLocation,myChunkFactory.getLineSeparator());
+  int chunkOffset=0;
+  for (  Entry<TextAreaToken,StringBuilder> e : textMap.entrySet()) {
+    s.setOffset(myChunks.get(e.getKey()),chunkOffset);
+    chunkOffset+=e.getValue().length();
+  }
+  return s;
+}
