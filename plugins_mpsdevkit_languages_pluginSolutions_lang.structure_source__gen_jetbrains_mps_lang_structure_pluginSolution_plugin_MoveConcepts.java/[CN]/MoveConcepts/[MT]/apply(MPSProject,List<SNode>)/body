@@ -39,7 +39,7 @@
   if (writeMigration == MoveNodesUI.WhetherWriteMigration.CANCEL) {
     return;
   }
-  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+  ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
       for (      SNode node : ListSequence.fromList(nodesToMove)) {
         if (!(SNodeUtil.isAccessible(node,project.getRepository()))) {
@@ -67,13 +67,6 @@
         }
       }
 ),"reference"));
-      final Set<SNode> instances=FindUsagesManager.getInstance().findInstances(GlobalScope.getInstance(),SetSequence.fromSetWithValues(new HashSet<SAbstractConcept>(),ListSequence.fromList(conceptsToMove).select(new ISelector<SNode,SAbstractConcept>(){
-        public SAbstractConcept select(        SNode it){
-          return SNodeOperations.asSConcept(it);
-        }
-      }
-)),false,new EmptyProgressMonitor());
-      searchResults.addAll(nodesToRefactoringResult(conceptsToMove,instances,"instance"));
       if (writeMigration == MoveNodesUI.WhetherWriteMigration.WRITE_MIGRATION) {
         updateReferences(project,searchResults,refUsages,new _FunctionTypes._void_P1_E0<Set<SNode>>(){
           public void invoke(          final Set<SNode> included){
@@ -97,7 +90,7 @@
             for (            SNode concept : ListSequence.fromList(conceptsToMove)) {
               SNode oldConcept=concept;
               SNode newConcept=SNodeOperations.cast(MapSequence.fromMap(copyMap).get(concept),MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x1103553c5ffL,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration"));
-              AttributeOperations.setAttribute(oldConcept,new IAttributeDescriptor.NodeAttribute(MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x11d0a70ae54L,"jetbrains.mps.lang.structure.structure.DeprecatedNodeAnnotation")),createDeprecatedNodeAnnotation_u6ijv2_a0c0g0d0a0q0a91a4("The concept was moved to language \"" + targetModel.getModule().getModuleName() + "\""));
+              AttributeOperations.setAttribute(oldConcept,new IAttributeDescriptor.NodeAttribute(MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x11d0a70ae54L,"jetbrains.mps.lang.structure.structure.DeprecatedNodeAnnotation")),createDeprecatedNodeAnnotation_u6ijv2_a0c0g0d0a0o0a91a4("The concept was moved to language \"" + targetModel.getModule().getModuleName() + "\""));
               MigrationScriptBuilder builder=MigrationScriptBuilder.createMigrationScript(sourceLanguage).setName("Move_concept_" + SPropertyOperations.getString(oldConcept,MetaAdapterFactory.getProperty(0xceab519525ea4f22L,0x9b92103b95ca8c0cL,0x110396eaaa4L,0x110396ec041L,"name")));
               builder.appendExecuteStatements(MoveConceptUtil.replaceExactInstances(oldConcept,newConcept,builder));
               builder.addMissingImports();
@@ -108,6 +101,12 @@
 ,new MoveNodesUI.MoveNodesUIImpl());
       }
       if (writeMigration == MoveNodesUI.WhetherWriteMigration.LOCALLY) {
+        final Set<SNode> instances=FindUsagesManager.getInstance().findInstances(GlobalScope.getInstance(),SetSequence.fromSetWithValues(new HashSet<SAbstractConcept>(),ListSequence.fromList(conceptsToMove).select(new ISelector<SNode,SAbstractConcept>(){
+          public SAbstractConcept select(          SNode it){
+            return SNodeOperations.asSConcept(it);
+          }
+        }
+)),false,new EmptyProgressMonitor());
         updateReferences(project,searchResults,refUsages,new _FunctionTypes._void_P1_E0<Set<SNode>>(){
           public void invoke(          final Set<SNode> included){
             Map<SAbstractConcept,Tuples._2<MoveConcepts.ConceptInfo,MoveConcepts.ConceptInfo>> sConceptMap=MapSequence.fromMap(new HashMap<SAbstractConcept,Tuples._2<MoveConcepts.ConceptInfo,MoveConcepts.ConceptInfo>>());
@@ -170,12 +169,7 @@
                 toModel.addRootNode(aspectNode);
               }
             }
-            for (            final SNode instance : SetSequence.fromSet(instances).where(new IWhereFilter<SNode>(){
-              public boolean accept(              SNode it){
-                return SetSequence.fromSet(included).contains(it);
-              }
-            }
-)) {
+            for (            final SNode instance : SetSequence.fromSet(instances)) {
               for (              SAbstractConcept concept : SetSequence.fromSet(MapSequence.fromMap(sConceptMap).keySet()).where(new IWhereFilter<SAbstractConcept>(){
                 public boolean accept(                SAbstractConcept it){
                   return instance.isInstanceOfConcept(it);
