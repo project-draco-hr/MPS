@@ -1,41 +1,25 @@
 {
   if (!SNodeUtil.isAccessible(node,MPSModuleRepository.getInstance()))   return true;
   Set<String> langNames=new HashSet<String>();
+  ArrayList<IntentionAspectDescriptor> activeIntentionAspects=new ArrayList<IntentionAspectDescriptor>();
   for (  SLanguage l : SModelOperations.getAllLanguageImports(node.getModel())) {
     langNames.add(l.getQualifiedName());
-  }
-  Map<String,Set<IntentionFactory>> concept2FactoriesMap=isAncestor ? myConcept2IntentionFactoriesAvailableInChildNodes : myConcept2IntentionFactories;
-  HashSet<String> classNameOfSeenIntentionFactories=new HashSet<String>();
-  for (  SAbstractConcept concept : new UniqueIterator<SAbstractConcept>(new DepthFirstConceptIterator(node.getConcept()))) {
-    if (langNames.contains(concept.getLanguage().getQualifiedName())) {
-      final LanguageRuntime lr=LanguageRegistry.getInstance().getLanguage(concept.getLanguage());
-      final IntentionAspectDescriptor intentionAspect=lr == null ? null : lr.getAspect(IntentionAspectDescriptor.class);
-      if (intentionAspect != null) {
-        final Collection<IntentionFactory> intentions=intentionAspect.getIntentions(MetaIdHelper.getConcept(concept));
-        if (intentions == null) {
-          continue;
-        }
-        for (        IntentionFactory intentionFactory : intentions) {
-          if (isAncestor && !intentionFactory.isAvailableInChildNodes()) {
-            continue;
-          }
-          classNameOfSeenIntentionFactories.add(intentionFactory.getClass().getName());
-          if (!filter.accept(intentionFactory) || !intentionFactory.isApplicable(node,editorContext)) {
-            continue;
-          }
-          if (!visitor.visit(intentionFactory)) {
-            return false;
-          }
-        }
-      }
+    final LanguageRuntime lr=LanguageRegistry.getInstance().getLanguage(l);
+    final IntentionAspectDescriptor intentionAspect=lr == null ? null : lr.getAspect(IntentionAspectDescriptor.class);
+    if (intentionAspect != null) {
+      activeIntentionAspects.add(intentionAspect);
     }
   }
-  for (  SAbstractConcept concept : new DepthFirstConceptIterator(node.getConcept())) {
-    final String conceptId=concept.getQualifiedName();
-    if (concept2FactoriesMap.containsKey(conceptId)) {
-      for (      IntentionFactory intentionFactory : concept2FactoriesMap.get(conceptId)) {
-        if (!langNames.contains(intentionFactory.getLanguageFqName()))         continue;
-        if (classNameOfSeenIntentionFactories.contains(intentionFactory.getClass().getName())) {
+  Map<String,Set<IntentionFactory>> concept2FactoriesMap=isAncestor ? myConcept2IntentionFactoriesAvailableInChildNodes : myConcept2IntentionFactories;
+  for (  SAbstractConcept concept : new UniqueIterator<SAbstractConcept>(new DepthFirstConceptIterator(node.getConcept()))) {
+    final SConceptId conceptId=MetaIdHelper.getConcept(concept);
+    for (    IntentionAspectDescriptor intentionAspect : activeIntentionAspects) {
+      final Collection<IntentionFactory> intentions=intentionAspect.getIntentions(conceptId);
+      if (intentions == null) {
+        continue;
+      }
+      for (      IntentionFactory intentionFactory : intentions) {
+        if (isAncestor && !intentionFactory.isAvailableInChildNodes()) {
           continue;
         }
         if (!filter.accept(intentionFactory) || !intentionFactory.isApplicable(node,editorContext)) {
@@ -43,6 +27,22 @@
         }
         if (!visitor.visit(intentionFactory)) {
           return false;
+        }
+      }
+    }
+  }
+  if (!concept2FactoriesMap.isEmpty()) {
+    for (    SAbstractConcept concept : new DepthFirstConceptIterator(node.getConcept())) {
+      final String conceptId=concept.getQualifiedName();
+      if (concept2FactoriesMap.containsKey(conceptId)) {
+        for (        IntentionFactory intentionFactory : concept2FactoriesMap.get(conceptId)) {
+          if (!langNames.contains(intentionFactory.getLanguageFqName()))           continue;
+          if (!filter.accept(intentionFactory) || !intentionFactory.isApplicable(node,editorContext)) {
+            continue;
+          }
+          if (!visitor.visit(intentionFactory)) {
+            return false;
+          }
         }
       }
     }

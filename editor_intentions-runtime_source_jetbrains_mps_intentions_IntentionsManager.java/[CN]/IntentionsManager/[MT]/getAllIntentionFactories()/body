@@ -1,4 +1,18 @@
 {
   checkLoaded();
-  return Collections.unmodifiableSet(myIntentionFactories);
+  return new ModelAccessHelper(myRepository).runReadAction(new Computable<Set<IntentionFactory>>(){
+    @Override public Set<IntentionFactory> compute(){
+      final HashSet<IntentionFactory> rv=new HashSet<IntentionFactory>();
+      for (      LanguageRuntime lr : LanguageRegistry.getInstance().getAvailableLanguages()) {
+        final IntentionAspectDescriptor intentionAspect=lr.getAspect(IntentionAspectDescriptor.class);
+        if (intentionAspect == null) {
+          continue;
+        }
+        rv.addAll(intentionAspect.getAllIntentions());
+      }
+      rv.addAll(myIntentionFactories);
+      return rv;
+    }
+  }
+);
 }
