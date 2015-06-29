@@ -1,14 +1,13 @@
 {
   myResults=new SearchResults<SNode>();
   SearchScope queryScope=query.getScope();
-  List<BaseMigrationScript> scriptInstances=MigrationScriptUtil.getScriptInstances(myScripts,myOperationContext);
-  monitor.start("Searching applicable nodes",scriptInstances.size());
+  monitor.start("Searching applicable nodes",myScripts.size());
   try {
-    for (    BaseMigrationScript scriptInstance : scriptInstances) {
+    for (    RefactoringScript scriptInstance : myScripts) {
       if (monitor.isCanceled()) {
         break;
       }
-      List<AbstractMigrationRefactoring> refactorings=scriptInstance.getRefactorings();
+      Collection<AbstractMigrationRefactoring> refactorings=scriptInstance.getRefactorings();
       for (      AbstractMigrationRefactoring ref : refactorings) {
         if (monitor.isCanceled()) {
           break;
@@ -16,11 +15,18 @@
         monitor.step(scriptInstance.getName() + " [" + ref.getAdditionalInfo()+ "]");
         Set<SNode> instances=FindUsagesFacade.getInstance().findInstances(queryScope,Collections.singleton(ref.getApplicableConcept()),false,new EmptyProgressMonitor());
         for (        SNode instance : instances) {
-          if (MigrationScriptUtil.isApplicableRefactoring(instance,ref)) {
-            String category=StringUtil.escapeXml(scriptInstance.getName()) + " </b>[" + StringUtil.escapeXml(ref.getAdditionalInfo())+ "]<b>";
-            SearchResult<SNode> result=new SearchResult<SNode>(instance,category);
-            myMigrationBySearchResult.put(result,ref);
-            myResults.getSearchResults().add(result);
+          try {
+            if (ref.isApplicableInstanceNode(instance)) {
+              String category=StringUtil.escapeXml(scriptInstance.getName()) + " </b>[" + StringUtil.escapeXml(ref.getAdditionalInfo())+ "]<b>";
+              SearchResult<SNode> result=new SearchResult<SNode>(instance,category);
+              myMigrationBySearchResult.put(result,ref);
+              myResults.getSearchResults().add(result);
+            }
+          }
+ catch (          Throwable th) {
+            if (LOG.isEnabledFor(Level.ERROR)) {
+              LOG.error("Failed to evaluate script applicability",th);
+            }
           }
         }
       }
