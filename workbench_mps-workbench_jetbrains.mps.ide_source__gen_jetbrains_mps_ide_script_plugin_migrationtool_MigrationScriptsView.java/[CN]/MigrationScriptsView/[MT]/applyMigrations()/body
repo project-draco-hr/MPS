@@ -12,20 +12,12 @@
   }
   updateControls(false,myIndicator.getComponent());
   final TaskInfo task=createTaskInfo();
-  final Object cmd=((CommandProcessorEx)CommandProcessor.getInstance()).startCommand(myProject,task.getTitle(),null,UndoConfirmationPolicy.REQUEST_CONFIRMATION);
-  final Runnable finishCommand=new Runnable(){
-    @Override public void run(){
-      ((CommandProcessorEx)CommandProcessor.getInstance()).finishCommand(myProject,cmd,null);
-    }
-  }
-;
-  Runnable process=new Runnable(){
-    @Override public void run(){
+  UndoRunnable ur=new UndoRunnable.Base(task.getTitle(),task.getProcessId(),true){
+    public void run(){
       myController.process(new ProgressMonitorAdapter(myIndicator),aliveIncludedResults);
-      getMPSProject().getModelAccess().executeCommandInEDT(finishCommand);
       checkMigrationResults();
     }
   }
 ;
-  ((ApplicationEx)ApplicationManagerEx.getApplicationEx()).runProcessWithProgressSynchronously(process,task.getTitle(),task.isCancellable(),myProject,getComponent(),task.getCancelText());
+  getMPSProject().getModelAccess().executeCommandInEDT(ur);
 }

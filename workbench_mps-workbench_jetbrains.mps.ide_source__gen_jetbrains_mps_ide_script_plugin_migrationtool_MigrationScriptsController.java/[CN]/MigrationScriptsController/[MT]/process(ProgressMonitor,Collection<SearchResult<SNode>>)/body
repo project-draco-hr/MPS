@@ -1,37 +1,22 @@
 {
   pmonitor.start("",searchResults.size());
-  for (  final SearchResult<SNode> seachResult : searchResults) {
-    runCommand(new Runnable(){
-      @Override public void run(){
-        pmonitor.advance(1);
+  for (  SearchResult<SNode> seachResult : searchResults) {
+    pmonitor.advance(1);
+    final SNode node=seachResult.getObject();
+    if (node == null || node.getModel() == null) {
+      return;
+    }
+    final AbstractMigrationRefactoring migrationRefactoring=myFinder.getRefactoring(seachResult);
+    try {
+      if (migrationRefactoring.isApplicableInstanceNode(node)) {
+        migrationRefactoring.doUpdateInstanceNode(node);
       }
     }
-);
-    runCommand(new Runnable(){
-      public void run(){
-        final SNode node=seachResult.getObject();
-        if (node == null || node.getModel() == null) {
-          return;
-        }
-        final AbstractMigrationRefactoring migrationRefactoring=myFinder.getRefactoring(seachResult);
-        try {
-          if (migrationRefactoring.isApplicableInstanceNode(node)) {
-            migrationRefactoring.doUpdateInstanceNode(node);
-          }
-        }
- catch (        Throwable th) {
-          if (LOG.isEnabledFor(Level.ERROR)) {
-            LOG.error("Script execution failed",th);
-          }
-        }
+ catch (    Throwable th) {
+      if (LOG.isEnabledFor(Level.ERROR)) {
+        LOG.error("Script execution failed",th);
       }
     }
-);
   }
-  runCommand(new Runnable(){
-    @Override public void run(){
-      pmonitor.done();
-    }
-  }
-);
+  pmonitor.done();
 }
