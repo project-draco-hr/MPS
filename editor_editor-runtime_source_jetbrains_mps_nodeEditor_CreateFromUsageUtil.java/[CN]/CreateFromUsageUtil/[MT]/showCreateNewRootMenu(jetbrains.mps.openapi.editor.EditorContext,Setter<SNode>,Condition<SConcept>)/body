@@ -1,0 +1,36 @@
+{
+  final EditorCell selectedCell=editorContext.getSelectedCell();
+  int x=selectedCell.getX();
+  int y=selectedCell.getY();
+  if (selectedCell instanceof EditorCell_Label) {
+    y+=selectedCell.getHeight();
+  }
+  Component editorComponent=((EditorContext)editorContext).getNodeEditorComponent();
+  final DataContext dataContext=DataManager.getInstance().getDataContext(editorComponent,x,y);
+  final SModel model=selectedCell.getSNode().getModel();
+  if (conceptsFilter == null) {
+    conceptsFilter=Condition.TRUE_CONDITION;
+  }
+  BaseGroup group=new BaseGroup("");
+  Set<SLanguage> modelLanguages=new SLanguageHierarchy(SModelOperations.getAllLanguageImports(model)).getExtended();
+  SLanguage[] languages=modelLanguages.toArray(new SLanguage[modelLanguages.size()]);
+  Arrays.sort(languages,new ToStringComparator());
+  for (  SLanguage language : languages) {
+    boolean hasChildren=false;
+    for (    SAbstractConcept ac : language.getConcepts()) {
+      if (!(ac instanceof SConcept)) {
+        continue;
+      }
+      final SConcept concept=(SConcept)ac;
+      if (SNodeUtil.getConceptDeclaration_IsRootable(ac.getDeclarationNode()) && conceptsFilter.met(concept)) {
+        group.add(new AddNewRootAction(model,concept,newRootHandler));
+        hasChildren=true;
+      }
+    }
+    if (hasChildren) {
+      group.addSeparator();
+    }
+  }
+  ListPopup popup=JBPopupFactory.getInstance().createActionGroupPopup(IdeBundle.message("title.popup.new.element"),group,dataContext,JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,false);
+  popup.show(new RelativePoint(editorComponent,new Point(x,y)));
+}
