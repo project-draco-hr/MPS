@@ -3,12 +3,13 @@
     return true;
   }
   final Wrappers._T<DeployScript> script=new Wrappers._T<DeployScript>();
+  final jetbrains.mps.project.Project mpsProject=ProjectHelper.toMPSProject(project);
   final Project projectFinal=project;
   ApplicationManager.getApplication().invokeAndWait(new Runnable(){
     public void run(){
-      ProjectHelper.getModelAccess(projectFinal).executeCommand(new Runnable(){
+      mpsProject.getModelAccess().executeCommand(new Runnable(){
         public void run(){
-          script.value=new DeployScript(projectFinal,myPlugins);
+          script.value=new DeployScript(mpsProject,myPlugins);
         }
       }
 );
@@ -24,7 +25,8 @@
   console.addMessageFilter(new StandaloneMPSStackTraceFilter(project));
   final Wrappers._T<ProcessHandler> process=new Wrappers._T<ProcessHandler>();
   try {
-    process.value=OutputRedirector.redirect(new Ant_Command().setTargetName_String("buildDependents assemble").createProcess(deployScriptLocation),new ConsoleProcessListener(console));
+    process.value=new Ant_Command().setTargetName_String("buildDependents assemble").createProcess(deployScriptLocation);
+    console.attachToProcess(process.value);
   }
  catch (  ExecutionException e) {
     if (LOG.isEnabledFor(Level.ERROR)) {
