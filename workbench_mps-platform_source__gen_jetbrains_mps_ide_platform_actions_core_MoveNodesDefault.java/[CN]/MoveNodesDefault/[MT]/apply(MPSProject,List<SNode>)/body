@@ -1,0 +1,53 @@
+{
+  final Wrappers._T<SModel> currentModel=new Wrappers._T<SModel>();
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      currentModel.value=SNodeOperations.getModel(ListSequence.fromList(nodesToMove).first());
+    }
+  }
+);
+  final NodeLocation newLocation=MoveNodesDialog.getSelectedObject(project.getProject(),currentModel.value,new MoveNodesDialog.ModelFilter("Choose Node or Model"){
+    @Override public boolean check(    NodeLocation selectedObject,    SModel model){
+      return true;
+    }
+  }
+);
+  if (newLocation == null) {
+    return;
+  }
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      for (      SNode node : ListSequence.fromList(nodesToMove)) {
+        if (!(SNodeUtil.isAccessible(node,project.getRepository()))) {
+          return;
+        }
+      }
+      if (!(newLocation.isValid(project,nodesToMove))) {
+        return;
+      }
+      final Set<SReference> refUsages=findUsages(project,nodesToMove);
+      SearchResults<SNode> searchResults=nodesToRefactoringResult(nodesToMove,SetSequence.fromSet(refUsages).select(new ISelector<SReference,SNode>(){
+        public SNode select(        SReference it){
+          return it.getSourceNode();
+        }
+      }
+),"reference");
+      RefactoringViewUtil.refactor(project,searchResults,new _FunctionTypes._void_P1_E0<Set<SNode>>(){
+        public void invoke(        final Set<SNode> included){
+          Map<SReference,SNode> usagesMap=classifyUsages(SetSequence.fromSet(refUsages).where(new IWhereFilter<SReference>(){
+            public boolean accept(            SReference it){
+              return SetSequence.fromSet(included).contains(it.getSourceNode());
+            }
+          }
+));
+          newLocation.insertNodes(nodesToMove);
+          for (          IMapping<SReference,SNode> mapping : MapSequence.fromMap(usagesMap)) {
+            updateUsage(mapping.key(),mapping.value());
+          }
+        }
+      }
+,"Move nodes");
+    }
+  }
+);
+}

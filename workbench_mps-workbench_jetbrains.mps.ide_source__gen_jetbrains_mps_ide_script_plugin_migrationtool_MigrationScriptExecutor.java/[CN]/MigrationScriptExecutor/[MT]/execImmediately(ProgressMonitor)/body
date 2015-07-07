@@ -1,5 +1,16 @@
 {
-  ThreadUtils.assertEDT();
-  Runnable process=createProcess(false,promon);
-  process.run();
+  getMPSProject().getModelAccess().checkWriteAccess();
+  SNode scriptNode=(SNode)script.resolve(getMPSProject().getRepository());
+  if (scriptNode == null) {
+    return;
+  }
+  final MigrationScriptFinder finder=new MigrationScriptFinder(Collections.singletonList(AbstractMigrationScriptHelper.toExecutable(scriptNode,getMPSProject())));
+  final MigrationScriptsController controller=new MigrationScriptsController(finder);
+  if (promon == null) {
+    promon=new EmptyProgressMonitor();
+  }
+  promon.start(String.format("Executing \"%s\"",title),200);
+  SearchResults results=finder.find(new SearchQuery(AbstractMigrationScriptHelper.createMigrationScope(getMPSProject())),promon.subTask(100));
+  controller.process(promon.subTask(100),(List<SearchResult<SNode>>)results.getSearchResults());
+  promon.done();
 }
