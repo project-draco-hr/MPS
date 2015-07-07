@@ -10,7 +10,7 @@
   }
 );
   if (!(migrationRequired.value)) {
-    Messages.showMessageDialog(myProject,"None of the modules in project require migration.\n" + "Migration assistant will not be started.","Migration Not Required",null);
+    MigrationDialogUtil.showNoMigrationMessage(myProject);
     myMigrationQueued=false;
     return;
   }
@@ -19,9 +19,9 @@
     public void run(){
       ApplicationManager.getApplication().invokeLater(new Runnable(){
         public void run(){
-          int result=Messages.showYesNoDialog(myProject,DIALOG_TEXT,"Migration Required","Migrate","Postpone",null);
+          boolean migrate=MigrationDialogUtil.showMigrationConfirmation(myProject,allModules,myMigrationManager);
           restoreTipsState();
-          if (result == Messages.NO) {
+          if (!(migrate)) {
             return;
           }
           VirtualFileUtils.refreshSynchronouslyRecursively(myProject.getBaseDir());
@@ -30,7 +30,6 @@
               ApplicationManager.getApplication().invokeLater(new Runnable(){
                 public void run(){
                   ReloadManager.getInstance().flush();
-                  ProjectManagerEx.getInstanceEx().unblockReloadingProjectOnExternalChanges();
                   myState.migrationRequired=true;
                   ProjectManagerEx.getInstance().reloadProject(ideaProject);
                 }
