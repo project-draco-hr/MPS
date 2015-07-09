@@ -1,4 +1,18 @@
 {
   MigrationTrigger mt=((MigrationTrigger)((Project)MapSequence.fromMap(_params).get("project")).getComponent(IStartupMigrationExecutor.class));
-  mt.postponeMigration();
+  final Wrappers._boolean migrationRequired=new Wrappers._boolean();
+  ((MPSProject)MapSequence.fromMap(_params).get("mpsProject")).getRepository().getModelAccess().runWriteAction(new Runnable(){
+    public void run(){
+      MigrationTrigger.updateUsedLanguagesVersions(MigrationsUtil.getMigrateableModulesFromProject(((MPSProject)MapSequence.fromMap(_params).get("mpsProject"))));
+      migrationRequired.value=((Project)MapSequence.fromMap(_params).get("project")).getComponent(MigrationManager.class).isMigrationRequired();
+    }
+  }
+);
+  if (!(migrationRequired.value)) {
+    MigrationDialogUtil.showNoMigrationMessage(((Project)MapSequence.fromMap(_params).get("project")));
+    mt.resetMigrationQueuedFlag();
+  }
+ else {
+    mt.postponeMigration();
+  }
 }
