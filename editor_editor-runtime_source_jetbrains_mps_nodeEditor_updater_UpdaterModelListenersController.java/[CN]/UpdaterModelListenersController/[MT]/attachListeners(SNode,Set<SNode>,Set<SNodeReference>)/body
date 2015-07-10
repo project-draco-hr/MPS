@@ -2,6 +2,7 @@
   if (myModelListener == null) {
     myModelListener=new UpdaterModelListener(myUpdater);
   }
+  final SRepository repository=myUpdater.getEditorContext().getRepository();
   Set<SModel> modelsToListen=new HashSet<SModel>();
   if (relatedNodes != null) {
     for (    SNode node : relatedNodes) {
@@ -9,15 +10,13 @@
       if (model == null) {
         continue;
       }
-      SModel modelDescriptor=SModelRepository.getInstance().getModelDescriptor(model.getReference());
-      if (modelDescriptor != null) {
-        modelsToListen.add(modelDescriptor);
-      }
+      modelsToListen.add(model);
     }
   }
   if (relatedRefTargets != null) {
     for (    SNodeReference nodeProxy : relatedRefTargets) {
-      SModel model=nodeProxy.getModelReference() == null ? null : SModelRepository.getInstance().getModelDescriptor(nodeProxy.getModelReference());
+      final SModelReference modelRef=nodeProxy.getModelReference();
+      SModel model=modelRef == null ? null : modelRef.resolve(repository);
       if (model != null) {
         modelsToListen.add(model);
       }
@@ -35,12 +34,10 @@
   }
   myListeningModels=modelsToListen;
   if (myRepositoryListener == null) {
-    SModelRepository.getInstance().addModelRepositoryListener(myRepositoryListener=new UpdaterRepositoryListener(myUpdater.getEditorComponent()));
+    myRepositoryListener=new UpdaterRepositoryContentAdapter(myUpdater.getEditorComponent());
+    new RepoListenerRegistrar(repository,myRepositoryListener).attach();
   }
   myRepositoryListener.setUsedModels(modelsToListen);
-  if (myContentAdapter == null) {
-    SRepositoryRegistry.getInstance().addGlobalListener(myContentAdapter=new UpdaterRepositoryContentAdapter(myUpdater.getEditorComponent()));
-  }
-  myContentAdapter.setMainModel(mainNode.getModel());
+  myRepositoryListener.setMainModel(mainNode.getModel());
   assertListenerAdded(mainNode);
 }
