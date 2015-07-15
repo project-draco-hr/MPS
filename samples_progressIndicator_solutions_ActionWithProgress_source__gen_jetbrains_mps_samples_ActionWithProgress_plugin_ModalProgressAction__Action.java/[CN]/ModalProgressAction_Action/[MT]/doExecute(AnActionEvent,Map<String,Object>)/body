@@ -1,0 +1,114 @@
+{
+  boolean canBeCanceled=true;
+  final Task.Modal modalTask=new Task.Modal(event.getData(CommonDataKeys.PROJECT),"Modal cancelable task",canBeCanceled){
+    public void run(    @NotNull final ProgressIndicator indicator){
+      final ProgressMonitorAdapter adapter=new ProgressMonitorAdapter(indicator);
+      final SRepository repository=event.getData(MPSCommonDataKeys.MPS_PROJECT).getRepository();
+      adapter.start("Progress in progress...",9);
+      int stepValue=1;
+      adapter.step("Do simple work...");
+      ModalProgressAction_Action.this.doWork(event);
+      adapter.advance(stepValue);
+      if (adapter.isCanceled()) {
+        return;
+      }
+      repository.getModelAccess().runReadAction(new Runnable(){
+        public void run(){
+          adapter.step("Do some work with Read Lock...");
+          ModalProgressAction_Action.this.doWork(event);
+        }
+      }
+);
+      adapter.advance(stepValue);
+      if (adapter.isCanceled()) {
+        return;
+      }
+      repository.getModelAccess().runWriteAction(new Runnable(){
+        public void run(){
+          adapter.step("Do some work with Write Lock...");
+          ModalProgressAction_Action.this.doWork(event);
+        }
+      }
+);
+      adapter.advance(stepValue);
+      if (adapter.isCanceled()) {
+        return;
+      }
+      repository.getModelAccess().executeCommand(new Runnable(){
+        public void run(){
+          adapter.step("Do some work in command ...");
+          ModalProgressAction_Action.this.doWork(event);
+        }
+      }
+);
+      adapter.advance(stepValue);
+      if (adapter.isCanceled()) {
+        return;
+      }
+      final CyclicBarrier barrier=new CyclicBarrier(2);
+      adapter.step("Now will try to do some work with Locks in EDT...");
+      ModalProgressAction_Action.this.doWork(event);
+      adapter.advance(stepValue);
+      if (adapter.isCanceled()) {
+        return;
+      }
+      adapter.step("Do some work with Read Lock in EDT...");
+      repository.getModelAccess().runReadInEDT(new Runnable(){
+        public void run(){
+          ModalProgressAction_Action.this.doWork(event);
+          ModalProgressAction_Action.this.block(barrier,event);
+        }
+      }
+);
+      ModalProgressAction_Action.this.block(barrier,event);
+      adapter.advance(stepValue);
+      if (adapter.isCanceled()) {
+        return;
+      }
+      adapter.step("Do some work with Write Lock in EDT...");
+      repository.getModelAccess().runWriteInEDT(new Runnable(){
+        public void run(){
+          ModalProgressAction_Action.this.doWork(event);
+          ModalProgressAction_Action.this.block(barrier,event);
+        }
+      }
+);
+      ModalProgressAction_Action.this.block(barrier,event);
+      adapter.advance(stepValue);
+      if (adapter.isCanceled()) {
+        return;
+      }
+      adapter.step("Do some work in command in EDT...");
+      repository.getModelAccess().executeCommandInEDT(new Runnable(){
+        public void run(){
+          ModalProgressAction_Action.this.doWork(event);
+          ModalProgressAction_Action.this.block(barrier,event);
+        }
+      }
+);
+      ModalProgressAction_Action.this.block(barrier,event);
+      adapter.advance(stepValue);
+      if (adapter.isCanceled()) {
+        return;
+      }
+      ModalProgressAction_Action.this.doWork(event);
+      adapter.step("Finishing...");
+      ModalProgressAction_Action.this.doWork(event);
+      adapter.advance(stepValue);
+      if (adapter.isCanceled()) {
+        return;
+      }
+      adapter.done();
+    }
+    @Override public void onCancel(){
+      super.onCancel();
+    }
+  }
+;
+  ApplicationManager.getApplication().invokeLater(new Runnable(){
+    public void run(){
+      ProgressManager.getInstance().run(modalTask);
+    }
+  }
+);
+}
