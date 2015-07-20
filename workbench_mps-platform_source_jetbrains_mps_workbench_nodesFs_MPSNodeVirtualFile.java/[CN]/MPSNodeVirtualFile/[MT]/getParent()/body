@@ -1,12 +1,18 @@
 {
   if (myNode == null || myNode.getModelReference() == null)   return null;
-  org.jetbrains.mps.openapi.model.SModelReference modelRef=myNode.getModelReference();
-  if (modelRef.resolve(MPSModuleRepository.getInstance()) == null) {
-    return null;
+  final SRepository repo=MPSModuleRepository.getInstance();
+  return new ModelAccessHelper(repo).runReadAction(new Computable<VirtualFile>(){
+    @Override public VirtualFile compute(){
+      org.jetbrains.mps.openapi.model.SModelReference modelRef=myNode.getModelReference();
+      if (modelRef.resolve(repo) == null) {
+        return null;
+      }
+      MPSModelVirtualFile modelVFile=myFileSystem.getFileFor(modelRef);
+      if (modelVFile != null) {
+        return modelVFile.getParent();
+      }
+      return null;
+    }
   }
-  MPSModelVirtualFile modelVFile=myFileSystem.getFileFor(modelRef);
-  if (modelVFile != null) {
-    return modelVFile.getParent();
-  }
-  return null;
+);
 }

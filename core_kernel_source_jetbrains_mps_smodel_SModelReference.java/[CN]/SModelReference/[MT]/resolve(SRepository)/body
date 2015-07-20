@@ -1,3 +1,27 @@
 {
+  if (myModuleReference != null) {
+    final SRepository repository;
+    if (repo == null) {
+      repository=MPSModuleRepository.getInstance();
+    }
+ else {
+      repository=repo;
+    }
+    Computable<SModel> c=new Computable<SModel>(){
+      @Override public SModel compute(){
+        SModule module=repository.getModule(myModuleReference.getModuleId());
+        if (module == null) {
+          return null;
+        }
+        SModel rv=module.getModel(myModelId);
+        return rv != null ? rv : module.resolveInDependencies(myModelId);
+      }
+    }
+;
+    if (!repository.getModelAccess().canRead()) {
+      LOG.warn("Attempt to resolve a model not from read action. What are you going to do with return value?",new Throwable());
+      return new ModelAccessHelper(repository).runReadAction(c);
+    }
+  }
   return SModelRepository.getInstance().getModelDescriptor(this);
 }
