@@ -1,18 +1,19 @@
 {
   String version=Command.getVersion();
   if (version == null)   return;
-  HttpClient client=new HttpClient();
-  Poster.setTimeouts(client);
-  Response r=Command.login(client,Query.ANONYMOUS);
+  Command c=new Command();
+  c.setTimeouts(5000);
+  Response r=c.login(Query.ANONYMOUS);
   if (!r.isSuccess())   fail("Was not able to login anonymously");
-  GetMethod p=new GetMethod(URL);
-  client.executeMethod(p);
-  int statusCode=p.getStatusCode();
-  if (statusCode != 200)   fail("Status code: " + statusCode);
-  Element e=Response.responseAsElement(p.getResponseBodyAsString());
-  List<Element> versions=e.getChildren("version");
-  for (  Element v : versions) {
-    if (v.getText().equals(version))     return;
+  r=c.listVersions();
+  if (!r.isSuccess()) {
+    fail("Failed to retrieve list of versions from server");
   }
-  fail("version " + version + " does not exist in tracker");
+  Element e=r.getResponseXml();
+  List<Element> versions=e.getChildren("version");
+  HashSet<String> availableVersions=new HashSet<String>();
+  for (  Element v : versions) {
+    availableVersions.add(v.getText());
+  }
+  assertTrue("version " + version + " does not exist in tracker",availableVersions.contains(version));
 }
