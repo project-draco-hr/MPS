@@ -1,0 +1,24 @@
+{
+  LanguageRuntime language=LanguageRegistry.getInstance().getLanguage(NameUtil.namespaceFromConceptFQName(descriptor.getConceptFqName()));
+  if (EditorLoadedLanguagesCache.getInstance().isLanguageInvalidated(language)) {
+    myEditorsCache.clear();
+  }
+ else {
+    if (myEditorsCache.containsKey(descriptor)) {
+      return myEditorsCache.get(descriptor);
+    }
+  }
+  List<ConceptEditor> result=new ArrayList<ConceptEditor>();
+  result.addAll(initialEditors);
+  for (  LanguageRuntime extendingLanguage : language.getExtendingLanguages()) {
+    EditorAspectDescriptor editorAspect=extendingLanguage.getAspect(EditorAspectDescriptor.class);
+    if (editorAspect == null) {
+      continue;
+    }
+    Collection<ConceptEditor> editors=editorAspect.getEditors(descriptor);
+    result.addAll(editors);
+  }
+  myEditorsCache.put(descriptor,result);
+  EditorLoadedLanguagesCache.getInstance().cacheLanguage(language);
+  return result;
+}
