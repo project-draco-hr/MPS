@@ -1,5 +1,5 @@
 {
-  if (ValidEditorDescriptorsCache.getInstance().isDescriptorValid(this)) {
+  if (!ValidEditorDescriptorsCache.getInstance().isDescriptorValid(this)) {
     myEditorsCache.clear();
   }
  else {
@@ -7,18 +7,13 @@
       return myEditorsCache.get(descriptor);
     }
   }
-  LanguageRuntime language=LanguageRegistry.getInstance().getLanguage(NameUtil.namespaceFromConceptFQName(descriptor.getConceptFqName()));
-  List<ConceptEditor> result=new ArrayList<ConceptEditor>();
-  result.addAll(initialEditors);
-  for (  LanguageRuntime extendingLanguage : language.getExtendingLanguages()) {
-    EditorAspectDescriptor editorAspect=extendingLanguage.getAspect(EditorAspectDescriptor.class);
-    if (editorAspect == null) {
-      continue;
+  Collection<ConceptEditor> allEditors=getAllEditors(descriptor,initialEditors,new EditorComputable<Collection<ConceptEditor>>(){
+    @Override public Collection<ConceptEditor> compute(    EditorAspectDescriptor editorDescriptor){
+      return editorDescriptor.getEditors(descriptor);
     }
-    Collection<ConceptEditor> editors=editorAspect.getEditors(descriptor);
-    result.addAll(editors);
   }
-  myEditorsCache.put(descriptor,result);
+);
+  myEditorsCache.put(descriptor,allEditors);
   ValidEditorDescriptorsCache.getInstance().cacheDescriptor(this);
-  return result;
+  return allEditors;
 }
