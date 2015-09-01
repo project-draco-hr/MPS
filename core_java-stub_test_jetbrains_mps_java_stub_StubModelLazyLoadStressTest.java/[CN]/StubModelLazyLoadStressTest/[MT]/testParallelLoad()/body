@@ -1,0 +1,59 @@
+{
+  final ModuleReference moduleRef=new ModuleReference("fake",ModuleId.regular());
+  SModelReference modelRef=new JavaPackageNameStub("java.util.regex").asModelReference(moduleRef);
+  FolderSetDataSource dataSource=new FolderSetDataSource();
+  for (  String path : CommonPaths.getJDKPath()) {
+    if (new File(path).isFile() && path.endsWith(".jar")) {
+      path+="!/java/util/regex/";
+    }
+    dataSource.addPath(path,null);
+  }
+  JavaClassStubModelDescriptor model=new JavaClassStubModelDescriptor(modelRef,dataSource){
+    @Override protected void fireModelStateChanged(    ModelLoadingState oldState,    ModelLoadingState newState){
+      Thread.yield();
+      try {
+        Thread.sleep(10);
+      }
+ catch (      InterruptedException ex) {
+      }
+      super.fireModelStateChanged(oldState,newState);
+      trace("JCSMD.marked as " + newState + " from "+ Thread.currentThread().getName());
+    }
+  }
+;
+  model.setModule(new AbstractModule(){
+{
+      setModuleReference(moduleRef);
+    }
+  }
+);
+  SNodeId nodeId=new Foreign("~Pattern.compile(java.lang.String):java.util.regex.Pattern");
+  ModelAccess modelAccess=ourModuleRepository.getModelAccess();
+  FindNodeRunnable[] runners=new FindNodeRunnable[10];
+  LatchCountAction latch=new LatchCountAction(new CountDownLatch(2));
+  CyclicBarrier barrier=new CyclicBarrier(runners.length,latch);
+  for (int i=0; i < runners.length; i++) {
+    runners[i]=new FindNodeRunnable(model,nodeId);
+    if (i + 1 == runners.length) {
+      trace("about to start latest thread...");
+    }
+    new Thread(new ModelReadRunnable(modelAccess,new BarrierRunnable(barrier,runners[i])),"FindNodeThread" + i).start();
+  }
+  latch.await(10);
+  StringBuilder msg=new StringBuilder();
+  boolean anyNull=false;
+  for (int i=0; i < runners.length; i++) {
+    msg.append("Thread");
+    msg.append(i);
+    msg.append(':');
+    if (runners[i].getNode() == null) {
+      anyNull=true;
+      msg.append("NULL");
+    }
+ else {
+      msg.append("OK");
+    }
+    msg.append(',');
+  }
+  Assert.assertFalse(msg.toString(),anyNull);
+}
