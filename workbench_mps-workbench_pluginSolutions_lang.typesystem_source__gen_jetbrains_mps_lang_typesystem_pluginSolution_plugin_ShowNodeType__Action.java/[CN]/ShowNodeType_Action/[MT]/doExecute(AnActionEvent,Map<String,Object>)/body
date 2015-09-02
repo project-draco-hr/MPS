@@ -1,18 +1,26 @@
 {
-  final Wrappers._T<IErrorReporter> reporter=new Wrappers._T<IErrorReporter>();
+  final Wrappers._T<IErrorReporter> error=new Wrappers._T<IErrorReporter>();
   final Wrappers._T<SNode> type=new Wrappers._T<SNode>();
-  ModelAccess.instance().runWriteAction(new Runnable(){
+  ((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess().runWriteAction(new Runnable(){
     public void run(){
-      TypeContextManager.getInstance().runTypeCheckingAction(((EditorComponent)MapSequence.fromMap(_params).get("editorComponent")),((EditorComponent)MapSequence.fromMap(_params).get("editorComponent")).getNodeForTypechecking(),new ITypechecking.Action(){
+      ShowNodeType_Action.this.runTypecheckingAction(new ITypechecking.Action(){
         public void run(        TypeCheckingContext typeCheckingContext){
           if (!(typeCheckingContext.isCheckedRoot(false))) {
             typeCheckingContext.checkIfNotChecked(((SNode)MapSequence.fromMap(_params).get("node")),false);
           }
           type.value=typeCheckingContext.getTypeDontCheck(((SNode)MapSequence.fromMap(_params).get("node")));
-          reporter.value=typeCheckingContext.getTypeMessageDontCheck(((SNode)MapSequence.fromMap(_params).get("node")));
+          error.value=typeCheckingContext.getTypeMessageDontCheck(((SNode)MapSequence.fromMap(_params).get("node")));
+          if (error.value == null && TypesUtil.hasVariablesInside(type.value)) {
+            error.value=new NullErrorReporter(){
+              @Override public String reportError(){
+                return "Type was not fully instantiated";
+              }
+            }
+;
+          }
         }
       }
-);
+,_params);
     }
   }
 );
@@ -24,13 +32,13 @@
   try {
     ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
       public void run(){
-        tmpModel.value=TemporaryModels.getInstance().create(false,TempModuleOptions.forDefaultModule());
+        tmpModel.value=TemporaryModels.getInstance().create(true,TempModuleOptions.forDefaultModule());
         tmpModel.value.addRootNode(type.value);
         TemporaryModels.getInstance().addMissingImports(tmpModel.value);
       }
     }
 );
-    new MyBaseNodeDialog(((IOperationContext)MapSequence.fromMap(_params).get("context")),((SNode)MapSequence.fromMap(_params).get("node")),type.value,reporter.value).show();
+    new MyBaseNodeDialog(((IOperationContext)MapSequence.fromMap(_params).get("context")),((SNode)MapSequence.fromMap(_params).get("node")),type.value,error.value).show();
   }
   finally {
     ModelAccess.instance().runUndoTransparentCommand(new Runnable(){
