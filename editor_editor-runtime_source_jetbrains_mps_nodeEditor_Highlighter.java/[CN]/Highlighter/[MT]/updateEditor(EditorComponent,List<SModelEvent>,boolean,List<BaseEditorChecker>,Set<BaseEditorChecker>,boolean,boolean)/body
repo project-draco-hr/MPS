@@ -1,0 +1,66 @@
+{
+  if (editor == null || editor.getRootCell() == null)   return false;
+  final NodeHighlightManager highlightManager=editor.getHighlightManager();
+  boolean anyMessageChanged=false;
+  for (  final BaseEditorChecker checker : checkersToRecheck) {
+    final LinkedHashSet<EditorMessage> messages=new LinkedHashSet<EditorMessage>();
+    boolean changed=runLoPrioRead(new Computable<Boolean>(){
+      @Override public Boolean compute(){
+        if (myStopThread || myCancellable.isCancelled())         return false;
+        SNode node=editor.getEditedNode();
+        if (node == null)         return false;
+        if (!SNodeUtil.isAccessible(node,MPSModuleRepository.getInstance())) {
+          return null;
+        }
+        EditorContext editorContext=editor.getEditorContext();
+        if (editorContext != null) {
+          IOperationContext operationContext=editor.getOperationContext();
+          if (operationContext.isValid()) {
+            try {
+              messages.addAll(checker.createMessagesProtected(node,events,wasCheckedOnce,editorContext,myCancellable,applyQuickFixes));
+              return checker.areMessagesChangedProtected();
+            }
+ catch (            IndexNotReadyException ex) {
+              highlightManager.clearForOwner(checker,true);
+              checker.clearProtected(node,editor);
+              throw ex;
+            }
+          }
+        }
+        return false;
+      }
+    }
+);
+    if (myStopThread)     return false;
+    if (editor instanceof InspectorEditorComponent && recreateInspectorMessages) {
+      changed=true;
+    }
+    if (changed) {
+      anyMessageChanged=true;
+      highlightManager.clearForOwner(checker,false);
+      for (      EditorMessage message : messages) {
+        highlightManager.mark(message);
+      }
+    }
+  }
+  for (  final BaseEditorChecker checker : checkersToRemove) {
+    EditorMessageOwner owner=ModelAccess.instance().runReadAction(new Computable<EditorMessageOwner>(){
+      @Override public EditorMessageOwner compute(){
+        if (myStopThread)         return null;
+        SNode node=editor.getEditedNode();
+        if (node == null)         return null;
+        return checker;
+      }
+    }
+);
+    if (myStopThread)     return false;
+    highlightManager.clearForOwner(owner,false);
+    anyMessageChanged=true;
+  }
+  if (myStopThread)   return false;
+  if (anyMessageChanged) {
+    highlightManager.repaintAndRebuildEditorMessages();
+    editor.updateStatusBarMessage();
+  }
+  return anyMessageChanged;
+}
