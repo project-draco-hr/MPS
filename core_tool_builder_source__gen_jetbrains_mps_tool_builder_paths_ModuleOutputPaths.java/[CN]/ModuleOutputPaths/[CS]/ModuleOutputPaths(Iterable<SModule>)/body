@@ -1,41 +1,51 @@
 {
-  Iterable<AbstractModule> modules=Sequence.fromIterable(_modules).where(new IWhereFilter<SModule>(){
-    public boolean accept(    SModule it){
-      return it instanceof AbstractModule;
+  Iterable<AbstractModule> modules=Sequence.fromIterable(_modules).ofType(AbstractModule.class);
+  Iterable<IFile> outputRoots=Sequence.fromIterable(modules).select(new ISelector<AbstractModule,IFile>(){
+    public IFile select(    AbstractModule it){
+      return it.getOutputPath();
     }
   }
-).select(new ISelector<SModule,AbstractModule>(){
-    public AbstractModule select(    SModule it){
-      return ((AbstractModule)it);
+).where(new IWhereFilter<IFile>(){
+    public boolean accept(    IFile it){
+      return it != null;
     }
   }
 );
-  this.sortedOutDirs=DirUtil.sortDirs(Sequence.fromIterable(modules).select(new ISelector<AbstractModule,String>(){
-    public String select(    AbstractModule mod){
-      return ((AbstractModule)mod).getGeneratorOutputPath();
+  this.sortedOutDirs=DirUtil.sortDirs(Sequence.fromIterable(outputRoots).select(new ISelector<IFile,String>(){
+    public String select(    IFile it){
+      return it.getPath();
     }
   }
 ));
-  this.sortedOutCacheDirs=DirUtil.sortDirs(Sequence.fromIterable(modules).select(new ISelector<AbstractModule,String>(){
-    public String select(    AbstractModule mod){
-      return FileGenerationUtil.getCachesPath(mod.getGeneratorOutputPath());
+  this.sortedOutCacheDirs=DirUtil.sortDirs(Sequence.fromIterable(outputRoots).select(new ISelector<IFile,String>(){
+    public String select(    IFile it){
+      return FileGenerationUtil.getCachesPath(it.getPath());
     }
   }
 ));
-  this.sortedTestOutDirs=DirUtil.sortDirs(Sequence.fromIterable(modules).select(new ISelector<AbstractModule,String>(){
-    public String select(    AbstractModule mod){
-      String path=mod.getTestsGeneratorOutputPath();
-      return (path != null ? path : mod.getGeneratorOutputPath());
-    }
-  }
-));
-  this.sortedTestOutCacheDirs=DirUtil.sortDirs(Sequence.fromIterable(modules).select(new ISelector<AbstractModule,String>(){
-    public String select(    AbstractModule mod){
-      String path=mod.getTestsGeneratorOutputPath();
-      if (path == null) {
-        path=mod.getGeneratorOutputPath();
+  Iterable<IFile> testOutputRoots=Sequence.fromIterable(modules).select(new ISelector<AbstractModule,IFile>(){
+    public IFile select(    AbstractModule mod){
+      if (mod.getFacet(TestsFacet.class) != null) {
+        return mod.getFacet(TestsFacet.class).getTestsOutputPath();
       }
-      return FileGenerationUtil.getCachesPath(path);
+      return null;
+    }
+  }
+).where(new IWhereFilter<IFile>(){
+    public boolean accept(    IFile it){
+      return it != null;
+    }
+  }
+);
+  this.sortedTestOutDirs=DirUtil.sortDirs(Sequence.fromIterable(testOutputRoots).select(new ISelector<IFile,String>(){
+    public String select(    IFile it){
+      return it.getPath();
+    }
+  }
+));
+  this.sortedTestOutCacheDirs=DirUtil.sortDirs(Sequence.fromIterable(testOutputRoots).select(new ISelector<IFile,String>(){
+    public String select(    IFile it){
+      return FileGenerationUtil.getCachesPath(it.getPath());
     }
   }
 ));
