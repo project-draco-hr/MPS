@@ -1,12 +1,13 @@
 {
-  SModel mi=getSModelInternal();
-  if (getLoadingState() == ModelLoadingState.INTERFACE_LOADED) {
-    mi.enterUpdateMode();
-    try {
-      if (getLoadingState() == ModelLoadingState.FULLY_LOADED) {
+  if (getLoadingState() != ModelLoadingState.FULLY_LOADED) {
+    final ModelLoadingState oldState;
+synchronized (myLoadLock) {
+      if (myIsLoadInProgress) {
         return;
       }
-      if (myIsLoadInProgress) {
+      final SModel mi=getSModelInternal();
+      oldState=getLoadingState();
+      if (oldState == ModelLoadingState.FULLY_LOADED) {
         return;
       }
       myIsLoadInProgress=true;
@@ -14,17 +15,17 @@
       loader.skipPrivateMembers(mySkipPrivate);
       SModel completeModelData=new SModel(getReference(),new ForeignNodeIdMap());
       Collection<SModelReference> imports=loader.completeModel(this,completeModelData);
-      completeModelData.enterUpdateMode();
+      completeModelData.setUpdateMode(true);
+      mi.setUpdateMode(true);
       new PartialModelUpdateFacility(mi,completeModelData,this).update();
       for (      SModelReference mr : imports) {
         mi.addModelImport(new SModel.ImportElement(mr));
       }
-      completeModelData.leaveUpdateMode();
+      completeModelData.setUpdateMode(false);
+      mi.setUpdateMode(false);
+      setLoadingState(ModelLoadingState.FULLY_LOADED);
+      myIsLoadInProgress=false;
     }
-  finally {
-      mi.leaveUpdateMode();
-    }
-    fireModelStateChanged(ModelLoadingState.FULLY_LOADED);
-    myIsLoadInProgress=false;
+    fireModelStateChanged(oldState,getLoadingState());
   }
 }

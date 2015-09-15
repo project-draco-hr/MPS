@@ -1,16 +1,16 @@
 {
-  if (origType == null)   return null;
-  if (!TypesUtil.isVariable(origType)) {
-    SNode subsType=new TypeSubstitution(origType,myTypeCheckingContext).substitutedType();
-    if (subsType != null && !subsType.equals(origType)) {
-      Set<SNode> seen=new HashSet<SNode>(Collections.singleton(subsType));
-      for (SNode nextSubs=null; !seen.contains(nextSubs); seen.add(nextSubs)) {
-        nextSubs=new TypeSubstitution(subsType,myTypeCheckingContext).substitutedType();
-        subsType=nextSubs;
-      }
-      executeOperation(new SubstituteTypeOperation(origType,subsType));
-      origType=subsType;
+  if (origType == null || TypesUtil.isVariable(origType))   return origType;
+  SNode newType=origType;
+  StructuralNodeSet<SNode> seen=new StructuralNodeSet<SNode>();
+  TypeSubstitution typeSubs=myTypeCheckingContext.getSubstitution(origType);
+  while (typeSubs != null && typeSubs.isValid()) {
+    newType=typeSubs.getNewNode();
+    if (seen.containsStructurally(newType)) {
+      break;
     }
+    seen.addStructurally(newType);
+    executeOperation(new SubstituteTypeOperation(typeSubs));
+    typeSubs=myTypeCheckingContext.getSubstitution(newType);
   }
-  return origType;
+  return newType;
 }

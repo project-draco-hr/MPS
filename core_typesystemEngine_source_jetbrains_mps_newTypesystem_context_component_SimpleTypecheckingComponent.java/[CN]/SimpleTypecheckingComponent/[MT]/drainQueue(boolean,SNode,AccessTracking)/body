@@ -1,6 +1,6 @@
 {
   for (SNode sNode=myQueue.poll(); sNode != null; sNode=myQueue.poll()) {
-    if (myFullyCheckedNodes.contains(sNode)) {
+    if (myFullyCheckedNodes.contains(sNode) || !TypeSystemUtil.shouldApplyTypeSystemRules(sNode)) {
       continue;
     }
     Set<SNode> candidatesForFrontier=new LinkedHashSet<SNode>();
@@ -11,17 +11,11 @@
       if (candidate == null || myFullyCheckedNodes.contains(candidate))       continue;
       myQueue.add(candidate);
     }
-    if (!myPartlyCheckedNodes.contains(sNode)) {
-      accessTracking.installReadListeners();
-      boolean typeAffected=false;
-      try {
-        myNodes.add(sNode);
-        typeAffected=applyRulesToNode(sNode);
-      }
-  finally {
-        accessTracking.removeReadListeners();
-      }
-      accessTracking.postProcess(sNode,typeAffected);
+    if (isNodeAttribute(sNode)) {
+      myQueue.add(sNode.getParent());
+    }
+ else     if (!myPartlyCheckedNodes.contains(sNode)) {
+      applyRulesAndTrackAccess(accessTracking,sNode);
       myPartlyCheckedNodes.add(sNode);
     }
     myFullyCheckedNodes.add(sNode);
