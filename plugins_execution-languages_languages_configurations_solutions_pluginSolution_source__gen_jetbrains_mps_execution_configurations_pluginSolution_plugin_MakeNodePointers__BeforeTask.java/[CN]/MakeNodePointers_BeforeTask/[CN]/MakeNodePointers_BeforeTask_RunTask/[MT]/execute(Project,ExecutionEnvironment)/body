@@ -1,8 +1,8 @@
 {
   final jetbrains.mps.project.Project mpsProject=ProjectHelper.toMPSProject(project);
-  Iterable<SModel> models=new ModelAccessHelper(mpsProject.getModelAccess()).runReadAction(new Computable<ISequence<SModel>>(){
-    public ISequence<SModel> compute(){
-      return ListSequence.fromList(myNodePointers).where(new IWhereFilter<SNodeReference>(){
+  List<IResource> resources=new ModelAccessHelper(mpsProject.getModelAccess()).runReadAction(new Computable<List<IResource>>(){
+    public List<IResource> compute(){
+      Iterable<SModel> models=ListSequence.fromList(myNodePointers).where(new IWhereFilter<SNodeReference>(){
         public boolean accept(        SNodeReference it){
           return it != null;
         }
@@ -19,15 +19,20 @@
         }
       }
 );
+      if (Sequence.fromIterable(models).isEmpty()) {
+        return null;
+      }
+      List<IResource> list=ListSequence.fromListWithValues(new ArrayList<IResource>(),new ModelsToResources(models).resources(false));
+      return list;
     }
   }
 );
-  if (Sequence.fromIterable(models).isEmpty()) {
+  if (ListSequence.fromList(resources).isEmpty()) {
     return true;
   }
   MakeSession session=new MakeSession(mpsProject,new DefaultMakeMessageHandler(mpsProject),true);
   if (IMakeService.INSTANCE.get().openNewSession(session)) {
-    Future<IResult> future=IMakeService.INSTANCE.get().make(session,new ModelsToResources(models).resources(false));
+    Future<IResult> future=IMakeService.INSTANCE.get().make(session,resources);
     IResult result=null;
     try {
       result=future.get();
