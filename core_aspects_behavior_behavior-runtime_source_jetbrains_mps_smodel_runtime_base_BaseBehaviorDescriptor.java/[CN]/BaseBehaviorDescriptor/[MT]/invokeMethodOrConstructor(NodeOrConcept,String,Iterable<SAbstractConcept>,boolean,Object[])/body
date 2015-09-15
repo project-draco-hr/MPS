@@ -1,24 +1,31 @@
 {
   for (  SAbstractConcept ancestor : ancestors) {
-    BHDescriptor bhDescriptor=ConceptRegistry.getInstance().getBehaviorRegistry().getBHDescriptor(ancestor);
+    BHDescriptor bhDescriptor=getBehaviorRegistry().getBHDescriptor(ancestor);
     if (bhDescriptor instanceof BHDescriptorLegacyAdapter) {
       InterpretedBehaviorDescriptor legacyDescriptor=((BHDescriptorLegacyAdapter)bhDescriptor).getLegacyDescriptor();
       if (legacyDescriptor.hasOwnMethod(methodName)) {
-        return (T)legacyDescriptor.invokeOwn(nodeOrConcept,methodName,parameters);
+        T result=(T)legacyDescriptor.invokeOwn(nodeOrConcept,methodName,parameters);
+        if (methodInvocation) {
+          return result;
+        }
       }
     }
  else     if (bhDescriptor instanceof BaseBHDescriptor) {
       BehaviorDescriptor behaviorDescriptor=getBehaviorDescriptor(ancestor.getQualifiedName());
       if (!(behaviorDescriptor instanceof BehaviorDescriptorAdapter)) {
-        throw new IllegalStateException("Could not get legacy behavior descriptor + " + behaviorDescriptor + "; unable to resolve the method '"+ methodName+ "'");
+        throw new IllegalStateException("Could not get legacy behavior descriptor + " + behaviorDescriptor + "; unable to resolve method '"+ methodName+ "'");
       }
       BehaviorDescriptorAdapter behaviorDescriptorAdapter=(BehaviorDescriptorAdapter)behaviorDescriptor;
-      boolean isStatic=(nodeOrConcept.getNode() == null);
       if (behaviorDescriptorAdapter.hasOwnMethod(methodName,parameters)) {
-        return (T)behaviorDescriptorAdapter.invokeOwn(nodeOrConcept.getNode(),methodName,parameters);
+        T result=(T)behaviorDescriptorAdapter.invokeOwn(nodeOrConcept.getNode(),methodName,parameters);
+        if (methodInvocation) {
+          return result;
+        }
       }
     }
   }
-  throwNoSuchMethod(methodName);
+  if (methodInvocation) {
+    throwNoSuchMethod(methodName);
+  }
   return null;
 }
