@@ -1,26 +1,68 @@
 {
-  final Set<String> usedConcepts=SetSequence.fromSet(new HashSet<String>());
-  InternalActionsUtils.executeActionOnAllNodesInModal("find used concepts",((Project)MapSequence.fromMap(_params).get("ideaProject")),new _FunctionTypes._void_P1_E0<SNode>(){
-    public void invoke(    SNode node){
-      for (      SAbstractConcept c : new DepthFirstConceptIterator(node.getConcept())) {
-        SetSequence.fromSet(usedConcepts).addElement(c.getQualifiedName());
-      }
-    }
-  }
-);
-  List<SNodeReference> concepts=ListSequence.fromList(InternalActionsUtils.getAllConcepts()).where(new IWhereFilter<SNodeReference>(){
-    public boolean accept(    final SNodeReference it){
-      final Wrappers._boolean isOk=new Wrappers._boolean(false);
-      ((MPSProject)MapSequence.fromMap(_params).get("project")).getModelAccess().runReadAction(new Runnable(){
-        public void run(){
-          SNode concept=SNodeOperations.cast(it.resolve(MPSModuleRepository.getInstance()),MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x1103553c5ffL,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration"));
-          isOk.value=(concept != null) && (BehaviorReflection.invokeVirtual(Boolean.TYPE,concept,"virtual_isDeprecated_1224609060727",new Object[]{}) || !(SetSequence.fromSet(usedConcepts).contains(NameUtil.nodeFQName(concept))));
+  final List<SNodeReference> conceptsToShow=ListSequence.fromList(new ArrayList<SNodeReference>());
+  Task.Modal modal=new Task.Modal(((Project)MapSequence.fromMap(_params).get("ideaProject")),event.getPresentation().getText(),true){
+    @Override public void run(    @NotNull ProgressIndicator indicator){
+      final ProgressMonitor monitor=new ProgressMonitorAdapter(indicator);
+      List<SNodeReference> concepts=new ModelAccessHelper(((MPSProject)MapSequence.fromMap(_params).get("project")).getModelAccess()).runReadAction(new Computable<List<SNodeReference>>(){
+        public List<SNodeReference> compute(){
+          Iterable<? extends SModule> modules=((MPSProject)MapSequence.fromMap(_params).get("project")).getModulesWithGenerators();
+          int totalWork=Sequence.fromIterable(modules).count() * 2;
+          monitor.start("Find unused  and deprecated concepts",totalWork);
+          ModelDependencyScanner scanner=new ModelDependencyScanner().usedConcepts(true).usedLanguages(false).crossModelReferences(false);
+          for (          SModule module : modules) {
+            monitor.step(String.format("Look up concepts in use: %s...",NameUtil.compactNamespace(module.getModuleName())));
+            for (            SModel m : module.getModels()) {
+              if (monitor.isCanceled()) {
+                return null;
+              }
+              scanner.walk(m);
+            }
+            monitor.advance(1);
+          }
+          monitor.step("Complete concept hierarchy...");
+          final HashSet<String> conceptsInUse=new HashSet<String>();
+          for (          SConcept inUse : scanner.getConcepts()) {
+            for (            SAbstractConcept c : new DepthFirstConceptIterator(inUse)) {
+              conceptsInUse.add(c.getQualifiedName());
+            }
+            if (monitor.isCanceled()) {
+              return null;
+            }
+          }
+          monitor.advance(totalWork / 8);
+          monitor.step("Look up concept declarations...");
+          Iterable<SearchResult<Object>> searchResults=FindUtils.getSearchResults(new EmptyProgressMonitor(),MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0xf979ba0450L,"jetbrains.mps.lang.structure.structure.ConceptDeclaration").getDeclarationNode(),GlobalScope.getInstance(),"jetbrains.mps.lang.structure.findUsages.ConceptInstances_Finder").getSearchResults();
+          if (monitor.isCanceled()) {
+            return null;
+          }
+          monitor.advance(totalWork / 4);
+          monitor.step("Filter unused and deprecated...");
+          Iterable<SNode> allConcepts=SNodeOperations.ofConcept(Sequence.fromIterable(searchResults).select(new ISelector<SearchResult<Object>,Object>(){
+            public Object select(            SearchResult<Object> it){
+              return it.getObject();
+            }
+          }
+).ofType(SNode.class),MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x1103553c5ffL,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration"));
+          List<SNodeReference> rv=Sequence.fromIterable(allConcepts).where(new IWhereFilter<SNode>(){
+            public boolean accept(            SNode concept){
+              return BehaviorReflection.invokeVirtual(Boolean.TYPE,concept,"virtual_isDeprecated_1224609060727",new Object[]{}) || !(conceptsInUse.contains(NameUtil.nodeFQName(concept)));
+            }
+          }
+).select(new ISelector<SNode,SNodeReference>(){
+            public SNodeReference select(            SNode it){
+              return SNodeOperations.getPointer(it);
+            }
+          }
+).toListSequence();
+          monitor.done();
+          return rv;
         }
       }
 );
-      return isOk.value;
+      ListSequence.fromList(conceptsToShow).addSequence(ListSequence.fromList(concepts));
     }
   }
-).toListSequence();
-  InternalActionsUtils.showUsagesViewForNodes(((Project)MapSequence.fromMap(_params).get("ideaProject")),concepts);
+;
+  ProgressManager.getInstance().run(modal);
+  InternalActionsUtils.showUsagesViewForNodes(((Project)MapSequence.fromMap(_params).get("ideaProject")),conceptsToShow);
 }
