@@ -1,2 +1,35 @@
 {
+  final Set<VirtualFile> roots=new HashSet<VirtualFile>();
+  final jetbrains.mps.project.Project mpsProject=ProjectHelper.toMPSProject(getProject());
+  mpsProject.getModelAccess().runReadAction(new Runnable(){
+    @Override public void run(){
+      for (      SModule module : mpsProject.getModulesWithGenerators()) {
+        JavaModuleFacet facet=module.getFacet(JavaModuleFacet.class);
+        if (facet == null) {
+          continue;
+        }
+        IFile classesGen=facet.getClassesGen();
+        if (classesGen == null) {
+          continue;
+        }
+        if (classesGen.getName().endsWith("." + MPSExtentions.MPS_ARCH)) {
+          continue;
+        }
+        VirtualFile classesGenVF=VirtualFileUtils.getVirtualFile(classesGen);
+        if (classesGenVF != null) {
+          roots.add(classesGenVF);
+        }
+        if (((AbstractModule)module).getModuleSourceDir() == null)         continue;
+        IFile classesDir=((AbstractModule)module).getModuleSourceDir().getDescendant(AbstractModule.CLASSES);
+        if (classesDir.exists()) {
+          VirtualFile classesVF=VirtualFileUtils.getVirtualFile(classesDir);
+          if (classesVF != null) {
+            roots.add(classesVF);
+          }
+        }
+      }
+    }
+  }
+);
+  return roots;
 }
