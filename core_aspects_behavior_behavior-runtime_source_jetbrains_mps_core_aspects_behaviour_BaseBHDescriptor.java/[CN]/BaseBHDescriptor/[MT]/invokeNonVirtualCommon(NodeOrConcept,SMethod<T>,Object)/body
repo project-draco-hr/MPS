@@ -1,0 +1,33 @@
+{
+  checkInitialized();
+  @NotNull Object[] parametersArray=getParametersArray(parameters);
+  checkForConcept(nodeOrConcept.getConcept());
+  checkParameters(method,parametersArray);
+  if (method.getModifiers().isPrivate()) {
+    if (nodeOrConcept.getNode() != null) {
+      return invokeSpecial(nodeOrConcept.getNode(),method,parametersArray);
+    }
+ else {
+      return invokeSpecial(nodeOrConcept.getConcept(),method,parametersArray);
+    }
+  }
+  Iterable<SAbstractConcept> ancestors=myAncestorCache.getAncestorsInvocationOrder();
+  for (  SAbstractConcept ancestor : ancestors) {
+    BHDescriptor bhDescriptor=getBHDescriptor(ancestor);
+    if (bhDescriptor instanceof BaseBHDescriptor) {
+      BaseBHDescriptor baseBHDescriptor=(BaseBHDescriptor)bhDescriptor;
+      if (baseBHDescriptor.hasDeclaredMethod(method)) {
+        if (nodeOrConcept.getNode() != null) {
+          return baseBHDescriptor.invokeSpecial(nodeOrConcept.getNode(),method,parametersArray);
+        }
+ else {
+          return baseBHDescriptor.invokeSpecial(nodeOrConcept.getConcept(),method,parametersArray);
+        }
+      }
+    }
+ else {
+      throw new IllegalStateException("Unknown behavior descriptor in the '" + nodeOrConcept.getConcept() + "' ancestor tree : '"+ bhDescriptor+ "'");
+    }
+  }
+  throw new BHMethodNotFoundException(this,method);
+}
