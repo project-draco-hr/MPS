@@ -25,7 +25,7 @@
   int work=ListSequence.fromList(modules).count() + ListSequence.fromList(models).count() + 1;
   monitor.start("Checking",work);
   try {
-    SearchResults<ModelCheckerIssue> rv=new SearchResults<ModelCheckerIssue>();
+    final SearchResults<ModelCheckerIssue> rv=new SearchResults<ModelCheckerIssue>();
     if (!(ListSequence.fromList(modules).isEmpty())) {
       ModuleChecker moduleChecker=new ModuleChecker();
       for (      SModule module : ListSequence.fromList(modules)) {
@@ -46,6 +46,21 @@
       }
     }
     rv.addAll(modelChecker.getSearchResults());
+    List<SearchResult<ModelCheckerIssue>> toRemove=ListSequence.fromList(new ArrayList<SearchResult<ModelCheckerIssue>>());
+    for (    SearchResult<ModelCheckerIssue> result : ListSequence.fromList(rv.getSearchResults())) {
+      if (result.getObject() instanceof ModelCheckerIssue.NodeIssue) {
+        ModelCheckerIssue.NodeIssue mci=(ModelCheckerIssue.NodeIssue)result.getObject();
+        if (!(ErrorReportUtil.shouldReportError(mci.getNode()))) {
+          ListSequence.fromList(toRemove).addElement(result);
+        }
+      }
+    }
+    ListSequence.fromList(toRemove).visitAll(new IVisitor<SearchResult<ModelCheckerIssue>>(){
+      public void visit(      SearchResult<ModelCheckerIssue> it){
+        rv.remove(it);
+      }
+    }
+);
     return rv;
   }
   finally {
