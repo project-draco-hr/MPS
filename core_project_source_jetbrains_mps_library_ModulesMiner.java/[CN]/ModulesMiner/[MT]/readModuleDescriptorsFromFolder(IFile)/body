@@ -1,9 +1,12 @@
 {
   if (!needProcess(file))   return;
-  if (file.getPath().endsWith(JAR + JAR_SEPARATOR)) {
+  if (IFileUtils.isJarFile(file)) {
+    readModuleDescriptorsFromFolder(IFileUtils.stepIntoJar(file));
+  }
+ else   if (file.getPath().endsWith(JAR_SEPARATOR)) {
     IFile moduleXml=file.getDescendant(META_INF).getDescendant(MODULE_XML);
     if (moduleXml.exists() && !moduleXml.isDirectory()) {
-      ModuleDescriptor moduleDescriptor=loadModuleDescriptor(moduleXml);
+      ModuleDescriptor moduleDescriptor=loadDeploymentDescriptor(moduleXml);
       if (moduleDescriptor != null) {
         myOutcome.add(new ModuleHandle(moduleXml,moduleDescriptor));
       }
@@ -11,23 +14,11 @@
  else {
       IFile dirInJar=file.getDescendant(MODULES_DIR);
       if (dirInJar.exists() && dirInJar.isDirectory()) {
-        readModuleDescriptorsFromFolder(dirInJar);
+        readModuleDescriptorsFromFolder0(dirInJar,Location.INSIDE_THE_JAR);
       }
     }
   }
  else {
-    List<IFile> children=file.getChildren();
-    ArrayList<IFile> folders=new ArrayList<IFile>();
-    for (    IFile child : children) {
-      if (!child.isDirectory()) {
-        readModuleDescriptorsFromFile(child);
-      }
- else {
-        folders.add(child);
-      }
-    }
-    for (    IFile child : folders) {
-      readModuleDescriptorsFromFolder(child);
-    }
+    readModuleDescriptorsFromFolder0(file,Location.OUTSIDE_THE_JAR);
   }
 }
