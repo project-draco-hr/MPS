@@ -110,6 +110,7 @@
     }
 );
   }
+  final Wrappers._T<Iterable<SReference>> usagesOfDeprecated=new Wrappers._T<Iterable<SReference>>();
 {
     final SearchScope scope=CommandUtil.createScope(event.getData(MPSCommonDataKeys.MPS_PROJECT));
     final QueryExecutionContext context=new QueryExecutionContext(){
@@ -118,11 +119,27 @@
       }
     }
 ;
-    Sequence.fromIterable(deprecatedMembers).translate(new ITranslator2<SNode,SReference>(){
+    usagesOfDeprecated.value=Sequence.fromIterable(deprecatedMembers).translate(new ITranslator2<SNode,SReference>(){
       public Iterable<SReference> translate(      SNode it){
         return CommandUtil.usages(CommandUtil.createConsoleScope(null,false,context),it);
       }
     }
 );
   }
+  ApplicationManager.getApplication().invokeLater(new Runnable(){
+    public void run(){
+      ModelAccess.instance().runReadAction(new Runnable(){
+        public void run(){
+          MigrationProblemsOutputUtil.showNodes(event.getData(CommonDataKeys.PROJECT),"Usages of deprecated stuff",Sequence.fromIterable(usagesOfDeprecated.value).select(new ISelector<SReference,SNode>(){
+            public SNode select(            SReference it){
+              return it.getSourceNode();
+            }
+          }
+));
+        }
+      }
+);
+    }
+  }
+,ModalityState.NON_MODAL);
 }
