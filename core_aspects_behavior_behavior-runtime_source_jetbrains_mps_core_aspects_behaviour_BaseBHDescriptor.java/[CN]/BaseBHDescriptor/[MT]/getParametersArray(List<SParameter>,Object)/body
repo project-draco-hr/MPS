@@ -1,0 +1,45 @@
+{
+  if (parameters == null) {
+    return new Object[]{null};
+  }
+  if (methodParameters.isEmpty()) {
+    return new Object[0];
+  }
+  SParameter lastPrm=methodParameters.get(methodParameters.size() - 1);
+  if (lastPrm instanceof SVarArgParameter) {
+    Object[] newParameters=new Object[methodParameters.size()];
+    SAbstractType componentType=((SVarArgParameter)lastPrm).getComponentType();
+    Class<?> javaComponentType=Object.class;
+    if (componentType instanceof SJavaCompoundType) {
+      javaComponentType=((SJavaCompoundType)componentType).getJavaType();
+    }
+    newParameters[methodParameters.size() - 1]=Array.newInstance(javaComponentType,parameters.length - methodParameters.size() + 1);
+    for (int i=0; i < parameters.length; ++i) {
+      if (i < methodParameters.size() - 1) {
+        newParameters[i]=parameters[i];
+      }
+ else {
+        Array.set(newParameters[methodParameters.size() - 1],i - methodParameters.size() + 1,parameters[i]);
+      }
+    }
+    return newParameters;
+  }
+ else {
+    if (methodParameters.size() == 1) {
+      if (lastPrm.getType() instanceof SJavaCompoundType) {
+        Class<?> javaType=((SJavaCompoundType)lastPrm.getType()).getJavaType();
+        if (javaType.isArray()) {
+          Class<?> componentType=javaType.getComponentType();
+          for (int i=0; i < parameters.length; ++i) {
+            if (parameters[i] == null)             continue;
+            if (!componentType.isAssignableFrom(parameters[i].getClass())) {
+              return parameters;
+            }
+          }
+          parameters=new Object[]{parameters};
+        }
+      }
+    }
+    return parameters;
+  }
+}
