@@ -1,7 +1,9 @@
 {
   final Wrappers._T<SModel> currentModel=new Wrappers._T<SModel>();
+  final Wrappers._T<SContainmentLink> role=new Wrappers._T<SContainmentLink>();
   project.getRepository().getModelAccess().runReadAction(new Runnable(){
     public void run(){
+      role.value=ListSequence.fromList(nodesToMove).first().getContainmentLink();
       currentModel.value=SNodeOperations.getModel(ListSequence.fromList(nodesToMove).first());
     }
   }
@@ -22,7 +24,7 @@
           return;
         }
       }
-      if (!(newLocation.isValid(project,nodesToMove))) {
+      if (!(newLocation.isValid(project.getRepository(),nodesToMove,role.value))) {
         return;
       }
       final List<MoveRefactoringContributor> selectedBuilders=SelectContributorsDialog.selectContributors(ProjectHelper.toIdeaProject(project),Sequence.fromIterable(new ExtensionPoint<MoveRefactoringContributor.MoveNodesBuilderFactory>("jetbrains.mps.ide.platform.MoveNodesBuilderEP").getObjects()).select(new ISelector<MoveRefactoringContributor.MoveNodesBuilderFactory,MoveRefactoringContributor>(){
@@ -51,9 +53,22 @@
       }
       RefactoringViewUtil.refactor(project,searchResults,new _FunctionTypes._void_P1_E0<Set<SNode>>(){
         public void invoke(        Set<SNode> included){
-          newLocation.insertNodes(nodesToMove);
+          final Map<SNode,SNode> copyMap=MapSequence.fromMap(new HashMap<SNode,SNode>());
+          List<SNode> copied=CopyUtil.copyAndPreserveId(nodesToMove,copyMap);
+          ListSequence.fromList(nodesToMove).visitAll(new IVisitor<SNode>(){
+            public void visit(            SNode it){
+              SNodeOperations.detachNode(it);
+            }
+          }
+);
+          newLocation.insertNodes(copied,role.value);
           for (          MoveRefactoringContributor builder : ListSequence.fromList(selectedBuilders)) {
-            builder.isMoved(nodesToMoveWithDescendants);
+            builder.isMoved(ListSequence.fromList(nodesToMoveWithDescendants).select(new ISelector<SNode,SNode>(){
+              public SNode select(              SNode it){
+                return MapSequence.fromMap(copyMap).get(it);
+              }
+            }
+).toListSequence());
           }
           for (          MoveRefactoringContributor builder : ListSequence.fromList(selectedBuilders)) {
             builder.commit();
