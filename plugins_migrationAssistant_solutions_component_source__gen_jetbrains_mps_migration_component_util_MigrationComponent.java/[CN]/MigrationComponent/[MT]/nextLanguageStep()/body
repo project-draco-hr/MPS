@@ -2,42 +2,75 @@
   final Wrappers._T<MigrationManager.MigrationStep> result=new Wrappers._T<MigrationManager.MigrationStep>(null);
   ModelAccess.instance().runReadAction(new _Adapters._return_P0_E0_to_Runnable_adapter(new _FunctionTypes._return_P0_E0<Boolean>(){
     public Boolean invoke(){
-      Collection<ScriptApplied> scripts=CollectionSequence.fromCollection(new ArrayList<ScriptApplied>());
+      Collection<LanguageScriptApplied> scripts=CollectionSequence.fromCollection(new ArrayList<LanguageScriptApplied>());
       return Sequence.fromIterable(MigrationsUtil.getMigrateableModulesFromProject(ProjectHelper.toMPSProject(myProject))).ofType(AbstractModule.class).any(new IWhereFilter<AbstractModule>(){
         public boolean accept(        final AbstractModule module){
-          return Sequence.fromIterable(MigrationsUtil.getNextStepScripts(module)).any(new IWhereFilter<MigrationScriptReference>(){
-            public boolean accept(            MigrationScriptReference it){
-              if (!(MigrationsUtil.isMigrationNeeded(it.getLanguage(),it.getFromVersion(),module))) {
-                return false;
-              }
-              MigrationScript loaded=fetchScript(it,false);
-              if (loaded == null) {
-                return false;
-              }
-              final ScriptApplied applied=new ScriptApplied(loaded,module);
-              if (!(areDepsSatisfied(applied))) {
-                return false;
-              }
-              result.value=new MigrationManager.MigrationStep(){
-                public String getDescription(){
-                  return applied.toString();
+          return Sequence.fromIterable(MigrationsUtil.getNextStepScripts(module)).any(new IWhereFilter<MigrationUnitReference>(){
+            public boolean accept(            MigrationUnitReference it){
+              if (it instanceof MigrationScriptReference) {
+                if (!(MigrationsUtil.isLanguageMigrationNeeded(((MigrationScriptReference)it).getLanguage(),((MigrationScriptReference)it).getFromVersion(),module))) {
+                  return false;
                 }
-                public boolean execute(){
-                  final Wrappers._boolean res=new Wrappers._boolean();
-                  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
-                    public void run(){
-                      res.value=executeScript(applied);
-                    }
+                MigrationScript loaded=fetchLanguageScript(((MigrationScriptReference)it),false);
+                if (loaded == null) {
+                  return false;
+                }
+                final LanguageScriptApplied applied=new LanguageScriptApplied(loaded,module);
+                if (!(areDepsSatisfied(applied))) {
+                  return false;
+                }
+                result.value=new MigrationManager.MigrationStep(){
+                  public String getDescription(){
+                    return applied.toString();
                   }
+                  public boolean execute(){
+                    final Wrappers._boolean res=new Wrappers._boolean();
+                    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+                      public void run(){
+                        res.value=executeLanguageScript(applied);
+                      }
+                    }
 );
-                  return res.value;
+                    return res.value;
+                  }
+                  public void forceExecutionNextTime(){
+                    throw new UnsupportedOperationException("not supported for language migrations");
+                  }
                 }
-                public void forceExecutionNextTime(){
-                  throw new UnsupportedOperationException("not supported for language migrations");
-                }
-              }
 ;
-              return true;
+                return true;
+              }
+              if (it instanceof RefactoringStepReference) {
+                if (!(MigrationsUtil.isDependencyMigrationNeeded(((RefactoringStepReference)it).getModule().resolve(ProjectHelper.toMPSProject(myProject).getRepository()),((RefactoringStepReference)it).getFromVersion(),module))) {
+                  return false;
+                }
+                RefactoringStep loaded=fetchModuleScript(((RefactoringStepReference)it),false);
+                if (loaded == null) {
+                  return false;
+                }
+                final DependencyScriptApplied applied=new DependencyScriptApplied(loaded,module);
+                result.value=new MigrationManager.MigrationStep(){
+                  public String getDescription(){
+                    return applied.toString();
+                  }
+                  public boolean execute(){
+                    final Wrappers._boolean res=new Wrappers._boolean();
+                    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+                      public void run(){
+                        res.value=executeDependencyScript(applied);
+                      }
+                    }
+);
+                    return res.value;
+                  }
+                  public void forceExecutionNextTime(){
+                    throw new UnsupportedOperationException("not supported for dependency migrations");
+                  }
+                }
+;
+                return true;
+              }
+              throw new IllegalStateException();
             }
           }
 );
