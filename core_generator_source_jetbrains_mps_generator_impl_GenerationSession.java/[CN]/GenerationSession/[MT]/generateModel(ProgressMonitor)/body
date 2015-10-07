@@ -4,9 +4,21 @@
   }
   GenerationParametersProvider parametersProvider=myGenerationOptions.getParametersProvider();
   ttrace.push("analyzing dependencies",false);
-  Collection<String> additionalLanguages=parametersProvider instanceof GenerationParametersProviderEx ? ((GenerationParametersProviderEx)parametersProvider).getAdditionalLanguages(myOriginalInputModel) : null;
   ModelGenerationPlan customPlan=myGenerationOptions.getCustomPlan(myOriginalInputModel);
-  myGenerationPlan=customPlan != null ? new GenerationPlan(myOriginalInputModel,customPlan) : new GenerationPlan(myOriginalInputModel,additionalLanguages);
+  if (customPlan != null) {
+    myGenerationPlan=new GenerationPlan(myOriginalInputModel,customPlan);
+  }
+ else {
+    Collection<String> additionalLanguages=parametersProvider instanceof GenerationParametersProviderEx ? ((GenerationParametersProviderEx)parametersProvider).getAdditionalLanguages(myOriginalInputModel) : null;
+    List<SLanguage> extraLanguages=null;
+    if (additionalLanguages != null && !additionalLanguages.isEmpty()) {
+      extraLanguages=new ArrayList<SLanguage>(additionalLanguages.size());
+      for (      String l : additionalLanguages) {
+        extraLanguages.add(MetaAdapterFactoryByName.getLanguage(l));
+      }
+    }
+    myGenerationPlan=new GenerationPlan(myOriginalInputModel,extraLanguages);
+  }
   if (!checkGenerationPlan(myGenerationPlan)) {
     if (myGenerationOptions.isStrictMode()) {
       throw new GenerationCanceledException();
