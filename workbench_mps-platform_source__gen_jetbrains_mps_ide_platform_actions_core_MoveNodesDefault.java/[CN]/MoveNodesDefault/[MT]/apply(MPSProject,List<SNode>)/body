@@ -1,8 +1,10 @@
 {
   final Wrappers._T<SModel> currentModel=new Wrappers._T<SModel>();
+  final Wrappers._T<SContainmentLink> role=new Wrappers._T<SContainmentLink>();
   project.getRepository().getModelAccess().runReadAction(new Runnable(){
     public void run(){
       currentModel.value=SNodeOperations.getModel(ListSequence.fromList(nodesToMove).first());
+      role.value=ListSequence.fromList(nodesToMove).first().getContainmentLink();
     }
   }
 );
@@ -12,8 +14,15 @@
     }
   }
 );
+  if (newLocation instanceof NodeLocation.NodeLocationChild) {
+    ((NodeLocation.NodeLocationChild)newLocation).setRole(role.value);
+  }
   if (newLocation == null) {
     return;
   }
-  doMove(project,ListSequence.fromListAndArray(new ArrayList<ToMoveItem>(),new ToMoveItem(nodesToMove,newLocation)),null);
+  Map<SNodeReference,NodeLocation> moveMap=MapSequence.fromMap(new HashMap<SNodeReference,NodeLocation>());
+  for (  SNode node : ListSequence.fromList(nodesToMove)) {
+    MapSequence.fromMap(moveMap).put(node.getReference(),newLocation);
+  }
+  doMove(project,moveMap,null);
 }
