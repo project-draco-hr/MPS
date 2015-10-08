@@ -1,0 +1,40 @@
+{
+  myMinorStep=-1;
+  List<TemplateMappingConfiguration> mappingConfigurations=new ArrayList<TemplateMappingConfiguration>(planStep.getTransformations());
+  if (myLogger.needsInfo()) {
+    printUsedLanguages(inputModel);
+    printMappingConfigurations("apply mapping configurations:",mappingConfigurations);
+  }
+  mySessionContext=new GenerationSessionContext(mySessionContext);
+  TemplateGenerator templateGenerator=new TemplateGenerator(mySessionContext,inputModel,null,new StepArguments(null,myDependenciesBuilder,myNewTrace,null));
+  LinkedList<TemplateMappingConfiguration> drop=new LinkedList<TemplateMappingConfiguration>();
+  for (  TemplateMappingConfiguration c : mappingConfigurations) {
+    if (!c.isApplicable(templateGenerator)) {
+      drop.add(c);
+    }
+  }
+  if (!drop.isEmpty()) {
+    printMappingConfigurations("drop mapping configurations (not applicable):",drop);
+  }
+  mappingConfigurations.removeAll(drop);
+  if (mappingConfigurations.isEmpty()) {
+    if (inputModel.getRootNodes().iterator().hasNext()) {
+      myLogger.warning("skip model \"" + inputModel.getReference().getModelName() + "\" : no generator available");
+    }
+    return inputModel;
+  }
+  Collections.sort(mappingConfigurations,new MapCfgComparator());
+  RuleManager ruleManager=new RuleManager(mappingConfigurations,planStep.getTemplateModels(),myLogger);
+  try {
+    myStepArguments=new StepArguments(ruleManager,myDependenciesBuilder,myNewTrace,new GeneratorMappings(myLogger));
+    SModel outputModel=executeMajorStepInternal(inputModel,progress);
+    if (myLogger.getErrorCount() > 0) {
+      myLogger.warning("model \"" + inputModel.getReference().getModelName() + "\" has been generated with errors");
+    }
+    myStepArguments=null;
+    return outputModel;
+  }
+  finally {
+    recordAccessedTransientModels();
+  }
+}

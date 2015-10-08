@@ -4,11 +4,8 @@
   }
   GenerationParametersProvider parametersProvider=myGenerationOptions.getParametersProvider();
   ttrace.push("analyzing dependencies",false);
-  ModelGenerationPlan customPlan=myGenerationOptions.getCustomPlan(myOriginalInputModel);
-  if (customPlan != null) {
-    myGenerationPlan=new GenerationPlan(myOriginalInputModel,customPlan);
-  }
- else {
+  myGenerationPlan=myGenerationOptions.getCustomPlan(myOriginalInputModel);
+  if (myGenerationPlan == null) {
     Collection<String> additionalLanguages=parametersProvider instanceof GenerationParametersProviderEx ? ((GenerationParametersProviderEx)parametersProvider).getAdditionalLanguages(myOriginalInputModel) : null;
     List<SLanguage> extraLanguages=null;
     if (additionalLanguages != null && !additionalLanguages.isEmpty()) {
@@ -17,16 +14,16 @@
         extraLanguages.add(MetaAdapterFactoryByName.getLanguage(l));
       }
     }
-    myGenerationPlan=new GenerationPlan(myOriginalInputModel,extraLanguages);
-  }
-  if (!checkGenerationPlan(myGenerationPlan)) {
-    if (myGenerationOptions.isStrictMode()) {
+    GenerationPlan gp;
+    myGenerationPlan=gp=new GenerationPlan(myOriginalInputModel,extraLanguages);
+    if (!checkGenerationPlan(gp) && myGenerationOptions.isStrictMode()) {
       throw new GenerationCanceledException();
     }
   }
-  monitor.start("",1 + myGenerationPlan.getStepCount());
+  warnIfGenerateSelf(myGenerationPlan);
+  monitor.start("",1 + myGenerationPlan.getSteps().size());
   try {
-    IntermediateCacheHelper cacheHelper=new IntermediateCacheHelper(myGenerationOptions.getIncrementalStrategy(),myGenerationPlan,ttrace);
+    IntermediateCacheHelper cacheHelper=new IntermediateCacheHelper(myGenerationOptions.getIncrementalStrategy(),new PlanSignature(myOriginalInputModel,myGenerationPlan),ttrace);
     IncrementalGenerationHandler incrementalHandler=new IncrementalGenerationHandler(myOriginalInputModel,myProject,myGenerationOptions,cacheHelper,null);
     myDependenciesBuilder=incrementalHandler.createDependenciesBuilder();
     if (incrementalHandler.canOptimize()) {
@@ -59,7 +56,7 @@
       ((IncrementalDependenciesBuilder)myDependenciesBuilder).traceDependencyOrigins();
     }
     boolean success=false;
-    myIntermediateCache=new IntermediateCacheHelper(myGenerationOptions.getIncrementalStrategy(),myGenerationPlan,ttrace);
+    myIntermediateCache=new IntermediateCacheHelper(myGenerationOptions.getIncrementalStrategy(),new PlanSignature(myOriginalInputModel,myGenerationPlan),ttrace);
     myIntermediateCache.createNew(myOriginalInputModel);
     ttrace.pop();
     try {
@@ -72,9 +69,9 @@
       myDependenciesBuilder.updateModel(currInputModel);
       SModel currOutput=null;
       ttrace.push("steps",false);
-      myGenerationPlan.createSwitchGraph();
-      for (myMajorStep=0; myMajorStep < myGenerationPlan.getStepCount(); myMajorStep++) {
-        final List<TemplateMappingConfiguration> mappingConfigurations=myGenerationPlan.getMappingConfigurations(myMajorStep);
+      for (myMajorStep=0; myMajorStep < myGenerationPlan.getSteps().size(); myMajorStep++) {
+        Transform planStep=new Transform(myGenerationPlan.getSteps().get(myMajorStep));
+        final List<TemplateMappingConfiguration> mappingConfigurations=planStep.getTransformations();
         if (mappingConfigurations.size() >= 1) {
           final TemplateMappingConfiguration first=mappingConfigurations.get(0);
           String n=GeneratorUtil.compactNamespace(first.getModel().getLongName());
@@ -83,7 +80,7 @@
         if (myLogger.needsInfo()) {
           myLogger.info("executing step " + (myMajorStep + 1));
         }
-        currOutput=executeMajorStep(monitor.subTask(1),currInputModel);
+        currOutput=executeMajorStep(monitor.subTask(1),currInputModel,planStep);
         monitor.advance(0);
         if (currOutput == null || myLogger.getErrorCount() > 0) {
           break;
