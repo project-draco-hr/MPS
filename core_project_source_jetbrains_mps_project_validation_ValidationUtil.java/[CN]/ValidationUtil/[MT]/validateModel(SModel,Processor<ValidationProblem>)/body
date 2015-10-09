@@ -9,7 +9,7 @@
   if (model instanceof InvalidSModel) {
     Iterable<SModel.Problem> problems=model.getProblems();
     if (!problems.iterator().hasNext()) {
-      if (!processor.process(new ValidationProblem(Severity.ERROR,"Couldn't read model")))       return;
+      processor.process(new ValidationProblem(Severity.ERROR,"Couldn't read model"));
       return;
     }
     for (    SModel.Problem m : problems) {
@@ -22,7 +22,7 @@
     if (!processor.process(new ValidationProblem(Severity.WARNING,"Outdated model persistence is used: " + ((PersistenceVersionAware)model).getPersistenceVersion() + ". Please upgrade model persistence")))     return;
   }
   if (repository == null) {
-    if (!processor.process(new ValidationProblem(Severity.WARNING,"Model is detached from a repository, could not process further")))     return;
+    processor.process(new ValidationProblem(Severity.WARNING,"Model is detached from a repository, could not process further"));
     return;
   }
   SModule module=model.getModule();
@@ -30,10 +30,14 @@
   for (  final SModelReference reference : SModelOperations.getImportedModelUIDs(model)) {
     if (module.resolveInDependencies(reference.getModelId()) == null) {
       String msg="Can't find model: " + SModelStereotype.withoutStereotype(reference.getModelName());
-      if (!processor.process(new MissingModelError(model,msg,reference)))       return;
+      if (!processor.process(new MissingModelError(model,msg,reference))) {
+        return;
+      }
     }
     if (reference.equals(modelToValidateRef)) {
-      if (!processor.process(new ImportSelfWarning(model,reference)))       return;
+      if (!processor.process(new ImportSelfWarning(model,reference))) {
+        return;
+      }
     }
   }
   List<SModuleReference> langsToCheck=new ArrayList<SModuleReference>();
@@ -41,12 +45,19 @@
   langsToCheck.addAll(((jetbrains.mps.smodel.SModelInternal)model).engagedOnGenerationLanguages());
   for (  final SModuleReference lang : langsToCheck) {
     if (repository.getModule(lang.getModuleId()) == null) {
-      if (!processor.process(new MissingImportedLanguageError(model,lang)))       return;
+      if (!processor.process(new MissingImportedLanguageError(model,lang))) {
+        return;
+      }
     }
   }
   for (  SModuleReference devKit : ((jetbrains.mps.smodel.SModelInternal)model).importedDevkits()) {
     if (repository.getModule(devKit.getModuleId()) == null) {
-      if (!processor.process(new ValidationProblem(Severity.ERROR,"Can't find devkit: " + devKit.getModuleName())))       return;
+      if (!processor.process(new ValidationProblem(Severity.ERROR,"Can't find devkit: " + devKit.getModuleName()))) {
+        return;
+      }
     }
+  }
+  if (SModelStereotype.isGeneratorModel(model)) {
+    checkGeneratorModel(model,null,processor);
   }
 }
