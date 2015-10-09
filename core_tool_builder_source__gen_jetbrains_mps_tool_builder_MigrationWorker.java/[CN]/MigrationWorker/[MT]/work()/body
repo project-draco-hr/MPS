@@ -4,20 +4,19 @@
   for (  File file : mpsProjects.keySet()) {
     Project p=myEnvironment.openProject(file);
     info("Loaded project " + p);
-    MigrationManager m=p.getComponent(MigrationManager.class);
-    if (!(m.isMigrationRequired())) {
-      MigrationWorker.this.info("Nothing to migrate");
-    }
- else {
-      myEnvironment.flushAllEvents();
-      try {
-        migrate(p,m);
+    myEnvironment.flushAllEvents();
+    try {
+      Class<?> euClass=PluginManager.getPlugin(PluginId.getId(MIGRATION_PLUGIN)).getPluginClassLoader().loadClass(TASK_EXEC_CLASS);
+      Method method=euClass.getMethod("migrate",Project.class);
+      Object result=method.invoke(p);
+      if (!(((Boolean)result))) {
+        info("Nothing to migrate");
       }
- catch (      Exception e) {
-        error(e.getMessage());
-      }
-      myEnvironment.flushAllEvents();
     }
+ catch (    Exception e) {
+      error(e.getMessage());
+    }
+    myEnvironment.flushAllEvents();
     myEnvironment.closeProject(p);
   }
   dispose();
