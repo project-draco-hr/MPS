@@ -1,27 +1,29 @@
 {
-  if (ModelAccess.instance().isInsideCommand()) {
-    throw new IllegalStateException();
-  }
   final Project project=myParams.getProject();
+  if (project.getModelAccess().isCommandAction()) {
+    throw new IllegalStateException("should be called outside of command");
+  }
   new SaveRepositoryCommand(project.getRepository()).execute();
-  final Iterable<IResource> inputRes=new ModelAccessHelper(project.getModelAccess()).runReadAction(new Computable<Iterable<IResource>>(){
-    public Iterable<IResource> compute(){
-      return myParams.collectInput();
+  final List<IResource> inputRes=new ModelAccessHelper(project.getModelAccess()).runReadAction(new Computable<List<IResource>>(){
+    public List<IResource> compute(){
+      List<IResource> rv=Sequence.fromIterable(myParams.collectInput()).toListSequence();
+      List<SModel> models=ListSequence.fromList(rv).translate(new ITranslator2<IResource,SModel>(){
+        public Iterable<SModel> translate(        IResource it){
+          return ((MResource)it).models();
+        }
+      }
+).toListSequence();
+      if (new GenerationCheckHelper().checkModelsBeforeGenerationIfNeeded(project,models)) {
+        return rv;
+      }
+      return null;
     }
   }
 );
-  final List<SModel> models=ListSequence.fromListWithValues(new ArrayList<SModel>(),MakeActionImpl.this.selectModels(inputRes));
-  MakeSession session=new MakeSession(project,new DefaultMakeMessageHandler(project),myParams.isCleanMake()){
-    @Override public void doExecute(    Runnable scriptRunnable){
-      if (new GenerationCheckHelper().checkModelsBeforeGenerationIfNeeded(project,models)) {
-        scriptRunnable.run();
-      }
- else {
-        IMakeService.INSTANCE.get().closeSession(this);
-      }
-    }
+  if (inputRes == null) {
+    return;
   }
-;
+  MakeSession session=new MakeSession(project,new DefaultMakeMessageHandler(project),myParams.isCleanMake());
   if (IMakeService.INSTANCE.get().openNewSession(session)) {
     IMakeService.INSTANCE.get().make(session,inputRes);
   }

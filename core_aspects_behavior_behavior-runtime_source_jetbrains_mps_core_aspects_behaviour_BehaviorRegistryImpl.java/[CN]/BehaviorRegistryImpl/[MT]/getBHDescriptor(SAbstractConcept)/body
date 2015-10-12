@@ -1,0 +1,51 @@
+{
+  BHDescriptor descriptor=myBHDescriptors.get(MetaIdHelper.getConcept(concept));
+  if (descriptor != null) {
+    return descriptor;
+  }
+  if (!myStorage.startLoading(concept)) {
+    return new IllegalBHDescriptor(concept);
+  }
+  try {
+    try {
+      if ((concept instanceof SAbstractConceptAdapter)) {
+        LanguageRuntime languageRuntime=myLanguageRegistry.getLanguage(concept.getLanguage());
+        BehaviorAspectDescriptor behaviorAspect=null;
+        if (languageRuntime == null) {
+          LOG.warn("No language for: " + concept + ", while looking for the behavior descriptor.");
+        }
+ else {
+          behaviorAspect=languageRuntime.getAspect(BehaviorAspectDescriptor.class);
+        }
+        if (behaviorAspect == null) {
+          descriptor=new EmptyBHDescriptor(this,concept);
+        }
+ else         if (behaviorAspect instanceof BaseBehaviorAspectDescriptor) {
+          SConceptId conceptId=((SAbstractConceptAdapter)concept).getId();
+          descriptor=((BaseBehaviorAspectDescriptor)behaviorAspect).getDescriptor(conceptId);
+          if (descriptor == null) {
+            descriptor=new EmptyBHDescriptor(this,concept);
+          }
+        }
+ else {
+          descriptor=fallbackToInterpretedLegacy(concept);
+        }
+      }
+ else {
+        descriptor=fallbackToInterpretedLegacy(concept);
+      }
+      if (descriptor instanceof BaseBHDescriptor) {
+        ((BaseBHDescriptor)descriptor).init();
+      }
+    }
+ catch (    Throwable e) {
+      LOG.error("Exception while behavior descriptor creating " + concept,e);
+      descriptor=new IllegalBHDescriptor(concept);
+    }
+    myBHDescriptors.put(MetaIdHelper.getConcept(concept),descriptor);
+    return descriptor;
+  }
+  finally {
+    myStorage.finishLoading(concept);
+  }
+}

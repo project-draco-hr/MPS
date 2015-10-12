@@ -1,4 +1,20 @@
 {
-  List<SModel> models=ListSequence.fromListWithValues(new ArrayList<SModel>(),(Iterable<SModel>)VcsActionsUtil.getModels(event.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY)));
-  new MakeActionImpl(new MakeActionParameters(event.getData(MPSCommonDataKeys.MPS_PROJECT)).models(models).cleanMake(MakeOrRebuildModelsFromChangeList_Action.this.rebuild)).executeAction();
+  final MPSProject project=event.getData(MPSCommonDataKeys.MPS_PROJECT);
+  List<? extends IResource> resources=new ModelAccessHelper(project.getModelAccess()).runReadAction(new Computable<IListSequence<IResource>>(){
+    public IListSequence<IResource> compute(){
+      List<SModel> models=MakeOrRebuildModelsFromChangeList_Action.this.getModels2Build(event.getData(CommonDataKeys.VIRTUAL_FILE_ARRAY),event);
+      if (new GenerationCheckHelper().checkModelsBeforeGenerationIfNeeded(project,models)) {
+        return Sequence.fromIterable(new ModelsToResources(models).resources(MakeOrRebuildModelsFromChangeList_Action.this.rebuild)).toListSequence();
+      }
+      return ListSequence.fromList(new ArrayList<IResource>());
+    }
+  }
+);
+  if (ListSequence.fromList(resources).isEmpty()) {
+    return;
+  }
+  MakeSession session=new MakeSession(project,new DefaultMakeMessageHandler(project),MakeOrRebuildModelsFromChangeList_Action.this.rebuild);
+  if (IMakeService.INSTANCE.get().openNewSession(session)) {
+    IMakeService.INSTANCE.get().make(session,resources);
+  }
 }

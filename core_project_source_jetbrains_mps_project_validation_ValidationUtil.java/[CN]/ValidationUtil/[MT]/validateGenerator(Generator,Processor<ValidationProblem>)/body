@@ -4,7 +4,7 @@
     if (ModuleRepositoryFacade.getInstance().getModule(gen) != null)     continue;
     if (!processor.process(new ValidationProblem(Severity.ERROR,"Can't find generator dependency: " + gen.getModuleName())))     return;
   }
-  Set<String> usedLanguages=new HashSet<String>();
+  Set<SLanguage> usedLanguages=new HashSet<SLanguage>();
   ModelDependencyScanner depScan=new ModelDependencyScanner();
   depScan.crossModelReferences(true).usedLanguages(false);
   boolean anyGeneratorModelNotLoaded=false;
@@ -13,13 +13,18 @@
       anyGeneratorModelNotLoaded|=SModelStereotype.isGeneratorModel(model);
       continue;
     }
-    if (SModelStereotype.isGeneratorModel(model)) {
-      usedLanguages.addAll(ModelContentUtil.getUsedLanguageNamespacesInTemplateModel(model));
+    if (SModelStereotype.isGeneratorModel(model) && !checkGeneratorModel(model,usedLanguages,processor)) {
+      return;
     }
     depScan.walk(model);
   }
   if (!warnMissingTargetLangRuntime(generator,usedLanguages,processor))   return;
   if (!anyGeneratorModelNotLoaded) {
-    warnStrictGeneratorDependencies(generator,depScan,processor);
+    if (!warnStrictGeneratorDependencies(generator,depScan,processor)) {
+      return;
+    }
+    if (generator.getOwnTemplateModels().isEmpty()) {
+      processor.process(new ValidationProblem(Severity.WARNING,"No template models in the generator, generator is no-op"));
+    }
   }
 }

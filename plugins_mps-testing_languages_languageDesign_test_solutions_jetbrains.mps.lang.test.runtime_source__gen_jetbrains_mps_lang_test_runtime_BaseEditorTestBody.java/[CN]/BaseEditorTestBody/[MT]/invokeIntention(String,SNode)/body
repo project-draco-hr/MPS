@@ -1,16 +1,22 @@
 {
+  final Throwable[] ts=new Throwable[1];
   runUndoableInEDTAndWait(new Runnable(){
     public void run(){
       myProject.getModelAccess().executeCommand(new Runnable(){
         public void run(){
-          myEditor.getEditorContext().select(node);
-          IntentionsManager.QueryDescriptor query=new IntentionsManager.QueryDescriptor();
-          query.setCurrentNodeOnly(true);
-          Collection<Pair<IntentionExecutable,SNode>> intentions=IntentionsManager.getInstance().getAvailableIntentions(query,node,myEditor.getEditorContext());
-          for (          Pair<IntentionExecutable,SNode> intention : intentions) {
-            if (intention.o1.getDescriptor().getPersistentStateKey().equals(name)) {
-              intention.o1.execute(intention.o2,myEditor.getEditorContext());
+          try {
+            myEditor.getEditorContext().select(node);
+            IntentionsManager.QueryDescriptor query=new IntentionsManager.QueryDescriptor();
+            query.setCurrentNodeOnly(true);
+            Collection<Pair<IntentionExecutable,SNode>> intentions=IntentionsManager.getInstance().getAvailableIntentions(query,node,myEditor.getEditorContext());
+            for (            Pair<IntentionExecutable,SNode> intention : intentions) {
+              if (intention.o1.getDescriptor().getPersistentStateKey().equals(name)) {
+                intention.o1.execute(intention.o2,myEditor.getEditorContext());
+              }
             }
+          }
+ catch (          Throwable t) {
+            ts[0]=t;
           }
         }
       }
@@ -18,4 +24,7 @@
     }
   }
 );
+  if (ts[0] != null) {
+    throw new RuntimeException("Failure during intention invoke",ts[0]);
+  }
 }

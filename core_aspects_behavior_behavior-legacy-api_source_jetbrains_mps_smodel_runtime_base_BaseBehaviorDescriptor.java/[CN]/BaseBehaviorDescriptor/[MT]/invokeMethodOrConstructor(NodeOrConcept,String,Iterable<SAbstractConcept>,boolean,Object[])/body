@@ -1,0 +1,31 @@
+{
+  for (  SAbstractConcept ancestor : ancestors) {
+    BHDescriptor bhDescriptor=getBehaviorRegistry().getBHDescriptor(ancestor);
+    if (bhDescriptor instanceof BHDescriptorLegacyAdapter) {
+      InterpretedBehaviorDescriptor legacyDescriptor=((BHDescriptorLegacyAdapter)bhDescriptor).getLegacyDescriptor();
+      if (legacyDescriptor.hasOwnMethod(methodName)) {
+        Object result=legacyDescriptor.invokeSpecial(nodeOrConcept,methodName,parameters);
+        if (methodInvocation) {
+          return result;
+        }
+      }
+    }
+ else     if (bhDescriptor instanceof BaseBHDescriptor) {
+      BehaviorDescriptor behaviorDescriptor=getBehaviorDescriptor(ancestor.getQualifiedName());
+      if (!(behaviorDescriptor instanceof BehaviorDescriptorAdapter)) {
+        throw new IllegalStateException("Could not get legacy behavior descriptor + " + behaviorDescriptor + "; unable to resolve method '"+ methodName+ "'");
+      }
+      BehaviorDescriptorAdapter behaviorDescriptorAdapter=(BehaviorDescriptorAdapter)behaviorDescriptor;
+      if (behaviorDescriptorAdapter.hasOwnMethod(methodName,parameters)) {
+        Object result=behaviorDescriptorAdapter.invokeOwn(nodeOrConcept,methodName,parameters);
+        if (methodInvocation) {
+          return result;
+        }
+      }
+    }
+  }
+  if (methodInvocation) {
+    throwNoSuchMethod(methodName);
+  }
+  return null;
+}

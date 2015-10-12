@@ -1,0 +1,36 @@
+{
+  ConstraintsDescriptor descriptor=myConstraintsDescriptors.get(conceptId);
+  if (descriptor != null) {
+    return descriptor;
+  }
+  if (!myStorage.startLoading(conceptId)) {
+    return new IllegalConstraintsDescriptor(conceptId,MetaIdFactory.INVALID_CONCEPT_NAME);
+  }
+  try {
+    try {
+      LanguageRuntime languageRuntime=myLanguageRegistry.getLanguage(conceptId.getLanguageId());
+      ConstraintsAspectDescriptor constraintsAspectDescriptor=null;
+      if (languageRuntime == null) {
+        LOG.warn("No language for: " + conceptId + ", while looking for constraints descriptor.");
+      }
+ else {
+        constraintsAspectDescriptor=languageRuntime.getAspect(ConstraintsAspectDescriptor.class);
+      }
+      if (constraintsAspectDescriptor == null) {
+        constraintsAspectDescriptor=ConstraintsAspectInterpreted.getInstance();
+      }
+      descriptor=constraintsAspectDescriptor.getDescriptor(conceptId);
+    }
+ catch (    Throwable e) {
+      LOG.error("Exception while constraints descriptor creating",e);
+    }
+    if (descriptor == null) {
+      descriptor=new IllegalConstraintsDescriptor(conceptId,MetaIdFactory.INVALID_CONCEPT_NAME);
+    }
+    myConstraintsDescriptors.put(conceptId,descriptor);
+    return descriptor;
+  }
+  finally {
+    myStorage.finishLoading(conceptId);
+  }
+}

@@ -1,0 +1,31 @@
+{
+  List<SParameter> declaredParameters=method.getParameters();
+  boolean hasVarArg=!declaredParameters.isEmpty() && declaredParameters.get(declaredParameters.size() - 1) instanceof SVarArgParameter;
+  if (!hasVarArg) {
+    if (declaredParameters.size() != parameters.length) {
+      throw new BHMethodArgumentsCountDoNotMatch(method,parameters.length);
+    }
+  }
+  for (int i=0; i < parameters.length; ++i) {
+    if (parameters[i] != null) {
+      Class<?> aClass=parameters[i].getClass();
+      SJavaCompoundTypeImpl passedObjectType=new SJavaCompoundTypeImpl(aClass);
+      if (hasVarArg && (i >= declaredParameters.size() - 1)) {
+        SArrayType varArgType=(SArrayType)declaredParameters.get(declaredParameters.size() - 1).getType();
+        if (parameters.length == declaredParameters.size()) {
+          if (varArgType.isAssignableFrom(passedObjectType)) {
+            continue;
+          }
+        }
+        if (!varArgType.getInternalType().isAssignableFrom(passedObjectType)) {
+          throw new BHArgumentsDoNotMatch(method,parameters,declaredParameters,i);
+        }
+      }
+ else {
+        if (!declaredParameters.get(i).getType().isAssignableFrom(passedObjectType)) {
+          throw new BHArgumentsDoNotMatch(method,parameters,declaredParameters,i);
+        }
+      }
+    }
+  }
+}
