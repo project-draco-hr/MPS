@@ -2,18 +2,31 @@
   setupEnvironment();
   Map<File,List<String>> mpsProjects=myWhatToDo.getMPSProjectFiles();
   for (  File file : mpsProjects.keySet()) {
-    Project p=myEnvironment.openProject(file);
+    final Project p=myEnvironment.openProject(file);
     info("Loaded project " + p);
     myEnvironment.flushAllEvents();
     try {
-      Class<?> euClass=PluginManager.getPlugin(PluginId.getId(MigrationWorker.MIGRATION_PLUGIN)).getPluginClassLoader().loadClass(MigrationWorker.TASK_EXEC_CLASS);
-      Method method=euClass.getMethod("migrate",Project.class);
-      Object result=method.invoke(null,p);
-      if (!(((Boolean)result))) {
-        info("Nothing to migrate");
+      SwingUtilities.invokeAndWait(new Runnable(){
+        public void run(){
+          try {
+            Class<?> euClass=PluginManager.getPlugin(PluginId.getId(MIGRATION_PLUGIN)).getPluginClassLoader().loadClass(TASK_EXEC_CLASS);
+            Method method=euClass.getMethod("migrate",Project.class);
+            Object result=method.invoke(null,p);
+            if (!(((Boolean)result))) {
+              info("Nothing to migrate");
+            }
+          }
+ catch (          Exception e) {
+            error(e.getMessage());
+          }
+        }
       }
+);
     }
- catch (    Exception e) {
+ catch (    InterruptedException e) {
+      error(e.getMessage());
+    }
+catch (    InvocationTargetException e) {
       error(e.getMessage());
     }
     myEnvironment.flushAllEvents();
