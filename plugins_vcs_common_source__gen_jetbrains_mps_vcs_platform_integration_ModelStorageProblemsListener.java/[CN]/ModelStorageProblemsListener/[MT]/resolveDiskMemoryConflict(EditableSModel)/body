@@ -1,2 +1,47 @@
 {
+  final IFile file=((FileDataSource)model.getSource()).getFile();
+  final File backupFile=doBackup(file,model);
+  ApplicationManager.getApplication().invokeLater(new Runnable(){
+    public void run(){
+      if (!(model.isChanged()) || model.getRepository() == null) {
+        backupFile.delete();
+        return;
+      }
+      final boolean contentConflict=file.exists();
+      boolean needSave=ReloadManager.getInstance().computeNoReload(new Computable<Boolean>(){
+        public Boolean compute(){
+          if (contentConflict) {
+            return showDiskMemoryQuestion(file,model,backupFile);
+          }
+ else {
+            return showDeletedFromDiskQuestion(model,backupFile);
+          }
+        }
+      }
+);
+      if (needSave) {
+        getProjectFromUI(model.getRepository()).getModelAccess().executeCommand(new Runnable(){
+          public void run(){
+            model.updateTimestamp();
+            model.save();
+          }
+        }
+);
+      }
+ else {
+        model.getRepository().getModelAccess().runWriteAction(new Runnable(){
+          public void run(){
+            if (contentConflict) {
+              model.reloadFromSource();
+            }
+ else {
+              ((SModuleBase)model.getModule()).unregisterModel((SModelBase)model);
+            }
+          }
+        }
+);
+      }
+    }
+  }
+);
 }
