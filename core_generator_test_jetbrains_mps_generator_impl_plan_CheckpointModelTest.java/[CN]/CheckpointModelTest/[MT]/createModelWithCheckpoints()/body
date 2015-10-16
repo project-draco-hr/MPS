@@ -48,18 +48,22 @@
     }
 ,new EmptyProgressMonitor(),null,opt,tmProvider);
     myErrors.checkThat("Generation succeeds",result,CoreMatchers.equalTo(true));
-    TransientModelsModule transientModelsModule=tmProvider.getModule(m.getModule());
+    CrossModelEnvironment cme=tmProvider.getCrossModelEnvironment();
+    myErrors.checkThat("CrossModelEnvironment.hasState",cme.hasState(mr),CoreMatchers.equalTo(true));
+    SModule checkpointModule=tmProvider.getCheckpointsModule();
     final String cpModelName=SModelStereotype.withStereotype(SModelStereotype.withoutStereotype(m.getModelName()),"cp-aaa");
     SModel cpModel=null;
-    for (    SModel trm : transientModelsModule.getModels()) {
+    for (    SModel trm : checkpointModule.getModels()) {
       if (cpModelName.equals(trm.getModelName())) {
         cpModel=trm;
         break;
       }
     }
     myErrors.checkThat("Checkpoint model",cpModel,CoreMatchers.notNullValue());
-    CheckpointState cpState=transientModelsModule.getCheckpoint(mr,new Checkpoint("aaa"));
+    ModelCheckpoints modelCheckpoints=cme.getState(mr);
+    CheckpointState cpState=modelCheckpoints.find(null,new Checkpoint("aaa"));
     myErrors.checkThat("CheckpointState present",cpState,CoreMatchers.notNullValue());
+    myErrors.checkThat("Both ModelCheckpoints.find and direct getCheckpoint are identical",cme.getCheckpoint(mr,new Checkpoint("aaa")),CoreMatchers.equalTo(cpState));
     if (cpState != null) {
       Collection<String> mappingLabels=cpState.getMappingLabels();
       myErrors.checkThat("GetterMethod label present",mappingLabels.contains("GetterMethod"),CoreMatchers.equalTo(true));
