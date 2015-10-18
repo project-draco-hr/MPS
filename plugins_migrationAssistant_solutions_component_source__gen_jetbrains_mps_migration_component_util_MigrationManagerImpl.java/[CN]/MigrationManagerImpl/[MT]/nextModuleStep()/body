@@ -1,0 +1,56 @@
+{
+  final Wrappers._T<MigrationManager.MigrationStep> result=new Wrappers._T<MigrationManager.MigrationStep>(null);
+  myMpsMproject.getRepository().getModelAccess().runReadAction(new _Adapters._return_P0_E0_to_Runnable_adapter(new _FunctionTypes._return_P0_E0<Boolean>(){
+    public Boolean invoke(){
+      return Sequence.fromIterable(MigrationsUtil.getMigrateableModulesFromProject(ProjectHelper.toMPSProject(myProject))).any(new IWhereFilter<SModule>(){
+        public boolean accept(        SModule module){
+          return Sequence.fromIterable(MigrationsUtil.getAllSteps(module)).any(new IWhereFilter<ScriptApplied.ScriptAppliedReference>(){
+            public boolean accept(            ScriptApplied.ScriptAppliedReference it){
+              final ScriptApplied applied=it.resolve(myMigrationComponent,false);
+              if (applied == null) {
+                return false;
+              }
+              if (Sequence.fromIterable(applied.getDependencies()).where(new IWhereFilter<ScriptApplied.ScriptAppliedReference>(){
+                public boolean accept(                ScriptApplied.ScriptAppliedReference it){
+                  return !(it.isAlreadyDone());
+                }
+              }
+).isNotEmpty()) {
+                return false;
+              }
+              if (it instanceof MigrationScriptApplied.MigrationScriptAppliedReference) {
+                if (!(MigrationsUtil.areDepsSatisfied((MigrationScriptApplied)applied))) {
+                  throw new IllegalStateException();
+                }
+              }
+              result.value=new MigrationManager.MigrationStep(){
+                public String getDescription(){
+                  return applied.getDescription();
+                }
+                public boolean execute(){
+                  final Wrappers._boolean res=new Wrappers._boolean();
+                  myMpsMproject.getRepository().getModelAccess().executeCommand(new Runnable(){
+                    public void run(){
+                      res.value=applied.execute(myMigrationComponent);
+                    }
+                  }
+);
+                  return res.value;
+                }
+                public void forceExecutionNextTime(){
+                  throw new UnsupportedOperationException("not supported for module migrations");
+                }
+              }
+;
+              return true;
+            }
+          }
+);
+        }
+      }
+);
+    }
+  }
+));
+  return result.value;
+}

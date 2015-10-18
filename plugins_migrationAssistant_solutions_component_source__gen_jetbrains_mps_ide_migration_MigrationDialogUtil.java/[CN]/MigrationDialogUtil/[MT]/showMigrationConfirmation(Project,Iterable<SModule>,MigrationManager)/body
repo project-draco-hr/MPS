@@ -4,7 +4,12 @@
   ModelAccess.instance().runReadAction(new Runnable(){
     public void run(){
       Iterable<String> migrations;
-      migrations=m.getProjectMigrationsToApply(ProjectHelper.toMPSProject(p));
+      migrations=Sequence.fromIterable(m.getProjectMigrationsToApply()).select(new ISelector<ProjectMigration,String>(){
+        public String select(        ProjectMigration it){
+          return it.getDescription();
+        }
+      }
+);
       if (Sequence.fromIterable(migrations).isNotEmpty()) {
         text.append("  Project migrations to be executed:\n");
         Sequence.fromIterable(migrations).take(MIGRATIONS_TO_SHOW_COUNT).visitAll(new IVisitor<String>(){
@@ -17,7 +22,12 @@
           text.append("    ...and ").append(Sequence.fromIterable(migrations).count() - MIGRATIONS_TO_SHOW_COUNT).append(" more\n");
         }
       }
-      migrations=m.getLanguageMigrationsToApply(modules);
+      migrations=Sequence.fromIterable(m.getModuleMigrationsToApply(modules)).select(new ISelector<Tuples._2<ScriptApplied,ScriptApplied.ScriptAppliedReference>,String>(){
+        public String select(        Tuples._2<ScriptApplied,ScriptApplied.ScriptAppliedReference> it){
+          return it._1().getKindDescription(it._0());
+        }
+      }
+);
       if (Sequence.fromIterable(migrations).isNotEmpty()) {
         text.append("  Language migrations to be executed:\n");
         Sequence.fromIterable(migrations).take(MIGRATIONS_TO_SHOW_COUNT).visitAll(new IVisitor<String>(){
