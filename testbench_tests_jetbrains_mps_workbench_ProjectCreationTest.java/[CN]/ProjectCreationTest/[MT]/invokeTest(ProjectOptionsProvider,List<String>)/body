@@ -1,17 +1,23 @@
 {
+  final Reference<Throwable> refThrowable=new Reference<Throwable>();
   ApplicationManager.getApplication().invokeAndWait(new Runnable(){
     @Override public void run(){
       ApplicationManager.getApplication().runWriteAction(new Runnable(){
         @Override public void run(){
-          myTmpDir=IFileUtils.createTmpDir();
           try {
-            ProjectFactory factory=new ProjectFactory(null,projectOptionsProvider.getProjectOptions(myTmpDir));
-            myProject=factory.createProject();
-            factory.activate();
-            myProject.save();
+            myTmpDir=IFileUtils.createTmpDir();
+            try {
+              ProjectFactory factory=new ProjectFactory(null,projectOptionsProvider.getProjectOptions(myTmpDir));
+              myProject=factory.createProject();
+              factory.activate();
+              myProject.save();
+            }
+ catch (            ProjectNotCreatedException e) {
+              Assert.fail();
+            }
           }
- catch (          ProjectNotCreatedException e) {
-            Assert.fail();
+ catch (          Throwable t) {
+            refThrowable.set(t);
           }
         }
       }
@@ -19,11 +25,22 @@
     }
   }
 ,ModalityState.defaultModalityState());
-  ApplicationManager.getApplication().invokeLater(new Runnable(){
+  if (!refThrowable.isNull()) {
+    throw new RuntimeException(refThrowable.get());
+  }
+  Exception exception=ThreadUtils.runInUIThreadAndWait(new Runnable(){
     @Override public void run(){
-      ProjectUtil.closeAndDispose(myProject);
+      try {
+        ProjectUtil.closeAndDispose(myProject);
+      }
+ catch (      Throwable t) {
+        refThrowable.set(t);
+      }
     }
   }
 );
+  if (exception != null) {
+    throw new RuntimeException(exception);
+  }
   checkFilePathList(myTmpDir,expectedPathList);
 }
