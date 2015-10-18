@@ -21,7 +21,7 @@
     }
   }
   warnIfGenerateSelf(myGenerationPlan);
-  monitor.start("",1 + myGenerationPlan.getSteps().size());
+  monitor.start("",1 + myGenerationPlan.getSteps_().size());
   try {
     IntermediateCacheHelper cacheHelper=new IntermediateCacheHelper(myGenerationOptions.getIncrementalStrategy(),new PlanSignature(myOriginalInputModel,myGenerationPlan),ttrace);
     IncrementalGenerationHandler incrementalHandler=new IncrementalGenerationHandler(myOriginalInputModel,myProject,myGenerationOptions,cacheHelper,null);
@@ -68,26 +68,44 @@
       myDependenciesBuilder.updateModel(currInputModel);
       SModel currOutput=null;
       ttrace.push("steps",false);
-      for (myMajorStep=0; myMajorStep < myGenerationPlan.getSteps().size(); myMajorStep++) {
-        Transform planStep=new Transform(myGenerationPlan.getSteps().get(myMajorStep));
-        final List<TemplateMappingConfiguration> mappingConfigurations=planStep.getTransformations();
-        if (mappingConfigurations.size() >= 1) {
-          final TemplateMappingConfiguration first=mappingConfigurations.get(0);
-          String n=GeneratorUtil.compactNamespace(first.getModel().getLongName());
-          monitor.step(String.format("step %d (%s#%s%s)",myMajorStep + 1,n,first.getName(),mappingConfigurations.size() == 1 ? "" : "..."));
+      for (myMajorStep=0; myMajorStep < myGenerationPlan.getSteps_().size(); myMajorStep++) {
+        Step planStep=myGenerationPlan.getSteps_().get(myMajorStep);
+        if (planStep instanceof Transform) {
+          Transform transformStep=(Transform)planStep;
+          final List<TemplateMappingConfiguration> mappingConfigurations=transformStep.getTransformations();
+          if (mappingConfigurations.size() >= 1) {
+            final TemplateMappingConfiguration first=mappingConfigurations.get(0);
+            String n=GeneratorUtil.compactNamespace(first.getModel().getLongName());
+            monitor.step(String.format("step %d (%s#%s%s)",myMajorStep + 1,n,first.getName(),mappingConfigurations.size() == 1 ? "" : "..."));
+          }
+          if (myLogger.needsInfo()) {
+            myLogger.info("executing step " + (myMajorStep + 1));
+          }
+          currOutput=executeMajorStep(monitor.subTask(1),currInputModel,transformStep);
+          monitor.advance(0);
+          if (currOutput == null || myLogger.getErrorCount() > 0) {
+            break;
+          }
+          if (mappingConfigurations.isEmpty()) {
+            break;
+          }
+          currInputModel=currOutput;
         }
-        if (myLogger.needsInfo()) {
-          myLogger.info("executing step " + (myMajorStep + 1));
+ else         if (planStep instanceof Checkpoint) {
+          Checkpoint checkpointStep=(Checkpoint)planStep;
+          SModel checkpointModel=createTransientModel("cp-" + checkpointStep.getName());
+          new CloneUtil(currInputModel,checkpointModel).cloneModelWithImports();
+          publishTransientModel(checkpointModel.getReference());
+          CheckpointState cpState=new CheckpointState(checkpointModel.getReference(),checkpointStep,currInputModel.getReference());
+          if (myStepArguments != null) {
+            GeneratorMappings stepLabels=myStepArguments.mappingLabels;
+            stepLabels.export(cpState);
+            mySessionContext.getModule().publishCheckpoint(myOriginalInputModel.getReference(),cpState);
+            SNode debugMappings=new DebugMappingsBuilder(mySessionContext.getProject().getRepository()).build(checkpointModel,stepLabels);
+            checkpointModel.addRootNode(debugMappings);
+          }
+          myStepArguments=null;
         }
-        currOutput=executeMajorStep(monitor.subTask(1),currInputModel,planStep);
-        monitor.advance(0);
-        if (currOutput == null || myLogger.getErrorCount() > 0) {
-          break;
-        }
-        if (mappingConfigurations.isEmpty()) {
-          break;
-        }
-        currInputModel=currOutput;
       }
       ttrace.pop();
       mySessionContext.clearTransientObjects();
