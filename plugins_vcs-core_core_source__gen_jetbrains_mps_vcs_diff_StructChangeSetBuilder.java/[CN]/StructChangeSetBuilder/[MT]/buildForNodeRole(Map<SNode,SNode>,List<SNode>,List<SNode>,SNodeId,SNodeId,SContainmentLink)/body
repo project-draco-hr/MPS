@@ -1,0 +1,56 @@
+{
+  final Map<SNode,Integer> nodeClasses=MapSequence.fromMap(new HashMap<SNode,Integer>());
+  int i=1;
+  Map<SNode,SNode> old2NewMap=MapSequence.fromMap(new HashMap<SNode,SNode>());
+  MapSequence.fromMap(old2NewMap).putAll(oldToNewMap);
+  outer:   for (  SNode node : ListSequence.fromList(oldChildren).concat(ListSequence.fromList(newChildren))) {
+    for (    SNode nodeClass : SetSequence.fromSet(MapSequence.fromMap(nodeClasses).keySet())) {
+      if (equalsNodeStructure(node,nodeClass,old2NewMap,false)) {
+        MapSequence.fromMap(nodeClasses).put(node,MapSequence.fromMap(nodeClasses).get(nodeClass));
+        continue outer;
+      }
+    }
+    MapSequence.fromMap(nodeClasses).put(node,i++);
+  }
+  List<Integer> oldClasses=ListSequence.fromList(oldChildren).select(new ISelector<SNode,Integer>(){
+    public Integer select(    SNode n){
+      return MapSequence.fromMap(nodeClasses).get(n);
+    }
+  }
+).toListSequence();
+  List<Integer> newClasses=ListSequence.fromList(newChildren).select(new ISelector<SNode,Integer>(){
+    public Integer select(    SNode n){
+      return MapSequence.fromMap(nodeClasses).get(n);
+    }
+  }
+).toListSequence();
+  LongestCommonSubsequenceFinder<Integer> finder=new LongestCommonSubsequenceFinder<Integer>(oldClasses,newClasses);
+  List<Tuples._2<Integer,Integer>> commonIndices=finder.getCommonIndices();
+  for (  Tuples._2<Integer,Integer> ix : ListSequence.fromList(commonIndices)) {
+    addMatchedNodes(oldToNewMap,ListSequence.fromList(oldChildren).getElement((int)ix._0()),ListSequence.fromList(newChildren).getElement((int)ix._1()));
+  }
+  List<Tuples._2<Tuples._2<Integer,Integer>,Tuples._2<Integer,Integer>>> differentIndices=finder.getDifferentIndices();
+  for (  Tuples._2<Tuples._2<Integer,Integer>,Tuples._2<Integer,Integer>> indices : ListSequence.fromList(differentIndices)) {
+    Tuples._2<Integer,Integer> oldIndices=indices._0();
+    Tuples._2<Integer,Integer> newIndices=indices._1();
+    List<SConcept> oldC=ListSequence.fromList(oldChildren).page((int)oldIndices._0(),(int)oldIndices._1()).select(new ISelector<SNode,SConcept>(){
+      public SConcept select(      SNode n){
+        return n.getConcept();
+      }
+    }
+).toListSequence();
+    List<SConcept> newC=ListSequence.fromList(newChildren).page((int)newIndices._0(),(int)newIndices._1()).select(new ISelector<SNode,SConcept>(){
+      public SConcept select(      SNode n){
+        return n.getConcept();
+      }
+    }
+).toListSequence();
+    LongestCommonSubsequenceFinder<SConcept> finder2=new LongestCommonSubsequenceFinder<SConcept>(oldC,newC);
+    for (    Tuples._2<Tuples._2<Integer,Integer>,Tuples._2<Integer,Integer>> ixs : ListSequence.fromList(finder2.getDifferentIndices())) {
+      ListSequence.fromList(myNewChanges).addElement(new NodeGroupStructChange(myChangeSet,parentId,newParentId,role,(int)oldIndices._0() + (int)ixs._0()._0(),(int)oldIndices._0() + (int)ixs._0()._1(),(int)newIndices._0() + (int)ixs._1()._0(),(int)newIndices._0() + (int)ixs._1()._1()));
+    }
+    for (    Tuples._2<Integer,Integer> ixs : ListSequence.fromList(finder2.getCommonIndices())) {
+      buildForNode(oldToNewMap,ListSequence.fromList(oldChildren).getElement((int)oldIndices._0() + (int)ixs._0()),ListSequence.fromList(newChildren).getElement((int)newIndices._0() + (int)ixs._1()));
+    }
+  }
+}

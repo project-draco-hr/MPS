@@ -1,0 +1,54 @@
+{
+  if (neq_okvhpb_a0b0bb(SNodeOperations.getConcept(n1),SNodeOperations.getConcept(n2))) {
+    return false;
+  }
+  Map<SNode,SNode> tempMap=MapSequence.fromMap(new HashMap<SNode,SNode>());
+  MapSequence.fromMap(tempMap).putAll(oldToNewMap);
+  MapSequence.fromMap(tempMap).put(n1,n2);
+  Iterable<SProperty> n1Properties=n1.getProperties();
+  Iterable<SProperty> n2Properties=n2.getProperties();
+  for (  SProperty prop : Sequence.fromIterable(n1Properties).union(Sequence.fromIterable(n2Properties))) {
+    if (!((equalsProperty(n1,n2,prop)))) {
+      return false;
+    }
+  }
+  List<SReference> n1References=(List<SReference>)n1.getReferences();
+  List<SReference> n2References=(List<SReference>)n2.getReferences();
+  for (  SReferenceLink role : ListSequence.fromList(n1References).concat(ListSequence.fromList(n2References)).select(new ISelector<SReference,SReferenceLink>(){
+    public SReferenceLink select(    SReference r){
+      return r.getLink();
+    }
+  }
+).distinct()) {
+    if (!(equalsReference(n1.getReference(role),n2.getReference(role),tempMap,easyRef))) {
+      return false;
+    }
+  }
+  for (  SContainmentLink role : ListSequence.fromList(SNodeOperations.getChildren(n1)).concat(ListSequence.fromList(SNodeOperations.getChildren(n2))).select(new ISelector<SNode,SContainmentLink>(){
+    public SContainmentLink select(    SNode ch){
+      return ch.getContainmentLink();
+    }
+  }
+).distinct()) {
+    List<SNode> ch1List=IterableUtil.asList(n1.getChildren(role));
+    List<SNode> ch2List=IterableUtil.asList(n2.getChildren(role));
+    if (ListSequence.fromList(ch1List).count() != ListSequence.fromList(ch2List).count()) {
+      return false;
+    }
+{
+      Iterator<SNode> ch1_it=ListSequence.fromList(ch1List).iterator();
+      Iterator<SNode> ch2_it=ListSequence.fromList(ch2List).iterator();
+      SNode ch1_var;
+      SNode ch2_var;
+      while (ch1_it.hasNext() && ch2_it.hasNext()) {
+        ch1_var=ch1_it.next();
+        ch2_var=ch2_it.next();
+        if (!(equalsNodeStructure(ch1_var,ch2_var,tempMap,easyRef))) {
+          return false;
+        }
+      }
+    }
+  }
+  MapSequence.fromMap(oldToNewMap).putAll(tempMap);
+  return true;
+}
