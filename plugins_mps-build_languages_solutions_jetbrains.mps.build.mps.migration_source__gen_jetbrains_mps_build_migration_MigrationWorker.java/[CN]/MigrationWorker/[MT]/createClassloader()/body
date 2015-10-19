@@ -1,0 +1,31 @@
+{
+  Set<File> pluginsClasspath=SetSequence.fromSet(new LinkedHashSet<File>());
+  File pluginDir=new File(PathManager.getPreInstalledPluginsPath());
+  for (  File pluginFolder : pluginDir.listFiles()) {
+    if (pluginFolder.isFile()) {
+      SetSequence.fromSet(pluginsClasspath).addElement(pluginFolder);
+    }
+ else {
+      File lib=new File(pluginFolder + File.separator + "lib");
+      if (lib.exists() && lib.isDirectory()) {
+        SetSequence.fromSet(pluginsClasspath).addSequence(Sequence.fromIterable(Sequence.fromArray(lib.listFiles(PathManager.JAR_FILE_FILTER))));
+      }
+    }
+  }
+  return new UrlClassLoader(SetSequence.fromSet(pluginsClasspath).select(new ISelector<File,URL>(){
+    public URL select(    File it){
+      try {
+        return it.toURI().toURL();
+      }
+ catch (      MalformedURLException e) {
+        return null;
+      }
+    }
+  }
+).where(new IWhereFilter<URL>(){
+    public boolean accept(    URL it){
+      return it != null;
+    }
+  }
+).toGenericArray(URL.class),LibraryInitializer.class.getClassLoader());
+}

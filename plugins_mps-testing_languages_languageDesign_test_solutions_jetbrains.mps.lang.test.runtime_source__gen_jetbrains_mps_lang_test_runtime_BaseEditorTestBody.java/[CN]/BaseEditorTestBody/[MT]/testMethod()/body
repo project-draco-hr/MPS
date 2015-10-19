@@ -5,13 +5,22 @@
     dispose();
   }
   finally {
+    final Throwable[] ts=new Throwable[1];
     myProject.getModelAccess().runWriteInEDT(new Runnable(){
       public void run(){
-        UndoManagerImpl undoManager=(UndoManagerImpl)UndoManager.getInstance(ProjectHelper.toIdeaProject(myProject));
-        MPSNodeVirtualFile file=MPSNodesVirtualFileSystem.getInstance().getFileFor(BaseEditorTestBody.this.myBefore);
-        undoManager.clearUndoRedoQueueInTests(file);
+        try {
+          UndoManagerImpl undoManager=(UndoManagerImpl)UndoManager.getInstance(ProjectHelper.toIdeaProject(myProject));
+          MPSNodeVirtualFile file=MPSNodesVirtualFileSystem.getInstance().getFileFor(BaseEditorTestBody.this.myBefore);
+          undoManager.clearUndoRedoQueueInTests(file);
+        }
+ catch (        Throwable t) {
+          ts[0]=t;
+        }
       }
     }
 );
+    if (ts[0] != null) {
+      throw new RuntimeException("Failure during editor test execution",ts[0]);
+    }
   }
 }

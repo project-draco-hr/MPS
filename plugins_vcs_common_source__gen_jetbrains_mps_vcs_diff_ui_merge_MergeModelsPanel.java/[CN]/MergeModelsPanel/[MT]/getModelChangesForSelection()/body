@@ -1,0 +1,28 @@
+{
+  if (myMergeTree.getSelectedNodes(DiffModelTree.ModelTreeNode.class,null).length == 1) {
+    return Sequence.fromIterable(myMergeSession.getAllChanges()).where(new IWhereFilter<ModelChange>(){
+      public boolean accept(      ModelChange ch){
+        return !(ch instanceof MetadataChange);
+      }
+    }
+);
+  }
+ else {
+    return Sequence.fromIterable(Sequence.fromArray(myMergeTree.getSelectedNodes(DiffModelTree.RootTreeNode.class,null))).select(new ISelector<DiffModelTree.RootTreeNode,SNodeId>(){
+      public SNodeId select(      DiffModelTree.RootTreeNode rtn){
+        return rtn.getRootId();
+      }
+    }
+).where(new IWhereFilter<SNodeId>(){
+      public boolean accept(      SNodeId root){
+        return root != null;
+      }
+    }
+).translate(new ITranslator2<SNodeId,ModelChange>(){
+      public Iterable<ModelChange> translate(      SNodeId root){
+        return myMergeSession.getChangesForRoot(root);
+      }
+    }
+);
+  }
+}

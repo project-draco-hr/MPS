@@ -1,48 +1,36 @@
 {
-  final Set<String> namespaces=SetSequence.fromSet(new HashSet<String>());
+  final List<SLanguage> namespaces=ListSequence.fromList(new ArrayList<SLanguage>());
   Set<GeneratorRuntime> seen=SetSequence.fromSet(new HashSet<GeneratorRuntime>());
-  Queue<String> nsq=QueueSequence.fromQueue(new LinkedList<String>());
+  Queue<SLanguage> nsq=QueueSequence.fromQueue(new LinkedList<SLanguage>());
   for (  SModule mod : modules) {
+    Iterable<SLanguage> usedLanguages;
     if (mod instanceof Generator) {
       Iterable<SModel> genModels=mod.getModels();
-      QueueSequence.fromQueue(nsq).addSequence(Sequence.fromIterable(genModels).translate(new ITranslator2<SModel,String>(){
-        public Iterable<String> translate(        SModel smd){
-          return ModelContentUtil.getUsedLanguageNamespaces(smd);
+      usedLanguages=Sequence.fromIterable(genModels).translate(new ITranslator2<SModel,SLanguage>(){
+        public Iterable<SLanguage> translate(        SModel smd){
+          return ModelContentUtil.getUsedLanguages(smd);
         }
       }
-).where(new IWhereFilter<String>(){
-        public boolean accept(        String ns){
-          return !(SetSequence.fromSet(namespaces).contains(ns));
-        }
-      }
-));
+);
     }
  else {
-      Set<Language> langs=SetSequence.fromSet(new HashSet<Language>());
-      for (      Language l : CollectionSequence.fromCollection(new GlobalModuleDependenciesManager(mod).getUsedLanguages())) {
-        SetSequence.fromSet(langs).addSequence(SetSequence.fromSet(LanguageDependenciesManager.getAllExtendedLanguages(l)));
-      }
-      QueueSequence.fromQueue(nsq).addSequence(SetSequence.fromSet(langs).select(new ISelector<Language,String>(){
-        public String select(        Language lang){
-          return lang.getModuleDescriptor().getNamespace();
-        }
-      }
-).where(new IWhereFilter<String>(){
-        public boolean accept(        String ns){
-          return !(SetSequence.fromSet(namespaces).contains(ns));
-        }
-      }
-));
+      usedLanguages=new SLanguageHierarchy(myLanguageRegistry,mod.getUsedLanguages()).getExtended();
     }
+    QueueSequence.fromQueue(nsq).addSequence(Sequence.fromIterable(usedLanguages).where(new IWhereFilter<SLanguage>(){
+      public boolean accept(      SLanguage ns){
+        return !(ListSequence.fromList(namespaces).contains(ns));
+      }
+    }
+));
     while (QueueSequence.fromQueue(nsq).isNotEmpty()) {
-      String ns=QueueSequence.fromQueue(nsq).removeFirstElement();
-      LanguageRuntime lr=LanguageRegistry.getInstance().getLanguage(ns);
+      SLanguage ns=QueueSequence.fromQueue(nsq).removeFirstElement();
+      LanguageRuntime lr=myLanguageRegistry.getLanguage(ns);
       if (lr == null) {
         LOG.debug("language not found for namespace " + ns);
         continue;
       }
-      if (!(SetSequence.fromSet(namespaces).contains(ns))) {
-        SetSequence.fromSet(namespaces).addElement(ns);
+      if (!(ListSequence.fromList(namespaces).contains(ns))) {
+        ListSequence.fromList(namespaces).addElement(ns);
         Collection<? extends GeneratorRuntime> gens=lr.getGenerators();
         if (gens != null) {
           for (          GeneratorRuntime gr : gens) {
@@ -50,7 +38,7 @@
               continue;
             }
             if (!(SetSequence.fromSet(seen).contains(gr))) {
-              QueueSequence.fromQueue(nsq).addSequence(CollectionSequence.fromCollection(((TemplateModule)gr).getUsedLanguages()));
+              QueueSequence.fromQueue(nsq).addSequence(CollectionSequence.fromCollection(((TemplateModule)gr).getTargetLanguages()));
               SetSequence.fromSet(seen).addElement(gr);
             }
           }
@@ -58,5 +46,5 @@
       }
     }
   }
-  return SetSequence.fromSet(namespaces).toListSequence();
+  return namespaces;
 }

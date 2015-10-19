@@ -1,0 +1,50 @@
+{
+  if (change instanceof AddRootChange || change instanceof DeleteRootChange) {
+    return ListSequence.fromListAndArray(new LinkedList<ChangeEditorMessage>(),new ChangeEditorMessage(editedModel.getNode(change.getRootId()),new NodeMessageTarget(),owner,change,conflictChecker,highlighted));
+  }
+ else   if (change instanceof SetPropertyChange) {
+    SetPropertyChange chng=(SetPropertyChange)change;
+    SNode node=editedModel.getNode(chng.getAffectedNodeId(!(isOldEditor)));
+    PropertyMessageTarget target=new PropertyMessageTarget(chng.getPropertyName());
+    return ListSequence.fromListAndArray(new LinkedList<ChangeEditorMessage>(),new ChangeEditorMessage(node,target,owner,change,conflictChecker,highlighted));
+  }
+ else   if (change instanceof SetReferenceChange) {
+    SetReferenceChange chng=(SetReferenceChange)change;
+    SNode node=editedModel.getNode(chng.getAffectedNodeId(!(isOldEditor)));
+    ReferenceMessageTarget target=new ReferenceMessageTarget(chng.getRole());
+    return ListSequence.fromListAndArray(new LinkedList<ChangeEditorMessage>(),new ChangeEditorMessage(node,target,owner,change,conflictChecker,highlighted));
+  }
+ else   if (change instanceof NodeGroupChange) {
+    NodeGroupChange chng=(NodeGroupChange)change;
+    SModel changeModel=(isOldEditor ? change.getChangeSet().getOldModel() : change.getChangeSet().getNewModel());
+    SContainmentLink roleLink=chng.getRoleLink();
+    SNodeId parentId=chng.getParentNodeId(!(isOldEditor));
+    SNode parentNode=changeModel.getNode(parentId);
+    if (parentNode == null) {
+      return null;
+    }
+    List<SNode> changeChildren=IterableUtil.asList(parentNode.getChildren(roleLink));
+    int changeBegin=(isOldEditor ? chng.getBegin() : chng.getResultBegin());
+    int changeEnd=(isOldEditor ? chng.getEnd() : chng.getResultEnd());
+    SNodeId beginId=(changeBegin < ListSequence.fromList(changeChildren).count() ? ListSequence.fromList(changeChildren).getElement(changeBegin).getNodeId() : null);
+    SNodeId endId=(changeEnd < ListSequence.fromList(changeChildren).count() ? ListSequence.fromList(changeChildren).getElement(changeEnd).getNodeId() : null);
+    int currentChildrenSize=ListSequence.fromList(changeChildren).count();
+    int beginIndex=(beginId == null ? currentChildrenSize : SNodeOperations.getIndexInParent(((SNode)editedModel.getNode(beginId))));
+    int endIndex=(endId == null ? currentChildrenSize : SNodeOperations.getIndexInParent(((SNode)editedModel.getNode(endId))));
+    if (!((0 <= beginIndex && beginIndex <= endIndex && endIndex <= currentChildrenSize))) {
+      return null;
+    }
+    if (beginIndex == endIndex) {
+      return ListSequence.fromListAndArray(new LinkedList<ChangeEditorMessage>(),new ChangeEditorMessage(editedModel.getNode(parentId),new DeletedNodeMessageTarget(roleLink.getName(),beginIndex),owner,change,conflictChecker,highlighted));
+    }
+ else {
+      List<? extends SNode> editedChildren=IterableUtil.asList(editedModel.getNode(parentId).getChildren(roleLink));
+      List<ChangeEditorMessage> msgs=ListSequence.fromList(new LinkedList<ChangeEditorMessage>());
+      for (int i=beginIndex; i < endIndex; i++) {
+        ListSequence.fromList(msgs).addElement(new ChangeEditorMessage(editedChildren.get(i),new NodeMessageTarget(),owner,change,conflictChecker,highlighted));
+      }
+      return msgs;
+    }
+  }
+  return null;
+}
