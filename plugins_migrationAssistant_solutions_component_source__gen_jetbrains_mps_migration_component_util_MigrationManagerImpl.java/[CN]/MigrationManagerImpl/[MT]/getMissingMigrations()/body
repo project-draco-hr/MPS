@@ -1,27 +1,15 @@
 {
-  final List<Tuples._3<SModule,SLanguage,Integer>> result=ListSequence.fromList(new ArrayList<Tuples._3<SModule,SLanguage,Integer>>());
+  final Wrappers._T<List<ScriptApplied.ScriptAppliedReference>> result=new Wrappers._T<List<ScriptApplied.ScriptAppliedReference>>(ListSequence.fromList(new ArrayList<ScriptApplied.ScriptAppliedReference>()));
   myMpsMproject.getRepository().getModelAccess().runReadAction(new Runnable(){
     public void run(){
-      Iterable<SModule> modules=MigrationsUtil.getMigrateableModulesFromProject(myMpsMproject);
-      for (      SModule module : Sequence.fromIterable(modules)) {
-        for (        SLanguage lang : SetSequence.fromSet(new SLanguageHierarchy(module.getUsedLanguages()).getExtended())) {
-          int currentLangVersion=lang.getLanguageVersion();
-          int ver=module.getUsedLanguageVersion(lang);
-          ver=Math.max(ver,0);
-          currentLangVersion=Math.max(currentLangVersion,0);
-          if (ver >= currentLangVersion) {
-            continue;
-          }
-          for (int v=ver; v < currentLangVersion; v++) {
-            if (myMigrationComponent.fetchMigrationScript(new MigrationScriptReference(lang,v),false) == null) {
-              ListSequence.fromList(result).addElement(MultiTuple.<SModule,SLanguage,Integer>from(module,lang,v));
-              break;
-            }
-          }
+      result.value=ListSequence.fromList(getModuleMigrationsToApply(MigrationsUtil.getMigrateableModulesFromProject(myMpsMproject))).where(new IWhereFilter<ScriptApplied.ScriptAppliedReference>(){
+        public boolean accept(        ScriptApplied.ScriptAppliedReference it){
+          return it.resolve(myMigrationComponent,false) == null;
         }
       }
+).toListSequence();
     }
   }
 );
-  return result;
+  return result.value;
 }
