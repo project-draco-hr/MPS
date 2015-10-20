@@ -24,7 +24,7 @@
   monitor.start("",1 + myGenerationPlan.getSteps_().size());
   try {
     IntermediateCacheHelper cacheHelper=new IntermediateCacheHelper(myGenerationOptions.getIncrementalStrategy(),new PlanSignature(myOriginalInputModel,myGenerationPlan),ttrace);
-    IncrementalGenerationHandler incrementalHandler=new IncrementalGenerationHandler(myOriginalInputModel,myProject,myGenerationOptions,cacheHelper,null);
+    IncrementalGenerationHandler incrementalHandler=new IncrementalGenerationHandler(myOriginalInputModel,mySessionContext.getRepository(),myGenerationOptions,cacheHelper,null);
     myDependenciesBuilder=incrementalHandler.createDependenciesBuilder();
     if (incrementalHandler.canOptimize()) {
       int ignored=incrementalHandler.getIgnoredRoots().size();
@@ -93,15 +93,12 @@
         }
  else         if (planStep instanceof Checkpoint) {
           Checkpoint checkpointStep=(Checkpoint)planStep;
-          SModel checkpointModel=createTransientModel("cp-" + checkpointStep.getName());
-          new CloneUtil(currInputModel,checkpointModel).cloneModelWithImports();
-          publishTransientModel(checkpointModel.getReference());
-          CheckpointState cpState=new CheckpointState(checkpointModel.getReference(),checkpointStep,currInputModel.getReference());
+          CheckpointState cpState=mySessionContext.getCrossModelEnvironment().createCheckpoint(myOriginalInputModel,currInputModel,checkpointStep);
           if (myStepArguments != null) {
             GeneratorMappings stepLabels=myStepArguments.mappingLabels;
             stepLabels.export(cpState);
-            mySessionContext.getModule().publishCheckpoint(myOriginalInputModel.getReference(),cpState);
-            SNode debugMappings=new DebugMappingsBuilder(mySessionContext.getProject().getRepository()).build(checkpointModel,stepLabels);
+            SModel checkpointModel=cpState.getCheckpointModel();
+            SNode debugMappings=new DebugMappingsBuilder(mySessionContext.getRepository()).build(checkpointModel,stepLabels);
             checkpointModel.addRootNode(debugMappings);
           }
           myStepArguments=null;

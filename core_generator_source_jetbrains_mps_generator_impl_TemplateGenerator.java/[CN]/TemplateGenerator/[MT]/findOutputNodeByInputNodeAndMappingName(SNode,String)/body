@@ -1,0 +1,32 @@
+{
+  SNode existing=super.findOutputNodeByInputNodeAndMappingName(inputNode,mappingName);
+  if (existing != null) {
+    return existing;
+  }
+  if (inputNode == null) {
+    return null;
+  }
+  SModel inputNodeModel=inputNode.getModel();
+  if (inputNodeModel == getInputModel()) {
+    return null;
+  }
+  if (inputNodeModel == null) {
+    return null;
+  }
+  CrossModelEnvironment env=getGeneratorSessionContext().getCrossModelEnvironment();
+  if (!env.hasState(inputNodeModel.getReference())) {
+    return null;
+  }
+  ModelCheckpoints modelHistory=env.getState(inputNodeModel.getReference());
+  Checkpoint lastPoint=myPlanStep.getLastCheckpoint();
+  Checkpoint targetPoint=myPlanStep.getNextCheckpoint();
+  CheckpointState cp=modelHistory.find(lastPoint,targetPoint);
+  if (cp == null) {
+    return null;
+  }
+  Collection<SNode> output=cp.resolve(cp.getOutput(mappingName,inputNode.getNodeId()));
+  if (output.size() == 1) {
+    return output.iterator().next();
+  }
+  return null;
+}
