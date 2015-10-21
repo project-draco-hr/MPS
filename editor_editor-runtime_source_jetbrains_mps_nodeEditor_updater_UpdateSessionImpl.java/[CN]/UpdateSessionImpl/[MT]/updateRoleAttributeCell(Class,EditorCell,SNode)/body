@@ -2,6 +2,18 @@
   if (attributeKind != AttributeKind.Reference.class && myContextStack.peek().hasRoles()) {
     return cellWithRole;
   }
-  EditorContext editorContext=getUpdater().getEditorContext();
-  return EditorManager.getInstanceFromContext(editorContext).doCreateRoleAttributeCell(attributeKind,cellWithRole,roleAttribute,myModelModifications);
+  final EditorContext editorContext=getUpdater().getEditorContext();
+  editorContext.getCellFactory().pushCellContext();
+  editorContext.getCellFactory().removeCellContextHints(EditorCellFactoryImpl.BASE_REFLECTIVE_EDITOR_HINT);
+  try {
+    return runWithExplicitEditorHints(editorContext,roleAttribute,new Computable<EditorCell>(){
+      @Override public EditorCell compute(){
+        return EditorManager.getInstanceFromContext(editorContext).doCreateRoleAttributeCell(attributeKind,cellWithRole,roleAttribute,myModelModifications);
+      }
+    }
+);
+  }
+  finally {
+    editorContext.getCellFactory().popCellContext();
+  }
 }
