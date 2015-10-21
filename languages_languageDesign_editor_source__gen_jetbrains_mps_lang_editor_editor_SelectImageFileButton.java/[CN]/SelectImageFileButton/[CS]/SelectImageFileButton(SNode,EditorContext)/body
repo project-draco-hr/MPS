@@ -1,16 +1,28 @@
 {
   this.myNode=node;
+  this.myEditorContext=editorContext;
   this.setFont(EditorSettings.getInstance().getDefaultEditorFont());
   this.setBorder(new MetalBorders.ButtonBorder());
-  final Language language=Language.getLanguageFor(SNodeOperations.getModel(this.myNode));
-  String filename=MacrosFactory.forModule(language).expandPath(SPropertyOperations.getString(node,MetaAdapterFactory.getProperty(0x18bc659203a64e29L,0xa83a7ff23bde13baL,0x1095e12de6fL,0x1095e2f7e63L,"imageFile")));
-  final File baseFile=(filename == null ? null : new File(filename));
   this.setAction(new AbstractAction(" ... "){
     @Override public void actionPerformed(    ActionEvent e){
       Component root=SwingUtilities.getRoot(SelectImageFileButton.this);
       if (root instanceof Frame) {
         Frame frame=(Frame)root;
         TreeFileChooser chooser=new TreeFileChooser();
+        final Wrappers._T<String> filename=new Wrappers._T<String>(null);
+        ModelAccess modelAccess=myEditorContext.getRepository().getModelAccess();
+        modelAccess.runReadAction(new Runnable(){
+          public void run(){
+            filename.value=SPropertyOperations.getString(myNode,MetaAdapterFactory.getProperty(0x18bc659203a64e29L,0xa83a7ff23bde13baL,0x1095e12de6fL,0x1095e2f7e63L,"imageFile"));
+          }
+        }
+);
+        AbstractModule module=(AbstractModule)SNodeOperations.getModel(myNode).getModule();
+        MacroHelper macroHelper=MacrosFactory.forModule(module);
+        if (macroHelper != null) {
+          filename.value=macroHelper.expandPath(filename.value);
+        }
+        final File baseFile=(filename.value == null ? null : new File(filename.value));
         if (baseFile != null && baseFile.exists()) {
           chooser.setInitialFile(FileSystem.getInstance().getFileByPath(baseFile.getAbsolutePath()));
         }
@@ -19,8 +31,8 @@
           return;
         }
         String selectedPath=result.getPath();
-        final String pathToShow=MacrosFactory.forModule(language).shrinkPath(selectedPath);
-        ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+        final String pathToShow=(macroHelper == null ? selectedPath : macroHelper.shrinkPath(selectedPath));
+        modelAccess.executeCommand(new Runnable(){
           public void run(){
             SPropertyOperations.set(SelectImageFileButton.this.myNode,MetaAdapterFactory.getProperty(0x18bc659203a64e29L,0xa83a7ff23bde13baL,0x1095e12de6fL,0x1095e2f7e63L,"imageFile"),pathToShow);
           }
