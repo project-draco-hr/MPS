@@ -1,0 +1,117 @@
+{
+  myHasUI=true;
+  myVerticalScrollBar=new MyScrollBar(Adjustable.VERTICAL);
+  myScrollPane=ScrollPaneFactory.createScrollPane();
+  if (rightToLeft) {
+    myScrollPane.setLayout(new LeftHandScrollbarLayout());
+  }
+  myScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+  myScrollPane.setVerticalScrollBar(myVerticalScrollBar);
+  myScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+  myScrollPane.setViewportView(this);
+  myScrollPane.getViewport().addChangeListener(new ChangeListener(){
+    @Override public void stateChanged(    ChangeEvent e){
+      if (!getNodeSubstituteChooser().isVisible()) {
+        return;
+      }
+      Point point=getNodeSubstituteChooser().calcPatternEditorLocation();
+      Rectangle viewRect=getViewport().getViewRect();
+      if (isInsideEditor(point,viewRect)) {
+        getNodeSubstituteChooser().moveToContextCell();
+      }
+ else {
+        deactivateSubstituteChooser();
+      }
+    }
+    private boolean isInsideEditor(    Point point,    Rectangle viewRect){
+      return isShowing() && point != null && point.getX() >= 0 && point.getX() <= getLocationOnScreen().getX() + viewRect.getX() + viewRect.getWidth() && point.getY() >= 0 && point.getY() <= getLocationOnScreen().getY() + viewRect.getY() + viewRect.getHeight()+ myScrollPane.getHorizontalScrollBar().getHeight();
+    }
+  }
+);
+  myContainer=new JPanel(){
+    @Override public void addNotify(){
+      super.addNotify();
+      myIsInFiguresHierarchy=true;
+    }
+    @Override public void removeNotify(){
+      myIsInFiguresHierarchy=false;
+      super.removeNotify();
+    }
+  }
+;
+  myContainer.setMinimumSize(new Dimension(0,0));
+  myContainer.setLayout(new BorderLayout());
+  myContainer.add(myScrollPane,BorderLayout.CENTER);
+  myMessagesGutter=new MessagesGutter(this,rightToLeft);
+  if (showErrorsGutter) {
+    getVerticalScrollBar().setPersistentUI(myMessagesGutter);
+  }
+ else {
+    getVerticalScrollBar().setPersistentUI(new ButtonlessScrollBarUI(){
+      @Override public boolean alwaysShowTrack(){
+        return true;
+      }
+    }
+);
+  }
+  myLeftHighlighter=new LeftEditorHighlighter(this,rightToLeft);
+  myLeftHighlighter.addMouseListener(new MouseAdapter(){
+    @Override public void mousePressed(    MouseEvent e){
+      for (      LeftMarginMouseListener listener : new ArrayList<LeftMarginMouseListener>(myLeftMarginPressListeners)) {
+        listener.mousePressed(e,EditorComponent.this);
+      }
+    }
+    @Override public void mouseReleased(    MouseEvent e){
+      for (      LeftMarginMouseListener listener : new ArrayList<LeftMarginMouseListener>(myLeftMarginPressListeners)) {
+        listener.mouseReleased(e,EditorComponent.this);
+      }
+    }
+    @Override public void mouseClicked(    MouseEvent e){
+      for (      LeftMarginMouseListener listener : new ArrayList<LeftMarginMouseListener>(myLeftMarginPressListeners)) {
+        listener.mouseClicked(e,EditorComponent.this);
+      }
+    }
+  }
+);
+  myScrollPane.setRowHeaderView(myLeftHighlighter);
+  myIntentionsSupport=new IntentionsSupport(this);
+  if (CaretBlinker.getInstance() != null) {
+    CaretBlinker.getInstance().registerEditor(this);
+  }
+  if (MPSToolTipManager.getInstance() != null) {
+    MPSToolTipManager.getInstance().registerComponent(this);
+  }
+  KeyboardFocusManager.getCurrentKeyboardFocusManager().addPropertyChangeListener("focusOwner",myFocusListener=new PropertyChangeListener(){
+    @Override public void propertyChange(    PropertyChangeEvent evt){
+      Component focusOwner=KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+      if (EditorComponent.this.isAncestorOf(focusOwner)) {
+        Component current=focusOwner;
+        while (current.getParent() != EditorComponent.this) {
+          current=current.getParent();
+        }
+        selectComponentCell(current);
+      }
+    }
+  }
+);
+  getSelectionManager().addSelectionListener(new SelectionListener(){
+    @Override public void selectionChanged(    jetbrains.mps.openapi.editor.EditorComponent editorComponent,    Selection oldSelection,    Selection newSelection){
+      if (oldSelection == newSelection) {
+        return;
+      }
+      deactivateSubstituteChooser();
+      updateStatusBarMessage();
+      if (oldSelection != null) {
+        for (        jetbrains.mps.openapi.editor.cells.EditorCell editorCell : oldSelection.getSelectedCells()) {
+          repaint(editorCell);
+        }
+      }
+      if (newSelection != null) {
+        for (        jetbrains.mps.openapi.editor.cells.EditorCell editorCell : newSelection.getSelectedCells()) {
+          repaint(editorCell);
+        }
+      }
+    }
+  }
+);
+}
