@@ -2,12 +2,54 @@
   Language depModule=(Language)scriptReference.getModule();
   final int current=scriptReference.getFromVersion();
   SModel migrationModel=LanguageAspect.MIGRATION.get(depModule);
-  SNode script=ListSequence.fromList(SModelOperations.roots(migrationModel,MetaAdapterFactory.getConcept(0x9882f4ad195546feL,0x826994189e5dbbf2L,0x1bf9eb43276b6d8fL,"jetbrains.mps.lang.migration.util.structure.RefactoringLog"))).where(new IWhereFilter<SNode>(){
+  SNode log=ListSequence.fromList(SModelOperations.roots(migrationModel,MetaAdapterFactory.getConcept(0x9882f4ad195546feL,0x826994189e5dbbf2L,0x1bf9eb43276b6d8fL,"jetbrains.mps.lang.migration.util.structure.RefactoringLog"))).where(new IWhereFilter<SNode>(){
     public boolean accept(    SNode it){
       return SPropertyOperations.getInteger(it,MetaAdapterFactory.getProperty(0x9882f4ad195546feL,0x826994189e5dbbf2L,0x1bf9eb43276b6d8fL,0x1bf9eb43276b6d91L,"fromVersion")) == current;
     }
   }
 ).first();
-  RefactoringLog implementation=((RefactoringLog)BHReflection.invoke(script,SMethodTrimmedId.create("getImplementation",MetaAdapterFactory.getConcept(0x9882f4ad195546feL,0x826994189e5dbbf2L,0x1bf9eb43276b6d8fL,"jetbrains.mps.lang.migration.util.structure.RefactoringLog"),"1JTUOcBrmo$")));
+  if (log == null && !(silently)) {
+    if (LOG.isEnabledFor(Level.WARN)) {
+      LOG.warn("Could not load refactoring log for module " + depModule + ", version "+ current+ ".");
+    }
+    return null;
+  }
+  final Map<String,RefactoringParticipant.PersistentRefactoringParticipant<?,?>> participants=MapSequence.fromMap(new HashMap<String,RefactoringParticipant.PersistentRefactoringParticipant<?,?>>());
+  for (  RefactoringParticipant.PersistentRefactoringParticipant<?,?> participant : Sequence.fromIterable(new ExtensionPoint<Iterable<RefactoringParticipant.PersistentRefactoringParticipant<?,?>>>("jetbrains.mps.ide.platform.PersistentRefactoringParticipantsEP").getObjects()).translate(new ITranslator2<Iterable<RefactoringParticipant.PersistentRefactoringParticipant<?,?>>,RefactoringParticipant.PersistentRefactoringParticipant<?,?>>(){
+    public Iterable<RefactoringParticipant.PersistentRefactoringParticipant<?,?>> translate(    Iterable<RefactoringParticipant.PersistentRefactoringParticipant<?,?>> it){
+      return it;
+    }
+  }
+)) {
+    MapSequence.fromMap(participants).put(participant.getId(),participant);
+  }
+  RefactoringLog implementation=new RefactoringStepImpl(SPropertyOperations.getString(log,MetaAdapterFactory.getProperty(0xceab519525ea4f22L,0x9b92103b95ca8c0cL,0x110396eaaa4L,0x110396ec041L,"name")),((RefactoringLogReference)BHReflection.invoke(log,SMethodTrimmedId.create("getDescriptor",MetaAdapterFactory.getConcept(0x9882f4ad195546feL,0x826994189e5dbbf2L,0x1bf9eb43276b6d8fL,"jetbrains.mps.lang.migration.util.structure.RefactoringLog"),"4uVwhQyPQ_Z"))),ListSequence.fromList(SLinkOperations.getChildren(log,MetaAdapterFactory.getContainmentLink(0x9882f4ad195546feL,0x826994189e5dbbf2L,0x1bf9eb43276b6d8fL,0x1bf9eb43276b6d90L,"executeAfter"))).where(new IWhereFilter<SNode>(){
+    public boolean accept(    SNode it){
+      return (SLinkOperations.getTarget(it,MetaAdapterFactory.getReferenceLink(0x9882f4ad195546feL,0x826994189e5dbbf2L,0x1bf9eb43276b6d9dL,0x1bf9eb43276b6d9eL,"refactoring")) != null);
+    }
+  }
+).select(new ISelector<SNode,SNode>(){
+    public SNode select(    SNode it){
+      return SLinkOperations.getTarget(it,MetaAdapterFactory.getReferenceLink(0x9882f4ad195546feL,0x826994189e5dbbf2L,0x1bf9eb43276b6d9dL,0x1bf9eb43276b6d9eL,"refactoring"));
+    }
+  }
+).select(new ISelector<SNode,RefactoringLogReference>(){
+    public RefactoringLogReference select(    SNode it){
+      return ((RefactoringLogReference)BHReflection.invoke(it,SMethodTrimmedId.create("getDescriptor",MetaAdapterFactory.getConcept(0x9882f4ad195546feL,0x826994189e5dbbf2L,0x1bf9eb43276b6d8fL,"jetbrains.mps.lang.migration.util.structure.RefactoringLog"),"4uVwhQyPQ_Z")));
+    }
+  }
+),ListSequence.fromList(SLinkOperations.getChildren(log,MetaAdapterFactory.getContainmentLink(0x9882f4ad195546feL,0x826994189e5dbbf2L,0x1bf9eb43276b6d8fL,0x1bf9eb43276b6d92L,"part"))).select(new ISelector<SNode,RefactoringPart>(){
+    public RefactoringPart select(    final SNode refactoringPartNode){
+      return new RefactoringPart(){
+        public void execute(        SModule module){
+          RefactoringSessionImpl session=new RefactoringSessionImpl();
+          confirm(MapSequence.fromMap(participants).get(SPropertyOperations.getString(refactoringPartNode,MetaAdapterFactory.getProperty(0x9882f4ad195546feL,0x826994189e5dbbf2L,0x2b3f57492c163158L,0x325b97b223b9e3aaL,"participant"))),SLinkOperations.getTarget(refactoringPartNode,MetaAdapterFactory.getContainmentLink(0x9882f4ad195546feL,0x826994189e5dbbf2L,0x2b3f57492c163158L,0x325b97b223b9e3acL,"initialState")),SLinkOperations.getTarget(refactoringPartNode,MetaAdapterFactory.getContainmentLink(0x9882f4ad195546feL,0x826994189e5dbbf2L,0x2b3f57492c163158L,0x325b97b223b9e3aeL,"finalState")),myMpsProject.getRepository(),new ModulesScope(module),session);
+          session.commit();
+        }
+      }
+;
+    }
+  }
+));
   return implementation;
 }
