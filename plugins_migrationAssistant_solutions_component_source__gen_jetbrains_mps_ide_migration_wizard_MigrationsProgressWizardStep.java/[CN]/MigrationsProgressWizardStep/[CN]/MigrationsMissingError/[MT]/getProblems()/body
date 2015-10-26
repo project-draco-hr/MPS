@@ -1,8 +1,51 @@
 {
-  return ListSequence.fromList(errors).take(100).select(new ISelector<Tuples._3<SModule,SLanguage,Integer>,Problem>(){
-    public Problem select(    Tuples._3<SModule,SLanguage,Integer> it){
-      return ((Problem)new MissingMigrationProblem(it));
+  final List<SModule> modules=ListSequence.fromList(errors).select(new ISelector<ScriptApplied.ScriptAppliedReference,SModule>(){
+    public SModule select(    ScriptApplied.ScriptAppliedReference it){
+      return it.getModule();
     }
   }
-);
+).toListSequence();
+  return ListSequence.fromList(errors).ofType(MigrationScriptApplied.MigrationScriptAppliedReference.class).select(new ISelector<MigrationScriptApplied.MigrationScriptAppliedReference,MigrationScriptReference>(){
+    public MigrationScriptReference select(    MigrationScriptApplied.MigrationScriptAppliedReference it){
+      return it.getMigrationSciptReference();
+    }
+  }
+).distinct().select(new ISelector<MigrationScriptReference,Problem>(){
+    public Problem select(    final MigrationScriptReference it){
+      List<SModule> languageUsages=ListSequence.fromList(modules).where(new IWhereFilter<SModule>(){
+        public boolean accept(        SModule module){
+          return SetSequence.fromSet(MigrationsUtil.getUsedLanguages(module)).contains(it.getLanguage());
+        }
+      }
+).toListSequence();
+      return (Problem)new MissingMigrationProblem.MissingMigrationScriptProblem(it,Collections.min(ListSequence.fromList(languageUsages).select(new ISelector<SModule,Integer>(){
+        public Integer select(        SModule module){
+          return module.getUsedLanguageVersion(it.getLanguage());
+        }
+      }
+).toListSequence()));
+    }
+  }
+).concat(ListSequence.fromList(errors).ofType(RefactoringLogApplied.RefactoringLogAppliedReference.class).select(new ISelector<RefactoringLogApplied.RefactoringLogAppliedReference,RefactoringLogReference>(){
+    public RefactoringLogReference select(    RefactoringLogApplied.RefactoringLogAppliedReference it){
+      return it.getRefactoringLogReference();
+    }
+  }
+).distinct().select(new ISelector<RefactoringLogReference,Problem>(){
+    public Problem select(    final RefactoringLogReference it){
+      List<SModule> languageUsages=ListSequence.fromList(modules).where(new IWhereFilter<SModule>(){
+        public boolean accept(        SModule module){
+          return SetSequence.fromSet(MigrationsUtil.getModuleDependencies(module)).contains(it.getModule());
+        }
+      }
+).toListSequence();
+      return (Problem)new MissingMigrationProblem.MissingRefactoringLogProblem(it,Collections.min(ListSequence.fromList(languageUsages).select(new ISelector<SModule,Integer>(){
+        public Integer select(        SModule module){
+          return ((AbstractModule)module).getDependencyVersion(it.getModule());
+        }
+      }
+).toListSequence()));
+    }
+  }
+));
 }

@@ -1,59 +1,13 @@
 {
-  final MoveNodesUI moveNodesUI=MoveNodesUI.MoveNodesUIImpl.getInstance();
   final String featureKind=this.getKind();
   if (ListSequence.fromList(nodesToMove).count() > 1) {
-    moveNodesUI.showErrorDialog(project,"Moving multiple concept elements is not supported.\n" + "Please, select single " + featureKind + ".","Select single " + featureKind + ".");
+    Messages.showErrorDialog(project.getProject(),"Moving multiple concept elements is not supported.\n" + "Please, select single " + featureKind + ".","Select single " + featureKind + ".");
     return;
   }
-  final SNode feature=SNodeOperations.cast(ListSequence.fromList(nodesToMove).first(),MetaAdapterFactory.getInterfaceConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x11d2ea63881L,"jetbrains.mps.lang.structure.structure.IStructureDeprecatable"));
-  final SNode targetConcept=moveNodesUI.askTargetConcept(project,feature,featureKind);
+  SNode feature=SNodeOperations.cast(ListSequence.fromList(nodesToMove).first(),MetaAdapterFactory.getInterfaceConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x11d2ea63881L,"jetbrains.mps.lang.structure.structure.IStructureDeprecatable"));
+  final SNode targetConcept=MoveUpDialog.getConcept(project,feature,featureKind);
   if (targetConcept == null) {
     return;
   }
-  final MoveNodesUI.WhetherWriteMigration writeMigration=moveNodesUI.askAboutMigration(project);
-  if (writeMigration == MoveNodesUI.WhetherWriteMigration.CANCEL) {
-    return;
-  }
-  project.getRepository().getModelAccess().runReadAction(new Runnable(){
-    public void run(){
-      final SNode currentConcept=SNodeOperations.cast(SNodeOperations.getParent(feature),MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x1103553c5ffL,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration"));
-      if (currentConcept == null) {
-        return;
-      }
-      final Language currentLanguage=Language.getLanguageFor(SNodeOperations.getModel(currentConcept));
-      if (!(SNodeUtil.isAccessible(feature,project.getRepository()))) {
-        return;
-      }
-      if (!(SNodeUtil.isAccessible(targetConcept,project.getRepository()))) {
-        return;
-      }
-      final Set<SReference> usages=FindUsagesManager.getInstance().findUsages(GlobalScope.getInstance(),Collections.singleton(feature),new EmptyProgressMonitor());
-      final MoveFeatureUp.FeatureAccess featureAccess=MoveFeatureUp.this.getFeatureAccess(feature,targetConcept);
-      final String featureName=featureAccess.getName();
-      String usagesViewHeader="Move " + featureKind + " "+ featureName;
-      if (writeMigration == MoveNodesUI.WhetherWriteMigration.LOCALLY) {
-        final Set<SNode> instances=FindUsagesManager.getInstance().findInstances(GlobalScope.getInstance(),Collections.singleton(SNodeOperations.asSConcept(currentConcept)),false,new EmptyProgressMonitor());
-        updateReferences(project,usages,feature,feature,new _FunctionTypes._void_P0_E0(){
-          public void invoke(){
-            featureAccess.doMoveAndRefactorInstances(instances);
-          }
-        }
-,usagesViewHeader,moveNodesUI);
-      }
-      if (writeMigration == MoveNodesUI.WhetherWriteMigration.WRITE_MIGRATION) {
-        final SNode newFeature=SNodeOperations.copyNode(feature);
-        updateReferences(project,usages,feature,newFeature,new _Adapters._return_P0_E0_to__void_P0_E0_adapter(new _FunctionTypes._return_P0_E0<MigrationScriptBuilder>(){
-          public MigrationScriptBuilder invoke(){
-            ListSequence.fromList(featureAccess.placeToMove()).addElement(newFeature);
-            AttributeOperations.setAttribute(feature,new IAttributeDescriptor.NodeAttribute(MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x11d0a70ae54L,"jetbrains.mps.lang.structure.structure.DeprecatedNodeAnnotation")),createDeprecatedNodeAnnotation_g4dz8g_a0b0e0b0p0a31a31("The " + featureKind + " was moved to superconcept \""+ INamedConcept__BehaviorDescriptor.getFqName_idhEwIO9y.invoke(targetConcept)+ "\""));
-            MoveFeatureUp.this.markOldFeature(feature);
-            MigrationScriptBuilder builder=MigrationScriptBuilder.createMigrationScript(currentLanguage).setName("Move_" + featureKind + "_"+ featureName);
-            return builder.appendExecuteStatements(SLinkOperations.getChildren(SLinkOperations.getTarget(moveStatements(builder,MoveFeatureUp.this.migrations(feature,newFeature),currentConcept),MetaAdapterFactory.getContainmentLink(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0xfc092b6b77L,0xfc092b6b78L,"statements")),MetaAdapterFactory.getContainmentLink(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0xf8cc56b200L,0xf8cc6bf961L,"statement"))).addDependency(SModelRepository.getInstance().getModelDescriptor("jetbrains.mps.lang.structure.plugin"));
-          }
-        }
-),usagesViewHeader,moveNodesUI);
-      }
-    }
-  }
-);
+  MoveNodesDefault.doMove(project,ListSequence.fromListAndArray(new ArrayList<ToMoveItem>(),new ToMoveItem(nodesToMove,new NodeLocation.NodeLocationChild(targetConcept,feature.getContainmentLink()))),null);
 }
