@@ -1,0 +1,25 @@
+{
+  GenerationSettingsProvider.getInstance().setGenerationSettings(new DefaultModifiableGenerationSettings());
+  Iterable<IResource> resources=new ModelsToResources(myModels).resources(false);
+  MessagesViewTool messagesView=myProject.getComponent(MessagesViewTool.class);
+  final MakeSession makeSession=new MakeSession(ProjectHelper.toMPSProject(myProject),messagesView.newHandler("MPS generator"),true);
+  BuildMakeService makeService=new BuildMakeService();
+  IScriptController controller=new IScriptController.Stub(){
+    @Override public void setup(    IPropertiesPool ppool){
+      new jetbrains.mps.internal.make.cfg.TextGenFacetInitializer(makeSession).populate(ppool);
+      new JavaCompileFacetInitializer().skipCompilation(true).populate(ppool);
+    }
+  }
+;
+  long start=System.currentTimeMillis();
+  Future<IResult> future=makeService.make(makeSession,resources,null,controller);
+  try {
+    IResult result=future.get();
+    long end=System.currentTimeMillis();
+    System.out.println("Time: " + (end - start));
+    System.out.println(result.isSucessful() ? "SUCCESS" : "FAILURE");
+  }
+ catch (  Exception e) {
+    System.out.println(e.getMessage());
+  }
+}
