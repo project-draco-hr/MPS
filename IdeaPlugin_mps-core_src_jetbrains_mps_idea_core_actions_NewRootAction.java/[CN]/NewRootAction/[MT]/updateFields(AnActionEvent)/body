@@ -10,13 +10,13 @@
   if (mpsProject == null) {
     return;
   }
-  Module module=e.getData(LangDataKeys.MODULE);
+  final Module module=e.getData(LangDataKeys.MODULE);
   final VirtualFile[] vFiles=e.getData(PlatformDataKeys.VIRTUAL_FILE_ARRAY);
   if (module == null || vFiles == null || vFiles.length != 1) {
     return;
   }
-  final MPSFacet mpsFacet=FacetManager.getInstance(module).getFacetByType(MPSFacetType.ID);
-  if (mpsFacet == null || !mpsFacet.wasInitialized()) {
+  final MPSModuleFacade mpsFacade=module.getProject().getComponent(MPSModuleFacade.class);
+  if (!mpsFacade.isMPSEnabled(module)) {
     return;
   }
   String url=vFiles[0].getUrl();
@@ -26,12 +26,12 @@
   final String path=VirtualFileManager.extractPath(url);
   mpsProject.getModelAccess().runReadAction(new Runnable(){
     @Override public void run(){
-      for (      ModelRoot root : mpsFacet.getSolution().getModelRoots()) {
+      for (      ModelRoot root : mpsFacade.getSolution(module).getModelRoots()) {
         if (!(root instanceof DefaultModelRoot))         continue;
         DefaultModelRoot modelRoot=(DefaultModelRoot)root;
         for (        String sourceRoot : modelRoot.getFiles(DefaultModelRoot.SOURCE_ROOTS)) {
           if (path.startsWith(sourceRoot)) {
-            Solution solution=mpsFacet.getSolution();
+            Solution solution=mpsFacade.getSolution(module);
             myOperationContext=new ModuleContext(solution,mpsProject);
             myModelDescriptor=(EditableSModel)SModelFileTracker.getInstance().findModel(FileSystem.getInstance().getFileByPath(vFiles[0].getPath()));
             if (myModelDescriptor != null) {
