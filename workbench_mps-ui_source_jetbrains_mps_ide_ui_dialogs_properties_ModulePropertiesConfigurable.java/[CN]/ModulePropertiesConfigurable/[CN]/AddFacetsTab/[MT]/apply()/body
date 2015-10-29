@@ -1,24 +1,30 @@
 {
-  final HashMap<String,ModuleFacetBase> moduleFacets=new HashMap<String,ModuleFacetBase>();
-  for (  final SModuleFacet moduleFacet : myModule.getFacets()) {
-    if (!(moduleFacet instanceof ModuleFacetBase))     continue;
-    moduleFacets.put(((ModuleFacetBase)moduleFacet).getFacetType(),(ModuleFacetBase)moduleFacet);
-  }
-  for (  JCheckBox checkBox : myCheckBoxes) {
-    if (!(checkBox.getClientProperty(CHECKBOX_PROPERTY_KEY) instanceof ModuleFacetBase))     continue;
-    ModuleFacetBase facet=(ModuleFacetBase)checkBox.getClientProperty(CHECKBOX_PROPERTY_KEY);
-    if (checkBox.isSelected() && !moduleFacets.keySet().contains(facet.getFacetType())) {
-      facet.setModule(myModule);
+  for (  FacetCheckBox checkBox : myCheckBoxes) {
+    Collection<ModuleFacetDescriptor> moduleFacetDescriptors=myModuleDescriptor.getModuleFacetDescriptors();
+    ModuleFacetBase facet=checkBox.getFacet();
+    if (checkBox.isNewlyCreated()) {
+      Tab tab=checkBox.getTab();
+      if (tab != null) {
+        tab.apply();
+      }
       Memento memento=new MementoImpl();
       facet.save(memento);
-      myModuleDescriptor.getModuleFacetDescriptors().add(new ModuleFacetDescriptor(facet.getFacetType(),memento));
+      boolean alreadyThere=false;
+      for (      ModuleFacetDescriptor d : moduleFacetDescriptors) {
+        if (facet.getFacetType().equals(d.getType())) {
+          alreadyThere=true;
+          break;
+        }
+      }
+      if (!alreadyThere) {
+        moduleFacetDescriptors.add(new ModuleFacetDescriptor(facet.getFacetType(),memento));
+      }
     }
- else     if (!checkBox.isSelected() && moduleFacets.keySet().contains(facet.getFacetType())) {
-      Iterator<ModuleFacetDescriptor> it=myModuleDescriptor.getModuleFacetDescriptors().iterator();
-      while (it.hasNext()) {
+ else     if (checkBox.isExistingToRemove()) {
+      for (Iterator<ModuleFacetDescriptor> it=moduleFacetDescriptors.iterator(); it.hasNext(); ) {
         ModuleFacetDescriptor facetDescriptor=it.next();
         if (facetDescriptor.getType().equals(facet.getFacetType())) {
-          myModuleDescriptor.getModuleFacetDescriptors().remove(facetDescriptor);
+          moduleFacetDescriptors.remove(facetDescriptor);
           break;
         }
       }

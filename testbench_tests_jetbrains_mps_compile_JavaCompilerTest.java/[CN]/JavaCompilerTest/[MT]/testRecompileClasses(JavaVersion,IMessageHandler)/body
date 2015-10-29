@@ -1,0 +1,30 @@
+{
+  final Set<SModule> toCompile=new LinkedHashSet<SModule>();
+  toCompile.add(ourSolution);
+  final Reference<Boolean> resultRef=new Reference<Boolean>();
+  final Reference<Throwable> throwableRef=new Reference<Throwable>();
+  ourProject.getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      try {
+        ModuleMaker moduleMaker;
+        if (msgHandler == null) {
+          moduleMaker=new ModuleMaker();
+        }
+ else {
+          moduleMaker=new ModuleMaker(msgHandler,MessageKind.INFORMATION);
+        }
+        moduleMaker.clean(toCompile,new EmptyProgressMonitor());
+        MPSCompilationResult result=moduleMaker.make(toCompile,new EmptyProgressMonitor(),new JavaCompilerOptions(version));
+        resultRef.set(result.isOk());
+      }
+ catch (      Throwable t) {
+        throwableRef.set(t);
+      }
+    }
+  }
+);
+  if (!throwableRef.isNull()) {
+    throw new RuntimeException(throwableRef.get());
+  }
+  return resultRef.get();
+}

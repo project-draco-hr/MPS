@@ -1,0 +1,25 @@
+{
+  applyMetadataChanges();
+  int result=MergeConfirmation.showMergeConfirmationAndTakeAction(this,myMergeSession,Sequence.fromIterable(myMergeSession.getAllChanges()).where(new IWhereFilter<ModelChange>(){
+    public boolean accept(    ModelChange ch){
+      return !(ch instanceof MetadataChange);
+    }
+  }
+),myMetadataMergeSession,(myMetadataMergeSession == null ? null : myMetadataMergeSession.getAllChanges()));
+  if (result == MergeConfirmation.RETURN) {
+    return false;
+  }
+  if (result == MergeConfirmation.RESOLVE_AUTOMATICALLY) {
+    ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+      public void run(){
+        mergeNonConflictingRoots();
+      }
+    }
+);
+  }
+  if (saveModel(getResultModelWithFixedId())) {
+    unregisterModels();
+    return true;
+  }
+  return false;
+}

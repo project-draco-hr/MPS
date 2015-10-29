@@ -1,17 +1,26 @@
 {
+  final Reference<Throwable> refThrowable=new Reference<Throwable>();
   ourModelAccess.executeCommandInEDT(new Runnable(){
     @Override public void run(){
       try {
-        ModelPersistence.saveModel(myModelBackup,myOriginalModelDataSource,myModelBackup.getSModelHeader().getPersistenceVersion());
+        try {
+          ModelPersistence.saveModel(myModelBackup,myOriginalModelDataSource,myModelBackup.getSModelHeader().getPersistenceVersion());
+        }
+ catch (        IOException e) {
+          e.printStackTrace();
+          Assert.fail();
+        }
+        getSolution().updateModelsSet();
+        getModel().reloadFromSource();
       }
- catch (      IOException e) {
-        e.printStackTrace();
-        Assert.fail();
+ catch (      Throwable t) {
+        refThrowable.set(t);
       }
-      getSolution().updateModelsSet();
-      getModel().reloadFromSource();
     }
   }
 );
+  if (!(refThrowable.isNull())) {
+    throw new RuntimeException(refThrowable.get());
+  }
   waitEDT();
 }
