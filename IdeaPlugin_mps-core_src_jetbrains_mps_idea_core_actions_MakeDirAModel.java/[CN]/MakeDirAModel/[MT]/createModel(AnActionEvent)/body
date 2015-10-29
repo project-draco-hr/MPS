@@ -1,0 +1,23 @@
+{
+  return new ModelAccessHelper(ProjectHelper.getModelAccess(myProject)).executeCommand(new Computable<EditableSModel>(){
+    @Override public EditableSModel compute(){
+      final PsiElement psiElement=e.getData(LangDataKeys.PSI_ELEMENT);
+      final VirtualFile targetDir=((PsiDirectory)psiElement).getVirtualFile();
+      final String modelName=deriveModelName(myRootForModel,targetDir);
+      EditableSModel model=null;
+      try {
+        model=(EditableSModel)myModelRoot.createModel(modelName,targetDir.getPath(),null,PersistenceRegistry.getInstance().getFolderModelFactory("file-per-root"));
+      }
+ catch (      IOException ioException) {
+        LOG.error("Can't create per-root model " + modelName + " under "+ myRootForModel.getPath(),ioException);
+      }
+      model.setChanged(true);
+      model.load();
+      model.save();
+      ModelsAutoImportsManager.doAutoImport(myModelRoot.getModule(),model);
+      new MissingDependenciesFixer(model).fixModuleDependencies();
+      return model;
+    }
+  }
+);
+}
