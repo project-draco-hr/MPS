@@ -3,7 +3,6 @@
   if (myProject == null) {
     return;
   }
-  mySolution=null;
   myModelRoot=null;
   myModelPrefix=null;
   final Module module=e.getData(LangDataKeys.MODULE);
@@ -11,39 +10,39 @@
   if (module == null || vFiles == null || vFiles.length != 1 || !vFiles[0].isDirectory()) {
     return;
   }
-  final MPSModuleFacade mpsFacade=module.getProject().getComponent(MPSModuleFacade.class);
+  final VirtualFile targetDir=vFiles[0];
+  final ModuleMPSSupport mpsFacade=module.getProject().getComponent(ModuleMPSSupport.class);
   if (!mpsFacade.isMPSEnabled(module)) {
     return;
   }
-  String url=vFiles[0].getUrl();
+  String url=targetDir.getUrl();
   if (!LocalFileSystem.PROTOCOL.equals(VirtualFileManager.extractProtocol(url))) {
     return;
   }
-  final String path=VirtualFileManager.extractPath(url);
   ProjectHelper.toMPSProject(module.getProject()).getModelAccess().runReadAction(new Runnable(){
     @Override public void run(){
-      myRootForModel=mpsFacade.rootForModel(module,vFiles[0]);
-      for (      ModelRoot root : mpsFacade.getSolution(module).getModelRoots()) {
-        if (!(root instanceof DefaultModelRoot))         continue;
-        DefaultModelRoot modelRoot=(DefaultModelRoot)root;
-        for (        String sourceRoot : modelRoot.getFiles(DefaultModelRoot.SOURCE_ROOTS)) {
-          if (FileUtil.isSubPath(sourceRoot,path)) {
-            mySolution=mpsFacade.getSolution(module);
-            myModelRoot=modelRoot;
-            myModelPrefix=path.substring(sourceRoot.length());
-            while (myModelPrefix.startsWith("/") || myModelPrefix.startsWith("\\")) {
-              myModelPrefix=myModelPrefix.substring(1);
-            }
-            while (myModelPrefix.endsWith("/") || myModelPrefix.endsWith("\\")) {
-              myModelPrefix=myModelPrefix.substring(0,myModelPrefix.length());
-            }
-            myModelPrefix=myModelPrefix.replaceAll("/",".");
-            myModelPrefix=myModelPrefix.replaceAll("\\\\",".");
-            if (!myModelPrefix.isEmpty()) {
-              myModelPrefix+=".";
-            }
-            return;
-          }
+      myModelRoot=mpsFacade.getModelRoot(module);
+      if (myModelRoot == null) {
+        return;
+      }
+      myRootForModel=rootToUse(targetDir.getPath());
+      if (myRootForModel == null) {
+        return;
+      }
+      myRelativePath=VfsUtilCore.getRelativePath(targetDir,VirtualFileManager.getInstance().findFileByUrl("file://" + myRootForModel));
+      String prefix=myRelativePath;
+      prefix=prefix.replace('/','.').replace('\\','.');
+      while (prefix.startsWith(".")) {
+        prefix=prefix.substring(1);
+      }
+      while (prefix.endsWith(".")) {
+        prefix=prefix.substring(0,prefix.length());
+      }
+      myModelPrefix=prefix;
+      for (      ModelRoot modelRoot : mpsFacade.getSolution(module).getModelRoots()) {
+        if (modelRoot instanceof DefaultModelRoot) {
+          myModelRoot=(DefaultModelRoot)modelRoot;
+          break;
         }
       }
     }

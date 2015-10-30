@@ -2,7 +2,8 @@
   CreateFromTemplateDialog dialog=new CreateFromTemplateDialog(myProject){
     @Override protected void doOKAction(){
       final ModelTemplates template=ModelTemplates.valueOf(getKindCombo().getSelectedName());
-      final String modelName=getNameField().getText().trim();
+      String shortModelName=getNameField().getText().trim();
+      final String modelName=myModelPrefix.isEmpty() ? shortModelName : myModelPrefix + "." + shortModelName;
       if (!isModelNameValid(modelName)) {
         return;
       }
@@ -11,12 +12,12 @@
           final String path=((PsiDirectory)anActionEvent.getData(LangDataKeys.PSI_ELEMENT)).getVirtualFile().getPath();
           EditableSModel model=null;
           try {
-            model=(EditableSModel)((DefaultModelRoot)myModelRoot).createModel(modelName,path,null,PersistenceFacade.getInstance().getModelFactory(MPSExtentions.MODEL));
+            model=(EditableSModel)myModelRoot.createModel(modelName,myRootForModel,null,PersistenceFacade.getInstance().getModelFactory(MPSExtentions.MODEL));
           }
  catch (          IOException e) {
             LOG.error("Can't create per-root model " + modelName + " under "+ path,e);
           }
-          template.preConfigure(model,mySolution);
+          template.preConfigure(model);
           model.addModelListener(new SModelListener(){
             @Override public void modelLoaded(            SModel sModel,            boolean b){
             }
@@ -82,6 +83,5 @@
     dialog.getKindCombo().addItem(template.getPresentation(),template.getIcon(),template.name());
     dialog.setTemplateKindComponentsVisible(true);
   }
-  dialog.getNameField().setText(myModelPrefix);
   dialog.show();
 }
