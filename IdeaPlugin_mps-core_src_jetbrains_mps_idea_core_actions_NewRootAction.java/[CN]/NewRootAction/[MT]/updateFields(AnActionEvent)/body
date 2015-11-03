@@ -1,56 +1,40 @@
 {
-  myOperationContext=null;
-  myModelDescriptor=null;
+  myModel=null;
   myConceptFqNameToNodePointerMap.clear();
   myProject=e.getData(PlatformDataKeys.PROJECT);
-  if (myProject == null) {
+  final SModel model=MPSCommonDataKeys.CONTEXT_MODEL.getData(e.getDataContext());
+  if (model instanceof EditableSModel) {
+    myModel=(EditableSModel)model;
+  }
+  if (myProject == null || myModel == null) {
     return;
   }
   final jetbrains.mps.project.Project mpsProject=ProjectHelper.toMPSProject(myProject);
   if (mpsProject == null) {
     return;
   }
-  Module module=e.getData(LangDataKeys.MODULE);
+  final Module module=e.getData(LangDataKeys.MODULE);
   final VirtualFile[] vFiles=e.getData(PlatformDataKeys.VIRTUAL_FILE_ARRAY);
   if (module == null || vFiles == null || vFiles.length != 1) {
     return;
   }
-  final MPSFacet mpsFacet=FacetManager.getInstance(module).getFacetByType(MPSFacetType.ID);
-  if (mpsFacet == null || !mpsFacet.wasInitialized()) {
+  final ModuleMPSSupport mpsFacade=module.getProject().getComponent(ModuleMPSSupport.class);
+  if (!mpsFacade.isMPSEnabled(module)) {
     return;
   }
   String url=vFiles[0].getUrl();
   if (!LocalFileSystem.PROTOCOL.equals(VirtualFileManager.extractProtocol(url))) {
     return;
   }
-  final String path=VirtualFileManager.extractPath(url);
   mpsProject.getModelAccess().runReadAction(new Runnable(){
     @Override public void run(){
-      for (      ModelRoot root : mpsFacet.getSolution().getModelRoots()) {
-        if (!(root instanceof DefaultModelRoot))         continue;
-        DefaultModelRoot modelRoot=(DefaultModelRoot)root;
-        for (        String sourceRoot : modelRoot.getFiles(DefaultModelRoot.SOURCE_ROOTS)) {
-          if (path.startsWith(sourceRoot)) {
-            Solution solution=mpsFacet.getSolution();
-            myOperationContext=new ModuleContext(solution,mpsProject);
-            myModelDescriptor=(EditableSModel)SModelFileTracker.getInstance().findModel(FileSystem.getInstance().getFileByPath(vFiles[0].getPath()));
-            if (myModelDescriptor != null) {
-              SModel model=myModelDescriptor;
-              List<Language> modelLanguages=SModelOperations.getLanguages(model);
-              for (              Language language : modelLanguages) {
-                for (                SNode concept : language.getConceptDeclarations()) {
-                  String conceptFqName=NameUtil.nodeFQName(concept);
-                  if (ModelConstraints.canBeRoot(conceptFqName,model,null)) {
-                    myConceptFqNameToNodePointerMap.put(conceptFqName,new jetbrains.mps.smodel.SNodePointer(concept));
-                  }
-                }
-              }
-            }
- else {
-              myNewModel=true;
-            }
+      Set<SLanguage> modelLanguages=SModelOperations.getAllLanguageImports(model);
+      for (      SLanguage language : modelLanguages) {
+        for (        SAbstractConcept concept : language.getConcepts()) {
+          String conceptFqName=concept.getQualifiedName();
+          if (ModelConstraints.canBeRoot(conceptFqName,model,null)) {
+            myConceptFqNameToNodePointerMap.put(conceptFqName,concept);
           }
-          return;
         }
       }
     }
