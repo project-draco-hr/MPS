@@ -1,0 +1,28 @@
+{
+  LOG.info("Loading modules");
+  myErrors.setLength(0);
+  Set<SModuleReference> existingModules=new HashSet<SModuleReference>(getModuleReferences());
+  for (  ModulePath modulePath : myProjectDescriptor.getModulePaths()) {
+    String path=modulePath.getPath();
+    IFile descriptorFile=FS.getFileByPath(path);
+    if (descriptorFile.exists()) {
+      final ModulesMiner modulesMiner=new ModulesMiner();
+      ModuleHandle handle=modulesMiner.loadModuleHandle(descriptorFile);
+      if (handle.getDescriptor() != null) {
+        SModule module=ModuleRepositoryFacade.createModule(handle,this);
+        SModuleReference moduleReference=module.getModuleReference();
+        if (!existingModules.remove(moduleReference)) {
+          myRefToPathMap.put(moduleReference,modulePath);
+        }
+      }
+ else {
+        error("Can't load module from " + descriptorFile.getPath() + " Unknown file type.");
+      }
+    }
+ else {
+      error("Can't load module from " + descriptorFile.getPath() + " File doesn't exist.");
+    }
+  }
+  removeNonExistingModules(existingModules);
+  LOG.info("Modules are loaded");
+}
