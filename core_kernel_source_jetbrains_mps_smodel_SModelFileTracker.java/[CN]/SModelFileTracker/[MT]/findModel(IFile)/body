@@ -1,3 +1,29 @@
 {
-  return myPathsToModelDescriptorMap.get(modelFile);
+  if (modelFile == null) {
+    return null;
+  }
+  SModelReference mr=myListener.findModel(modelFile);
+  if (mr == null) {
+    return null;
+  }
+class ModelResolve implements Computable<SModel> {
+    private final SModelReference myModelReference;
+    private final SRepository myRepository;
+    public ModelResolve(    SModelReference modelReference,    SRepository repository){
+      myModelReference=modelReference;
+      myRepository=repository;
+    }
+    @Override public SModel compute(){
+      return myModelReference.resolve(myRepository);
+    }
+    public SModel resolve(){
+      if (myRepository.getModelAccess().canRead()) {
+        return compute();
+      }
+ else {
+        return new ModelComputeRunnable<SModel>(this).runRead(myRepository.getModelAccess());
+      }
+    }
+  }
+  return new ModelResolve(mr,myRepository).resolve();
 }
