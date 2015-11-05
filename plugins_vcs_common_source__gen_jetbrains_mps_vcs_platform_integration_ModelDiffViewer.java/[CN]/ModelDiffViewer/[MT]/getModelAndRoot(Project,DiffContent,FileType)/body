@@ -2,7 +2,7 @@
   final Wrappers._T<SModel> model=new Wrappers._T<SModel>(null);
   IFile file=getFileByContent(content);
   if (file != null) {
-    model.value=SModelFileTracker.getInstance().findModel(file.getParent());
+    model.value=SModelFileTracker.getInstance(mpsProject.getRepository()).findModel(file.getParent());
   }
   if (model.value == null) {
     model.value=readModel(content,type);
@@ -10,20 +10,14 @@
   if (model.value == null) {
     return null;
   }
-  SNodeId nodeId=null;
-  int size=ModelAccess.instance().runReadAction(new Computable<Integer>(){
-    public Integer compute(){
-      return ListSequence.fromList(SModelOperations.roots(model.value,null)).count();
-    }
-  }
-);
-  if (size == 1) {
-    nodeId=ModelAccess.instance().runReadAction(new Computable<SNodeId>(){
-      public SNodeId compute(){
+  SNodeId nodeId=new ModelAccessHelper(mpsProject.getModelAccess()).runReadAction(new Computable<SNodeId>(){
+    public SNodeId compute(){
+      if (ListSequence.fromList(SModelOperations.roots(model.value,null)).count() == 1) {
         return ListSequence.fromList(SModelOperations.roots(model.value,null)).getElement(0).getNodeId();
       }
+      return null;
     }
-);
   }
+);
   return MultiTuple.<SModel,SNodeId>from(model.value,nodeId);
 }
