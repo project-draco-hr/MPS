@@ -1,8 +1,8 @@
 {
   Set<SModule> result=new HashSet<SModule>();
   for (  SDependency dependency : module.getDeclaredDependencies()) {
-    SModule m=dependency.getTarget();
-    if (m == null) {
+    SModule dependencyModule=dependency.getTarget();
+    if (dependencyModule == null) {
       if (dependency.getScope() == SDependencyScope.GENERATES_INTO || dependency.getScope() == SDependencyScope.DESIGN) {
         continue;
       }
@@ -15,27 +15,12 @@
     }
     boolean isExport=dependency.isReexport() || dependency.getScope() == SDependencyScope.EXTENDS;
     if (includeNonReexport || isExport) {
-      result.add(m);
+      result.add(dependencyModule);
     }
   }
   if (includeNonReexport) {
     if (runtimes) {
-      for (      SLanguage l : module.getUsedLanguages()) {
-        if (l.getSourceModule() == null) {
-          if (!checked) {
-            continue;
-          }
- else {
-            throw new AbsentDependencyException(l);
-          }
-        }
-        for (        SModuleReference runtimeRef : l.getLanguageRuntimes()) {
-          SModule runtime=ModuleRepositoryFacade.getInstance().getModule(runtimeRef);
-          if (runtime != null) {
-            result.add(runtime);
-          }
-        }
-      }
+      result.addAll(new RuntimesOfUsedLanguageCalculator(module,checked).invoke());
     }
   }
   return result;
