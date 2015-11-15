@@ -1,0 +1,49 @@
+{
+  myProject=project;
+  myOldRegistered=SNodeOperations.isRegistered(oldModel);
+  myNewRegistered=SNodeOperations.isRegistered(newModel);
+  myEditable=newModel instanceof EditableSModel && myNewRegistered;
+  project.getRepository().getModelAccess().runWriteAction(new Runnable(){
+    public void run(){
+      if (!(myNewRegistered)) {
+        DiffModelUtil.renameModelAndRegister(newModel,"new");
+      }
+      if (!(myOldRegistered)) {
+        DiffModelUtil.renameModelAndRegister(oldModel,"old");
+      }
+    }
+  }
+);
+  project.getRepository().getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      myChangeSet=ChangeSetBuilder.buildChangeSet(oldModel,newModel,true);
+    }
+  }
+);
+  project.getRepository().getModelAccess().runWriteAction(new Runnable(){
+    public void run(){
+      SModel newMetaModel=MetadataUtil.createMetadataModel(newModel,"metadata_new",myEditable);
+      SModel oldMetaModel=MetadataUtil.createMetadataModel(oldModel,"metadata_old",false);
+      myMetadataChangeSet=ChangeSetBuilder.buildChangeSet(oldMetaModel,newMetaModel,true);
+    }
+  }
+);
+  myPanel.setSplitterProportionKey(getClass().getName() + "ModelTreeSplitter");
+  myPanel.setSecondComponent(myNoRootPanel);
+  if (showTree) {
+    myTree=new ModelDifferenceViewer.ModelDifferenceTree();
+    myPanel.setFirstComponent(ScrollPaneFactory.createScrollPane(myTree));
+    myGoToNeighbourRootActions=new ModelDifferenceViewer.MyGoToNeighbourRootActions();
+    myGoToNeighbourRootActions.previous().registerCustomShortcutSet(GoToNeighbourRootActions.PREV_ROOT_SHORTCUT,myComponent);
+    myGoToNeighbourRootActions.next().registerCustomShortcutSet(GoToNeighbourRootActions.NEXT_ROOT_SHORTCUT,myComponent);
+  }
+ else {
+    setCurrentRoot(rootId);
+  }
+  myComponent.add(myPanel,BorderLayout.CENTER);
+  myComponent.add(myStatusBar,BorderLayout.SOUTH);
+  Dimension size=DimensionService.getInstance().getSize(getDimensionServiceKey());
+  if (size == null) {
+    myComponent.setPreferredSize(new Dimension(500,700));
+  }
+}

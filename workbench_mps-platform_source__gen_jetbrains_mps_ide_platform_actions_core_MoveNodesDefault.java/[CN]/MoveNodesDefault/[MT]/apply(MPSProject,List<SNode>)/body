@@ -1,53 +1,41 @@
 {
   final Wrappers._T<SModel> currentModel=new Wrappers._T<SModel>();
+  final Wrappers._T<SContainmentLink> role=new Wrappers._T<SContainmentLink>();
   project.getRepository().getModelAccess().runReadAction(new Runnable(){
     public void run(){
       currentModel.value=SNodeOperations.getModel(ListSequence.fromList(nodesToMove).first());
+      role.value=ListSequence.fromList(nodesToMove).first().getContainmentLink();
     }
   }
 );
+  final SContainmentLink finalRole=role.value;
   final NodeLocation newLocation=MoveNodesDialog.getSelectedObject(project.getProject(),currentModel.value,new MoveNodesDialog.ModelFilter("Choose Node or Model"){
     @Override public boolean check(    NodeLocation selectedObject,    SModel model){
-      return true;
+      if (selectedObject == null) {
+        return false;
+      }
+      if (selectedObject instanceof NodeLocation.NodeLocationChild) {
+        if (finalRole == null) {
+          return false;
+        }
+        Collection<SContainmentLink> containmentLinks=((NodeLocation.NodeLocationChild)selectedObject).getNode().resolve(project.getRepository()).getConcept().getContainmentLinks();
+        return CollectionSequence.fromCollection(containmentLinks).contains(finalRole);
+      }
+ else {
+        return true;
+      }
     }
   }
 );
+  if (newLocation instanceof NodeLocation.NodeLocationChild) {
+    ((NodeLocation.NodeLocationChild)newLocation).setRole(role.value);
+  }
   if (newLocation == null) {
     return;
   }
-  project.getRepository().getModelAccess().runReadAction(new Runnable(){
-    public void run(){
-      for (      SNode node : ListSequence.fromList(nodesToMove)) {
-        if (!(SNodeUtil.isAccessible(node,project.getRepository()))) {
-          return;
-        }
-      }
-      if (!(newLocation.isValid(project,nodesToMove))) {
-        return;
-      }
-      final Set<SReference> refUsages=findUsages(project,nodesToMove);
-      SearchResults<SNode> searchResults=nodesToRefactoringResult(nodesToMove,SetSequence.fromSet(refUsages).select(new ISelector<SReference,SNode>(){
-        public SNode select(        SReference it){
-          return it.getSourceNode();
-        }
-      }
-),"reference");
-      RefactoringViewUtil.refactor(project,searchResults,new _FunctionTypes._void_P1_E0<Set<SNode>>(){
-        public void invoke(        final Set<SNode> included){
-          Map<SReference,SNode> usagesMap=classifyUsages(SetSequence.fromSet(refUsages).where(new IWhereFilter<SReference>(){
-            public boolean accept(            SReference it){
-              return SetSequence.fromSet(included).contains(it.getSourceNode());
-            }
-          }
-));
-          newLocation.insertNodes(nodesToMove);
-          for (          IMapping<SReference,SNode> mapping : MapSequence.fromMap(usagesMap)) {
-            updateUsage(mapping.key(),mapping.value());
-          }
-        }
-      }
-,"Move nodes");
-    }
+  Map<SNodeReference,NodeLocation> moveMap=MapSequence.fromMap(new HashMap<SNodeReference,NodeLocation>());
+  for (  SNode node : ListSequence.fromList(nodesToMove)) {
+    MapSequence.fromMap(moveMap).put(node.getReference(),newLocation);
   }
-);
+  doMove(project,moveMap,null);
 }

@@ -1,25 +1,13 @@
 {
-  myPersistenceRegistry=PersistenceRegistry.getInstance();
   for (  ModelFactoryProvider provider : ModelFactoryProvider.EP_MODEL_FACTORY.getExtensions()) {
     try {
-      String implementationClassName=provider.getImplementationClass();
-      if (implementationClassName.isEmpty()) {
-        LOG.error("Empty implementationClass in ModelFactoryProvider in plugin " + provider.getPluginDescriptor().getPluginId());
-        continue;
-      }
-      Class<ModelFactory> implementationClass=(Class<ModelFactory>)Class.forName(implementationClassName,true,provider.getLoaderForClass());
-      ModelFactory modelFactory=implementationClass.newInstance();
+      ModelFactory modelFactory=provider.instantiate(provider.getImplementationClass(),ApplicationManager.getApplication().getPicoContainer());
       myRegisteredFactories.add(modelFactory);
       myPersistenceRegistry.setModelFactory(modelFactory.getFileExtension(),modelFactory);
     }
  catch (    ClassNotFoundException e) {
-      LOG.error("Can not load ModelFactoryProvider in plugin " + provider.getPluginDescriptor().getPluginId(),e);
-    }
-catch (    InstantiationException e) {
-      LOG.error("Can not load ModelFactoryProvider in plugin " + provider.getPluginDescriptor().getPluginId(),e);
-    }
-catch (    IllegalAccessException e) {
-      LOG.error("Can not load ModelFactoryProvider in plugin " + provider.getPluginDescriptor().getPluginId(),e);
+      String m=String.format("Failed to load ModelFactoryProvider in plugin %s",provider.getPluginDescriptor().getPluginId());
+      LogManager.getLogger(ModelFactoryRegister.class).error(m,e);
     }
   }
 }

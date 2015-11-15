@@ -3,5 +3,29 @@
   if (model == null) {
     return;
   }
-  PartitioningHelper.showMappingPartitioning(ProjectHelper.toIdeaProject(context.getProject()),Sequence.fromIterable(Sequence.<SModel>singleton(model)).toListSequence(),console);
+  SModule module=model.getModule();
+  final ModelGenerationPlan externalPlan;
+  if (module != null && module.getFacet(CustomGenerationModuleFacet.class) != null) {
+    externalPlan=module.getFacet(CustomGenerationModuleFacet.class).getPlan(model);
+  }
+ else {
+    externalPlan=null;
+  }
+  MessagesViewTool messagesView=context.getProject().getComponent(MessagesViewTool.class);
+  PartitioningHelper helper=new PartitioningHelper(messagesView,console);
+  ModelGenerationPlan gp;
+  if (SPropertyOperations.getBoolean(__thisNode__,MetaAdapterFactory.getProperty(0xa5e4de5346a344daL,0xaab368fdf1c34ed0L,0x61f2dd6de47f85e4L,0x2c510b378f8ce5ddL,"ignoreExternalPlan"))) {
+    gp=new GenerationPlan(model);
+    if (externalPlan != null) {
+      console.addText("Model has alternative plan configured though facet, ingored\n");
+    }
+  }
+ else   if (externalPlan != null) {
+    gp=externalPlan;
+  }
+ else {
+    gp=new GenerationPlan(model);
+  }
+  helper.show(gp);
+  helper.printConnectedComponents(Sequence.<SModel>singleton(model));
 }
