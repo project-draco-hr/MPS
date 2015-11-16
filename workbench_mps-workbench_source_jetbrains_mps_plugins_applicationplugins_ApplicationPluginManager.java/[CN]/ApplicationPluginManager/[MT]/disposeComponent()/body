@@ -2,7 +2,25 @@
 synchronized (myPluginsLock) {
     unregister();
     if (!myPluginLoaderRegistry.getLoadedContributors().isEmpty()) {
-      unloadPlugins(myPluginLoaderRegistry.getLoadedContributors());
+      final List<PluginContributor> loadedContributors=myPluginLoaderRegistry.getLoadedContributors();
+      if (ThreadUtils.isInEDT()) {
+        myRepository.getModelAccess().runWriteAction(new Runnable(){
+          @Override public void run(){
+            final long beginTime=System.nanoTime();
+            LOG.debug(String.format("Unloading application plugins from %d contributors",loadedContributors.size()));
+            try {
+              unloadPlugins(loadedContributors);
+            }
+  finally {
+              LOG.info(String.format("Unloading of %d application plugins took %.3f s",loadedContributors.size(),(System.nanoTime() - beginTime) / 1e9));
+            }
+          }
+        }
+);
+      }
+ else {
+        LOG.warn("Not in EDT: cannot dispose the rest of the application plugins!");
+      }
     }
   }
 }

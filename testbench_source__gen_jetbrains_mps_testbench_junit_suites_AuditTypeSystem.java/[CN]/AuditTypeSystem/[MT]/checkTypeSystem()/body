@@ -1,5 +1,13 @@
 {
-  Collection<SModel> models=new ModelsExtractor(myModule,true).getModels();
-  List<String> errors=CheckingTestsUtil.applyChecker(new TypesystemChecker(),models,BaseCheckModulesTest.getStatistic());
+  final CheckingTestStatistic statistic=new CheckingTestStatistic();
+  List<String> errors=new ModelAccessHelper(BaseCheckModulesTest.getContextProject().getModelAccess()).runReadAction(new Computable<List<String>>(){
+    public List<String> compute(){
+      Collection<SModel> models=new ModelsExtractor(myModule,true).getModels();
+      return new CheckingTestsUtil(statistic).applyChecker(new TypesystemChecker(),models);
+    }
+  }
+);
+  ourStats.report("Errors",statistic.getNumErrors());
+  ourStats.report("Warnings",statistic.getNumWarnings());
   Assert.assertTrue("Type system errors:\n" + CheckingTestsUtil.formatErrors(errors),errors.isEmpty());
 }
