@@ -1,17 +1,21 @@
 {
   Set<LibDescriptor> paths=new LinkedHashSet<LibDescriptor>();
-  for (  String plugin : myConfig.getPlugins()) {
-    File libFolder=new File(plugin + File.separator + "lib");
-    UrlClassLoader pluginCL=null;
-    if (libFolder.exists() && libFolder.isDirectory()) {
-      pluginCL=createPluginClassLoader(libFolder);
-      for (      File jar : libFolder.listFiles(PathManager.JAR_FILE_FILTER)) {
-        paths.add(new LibDescriptor(jar.getAbsolutePath() + MODULES_PREFIX,pluginCL));
+  for (  PluginDescriptor descriptor : myConfig.getPlugins()) {
+    String pluginFolder=descriptor.getPath();
+    for (    String pluginsPath : Arrays.asList(PathManager.getPluginsPath(),PathManager.getPreInstalledPluginsPath())) {
+      File pluginDirectory=new File(pluginsPath,pluginFolder);
+      File libFolder=new File(pluginDirectory,"lib");
+      UrlClassLoader pluginCL=null;
+      if (libFolder.exists() && libFolder.isDirectory()) {
+        pluginCL=createPluginClassLoader(libFolder);
+        for (        File jar : libFolder.listFiles(jetbrains.mps.util.PathManager.JAR_FILE_FILTER)) {
+          paths.add(new LibDescriptor(jar.getAbsolutePath() + MODULES_PREFIX,pluginCL));
+        }
       }
-    }
-    File languagesFolder=new File(plugin + File.separator + "languages");
-    if (languagesFolder.exists() && languagesFolder.isDirectory()) {
-      paths.add(new LibDescriptor(languagesFolder.getAbsolutePath(),pluginCL));
+      File languagesFolder=new File(pluginDirectory,"languages");
+      if (languagesFolder.exists() && languagesFolder.isDirectory()) {
+        paths.add(new LibDescriptor(languagesFolder.getAbsolutePath(),pluginCL));
+      }
     }
   }
   return Collections.unmodifiableSet(paths);

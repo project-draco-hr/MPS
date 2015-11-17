@@ -1,0 +1,26 @@
+{
+  int loadedModules=0;
+  for (  ModulePath modulePath : pathsToLoad) {
+    String path=modulePath.getPath();
+    IFile descriptorFile=FS.getFileByPath(path);
+    if (descriptorFile.exists()) {
+      final ModulesMiner modulesMiner=new ModulesMiner();
+      ModuleHandle handle=modulesMiner.loadModuleHandle(descriptorFile);
+      if (handle.getDescriptor() != null) {
+        SModule module=ModuleRepositoryFacade.createModule(handle,myProject);
+        newModuleToPathMap.put(module,modulePath);
+        ++loadedModules;
+        fireModuleLoaded(module);
+      }
+ else {
+        error(String.format("Can't load module from %s. Unknown file type.",descriptorFile.getPath()));
+        fireModuleTypeIsUnknown(modulePath);
+      }
+    }
+ else {
+      error(String.format("Can't load module from %s. File doesn't exist.",descriptorFile.getPath()));
+      fireModuleNotFound(modulePath);
+    }
+  }
+  return loadedModules;
+}

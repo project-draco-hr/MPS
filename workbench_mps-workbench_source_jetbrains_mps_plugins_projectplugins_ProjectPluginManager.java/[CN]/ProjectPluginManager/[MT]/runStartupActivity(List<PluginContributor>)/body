@@ -1,6 +1,20 @@
 {
 synchronized (myPluginsLock) {
-    loadPlugins(loadedContributors);
-    register();
+    myRepository.getModelAccess().runWriteInEDT(new Runnable(){
+      @Override public void run(){
+        if (!myProject.isDisposed()) {
+          final long beginTime=System.nanoTime();
+          LOG.debug(String.format("Loading project plugins from %d contributors",loadedContributors.size()));
+          try {
+            loadPlugins(loadedContributors);
+          }
+  finally {
+            LOG.info(String.format("Loading of %d project plugins took %.3f s",loadedContributors.size(),(System.nanoTime() - beginTime) / 1e9));
+          }
+          register();
+        }
+      }
+    }
+);
   }
 }
