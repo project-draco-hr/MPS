@@ -1,0 +1,34 @@
+{
+  final ModelFactory defaultModelFactory=PersistenceFacade.getInstance().getDefaultModelFactory();
+  final ModelFactory perRootModelFactory=PersistenceRegistry.getInstance().getFolderModelFactory(FilePerRootModelPersistence.FACTORY_ID);
+{
+    final SearchScope scope=CommandUtil.createScope(p);
+    QueryExecutionContext context=new QueryExecutionContext(){
+      public SearchScope getDefaultSearchScope(){
+        return scope;
+      }
+    }
+;
+    Iterable<PersistenceVersionAware> models=Sequence.fromIterable(CommandUtil.models(CommandUtil.createConsoleScope(null,false,context))).ofType(PersistenceVersionAware.class).where(new IWhereFilter<PersistenceVersionAware>(){
+      public boolean accept(      PersistenceVersionAware it){
+        return it.getPersistenceVersion() < 9;
+      }
+    }
+).where(new IWhereFilter<PersistenceVersionAware>(){
+      public boolean accept(      PersistenceVersionAware it){
+        return it.getModelFactory() == defaultModelFactory || it.getModelFactory() == perRootModelFactory;
+      }
+    }
+);
+    Sequence.fromIterable(models).visitAll(new IVisitor<PersistenceVersionAware>(){
+      public void visit(      PersistenceVersionAware model){
+        model.load();
+        model.setPersistenceVersion(9);
+        ((EditableSModel)model).setChanged(true);
+        ((EditableSModel)model).save();
+      }
+    }
+);
+  }
+  return true;
+}
