@@ -10,21 +10,26 @@
         throw new AbsentDependencyException(usedLang);
       }
     }
-    for (    SModuleReference runtimeRef : usedLang.getLanguageRuntimes()) {
-      SModule runtime=ModuleRepositoryFacade.getInstance().getModule(runtimeRef);
-      if (runtime != null) {
-        result.add(runtime);
-      }
- else {
-        String message=String.format("The runtime dependency could not be found in the repository: used language %s; runtime solution: %s",usedLang,runtimeRef);
-        if (myChecked) {
-          throw new AbsentDependencyException(message);
+    if (!myLanguageRuntimesCache.containsKey(usedLang)) {
+      List<SModule> runtimes=new ArrayList<SModule>();
+      myLanguageRuntimesCache.put(usedLang,runtimes);
+      for (      SModuleReference runtimeRef : usedLang.getLanguageRuntimes()) {
+        SModule runtime=ModuleRepositoryFacade.getInstance().getModule(runtimeRef);
+        if (runtime != null) {
+          runtimes.add(runtime);
         }
  else {
-          LOG.warn(message);
+          String message=String.format("The runtime dependency could not be found in the repository: used language %s; runtime solution: %s",usedLang,runtimeRef);
+          if (myChecked) {
+            throw new AbsentDependencyException(message);
+          }
+ else {
+            LOG.warn(message);
+          }
         }
       }
     }
+    result.addAll(myLanguageRuntimesCache.get(usedLang));
   }
   return result;
 }

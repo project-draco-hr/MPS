@@ -68,6 +68,8 @@
       myDependenciesBuilder.updateModel(currInputModel);
       SModel currOutput=null;
       ttrace.push("steps",false);
+      TransitionTrace transitionTrace=new TransitionTrace();
+      transitionTrace.reset(currInputModel);
       for (myMajorStep=0; myMajorStep < myGenerationPlan.getSteps_().size(); myMajorStep++) {
         Step planStep=myGenerationPlan.getSteps_().get(myMajorStep);
         if (planStep instanceof Transform) {
@@ -81,7 +83,7 @@
           if (myLogger.needsInfo()) {
             myLogger.info("executing step " + (myMajorStep + 1));
           }
-          currOutput=executeMajorStep(monitor.subTask(1),currInputModel,transformStep);
+          currOutput=executeMajorStep(monitor.subTask(1),currInputModel,transformStep,transitionTrace);
           monitor.advance(0);
           if (currOutput == null || myLogger.getErrorCount() > 0) {
             break;
@@ -93,14 +95,17 @@
         }
  else         if (planStep instanceof Checkpoint) {
           Checkpoint checkpointStep=(Checkpoint)planStep;
-          CheckpointState cpState=mySessionContext.getCrossModelEnvironment().createCheckpoint(myOriginalInputModel,currInputModel,checkpointStep);
+          SModel checkpointModel=mySessionContext.getCrossModelEnvironment().createBlankCheckpointModel(myOriginalInputModel.getReference(),checkpointStep);
+          CheckpointStateBuilder cpBuilder=new CheckpointStateBuilder(currInputModel,checkpointModel,transitionTrace);
           if (myStepArguments != null) {
             GeneratorMappings stepLabels=myStepArguments.mappingLabels;
-            stepLabels.export(cpState);
-            SModel checkpointModel=cpState.getCheckpointModel();
+            stepLabels.export(cpBuilder);
             SNode debugMappings=new DebugMappingsBuilder(mySessionContext.getRepository()).build(checkpointModel,stepLabels);
             checkpointModel.addRootNode(debugMappings);
           }
+          mySessionContext.getCrossModelEnvironment().publishCheckpoint(myOriginalInputModel.getReference(),cpBuilder.create(checkpointStep));
+          transitionTrace=new TransitionTrace(checkpointStep);
+          transitionTrace.reset(currInputModel);
           myStepArguments=null;
         }
       }
