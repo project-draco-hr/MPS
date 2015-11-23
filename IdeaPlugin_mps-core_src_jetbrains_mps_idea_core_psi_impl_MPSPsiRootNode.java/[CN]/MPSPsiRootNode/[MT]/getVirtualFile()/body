@@ -1,3 +1,21 @@
 {
-  return MPSNodesVirtualFileSystem.getInstance().getFileFor(getSNodeReference());
+  if (mySeparateFile != null) {
+    return mySeparateFile;
+  }
+  Project mpsProject=ProjectHelper.fromIdeaProject(getProject());
+  if (mpsProject == null) {
+    return null;
+  }
+  final SRepository repository=mpsProject.getRepository();
+  return new ModelAccessHelper(repository.getModelAccess()).runReadAction(new Computable<VirtualFile>(){
+    @Override public VirtualFile compute(){
+      SModel sModel=myModel.getSModelReference().resolve(repository);
+      DataSource dataSource=sModel.getSource();
+      if (dataSource instanceof FileDataSource) {
+        return VirtualFileUtils.getVirtualFile(((FileDataSource)dataSource).getFile());
+      }
+      return null;
+    }
+  }
+);
 }
