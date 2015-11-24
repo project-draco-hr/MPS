@@ -1,8 +1,15 @@
 {
-  if (!validateAbstractModule(generator,processor))   return;
+  if (!validateAbstractModule(generator,processor)) {
+    return;
+  }
+  final SRepository repository=generator.getRepository();
   for (  SModuleReference gen : generator.getModuleDescriptor().getDepGenerators()) {
-    if (ModuleRepositoryFacade.getInstance().getModule(gen) != null)     continue;
-    if (!processor.process(new ValidationProblem(Severity.ERROR,"Can't find generator dependency: " + gen.getModuleName())))     return;
+    if (gen.resolve(repository) != null) {
+      continue;
+    }
+    if (!processor.process(new ValidationProblem(Severity.ERROR,"Can't find generator dependency: " + gen.getModuleName()))) {
+      return;
+    }
   }
   Set<SLanguage> usedLanguages=new HashSet<SLanguage>();
   ModelDependencyScanner depScan=new ModelDependencyScanner();
@@ -18,7 +25,9 @@
     }
     depScan.walk(model);
   }
-  if (!warnMissingTargetLangRuntime(generator,usedLanguages,processor))   return;
+  if (!warnMissingTargetLangRuntime(generator,usedLanguages,processor)) {
+    return;
+  }
   if (!anyGeneratorModelNotLoaded) {
     if (!warnStrictGeneratorDependencies(generator,depScan,processor)) {
       return;
