@@ -1,0 +1,37 @@
+{
+  final SModelReference mr=PersistenceFacade.getInstance().createModelReference("r:24638668-c917-4da1-8069-8ddef862314d(jetbrains.mps.generator.crossmodel.sandbox.beanmodel1)");
+  final SModel m=resolve(mr);
+  final Checkpoint cp1=new Checkpoint("aaa");
+  ModelGenerationPlan plan=new ModelAccessHelper(mpsProject.getModelAccess()).runReadAction(new Computable<ModelGenerationPlan>(){
+    @Override public ModelGenerationPlan compute(){
+      final Transform step1=new Transform(getCrossmodelPropertyGenerators());
+      final Transform step2=new Transform(getBaseLanguageGenerators());
+      return new RigidGenerationPlan(step1,cp1,step2);
+    }
+  }
+);
+  GenerationOptions opt=GenerationOptions.getDefaults().customPlan(m,plan).create();
+  final TransientModelsProvider tmProvider=mpsProject.getComponent(TransientModelsProvider.class);
+  boolean result=GenerationFacade.generateModels(mpsProject,Collections.singletonList(m),null,new NoOpHandler(),new EmptyProgressMonitor(),null,opt,tmProvider);
+  myErrors.checkThat("Generation succeeds",result,CoreMatchers.equalTo(true));
+  CrossModelEnvironment cme=tmProvider.getCrossModelEnvironment();
+  myErrors.checkThat("CrossModelEnvironment.hasState",cme.hasState(mr),CoreMatchers.equalTo(true));
+  SModule checkpointModule=tmProvider.getCheckpointsModule();
+  final String cpModelName=CrossModelEnvironment.createCheckpointModelName(m.getReference(),cp1);
+  SModel cpModel=null;
+  for (  SModel trm : checkpointModule.getModels()) {
+    if (cpModelName.equals(trm.getModelName())) {
+      cpModel=trm;
+      break;
+    }
+  }
+  myErrors.checkThat("Checkpoint model",cpModel,CoreMatchers.notNullValue());
+  ModelCheckpoints modelCheckpoints=cme.getState(mr);
+  CheckpointState cpState=modelCheckpoints.find(cp1);
+  myErrors.checkThat("CheckpointState present",cpState,CoreMatchers.notNullValue());
+  myErrors.checkThat("Both ModelCheckpoints.find and direct getCheckpoint are identical",cme.getCheckpoint(mr,cp1),CoreMatchers.equalTo(cpState));
+  if (cpState != null) {
+    Collection<String> mappingLabels=cpState.getMappingLabels();
+    myErrors.checkThat("GetterMethod label present",mappingLabels.contains("GetterMethod"),CoreMatchers.equalTo(true));
+  }
+}

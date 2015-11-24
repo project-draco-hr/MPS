@@ -2,10 +2,19 @@
   final List<Runner> result=new ArrayList<Runner>();
   project.getModelAccess().runReadAction(new Runnable(){
     public void run(){
-      for (      SModule module : Sequence.fromIterable(myContextProject.getModules())) {
+      for (      SModule module : ListSequence.fromList(myContextProject.getProjectModules())) {
         for (        SModel model : Sequence.fromIterable(module.getModels())) {
           for (          SNode testCase : ListSequence.fromList(SModelOperations.roots(((SModel)model),MetaAdapterFactory.getInterfaceConcept(0xf61473f9130f42f6L,0xb98d6c438812c2f6L,0x11b2709bd56L,"jetbrains.mps.baseLanguage.unitTest.structure.ITestCase")))) {
-            result.add(new DelegatingRunner(myContextProject,builder,module.getModuleReference(),((String)BHReflection.invoke(testCase,SMethodTrimmedId.create("getClassName",null,"hGBnqtL")))));
+            String testClassName=((String)BHReflection.invoke(testCase,SMethodTrimmedId.create("getClassName",null,"hGBnqtL")));
+            try {
+              Class<?> testClass=myClassLoader.loadClass(testClassName);
+              result.add(new DelegatingRunner(builder,testClass));
+            }
+ catch (            ClassNotFoundException e) {
+              if (LOG.isEnabledFor(Level.WARN)) {
+                LOG.warn("Cannot find the test class " + testClassName + "; will skip this test class");
+              }
+            }
           }
         }
       }

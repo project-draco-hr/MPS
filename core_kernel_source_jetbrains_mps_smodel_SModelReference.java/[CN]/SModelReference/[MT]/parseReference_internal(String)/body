@@ -1,0 +1,59 @@
+{
+  if (s == null)   return null;
+  s=s.trim();
+  int lParen=s.indexOf('(');
+  int rParen=s.lastIndexOf(')');
+  String presentationPart=null;
+  if (lParen > 0 && rParen == s.length() - 1) {
+    presentationPart=s.substring(lParen + 1,rParen);
+    s=s.substring(0,lParen);
+    lParen=s.indexOf('(');
+    rParen=s.lastIndexOf(')');
+  }
+  if (lParen != -1 || rParen != -1) {
+    throw new IllegalArgumentException("parentheses do not match in: `" + s + "'");
+  }
+  SModuleId moduleId=null;
+  int slash=s.indexOf('/');
+  if (slash >= 0) {
+    moduleId=ModuleId.fromString(StringUtil.unescapeRefChars(s.substring(0,slash)));
+    s=s.substring(slash + 1);
+  }
+  String modelIDString=StringUtil.unescapeRefChars(s);
+  SModelId modelId;
+  if (modelIDString.indexOf(':') >= 0) {
+    PersistenceFacade facade=PersistenceFacade.getInstance();
+    if (facade == null) {
+      LOG.warn("Please report stacktrace, which would help us to find out improper MPS initialization sequence",new Throwable());
+    }
+    modelId=facade != null ? facade.createModelId(modelIDString) : jetbrains.mps.smodel.SModelId.fromString(modelIDString);
+  }
+ else {
+    modelId=new ModelNameSModelId(modelIDString);
+  }
+  String moduleName=null;
+  String modelName=null;
+  if (presentationPart != null) {
+    slash=presentationPart.indexOf('/');
+    if (slash >= 0) {
+      moduleName=StringUtil.unescapeRefChars(presentationPart.substring(0,slash));
+      modelName=StringUtil.unescapeRefChars(presentationPart.substring(slash + 1));
+    }
+ else {
+      modelName=StringUtil.unescapeRefChars(presentationPart);
+    }
+  }
+  if (modelName == null || modelName.isEmpty()) {
+    modelName=modelId.getModelName();
+    if (modelName == null) {
+      throw new IllegalArgumentException("incomplete model reference, presentation part is absent");
+    }
+  }
+  if (moduleId == null) {
+    moduleId=extractModuleIdFromModelIdIfJavaStub(modelId);
+  }
+  if (SModelRepository.isLegacyJavaStubModelId(modelId)) {
+    modelId=SModelRepository.newJavaPackageStubFromLegacy(modelId);
+  }
+  return new Pair(new Pair(moduleId,moduleName),new Pair(modelId,modelName));
+}

@@ -1,0 +1,31 @@
+{
+  Set<SModule> result=new LinkedHashSet<SModule>();
+  ModuleDescriptor moduleDescriptor=((AbstractModule)myModule).getModuleDescriptor();
+  if (moduleDescriptor == null) {
+    LOG.warn("Module descriptor could not be found for the module " + myModule + "; falling back to the SourceStrategy.");
+    return new SourceStrategy().findRuntimes();
+  }
+  DeploymentDescriptor descriptor=moduleDescriptor.getDeploymentDescriptor();
+  if (descriptor == null) {
+    LOG.debug("The deployment descriptor could not be found for the module " + myModule + "; falling back to the SourceStrategy.");
+    return new SourceStrategy().findRuntimes();
+  }
+  Collection<Dependency> dependencies=descriptor.getDependencies();
+  for (  Dependency dependency : dependencies) {
+    SModuleReference runtimeRef=dependency.getModuleRef();
+    SModule runtime=ModuleRepositoryFacade.getInstance().getModule(runtimeRef);
+    if (runtime != null) {
+      result.add(runtime);
+    }
+ else {
+      String message=String.format("The runtime dependency could not be found in the repository: %s",runtimeRef);
+      if (myChecked) {
+        throw new AbsentDependencyException(message);
+      }
+ else {
+        LOG.warn(message);
+      }
+    }
+  }
+  return result;
+}

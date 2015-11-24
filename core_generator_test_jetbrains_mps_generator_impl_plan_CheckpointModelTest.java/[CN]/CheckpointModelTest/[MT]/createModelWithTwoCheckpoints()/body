@@ -1,0 +1,61 @@
+{
+  final SModelReference mr=PersistenceFacade.getInstance().createModelReference("r:05c2f926-57b0-4b6d-930c-1aabb187694d(jetbrains.mps.generator.crossmodel.sandbox.entrymodel1)");
+  final SModel m=resolve(mr);
+  final Checkpoint cp1=new Checkpoint("aaa");
+  final Checkpoint cp2=new Checkpoint("bbb");
+  ModelGenerationPlan plan=new ModelAccessHelper(mpsProject.getModelAccess()).runReadAction(new Computable<ModelGenerationPlan>(){
+    @Override public ModelGenerationPlan compute(){
+      final Transform step1=new Transform(getCrossmodelEntityGenerators());
+      final Transform step2=new Transform(getCrossmodelPropertyGenerators());
+      final Transform step3=new Transform(getBaseLanguageGenerators());
+      return new RigidGenerationPlan(step1,cp1,step2,cp2,step3);
+    }
+  }
+);
+  GenerationOptions opt=GenerationOptions.getDefaults().customPlan(m,plan).create();
+  final TransientModelsProvider tmProvider=mpsProject.getComponent(TransientModelsProvider.class);
+  boolean result=GenerationFacade.generateModels(mpsProject,Collections.singletonList(m),null,new NoOpHandler(),new EmptyProgressMonitor(),null,opt,tmProvider);
+  myErrors.checkThat("Generation succeeds",result,CoreMatchers.equalTo(true));
+  CrossModelEnvironment cme=tmProvider.getCrossModelEnvironment();
+  boolean crossModelCheckpointsPresent=cme.hasState(mr);
+  myErrors.checkThat("CrossModelEnvironment.hasState",crossModelCheckpointsPresent,CoreMatchers.equalTo(true));
+  if (!crossModelCheckpointsPresent) {
+    return;
+  }
+  ModelCheckpoints modelCheckpoints=cme.getState(mr);
+  final CheckpointState cp1State=modelCheckpoints.find(cp1);
+  final CheckpointState cp2State=modelCheckpoints.find(cp2);
+  myErrors.checkThat("state for the first checkpoint present",cp1State,CoreMatchers.notNullValue());
+  myErrors.checkThat("state for the second checkpoint present",cp2State,CoreMatchers.notNullValue());
+  if (cp1State == null || cp2State == null) {
+    return;
+  }
+  final String ml1="EntryOne2Property";
+  final boolean ml1Present=cp1State.getMappingLabels().contains(ml1);
+  final String ml2="GetterMethod";
+  final boolean ml2Present=cp2State.getMappingLabels().contains(ml2);
+  myErrors.checkThat("Entry -> BeanProperty label present",ml1Present,CoreMatchers.equalTo(true));
+  myErrors.checkThat("BeanProperty -> InstanceMethodDeclaration label present",ml2Present,CoreMatchers.equalTo(true));
+  if (ml1Present && ml2Present) {
+    mpsProject.getModelAccess().runReadAction(new Runnable(){
+      @Override public void run(){
+        Collection<SNodeId> entryOneInputs=cp1State.getInputs(ml1);
+        myErrors.checkThat("There were two Entry(kind:ONE)",entryOneInputs.size(),CoreMatchers.equalTo(2));
+        for (        SNodeId in : entryOneInputs) {
+          SNode originalInput=m.getNode(in);
+          myErrors.checkThat("Original model doesn't contain Entry we've got label recorded for",originalInput,CoreMatchers.notNullValue());
+          if (originalInput == null) {
+            continue;
+          }
+          Collection<SNode> outputAtCheckpoint1=cp1State.getOutput(ml1,originalInput);
+          myErrors.checkThat("Output at first checkpoint",outputAtCheckpoint1.isEmpty(),CoreMatchers.equalTo(false));
+          for (          SNode cp1Out : outputAtCheckpoint1) {
+            Collection<SNode> outputAtCheckpoint2=cp2State.getOutput(ml2,cp1Out);
+            myErrors.checkThat("Output at second checkpoint",outputAtCheckpoint2.isEmpty(),CoreMatchers.equalTo(false));
+          }
+        }
+      }
+    }
+);
+  }
+}

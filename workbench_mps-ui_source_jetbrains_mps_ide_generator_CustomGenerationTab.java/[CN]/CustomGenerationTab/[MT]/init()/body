@@ -26,10 +26,18 @@
   f.setText(myActualReference == null ? "<none>" : myActualReference.getModelName());
   b.addActionListener(new ActionListener(){
     @Override public void actionPerformed(    ActionEvent e){
-      ArrayList<SModelReference> models=new ArrayList<SModelReference>();
-      for (      SModel m : myModuleFacet.getModule().getModels()) {
-        models.add(m.getReference());
+      ArrayList<SModelReference> models=new ModelAccessHelper(myProject.getModelAccess()).runReadAction(new Computable<ArrayList<SModelReference>>(){
+        @Override public ArrayList<SModelReference> compute(){
+          ArrayList<SModelReference> rv=new ArrayList<SModelReference>();
+          for (          SModule module : new GlobalModuleDependenciesManager(myModuleFacet.getModule()).getModules(Deptype.VISIBLE)) {
+            for (            SModel m : module.getModels()) {
+              rv.add(m.getReference());
+            }
+          }
+          return rv;
+        }
       }
+);
       myActualReference=CommonChoosers.showModelChooser(myProject,"Pick model with a generation plan",models);
       f.setText(myActualReference == null ? "<none>" : myActualReference.getModelName());
     }

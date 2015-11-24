@@ -1,13 +1,19 @@
 {
-  LOG.debug(String.format("Loading plugins from %d contributors",contributors.size()));
   if (contributors.isEmpty())   return;
-  long beginTime=System.nanoTime();
-  try {
-    for (    PluginLoader listener : myPluginLoaders) {
-      listener.loadPlugins(contributors);
+  final List<PluginContributor> contributorsToLoad=new ArrayList<PluginContributor>(contributors);
+  myModelAccess.runWriteInEDT(new Runnable(){
+    @Override public void run(){
+      final long beginTime=System.nanoTime();
+      LOG.debug(String.format("Loading plugins from %d contributors",contributorsToLoad.size()));
+      try {
+        for (        final PluginLoader listener : myPluginLoaders) {
+          listener.loadPlugins(contributorsToLoad);
+        }
+      }
+  finally {
+        LOG.info(String.format("Loading of %d plugins took %.3f s",contributorsToLoad.size(),(System.nanoTime() - beginTime) / 1e9));
+      }
     }
   }
-  finally {
-    LOG.info(String.format("Loading of %d plugins took %.3f s",contributors.size(),(System.nanoTime() - beginTime) / 1e9));
-  }
+);
 }

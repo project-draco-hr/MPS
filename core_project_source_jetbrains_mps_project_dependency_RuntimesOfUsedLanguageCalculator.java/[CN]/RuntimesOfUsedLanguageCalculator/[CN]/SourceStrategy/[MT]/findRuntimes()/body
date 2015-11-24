@@ -1,0 +1,35 @@
+{
+  Set<SModule> result=new LinkedHashSet<SModule>();
+  for (  SLanguage usedLang : myModule.getUsedLanguages()) {
+    if (usedLang.getSourceModule() == null) {
+      if (!myChecked) {
+        LOG.warn(String.format("The source module of the used language cannot be found: %s",usedLang));
+        continue;
+      }
+ else {
+        throw new AbsentDependencyException(usedLang);
+      }
+    }
+    if (!myLanguageRuntimesCache.containsKey(usedLang)) {
+      List<SModule> runtimes=new ArrayList<SModule>();
+      myLanguageRuntimesCache.put(usedLang,runtimes);
+      for (      SModuleReference runtimeRef : usedLang.getLanguageRuntimes()) {
+        SModule runtime=ModuleRepositoryFacade.getInstance().getModule(runtimeRef);
+        if (runtime != null) {
+          runtimes.add(runtime);
+        }
+ else {
+          String message=String.format("The runtime dependency could not be found in the repository: used language %s; runtime solution: %s",usedLang,runtimeRef);
+          if (myChecked) {
+            throw new AbsentDependencyException(message);
+          }
+ else {
+            LOG.warn(message);
+          }
+        }
+      }
+    }
+    result.addAll(myLanguageRuntimesCache.get(usedLang));
+  }
+  return result;
+}
