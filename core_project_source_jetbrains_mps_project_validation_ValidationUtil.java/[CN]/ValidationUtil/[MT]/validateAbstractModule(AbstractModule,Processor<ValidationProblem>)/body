@@ -3,40 +3,67 @@
   if (loadException != null) {
     return processor.process(new ValidationProblem(Severity.ERROR,"Couldn't load module: " + loadException.getMessage()));
   }
+  SRepository repository=module.getRepository();
+  LanguageRegistry languageRegistry=LanguageRegistry.getInstance();
+  for (  SLanguage lang : module.getUsedLanguages()) {
+    if (languageRegistry.getLanguage(lang) != null) {
+      continue;
+    }
+    if (!processor.process(new ValidationProblem(Severity.ERROR,String.format("Can't find used language: %s",lang.getQualifiedName())))) {
+      return false;
+    }
+  }
   ModuleDescriptor descriptor=module.getModuleDescriptor();
   for (  Dependency dep : descriptor.getDependencies()) {
     SModuleReference moduleRef=dep.getModuleRef();
-    if (ModuleRepositoryFacade.getInstance().getModule(moduleRef) != null)     continue;
-    if (!processor.process(new ValidationProblem(Severity.ERROR,"Can't find dependency: " + moduleRef.getModuleName())))     return false;
-  }
-  for (  SModuleReference reference : descriptor.getUsedLanguages()) {
-    if (ModuleRepositoryFacade.getInstance().getModule(reference,Language.class) != null)     continue;
-    if (!processor.process(new ValidationProblem(Severity.ERROR,"Can't find used language: " + reference.getModuleName())))     return false;
+    if (moduleRef.resolve(repository) != null) {
+      continue;
+    }
+    if (!processor.process(new ValidationProblem(Severity.ERROR,"Can't find dependency: " + moduleRef.getModuleName()))) {
+      return false;
+    }
   }
   for (  SModuleReference reference : descriptor.getUsedDevkits()) {
-    if (ModuleRepositoryFacade.getInstance().getModule(reference) != null)     continue;
-    if (!processor.process(new ValidationProblem(Severity.ERROR,"Can't find used devkit: " + reference.getModuleName())))     return false;
+    if (reference.resolve(repository) != null) {
+      continue;
+    }
+    if (!processor.process(new ValidationProblem(Severity.ERROR,"Can't find used devkit: " + reference.getModuleName()))) {
+      return false;
+    }
   }
   if (descriptor.getSourcePaths() != null && !module.isPackaged()) {
     for (    String sourcePath : descriptor.getSourcePaths()) {
       IFile file=FileSystem.getInstance().getFileByPath(sourcePath);
-      if (file != null && file.exists())       continue;
-      if (!processor.process(new ValidationProblem(Severity.ERROR,"Can't find source path: " + sourcePath)))       return false;
+      if (file != null && file.exists()) {
+        continue;
+      }
+      if (!processor.process(new ValidationProblem(Severity.ERROR,"Can't find source path: " + sourcePath))) {
+        return false;
+      }
     }
   }
   if (descriptor.getAdditionalJavaStubPaths() != null) {
     for (    String path : descriptor.getAdditionalJavaStubPaths()) {
       IFile file=FileSystem.getInstance().getFileByPath(path);
-      if (file != null && file.exists())       continue;
+      if (file != null && file.exists()) {
+        continue;
+      }
       String msg=(new File(path).exists() ? "Idea VFS is not up-to-date. " : "") + "Can't find library: " + path;
-      if (!processor.process(new ValidationProblem(Severity.ERROR,msg)))       return false;
+      if (!processor.process(new ValidationProblem(Severity.ERROR,msg))) {
+        return false;
+      }
     }
   }
-  if ((module instanceof Generator))   return true;
+  if (module instanceof Generator) {
+    return true;
+  }
   for (  SDependency dependency : module.getDeclaredDependencies()) {
-    if (!(dependency.getTarget() instanceof Generator))     continue;
-    if (!processor.process(new ValidationProblem(Severity.ERROR,"Contains dependency on generator: " + dependency.getTargetModule().getModuleName())))     return false;
-    ;
+    if (!(dependency.getTarget() instanceof Generator)) {
+      continue;
+    }
+    if (!processor.process(new ValidationProblem(Severity.ERROR,"Contains dependency on generator: " + dependency.getTargetModule().getModuleName()))) {
+      return false;
+    }
   }
   return true;
 }
