@@ -1,0 +1,74 @@
+{
+  project.getRepository().getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      for (      IMapping<SNode,MoveNodesDefault.NodeProcessor> moving : MapSequence.fromMap(moveMap)) {
+        if (!(moving.value().isValid(moving.key()))) {
+          throw new IllegalArgumentException();
+        }
+      }
+    }
+  }
+);
+  final Map<SNode,SNode> nodeRoots=MapSequence.fromMap(new HashMap<SNode,SNode>());
+  project.getRepository().getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      for (      SNode nodeToMove : SetSequence.fromSet(MapSequence.fromMap(moveMap).keySet())) {
+        for (        SNode descendant : ListSequence.fromList(SNodeOperations.getNodeDescendants(nodeToMove,null,true,new SAbstractConcept[]{}))) {
+          MapSequence.fromMap(nodeRoots).put(descendant,nodeToMove);
+        }
+      }
+    }
+  }
+);
+  Iterable<? extends RefactoringParticipant<?,?,SNode,SNode>> participants=new ExtensionPoint<MoveNodeRefactoringParticipant<?,?>>("jetbrains.mps.ide.platform.MoveNodeParticipantEP").getObjects();
+  performRefactoring(project,participants,MapSequence.fromMap(moveMap).keySet(),new _FunctionTypes._return_P2_E0<_FunctionTypes._return_P1_E0<? extends SNode,? super SNode>,Map<RefactoringParticipant,Map<SNode,RefactoringParticipant.ParticipantState<?,?,SNode,SNode>>>,RefactoringSession>(){
+    public _FunctionTypes._return_P1_E0<? extends SNode,? super SNode> invoke(    final Map<RefactoringParticipant,Map<SNode,RefactoringParticipant.ParticipantState<?,?,SNode,SNode>>> changes,    RefactoringSession refactoringSession){
+      if (initRefactoringSession != null) {
+        initRefactoringSession.invoke(refactoringSession);
+      }
+      final Map<MoveNodesDefault.NodeProcessor,List<SNode>> nodeProcessors=MapSequence.fromMap(new HashMap<MoveNodesDefault.NodeProcessor,List<SNode>>());
+      MapSequence.fromMap(moveMap).visitAll(new IVisitor<IMapping<SNode,MoveNodesDefault.NodeProcessor>>(){
+        public void visit(        IMapping<SNode,MoveNodesDefault.NodeProcessor> mapping){
+          MoveNodesDefault.NodeProcessor processor=mapping.value();
+          if (!(MapSequence.fromMap(nodeProcessors).containsKey(processor))) {
+            MapSequence.fromMap(nodeProcessors).put(processor,ListSequence.fromList(new ArrayList<SNode>()));
+          }
+          ListSequence.fromList(MapSequence.fromMap(nodeProcessors).get(processor)).addElement(mapping.key());
+        }
+      }
+);
+      for (      IMapping<MoveNodesDefault.NodeProcessor,List<SNode>> mapping : MapSequence.fromMap(nodeProcessors)) {
+        mapping.key().process(mapping.value(),ListSequence.fromList(mapping.value()).where(new IWhereFilter<SNode>(){
+          public boolean accept(          final SNode moveRoot){
+            boolean shouldKeep=Sequence.fromIterable(MapSequence.fromMap(changes).values()).any(new IWhereFilter<Map<SNode,RefactoringParticipant.ParticipantState<?,?,SNode,SNode>>>(){
+              public boolean accept(              final Map<SNode,RefactoringParticipant.ParticipantState<?,?,SNode,SNode>> participantChange){
+                return ListSequence.fromList(SNodeOperations.getNodeDescendants(moveRoot,null,true,new SAbstractConcept[]{})).any(new IWhereFilter<SNode>(){
+                  public boolean accept(                  SNode desc){
+                    return ListSequence.fromList(MapSequence.fromMap(participantChange).get(desc).getChanges()).any(new IWhereFilter<RefactoringParticipant.Change<?,?>>(){
+                      public boolean accept(                      RefactoringParticipant.Change<?,?> change){
+                        return change.needsToPreserveOldNode();
+                      }
+                    }
+);
+                  }
+                }
+);
+              }
+            }
+);
+            return !(shouldKeep);
+          }
+        }
+).toListSequence(),refactoringSession);
+      }
+      final Map<SNode,SNode> copyMap=MoveNodesDefault.CopyMapObject.getCopyMap(refactoringSession).getCopyMap();
+      return new _FunctionTypes._return_P1_E0<SNode,SNode>(){
+        public SNode invoke(        SNode oldNode){
+          return MapSequence.fromMap(copyMap).get(oldNode);
+        }
+      }
+;
+    }
+  }
+);
+}
