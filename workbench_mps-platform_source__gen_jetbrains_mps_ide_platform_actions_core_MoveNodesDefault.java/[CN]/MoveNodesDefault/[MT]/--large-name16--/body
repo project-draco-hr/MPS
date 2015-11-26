@@ -1,0 +1,40 @@
+{
+  final Map<RefactoringParticipant,Map<T,RefactoringParticipant.ParticipantState<?,?,T,S>>> changes=askParticipantChanges(project,participants,nodes);
+  if (changes == null) {
+    return;
+  }
+  SearchResults searchResults=new SearchResults();
+  for (  IMapping<RefactoringParticipant,Map<T,RefactoringParticipant.ParticipantState<?,?,T,S>>> participantChanges : MapSequence.fromMap(changes)) {
+    for (    IMapping<T,RefactoringParticipant.ParticipantState<?,?,T,S>> nodeChanges : MapSequence.fromMap(participantChanges.value())) {
+      for (      RefactoringParticipant.Change<?,?> change : ListSequence.fromList(nodeChanges.value().getChanges())) {
+        searchResults.addAll(change.getSearchResults());
+      }
+    }
+  }
+  RefactoringAccessEx.getInstance().showRefactoringView(project.getProject(),new RefactoringViewAction(){
+    public void performAction(    RefactoringViewItem refactoringViewItem){
+      project.getRepository().getModelAccess().executeCommand(new Runnable(){
+        public void run(){
+          RefactoringSessionImpl refactoringSession=new RefactoringSessionImpl();
+          _FunctionTypes._return_P1_E0<? extends S,? super T> getFinalObject=doRefactor.invoke(changes,refactoringSession);
+          for (          IMapping<RefactoringParticipant,Map<T,RefactoringParticipant.ParticipantState<?,?,T,S>>> participantChanges : MapSequence.fromMap(changes)) {
+            for (            IMapping<T,RefactoringParticipant.ParticipantState<?,?,T,S>> nodeChanges : MapSequence.fromMap(participantChanges.value())) {
+              nodeChanges.value().confirm(getFinalObject.invoke(nodeChanges.key()),project.getRepository(),refactoringSession);
+            }
+          }
+          try {
+            refactoringSession.commit();
+          }
+ catch (          RuntimeException exception) {
+            if (LOG.isEnabledFor(Level.ERROR)) {
+              LOG.error("Exception during refactoring: ",exception);
+            }
+          }
+        }
+      }
+);
+      refactoringViewItem.close();
+    }
+  }
+,searchResults,false,refactoringName);
+}
