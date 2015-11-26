@@ -22,9 +22,24 @@
     }
     return;
   }
-  if (!model.isReadOnly() && (model instanceof PersistenceVersionAware) && ((PersistenceVersionAware)model).getPersistenceVersion() < ModelPersistence.LAST_VERSION) {
-    if (!processor.process(new ValidationProblem(Severity.ERROR,"Outdated model persistence is used: " + ((PersistenceVersionAware)model).getPersistenceVersion() + ". Please upgrade model persistence"))) {
-      return;
+  if (!model.isReadOnly() && model instanceof PersistenceVersionAware) {
+    PersistenceVersionAware pvaModel=(PersistenceVersionAware)model;
+    ModelFactory pvaModelFactory=pvaModel.getModelFactory();
+    ModelFactory xmlModelFactory=PersistenceFacade.getInstance().getDefaultModelFactory();
+    if (pvaModelFactory != null && (xmlModelFactory == pvaModelFactory || xmlModelFactory.getFileExtension().equals(pvaModelFactory.getFileExtension()))) {
+      int persistenceVersion=pvaModel.getPersistenceVersion();
+      if (persistenceVersion < ModelPersistence.LAST_VERSION) {
+        String msg;
+        if (persistenceVersion == -1) {
+          msg="Undefined model persistence version, please check model persistence";
+        }
+ else {
+          msg=String.format("Outdated model persistence is used: %d. Please upgrade model persistence.",persistenceVersion);
+        }
+        if (!processor.process(new ValidationProblem(Severity.ERROR,msg))) {
+          return;
+        }
+      }
     }
   }
   if (repository == null) {
