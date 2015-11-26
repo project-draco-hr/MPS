@@ -1,14 +1,35 @@
 {
   List<SModel> modelsToOptimize=new ArrayList<SModel>();
-  modelsToOptimize.addAll(language.getModels());
+  for (  SModel model : language.getModels()) {
+    if (SModelStereotype.isDescriptorModelStereotype(SModelStereotype.getStereotype(model)) || SModelStereotype.isStubModel(model)) {
+      continue;
+    }
+    modelsToOptimize.add(model);
+  }
   for (  Generator g : language.getGenerators()) {
     modelsToOptimize.addAll(g.getModels());
   }
   Result result=optimizeModelsImports_internal(modelsToOptimize);
   SModelRepository.getInstance().saveAll();
   for (  Generator g : language.getGenerators()) {
-    result.myReport=optimizeModuleImports(g,result) + "\n\n" + result.myReport;
+    HashSet<SModuleReference> referencedGenerators=new HashSet<SModuleReference>();
+    LinkedList<MappingConfig_AbstractRef> mcRefs=new LinkedList<MappingConfig_AbstractRef>();
+    for (    MappingPriorityRule rule : g.getModuleDescriptor().getPriorityRules()) {
+      mcRefs.add(rule.getLeft());
+      mcRefs.add(rule.getRight());
+    }
+    while (!mcRefs.isEmpty()) {
+      MappingConfig_AbstractRef ref=mcRefs.removeFirst();
+      if (ref instanceof MappingConfig_RefSet) {
+        mcRefs.addAll(((MappingConfig_RefSet)ref).getMappingConfigs());
+        continue;
+      }
+      if (ref instanceof MappingConfig_ExternalRef) {
+        referencedGenerators.add(((MappingConfig_ExternalRef)ref).getGenerator());
+      }
+    }
+    result.myReport=optimizeModuleImports(g,result,referencedGenerators) + "\n\n" + result.myReport;
   }
-  result.myReport=optimizeModuleImports(language,result) + "\n\n" + result.myReport;
+  result.myReport=optimizeModuleImports(language,result,Collections.<SModuleReference>emptySet()) + "\n\n" + result.myReport;
   return result;
 }

@@ -1,0 +1,31 @@
+{
+  List<Dependency> unusedDeps=new ArrayList<Dependency>();
+  final SModuleReference optimizedModuleReference=module.getModuleReference();
+  HashSet<SModuleReference> inUse=new HashSet<SModuleReference>(toKeep);
+  SRepository repository=module.getRepository();
+  for (  SModelReference mr : result.myUsedModels) {
+    SModuleReference moduleInUse=mr.getModuleReference();
+    if (moduleInUse == null) {
+      if (repository != null) {
+        SModel model=mr.resolve(repository);
+        if (model != null && model.getModule() != null) {
+          inUse.add(model.getModule().getModuleReference());
+        }
+      }
+    }
+ else {
+      inUse.add(moduleInUse);
+    }
+  }
+  for (  Dependency d : module.getModuleDescriptor().getDependencies()) {
+    if (d.getModuleRef().equals(optimizedModuleReference)) {
+      unusedDeps.add(d);
+      continue;
+    }
+    if (inUse.contains(d.getModuleRef())) {
+      continue;
+    }
+    unusedDeps.add(d);
+  }
+  return removeFromImports(module,unusedDeps);
+}
