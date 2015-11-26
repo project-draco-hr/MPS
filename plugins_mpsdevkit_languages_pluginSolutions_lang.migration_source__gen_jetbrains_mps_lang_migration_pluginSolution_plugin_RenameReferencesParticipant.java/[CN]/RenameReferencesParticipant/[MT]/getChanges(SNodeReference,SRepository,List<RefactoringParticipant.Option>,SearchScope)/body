@@ -1,6 +1,6 @@
 {
-  if (!(ListSequence.fromList(selectedOptions).contains(OPTION))) {
-    return ListSequence.fromList(new ArrayList<RefactoringParticipant.Change<NamedNodeReference,NamedNodeReference>>());
+  if (!(ListSequence.fromList(selectedOptions).contains(RenameReferencesParticipant.OPTION))) {
+    return ListSequence.fromList(new ArrayList<RefactoringParticipant.Change<SNodeReference,String>>());
   }
 {
     final SearchScope scope=CommandUtil.createScope(searchScope);
@@ -10,7 +10,7 @@
       }
     }
 ;
-    final SNode movingNode=initialState.reference().resolve(repository);
+    final SNode movingNode=initialState.resolve(repository);
     Collection<SReference> usages;
     if (movingNode != null) {
       usages=CommandUtil.usages(CommandUtil.createConsoleScope(null,false,context),movingNode);
@@ -18,34 +18,33 @@
  else {
       usages=Sequence.fromIterable(CommandUtil.references(CommandUtil.createConsoleScope(null,false,context))).where(new IWhereFilter<SReference>(){
         public boolean accept(        SReference it){
-          return eq_k8iioh_a0a0a0a0a0a0a0a4a1a21(it.getTargetNodeReference(),initialState.reference());
+          return eq_xv67ae_a0a0a0a0a0a0a0a4a1a8(it.getTargetNodeReference(),initialState);
         }
       }
 ).toListSequence();
     }
-    return CollectionSequence.fromCollection(usages).select(new ISelector<SReference,RefactoringParticipant.Change<NamedNodeReference,NamedNodeReference>>(){
-      public RefactoringParticipant.Change<NamedNodeReference,NamedNodeReference> select(      SReference ref){
+    return CollectionSequence.fromCollection(usages).select(new ISelector<SReference,RefactoringParticipant.Change<SNodeReference,String>>(){
+      public RefactoringParticipant.Change<SNodeReference,String> select(      SReference ref){
         final SNodeReference containingNode=ref.getSourceNode().getReference();
         final SReferenceLink role=ref.getLink();
-        final String resolveInfo=SLinkOperations.getResolveInfo(ref);
         final SearchResults searchResults=new SearchResults(SetSequence.fromSetAndArray(new HashSet<SNode>(),movingNode),ListSequence.fromListAndArray(new ArrayList<SearchResult<SNode>>(),new SearchResult<SNode>(ref.getSourceNode(),"reference")));
-        RefactoringParticipant.Change<NamedNodeReference,NamedNodeReference> change=new RefactoringParticipant.Change<NamedNodeReference,NamedNodeReference>(){
+        RefactoringParticipant.Change<SNodeReference,String> change=new RefactoringParticipant.Change<SNodeReference,String>(){
           public SearchResults getSearchResults(){
             return searchResults;
           }
           public boolean needsToPreserveOldNode(){
             return false;
           }
-          public void confirm(          final NamedNodeReference finalState,          final SRepository repository,          RefactoringSession refactoringSession){
+          public void confirm(          final String finalState,          final SRepository repository,          RefactoringSession refactoringSession){
             refactoringSession.registerChange(new Runnable(){
               public void run(){
                 SNode node=containingNode.resolve(repository);
-                if (node == null || (movingNode != null && movingNode.getModel() != null)) {
+                if (node == null) {
                   return;
                 }
-                node.setReference(role,jetbrains.mps.smodel.SReference.create(role,node,finalState.reference().getModelReference(),finalState.reference().getNodeId(),resolveInfo));
-                if (ListSequence.fromList(selectedOptions).contains(UpdateModelImports.OPTION)) {
-                  UpdateModelImports.addModelImport(node.getModel(),finalState.reference().getModelReference().resolve(repository));
+                if (node.getModel() instanceof EditableSModel && node.getReference(role) instanceof jetbrains.mps.smodel.SReference) {
+                  ((jetbrains.mps.smodel.SReference)node.getReference(role)).setResolveInfo(finalState);
+                  as_xv67ae_a0a1a2a0a0a0a0a2a0a0d0a0a0a0a5a1a8(node.getModel(),EditableSModel.class).setChanged(true);
                 }
               }
             }
