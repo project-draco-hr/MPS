@@ -1,12 +1,22 @@
 {
   return new ModelAccessHelper(ProjectHelper.getModelAccess(myProject)).executeCommand(new Computable<EditableSModel>(){
     @Override public EditableSModel compute(){
+      Module module=e.getData(LangDataKeys.MODULE);
       final PsiElement psiElement=e.getData(LangDataKeys.PSI_ELEMENT);
       final VirtualFile targetDir=((PsiDirectory)psiElement).getVirtualFile();
       final String modelName=myModelPrefix;
       EditableSModel model=null;
       try {
-        model=(EditableSModel)myModelRoot.createModel(modelName,targetDir.getPath(),null,PersistenceRegistry.getInstance().getFolderModelFactory("file-per-root"));
+        String relPath=null;
+        for (        VirtualFile sr : ModuleRootManager.getInstance(module).getSourceRoots()) {
+          relPath=VfsUtilCore.getRelativePath(targetDir,sr);
+          if (relPath != null) {
+            break;
+          }
+        }
+        Map<String,String> options=new HashMap<String,String>();
+        options.put(ModelFactory.OPTION_RELPATH,relPath);
+        model=(EditableSModel)myModelRoot.createModel(modelName,myRootForModel,options,PersistenceRegistry.getInstance().getFolderModelFactory("file-per-root"));
       }
  catch (      IOException ioException) {
         LOG.error("Can't create per-root model " + modelName + " under "+ myRootForModel,ioException);
