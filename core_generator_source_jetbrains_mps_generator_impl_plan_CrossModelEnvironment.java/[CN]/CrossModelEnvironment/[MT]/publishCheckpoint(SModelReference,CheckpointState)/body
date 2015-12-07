@@ -5,12 +5,26 @@
     myCheckpoints.put(originalModel,checkpoints=new ArrayList<CheckpointState>(3));
   }
  else {
+    HashSet<SModelReference> forgottenCheckpoints=new HashSet<SModelReference>();
     for (Iterator<CheckpointState> it=checkpoints.iterator(); it.hasNext(); ) {
       CheckpointState next=it.next();
       if (next.getCheckpoint().equals(cpState.getCheckpoint())) {
-        myModule.forgetModel(next.getCheckpointModel().getReference(),true);
+        SModelReference cpReference=next.getCheckpointModel().getReference();
+        forgottenCheckpoints.add(cpReference);
+        myModule.forgetModel(cpReference,true);
         it.remove();
         break;
+      }
+    }
+    for (    List<CheckpointState> cpStates : myCheckpoints.values()) {
+      for (Iterator<CheckpointState> it=cpStates.iterator(); it.hasNext(); ) {
+        CheckpointState next=it.next();
+        for (        ImportElement importElement : ((SModelInternal)next.getCheckpointModel()).importedModels()) {
+          if (forgottenCheckpoints.contains(importElement.getModelReference())) {
+            it.remove();
+            break;
+          }
+        }
       }
     }
   }
