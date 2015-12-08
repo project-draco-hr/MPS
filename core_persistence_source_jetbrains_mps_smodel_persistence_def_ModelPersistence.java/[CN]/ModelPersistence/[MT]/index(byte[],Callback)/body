@@ -1,10 +1,21 @@
 {
-  SModelHeader header=loadDescriptor(new InputSource(new InputStreamReader(new ByteArrayInputStream(data),FileUtil.DEFAULT_CHARSET)));
-  IModelPersistence mp=getPersistence(header.getPersistenceVersion());
-  if (!(mp instanceof XMLPersistence)) {
-    LOG.error("Can't index old persistence. Please update persistence of old models.\n" + "Persistence version: " + header.getPersistenceVersion() + "\n"+ "Model: "+ header.getModelReference().getModelName());
-    return;
+  try {
+    SModelHeader header=new SModelHeader();
+    InputSource source=new InputSource(new InputStreamReader(new ByteArrayInputStream(data),FileUtil.DEFAULT_CHARSET));
+    parseAndHandleExceptions(source,new HeaderOnlyHandler(header));
+    IModelPersistence mp=getPersistence(header.getPersistenceVersion());
+    if (!(mp instanceof XMLPersistence)) {
+      LOG.error("Can't index old persistence. Please update persistence of old models.\n" + "Persistence version: " + header.getPersistenceVersion() + "\n"+ "Model: "+ header.getModelReference().getModelName());
+      return;
+    }
+    Indexer indexSupport=((XMLPersistence)mp).getIndexSupport(newConsumer);
+    indexSupport.index(new InputStreamReader(new ByteArrayInputStream(data),FileUtil.DEFAULT_CHARSET));
   }
-  Indexer indexSupport=((XMLPersistence)mp).getIndexSupport(newConsumer);
-  indexSupport.index(new InputStreamReader(new ByteArrayInputStream(data),FileUtil.DEFAULT_CHARSET));
+ catch (  IOException ex) {
+    throw ex;
+  }
+catch (  Exception ex) {
+    Throwable th=ex.getCause() == null ? ex : ex.getCause();
+    throw new IOException(th);
+  }
 }
