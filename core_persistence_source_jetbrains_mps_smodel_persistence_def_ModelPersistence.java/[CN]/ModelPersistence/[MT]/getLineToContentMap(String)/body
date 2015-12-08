@@ -1,14 +1,16 @@
 {
   try {
-    SModelHeader header=loadDescriptor(new InputSource(new StringReader(content)));
+    SModelHeader header=new SModelHeader();
+    parseAndHandleExceptions(new InputSource(new StringReader(content)),new HeaderOnlyHandler(header));
     IModelPersistence mp=getPersistence(header.getPersistenceVersion());
     if (mp == null)     return null;
     XMLSAXHandler<List<LineContent>> handler=mp.getLineToContentMapReaderHandler();
     if (handler == null)     return null;
-    parseAndHandleExceptions(new InputSource(new StringReader(content)),handler,"line to content map");
+    parseAndHandleExceptions(new InputSource(new StringReader(content)),handler);
     return handler.getResult();
   }
- catch (  IOException ex) {
-    throw new ModelReadException(ex.toString(),ex);
+ catch (  Exception ex) {
+    Throwable th=ex.getCause() == null ? ex : ex.getCause();
+    throw new ModelReadException(String.format("Failed to load line to content map: %s",th.getMessage()),th);
   }
 }
