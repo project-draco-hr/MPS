@@ -7,13 +7,14 @@
   try {
     in=dataSource.openInputStream(FilePerRootDataSource.HEADER_FILE);
     InputSource source=new InputSource(new InputStreamReader(in,FileUtil.DEFAULT_CHARSET));
-    ModelPersistence.parseAndHandleExceptions(source,headerHandler,".model");
+    ModelPersistence.parseAndHandleExceptions(source,headerHandler);
     if (headerHandler.getResult().getContentKind() != ContentKind.MODEL_HEADER) {
       throw new ModelReadException("Couldn't read model: .model file is broken",null);
     }
   }
- catch (  IOException e) {
-    throw new ModelReadException("Couldn't read model: " + e.getMessage(),e,header);
+ catch (  Exception e) {
+    Throwable th=e.getCause() == null ? e : e.getCause();
+    throw new ModelReadException(String.format("Couldn't read .model file: %s",th.getMessage()),e,header);
   }
  finally {
     FileUtil.closeFileSafe(in);
@@ -30,7 +31,7 @@
     try {
       in=dataSource.openInputStream(stream);
       InputSource source=new InputSource(new InputStreamReader(in,FileUtil.DEFAULT_CHARSET));
-      ModelPersistence.parseAndHandleExceptions(source,rootHandler,stream);
+      ModelPersistence.parseAndHandleExceptions(source,rootHandler);
       if (rootHandler.getResult().getContentKind() != ContentKind.MODEL_ROOT) {
         throw new ModelReadException("Couldn't read model: " + stream + " root file is broken",null);
       }
@@ -42,7 +43,7 @@
       model.enterUpdateMode();
       for (      SNode rootNode : model.getRootNodes()) {
         if (count != 0) {
-          throw new ModelReadException("Couldn't read model: " + stream + " root file is broken - contains more than one roots",null);
+          throw new ModelReadException(String.format("Couldn't read model from stream %s: root file is broken - contains more than one roots",stream),null);
         }
         count++;
         model.removeRootNode(rootNode);
@@ -50,8 +51,9 @@
       }
       model.leaveUpdateMode();
     }
- catch (    IOException e) {
-      throw new ModelReadException("Couldn't read model: " + e.getMessage(),e,header);
+ catch (    Exception e) {
+      Throwable th=e.getCause() == null ? e : e.getCause();
+      throw new ModelReadException(String.format("Couldn't read model from stream %s: %s",stream,th.getMessage()),th,header);
     }
  finally {
       FileUtil.closeFileSafe(in);
