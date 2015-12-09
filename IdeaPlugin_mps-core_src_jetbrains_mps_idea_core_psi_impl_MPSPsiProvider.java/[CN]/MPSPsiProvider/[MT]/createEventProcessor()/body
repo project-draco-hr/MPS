@@ -5,12 +5,23 @@
       if (psiModel == null)       return null;
       return new ReloadableModel(){
         @Override public void reload(        SNodeId sNodeId){
+          MPSPsiNode oldPsiNode=psiModel.lookupNode(sNodeId);
+          if (oldPsiNode != null && psiModel.isRoot(oldPsiNode)) {
+            save(psiModel);
+          }
           MPSPsiNode psiNode=psiModel.reload(sNodeId);
           notifyPsiChanged(psiModel,psiNode);
         }
         @Override public void reloadAll(){
+          save(psiModel);
           psiModel.reloadAll();
           notifyPsiChanged(psiModel,null);
+        }
+        private void save(        MPSPsiModel psiModel){
+          SModel smodel=psiModel.getSModelReference().resolve(ProjectHelper.getProjectRepository(psiModel.getProject()));
+          if (smodel instanceof EditableSModel) {
+            ((EditableSModel)smodel).save();
+          }
         }
       }
 ;
