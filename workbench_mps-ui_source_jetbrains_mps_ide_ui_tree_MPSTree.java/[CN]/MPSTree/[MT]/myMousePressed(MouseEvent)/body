@@ -1,39 +1,23 @@
 {
-  Project p=PlatformDataKeys.PROJECT.getData(DataManager.getInstance().getDataContext(this));
-  IdeFocusManager focusManager;
-  if (p != null) {
-    focusManager=IdeFocusManager.getInstance(p);
+  IdeFocusManager.findInstanceByComponent(this).requestFocus(this,true);
+  if (e.getButton() == 0) {
+    TreePath path=getSelectionPath();
+    if (path == null)     return;
+    int rowNum=getRowForPath(path);
+    Rectangle r=getRowBounds(rowNum);
+    showPopup(r.x,r.y);
+    return;
   }
- else {
-    focusManager=IdeFocusManagerHeadless.INSTANCE;
+  if (e.isPopupTrigger()) {
+    showPopup(e.getX(),e.getY());
+    return;
   }
-  focusManager.requestFocus(this,true);
   TreePath path=getClosestPathForLocation(e.getX(),e.getY());
   if (path == null)   return;
-  Object lastPathComponent=path.getLastPathComponent();
-  MPSTreeNode nodeToClick=null;
-  if (lastPathComponent instanceof MPSTreeNode && ((MPSTreeNode)lastPathComponent).canBeOpened()) {
-    nodeToClick=(MPSTreeNode)lastPathComponent;
+  MPSTreeNode nodeToClick=getOpenableNode(e);
+  if (nodeToClick != null) {
     if ((e.getClickCount() == 1 && isAutoOpen())) {
       autoscroll(nodeToClick);
     }
- else     if (e.getClickCount() == 2) {
-      e.consume();
-    }
   }
- else   if (e.getButton() == MouseEvent.BUTTON3) {
-    if (!isPathSelected(path)) {
-      setSelectionPath(path);
-    }
-  }
-  final MPSTreeNode node2dc=e.getClickCount() == 2 ? nodeToClick : null;
-  focusManager.doWhenFocusSettlesDown(new Runnable(){
-    @Override public void run(){
-      if (node2dc != null) {
-        doubleClick(node2dc);
-      }
-      if (e.isPopupTrigger())       showPopup(e.getX(),e.getY());
-    }
-  }
-);
 }
