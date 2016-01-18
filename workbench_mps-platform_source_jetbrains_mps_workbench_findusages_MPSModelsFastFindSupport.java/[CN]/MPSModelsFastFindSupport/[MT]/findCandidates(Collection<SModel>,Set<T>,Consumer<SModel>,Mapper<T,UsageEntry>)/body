@@ -1,0 +1,44 @@
+{
+  final ManyToManyMap<SModel,VirtualFile> scopeFiles=new ManyToManyMap<SModel,VirtualFile>();
+  for (  final SModel sm : models) {
+    if (sm instanceof EditableSModel && ((EditableSModel)sm).isChanged()) {
+      continue;
+    }
+    DataSource source=sm.getSource();
+    if (!(source instanceof FileDataSource || source instanceof FilePerRootDataSource)) {
+      continue;
+    }
+    Collection<IFile> modelFiles=getDataSourceFiles(source);
+    for (    IFile modelFile : modelFiles) {
+      String ext=FileUtil.getExtension(modelFile.getName());
+      if (ext == null || modelFile.isDirectory()) {
+        continue;
+      }
+      VirtualFile vf=VirtualFileUtils.getVirtualFile(modelFile);
+      if (vf == null) {
+        LogManager.getLogger(MPSModelsFastFindSupport.class).warn(String.format("Model %s: virtual file not found for model file. Model file: %s",sm.getName(),modelFile.getPath()));
+        continue;
+      }
+      processedModels.consume(sm);
+      scopeFiles.addLink(sm,vf);
+    }
+  }
+  ConcreteFilesGlobalSearchScope allFiles=new ConcreteFilesGlobalSearchScope(scopeFiles.getSecond());
+  MultiMap<SModel,T> result=new SetBasedMultiMap<SModel,T>();
+  for (  T elem : elems) {
+    UsageEntry entry=id.value(elem);
+    Collection<VirtualFile> matchingFiles;
+    try {
+      matchingFiles=MPSModelsIndexer.getContainingFiles(entry,allFiles);
+    }
+ catch (    ProcessCanceledException ce) {
+      matchingFiles=Collections.emptyList();
+    }
+    for (    VirtualFile file : matchingFiles) {
+      for (      SModel m : scopeFiles.getBySecond(file)) {
+        result.putValue(m,elem);
+      }
+    }
+  }
+  return result;
+}
