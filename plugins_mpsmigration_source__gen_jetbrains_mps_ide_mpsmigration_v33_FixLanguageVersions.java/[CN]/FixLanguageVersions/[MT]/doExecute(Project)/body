@@ -1,0 +1,35 @@
+{
+  for (  AbstractModule m : Sequence.fromIterable(getModulesForCleanup(p))) {
+    ModuleDescriptor md=m.getModuleDescriptor();
+    if (md == null) {
+      continue;
+    }
+    Map<SLanguage,Integer> oldVersions=md.getLanguageVersions();
+    Map<SLanguage,Integer> newVersions=new HashMap<SLanguage,Integer>();
+    for (    final SLanguage lang : m.getUsedLanguages()) {
+      Integer oldV=oldVersions.get(lang);
+      if (oldV == null || oldV == -1) {
+        oldV=0;
+        newVersions.put(lang,oldV);
+      }
+      List<SModel> models=m.getModels();
+      for (      SModelInternal model : ListSequence.fromList(models).ofType(SModelInternal.class).where(new IWhereFilter<SModelInternal>(){
+        public boolean accept(        SModelInternal it){
+          return it.importedLanguageIds().contains(lang);
+        }
+      }
+)) {
+        if (model.importedLanguageIds().contains(lang) && model.getLanguageImportVersion(lang) != -1) {
+          continue;
+        }
+        model.setLanguageImportVersion(lang,oldV);
+      }
+    }
+    if (newVersions.isEmpty()) {
+      continue;
+    }
+    oldVersions.putAll(newVersions);
+    m.setChanged();
+  }
+  return true;
+}
