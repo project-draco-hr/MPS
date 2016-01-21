@@ -1,0 +1,24 @@
+{
+  String hash=myHash;
+  if (hash != null) {
+    return hash;
+  }
+  Element element=new Element("gd");
+  GeneratorDescriptorPersistence.saveGeneratorDescriptor(element,myModule.getModuleDescriptor(),MacrosFactory.forModule(myModule.getSourceLanguage()));
+  StringWriter out=new StringWriter();
+  try {
+    JDOMUtil.writeDocument(new Document(element),out);
+  }
+ catch (  IOException ex) {
+    Logger.getLogger(getClass()).warn(ex.getMessage(),ex);
+  }
+  hash=ModelDigestUtil.hashText(out.toString());
+  BigInteger modelHash=new BigInteger(hash,Character.MAX_RADIX);
+  for (  SModel m : myModule.getModels()) {
+    if (m instanceof GeneratableSModel && !SModelStereotype.isDescriptorModel(m)) {
+      modelHash=modelHash.xor(new BigInteger(((GeneratableSModel)m).getModelHash(),Character.MAX_RADIX));
+    }
+  }
+  myHash=hash=modelHash.toString(Character.MAX_RADIX);
+  return hash;
+}
