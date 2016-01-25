@@ -1,6 +1,6 @@
 {
   Set<LanguageRuntime> loadedRuntimes=new HashSet<LanguageRuntime>();
-  for (  Language language : collectLanguagesToLoad(loadedModules)) {
+  for (  Language language : collectLanguageModules(loadedModules)) {
     SLanguageId languageId=MetaIdByDeclaration.getLanguageId(language);
     if (myLanguagesById.containsKey(languageId)) {
       LOG.error("",new IllegalArgumentException(String.format("There is already a language '%s' with id '%s'",myLanguagesById.get(languageId),languageId)));
@@ -22,5 +22,17 @@
     }
   }
   reinitialize();
+  for (  Generator generator : collectGeneratorModules(loadedModules)) {
+    GeneratorRuntime generatorRuntime=createRuntime(generator);
+    if (generatorRuntime == null) {
+      continue;
+    }
+    GeneratorRuntime old=myGeneratorsWithCompiledRuntime.put(generatorRuntime.getModuleReference(),generatorRuntime);
+    if (old != null) {
+      LOG.warn(String.format("There is already generator runtime for module '%s'",old.getModuleReference()));
+    }
+    LanguageRuntime srcLangRuntime=generatorRuntime.getSourceLanguage();
+    srcLangRuntime.register(generatorRuntime);
+  }
   notifyLoad(loadedRuntimes);
 }

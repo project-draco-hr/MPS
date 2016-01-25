@@ -1,0 +1,40 @@
+{
+  if (g.generateTemplates()) {
+    Language sourceLanguage=g.getSourceLanguage();
+    final String rtClassName=sourceLanguage.getModuleName() + ".Generator";
+    try {
+      Class<?> rtClass;
+      try {
+        rtClass=sourceLanguage.getOwnClass(rtClassName);
+      }
+ catch (      ClassNotFoundException ex) {
+        rtClass=g.getOwnClass(rtClassName);
+      }
+      if (GeneratorRuntime.class.isAssignableFrom(rtClass)) {
+        final Class<? extends GeneratorRuntime> aClass=rtClass.asSubclass(GeneratorRuntime.class);
+        final LanguageRuntime sourceLanguageRuntime=getLanguage(sourceLanguage);
+        if (sourceLanguageRuntime == null) {
+          throw new InstantiationException(String.format("Could not find language runtime for %s to attach generator %s to",sourceLanguage.getModuleName(),g.getModuleName()));
+        }
+        final Constructor<? extends GeneratorRuntime> constructor=aClass.getConstructor(sourceLanguageRuntime.getClass());
+        return constructor.newInstance(sourceLanguageRuntime);
+      }
+    }
+ catch (    ClassNotFoundException e) {
+      LOG.error(String.format("Failed to load runtime %s of generator %s",rtClassName,g.getModuleName()),e);
+    }
+catch (    InstantiationException e) {
+      LOG.error(String.format("Failed to instantiate runtime %s of generator %s",rtClassName,g.getModuleName()),e);
+    }
+catch (    IllegalAccessException e) {
+      LOG.error(String.format("Failed to instantiate runtime %s of generator %s",rtClassName,g.getModuleName()),e);
+    }
+catch (    NoSuchMethodException e) {
+      LOG.error(String.format("Failed to instantiate runtime %s of generator %s. Bad constructor?",rtClassName,g.getModuleName()),e);
+    }
+catch (    InvocationTargetException e) {
+      LOG.error(String.format("Failed to instantiate runtime %s of generator %s. Bad constructor?",rtClassName,g.getModuleName()),e);
+    }
+  }
+  return null;
+}
