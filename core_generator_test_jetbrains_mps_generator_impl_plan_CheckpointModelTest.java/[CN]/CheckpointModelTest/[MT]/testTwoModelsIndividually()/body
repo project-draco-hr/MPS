@@ -13,18 +13,14 @@
 );
   SModel m1=resolve(mr1);
   OptionsBuilder optBuilder=GenerationOptions.getDefaults();
-  final NoOpHandler h=new NoOpHandler(){
-    @Override public boolean canHandle(    SModel inputModel){
-      return true;
-    }
-  }
-;
   GenerationOptions opt=optBuilder.customPlan(m1,plan).create();
   final TransientModelsProvider tmProvider=mpsProject.getComponent(TransientModelsProvider.class);
-  boolean result1=GenerationFacade.generateModels(mpsProject,Collections.singletonList(m1),null,h,new EmptyProgressMonitor(),null,opt,tmProvider);
+  GenerationFacade genFacade=new GenerationFacade(mpsProject.getRepository(),opt).transients(tmProvider);
+  GenerationStatus genStatus1=genFacade.process(new EmptyProgressMonitor(),m1);
   SModel m2=resolve(mr2);
   opt=optBuilder.customPlan(m2,plan).create();
-  boolean result2=GenerationFacade.generateModels(mpsProject,Collections.singletonList(m2),null,h,new EmptyProgressMonitor(),null,opt,tmProvider);
-  myErrors.checkThat("m1 generation succeeds",result1,CoreMatchers.equalTo(true));
-  myErrors.checkThat("m2 generation succeeds",result2,CoreMatchers.equalTo(true));
+  genFacade=new GenerationFacade(mpsProject.getRepository(),opt).transients(tmProvider);
+  GenerationStatus genStatus2=genFacade.process(new EmptyProgressMonitor(),m2);
+  myErrors.checkThat("m1 generation succeeds",genStatus1.isOk(),CoreMatchers.equalTo(true));
+  myErrors.checkThat("m2 generation succeeds",genStatus2.isOk(),CoreMatchers.equalTo(true));
 }
