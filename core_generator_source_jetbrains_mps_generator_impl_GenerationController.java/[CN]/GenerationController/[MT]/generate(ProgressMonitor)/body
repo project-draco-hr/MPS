@@ -1,18 +1,12 @@
 {
   long startJobTime=System.currentTimeMillis();
-  myGenerationHandler.startGeneration(myLogger);
-  initMaps();
   try {
     boolean generationOK=true;
-    final int compileWork=myModuleSequence.size();
-    int totalWork=compileWork + myInputModels.size();
-    monitor.start("",totalWork);
+    monitor.start("",myTasks.size());
     try {
-      for (      Pair<SModule,List<SModel>> moduleAndDescriptors : myModuleSequence) {
-        final List<SModel> mlist=moduleAndDescriptors.o2;
-        final ProgressMonitor pm=monitor.subTask(mlist.size());
-        boolean result=generateModelsInModule(moduleAndDescriptors.o1,mlist,pm);
-        pm.done();
+      for (      GeneratorTask t : myTasks) {
+        checkMonitorCanceled(monitor);
+        boolean result=generateModel(t,monitor.subTask(1,SubProgressKind.REPLACING));
         generationOK=generationOK && result;
       }
     }
@@ -26,7 +20,6 @@
       if (myLogger.needsInfo()) {
         myLogger.info("generation completed successfully in " + (System.currentTimeMillis() - startJobTime) + " ms");
       }
-      generationOK=myGenerationHandler.compile(null,myModuleSequence,true,monitor.subTask(compileWork));
       monitor.advance(0);
     }
  else {
@@ -48,6 +41,5 @@ catch (  AssertionError e) {
   }
  finally {
     monitor.done();
-    myGenerationHandler.finishGeneration();
   }
 }
