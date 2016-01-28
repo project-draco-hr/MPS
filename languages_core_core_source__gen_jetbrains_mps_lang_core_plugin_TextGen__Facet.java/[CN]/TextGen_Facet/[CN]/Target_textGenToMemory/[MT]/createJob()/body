@@ -5,55 +5,54 @@
       final Iterable<GResource> input=(Iterable<GResource>)(Iterable)rawInput;
 switch (0) {
 case 0:
-        TextGen.enableNodeAttributes(GenerationSettingsProvider.getInstance().getGenerationSettings().handleAttributesInTextGen());
-      final TextGeneratorEngine tgEngine=new TextGeneratorEngine(TextGen_Facet.Target_configure.vars(pa.global()).makeSession().getMessageHandler());
-    try {
-      int modelsCount=Sequence.fromIterable(input).count();
-      final ArrayBlockingQueue<TextGenResult> resultQueue=new ArrayBlockingQueue<TextGenResult>(modelsCount);
-      for (      GResource resource : Sequence.fromIterable(input)) {
-        final SModel model=resource.status().getOutputModel();
-        if (model == null) {
-          modelsCount--;
-          monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Generated model in null")));
-          continue;
-        }
-        TextGen_Facet.Target_configure.vars(pa.global()).makeSession().getProject().getModelAccess().runReadAction(new Runnable(){
-          public void run(){
-            tgEngine.schedule(model,resultQueue);
-          }
-        }
-);
-      }
-      while (modelsCount-- > 0) {
-        final TextGenResult tgr=resultQueue.poll(1,TimeUnit.MINUTES);
-        Map<String,Object> texts=MapSequence.fromMap(new HashMap<String,Object>());
-        Map<SNodeReference,String> rootNodeToFileName=MapSequence.fromMap(new HashMap<SNodeReference,String>());
-        _output_21gswx_a0c=Sequence.fromIterable(_output_21gswx_a0c).concat(Sequence.fromIterable(Sequence.<IResource>singleton(new TextGenOutcomeResource(tgr.getModel(),tgr.getModel().getModule(),tgr))));
-        for (        TextUnit tu : tgr.getUnits()) {
-          if (tu.getState() == TextUnit.Status.Failed) {
-            monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Failed to generate text for " + tu.getFileName())));
+        final TextGeneratorEngine tgEngine=new TextGeneratorEngine(TextGen_Facet.Target_configure.vars(pa.global()).makeSession().getMessageHandler());
+      try {
+        int modelsCount=Sequence.fromIterable(input).count();
+        final ArrayBlockingQueue<TextGenResult> resultQueue=new ArrayBlockingQueue<TextGenResult>(modelsCount);
+        for (        GResource resource : Sequence.fromIterable(input)) {
+          final SModel model=resource.status().getOutputModel();
+          if (model == null) {
+            modelsCount--;
+            monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Generated model in null")));
             continue;
           }
-          String fname=tu.getFileName();
-          MapSequence.fromMap(texts).put(fname,tu);
-          SNodeReference sourceNode=TracingUtil.getInput(tu.getStartNode());
-          if (sourceNode != null) {
-            if ((MapSequence.fromMap(rootNodeToFileName).get(sourceNode) == null) || (fname.compareTo(MapSequence.fromMap(rootNodeToFileName).get(sourceNode)) < 0)) {
-              MapSequence.fromMap(rootNodeToFileName).put(sourceNode,fname);
+          TextGen_Facet.Target_configure.vars(pa.global()).makeSession().getProject().getModelAccess().runReadAction(new Runnable(){
+            public void run(){
+              tgEngine.schedule(model,resultQueue);
             }
           }
+);
         }
-        _output_21gswx_a0c=Sequence.fromIterable(_output_21gswx_a0c).concat(Sequence.fromIterable(Sequence.<IResource>singleton(new FResource(JavaNameUtil.packageName(tgr.getModel()),texts,rootNodeToFileName,null,tgr.getModel()))));
+        while (modelsCount-- > 0) {
+          final TextGenResult tgr=resultQueue.poll(1,TimeUnit.MINUTES);
+          Map<String,Object> texts=MapSequence.fromMap(new HashMap<String,Object>());
+          Map<SNodeReference,String> rootNodeToFileName=MapSequence.fromMap(new HashMap<SNodeReference,String>());
+          _output_21gswx_a0c=Sequence.fromIterable(_output_21gswx_a0c).concat(Sequence.fromIterable(Sequence.<IResource>singleton(new TextGenOutcomeResource(tgr.getModel(),tgr.getModel().getModule(),tgr))));
+          for (          TextUnit tu : tgr.getUnits()) {
+            if (tu.getState() == TextUnit.Status.Failed) {
+              monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("Failed to generate text for " + tu.getFileName())));
+              continue;
+            }
+            String fname=tu.getFileName();
+            MapSequence.fromMap(texts).put(fname,tu);
+            SNodeReference sourceNode=TracingUtil.getInput(tu.getStartNode());
+            if (sourceNode != null) {
+              if ((MapSequence.fromMap(rootNodeToFileName).get(sourceNode) == null) || (fname.compareTo(MapSequence.fromMap(rootNodeToFileName).get(sourceNode)) < 0)) {
+                MapSequence.fromMap(rootNodeToFileName).put(sourceNode,fname);
+              }
+            }
+          }
+          _output_21gswx_a0c=Sequence.fromIterable(_output_21gswx_a0c).concat(Sequence.fromIterable(Sequence.<IResource>singleton(new FResource(JavaNameUtil.packageName(tgr.getModel()),texts,rootNodeToFileName,null,tgr.getModel()))));
+        }
       }
-    }
- catch (    InterruptedException ex) {
-      monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("TextGen interrupted")));
-    }
+ catch (      InterruptedException ex) {
+        monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("TextGen interrupted")));
+      }
  finally {
-      tgEngine.shutdown();
-    }
+        tgEngine.shutdown();
+      }
 default :
-  return new IResult.SUCCESS(_output_21gswx_a0c);
+    return new IResult.SUCCESS(_output_21gswx_a0c);
 }
 }
 }
