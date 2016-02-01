@@ -6,6 +6,19 @@
     final SNode sourceConcept=SNodeOperations.cast(initialState.resolve(repository),MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x1103553c5ffL,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration"));
     Language sourceLanguage=((Language)SNodeOperations.getModel(sourceConcept).getModule());
     Map<LanguageAspect,List<SNode>> aspectsMap=MoveConceptUtil.getAspectNodes(sourceLanguage,Sequence.<SNode>singleton(sourceConcept));
+    int participantSize=Sequence.fromIterable(new ExtensionPoint<MoveNodeRefactoringParticipant<?,?>>("jetbrains.mps.ide.platform.MoveNodeParticipantEP").getObjects()).count();
+    Iterable<SNode> aspects=Sequence.fromIterable(MapSequence.fromMap(aspectsMap).values()).translate(new ITranslator2<List<SNode>,SNode>(){
+      public Iterable<SNode> translate(      List<SNode> x){
+        return x;
+      }
+    }
+);
+    progressMonitor.start("",participantSize * Sequence.fromIterable(aspects).foldLeft(0,new ILeftCombinator<SNode,Integer>(){
+      public Integer combine(      Integer s,      SNode it){
+        return s + ListSequence.fromList(SNodeOperations.getNodeDescendants(it,null,true,new SAbstractConcept[]{})).count();
+      }
+    }
+));
     return MapSequence.fromMap(aspectsMap).translate(new ITranslator2<IMapping<LanguageAspect,List<SNode>>,RefactoringParticipant.Change<SNodeReference,SNodeReference>>(){
       public Iterable<RefactoringParticipant.Change<SNodeReference,SNodeReference>> translate(      final IMapping<LanguageAspect,List<SNode>> mapping){
         return ListSequence.fromList(mapping.value()).select(new ISelector<SNode,RefactoringParticipant.Change<SNodeReference,SNodeReference>>(){
@@ -16,7 +29,7 @@
                 return Sequence.fromIterable(new ExtensionPoint<MoveNodeRefactoringParticipant<?,?>>("jetbrains.mps.ide.platform.MoveNodeParticipantEP").getObjects()).select(new ISelector<MoveNodeRefactoringParticipant<?,?>,Tuples._2<SNode,RecursiveParticipant.RecursiveParticipantState<?,?,SNode,SNode>>>(){
                   public Tuples._2<SNode,RecursiveParticipant.RecursiveParticipantState<?,?,SNode,SNode>> select(                  MoveNodeRefactoringParticipant<?,?> participant){
                     RecursiveParticipant.RecursiveParticipantState<?,?,SNode,SNode> participantState=RecursiveParticipant.RecursiveParticipantState.create(participant,node,parents);
-                    participantState.findChanges(repository,selectedOptions,searchScope);
+                    participantState.findChanges(repository,selectedOptions,searchScope,progressMonitor.subTask(1));
                     return MultiTuple.<SNode,RecursiveParticipant.RecursiveParticipantState<?,?,SNode,SNode>>from(node,participantState);
                   }
                 }
