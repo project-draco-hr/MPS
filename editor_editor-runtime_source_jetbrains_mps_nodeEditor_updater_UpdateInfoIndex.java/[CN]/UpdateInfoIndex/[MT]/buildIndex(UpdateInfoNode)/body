@@ -1,0 +1,24 @@
+{
+  long start=System.currentTimeMillis();
+  myIndex=new HashMap<ReferencedNodeContext,List<UpdateInfoNode>>();
+  myVisualizedRoots=new THashSet<SNode>();
+  Queue<UpdateInfoNode> nodesToProcess=new LinkedList<UpdateInfoNode>();
+  nodesToProcess.add(node);
+  while (!nodesToProcess.isEmpty()) {
+    UpdateInfoNode nextNode=nodesToProcess.remove();
+    List<UpdateInfoNode> nodesInContext=myIndex.get(nextNode.getContext());
+    if (nodesInContext == null) {
+      nodesInContext=new ArrayList<UpdateInfoNode>(1);
+      myIndex.put(nextNode.getContext(),nodesInContext);
+    }
+    nodesInContext.add(nextNode);
+    myVisualizedRoots.add(nextNode.getContext().getNode().getContainingRoot());
+    nodesToProcess.addAll(nextNode.getChildren());
+  }
+  LOG.debug("Building index took: " + (System.currentTimeMillis() - start) + "ms");
+  MemoryAnalyzer memoryAnalyzer=new MemoryAnalyzer();
+  if (memoryAnalyzer.isValid()) {
+    calculateSize(memoryAnalyzer);
+    LOG.debug("UpdateInfoIndex size: " + (memoryAnalyzer.getSize() / 1024) + "Kb");
+  }
+}
