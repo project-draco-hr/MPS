@@ -1,0 +1,50 @@
+{
+  final Map<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,T,S>> changes=MapSequence.fromMap(new HashMap<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,T,S>>());
+  final Wrappers._T<List<RefactoringParticipant.Option>> options=new Wrappers._T<List<RefactoringParticipant.Option>>();
+  project.getRepository().getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      for (      RefactoringParticipant<?,?,T,S> participant : Sequence.fromIterable(participants)) {
+        MapSequence.fromMap(changes).put(participant,RefactoringParticipant.ParticipantState.create(participant,nodes));
+      }
+      options.value=MapSequence.fromMap(changes).translate(new ITranslator2<IMapping<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,T,S>>,RefactoringParticipant.Option>(){
+        public Iterable<RefactoringParticipant.Option> translate(        IMapping<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,T,S>> it){
+          return it.value().getAvaliableOptions(project.getRepository());
+        }
+      }
+).distinct().sort(new ISelector<RefactoringParticipant.Option,String>(){
+        public String select(        RefactoringParticipant.Option it){
+          return it.getDescription();
+        }
+      }
+,true).toListSequence();
+    }
+  }
+);
+  final List<RefactoringParticipant.Option> selectedOptions=selectParticipants(project,options.value);
+  final Wrappers._boolean cancelled=new Wrappers._boolean(false);
+  ProgressManager.getInstance().run(new Task.Modal(project.getProject(),"Refactoring",true){
+    public void run(    @NotNull ProgressIndicator progressIndicator){
+      final ProgressMonitorAdapter progressMonitor=new ProgressMonitorAdapter(progressIndicator);
+      project.getRepository().getModelAccess().runReadAction(new Runnable(){
+        public void run(){
+          int steps=MapSequence.fromMap(changes).count();
+          progressMonitor.start("Searching for usages",steps);
+          for (          IMapping<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,T,S>> participantStates : MapSequence.fromMap(changes)) {
+            participantStates.value().findChanges(project.getRepository(),selectedOptions,project.getScope(),progressMonitor.subTask(1,SubProgressKind.AS_COMMENT));
+            if (progressMonitor.isCanceled()) {
+              cancelled.value=true;
+              break;
+            }
+          }
+          progressMonitor.done();
+        }
+      }
+);
+    }
+  }
+);
+  if (cancelled.value) {
+    return null;
+  }
+  return changes;
+}
