@@ -1,11 +1,20 @@
 {
-  try {
-    myResult=TextGen.generateText(myStartNode,true,true,null);
+  if (!TextGenRegistry.getInstance().hasTextGen(myStartNode)) {
+    myState=Status.Empty;
+    return;
   }
- catch (  Throwable th) {
-    final StringWriter out=new StringWriter();
-    th.printStackTrace(new PrintWriter(out));
-    IMessage m=new Message(MessageKind.ERROR,getClass(),"Text generation failed").setException(th).setHintObject(myStartNode);
-    myResult=new TextGenerationResult(myStartNode,out.toString(),true,Collections.singleton(m),null,null,null,null);
+  myTraceCollector=new TraceInfoCollector();
+  TextBuffer trueBuffer=new TextBufferImpl();
+  myLayoutBuilder.prepareBuffer(trueBuffer);
+  myLegacyBuffer=TextGen.newUserObjectHolder(getStartNode());
+  doGenerate(myLegacyBuffer,trueBuffer);
+  final BufferSnapshot textSnapshot=myLayoutBuilder.prepareSnapshot(trueBuffer);
+  myTraceCollector.populatePositions(textSnapshot);
+  myOutcome=textSnapshot.getText().toString();
+  if (myLegacyBuffer.hasErrors()) {
+    myState=Status.Failed;
+  }
+ else {
+    myState=Status.Generated;
   }
 }
