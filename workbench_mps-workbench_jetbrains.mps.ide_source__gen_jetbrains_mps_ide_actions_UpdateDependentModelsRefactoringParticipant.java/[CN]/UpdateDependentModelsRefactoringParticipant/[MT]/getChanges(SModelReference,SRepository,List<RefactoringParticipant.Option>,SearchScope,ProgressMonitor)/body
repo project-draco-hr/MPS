@@ -1,0 +1,40 @@
+{
+  if (!(ListSequence.fromList(selectedOptions).contains(myOption))) {
+    return ListSequence.fromList(new ArrayList<RefactoringParticipant.Change<SModelReference,SModelReference>>());
+  }
+  progressMonitor.start(myOption.getDescription(),1);
+  final Wrappers._T<Set<SModel>> usages=new Wrappers._T<Set<SModel>>();
+  final Wrappers._T<SModel> sourceModel=new Wrappers._T<SModel>();
+  repository.getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      usages.value=FindUsagesFacade.getInstance().findModelUsages(GlobalScope.getInstance(),Collections.singleton(initialState),progressMonitor.subTask(1));
+      sourceModel.value=initialState.resolve(repository);
+    }
+  }
+);
+  return SetSequence.fromSet(usages.value).select(new ISelector<SModel,RefactoringParticipant.Change<SModelReference,SModelReference>>(){
+    public RefactoringParticipant.Change<SModelReference,SModelReference> select(    SModel it){
+      final SModelReference usageRef=it.getReference();
+      final SearchResults searchResults=new SearchResults(SetSequence.fromSetAndArray(new HashSet<SModel>(),sourceModel.value),ListSequence.fromListAndArray(new ArrayList<SearchResult<SModel>>(),new SearchResult<SModel>(it,"dependent model")));
+      RefactoringParticipant.Change<SModelReference,SModelReference> change=new RefactoringParticipant.Change<SModelReference,SModelReference>(){
+        public SearchResults getSearchResults(){
+          return searchResults;
+        }
+        public boolean needsToPreserveOldNode(){
+          return false;
+        }
+        public void confirm(        SModelReference finalState,        SRepository repository,        RefactoringSession refactoringSession){
+          SModel usage=usageRef.resolve(repository);
+          if (usage instanceof SModelInternal && usage instanceof EditableSModel) {
+            ((SModelInternal)usage).addModelImport(finalState,true);
+            updateUsages((EditableSModel)usage,initialState,finalState);
+            ((SModelInternal)usage).deleteModelImport(initialState);
+          }
+        }
+      }
+;
+      return change;
+    }
+  }
+).toListSequence();
+}

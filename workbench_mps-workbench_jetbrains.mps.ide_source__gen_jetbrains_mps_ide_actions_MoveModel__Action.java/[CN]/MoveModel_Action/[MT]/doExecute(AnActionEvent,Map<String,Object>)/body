@@ -13,30 +13,34 @@
   if (selectedModule == null) {
     return;
   }
-  final Wrappers._T<NewModelDialog> dialog=new Wrappers._T<NewModelDialog>();
-  ((MPSProject)MapSequence.fromMap(_params).get("mpsProject")).getRepository().getModelAccess().runReadAction(new Runnable(){
-    public void run(){
-      dialog.value=new NewModelDialog(((MPSProject)MapSequence.fromMap(_params).get("mpsProject")),(AbstractModule)selectedModule.resolve(((MPSProject)MapSequence.fromMap(_params).get("mpsProject")).getRepository()),((SModel)MapSequence.fromMap(_params).get("model")));
-    }
-  }
-);
-  dialog.value.show();
-  final EditableSModel newModel=dialog.value.getResult();
-  if (newModel == null) {
-    return;
-  }
-  ((MPSProject)MapSequence.fromMap(_params).get("mpsProject")).getRepository().getModelAccess().executeCommand(new Runnable(){
-    public void run(){
-      Set<SModel> usages=FindUsagesFacade.getInstance().findModelUsages(GlobalScope.getInstance(),Collections.singleton(modelReference),new EmptyProgressMonitor());
-      for (      SModel usage : SetSequence.fromSet(usages)) {
-        if (SModelStereotype.isUserModel(usage) && usage instanceof EditableSModel) {
-          ((SModelInternal)usage).addModelImport(newModel.getReference(),true);
-          MoveModel_Action.this.updateUsages((EditableSModel)usage,modelReference,newModel.getReference(),_params);
-          ((SModelInternal)usage).deleteModelImport(modelReference);
+  UpdateDependentModelsRefactoringParticipant participant=new UpdateDependentModelsRefactoringParticipant();
+  Iterable<? extends RefactoringParticipant<?,?,SModel,SModel>> participants=new ExtensionPoint<MoveModelRefactoringParticipant<?,?>>("jetbrains.mps.ide.platform.MoveModelParticipantEP").getObjects();
+  RefactoringProcessor.performRefactoring(((MPSProject)MapSequence.fromMap(_params).get("mpsProject")),"Move Model",participants,ListSequence.fromListAndArray(new ArrayList<SModel>(),((SModel)MapSequence.fromMap(_params).get("model"))),new _FunctionTypes._return_P2_E0<_FunctionTypes._return_P1_E0<? extends SModel,? super SModel>,Map<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,SModel,SModel>>,RefactoringSession>(){
+    public _FunctionTypes._return_P1_E0<? extends SModel,? super SModel> invoke(    Map<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,SModel,SModel>> changes,    RefactoringSession refactoringSession){
+      final Wrappers._T<NewModelDialog> dialog=new Wrappers._T<NewModelDialog>();
+      ((MPSProject)MapSequence.fromMap(_params).get("mpsProject")).getRepository().getModelAccess().runReadAction(new Runnable(){
+        public void run(){
+          dialog.value=new NewModelDialog(((MPSProject)MapSequence.fromMap(_params).get("mpsProject")),(AbstractModule)selectedModule.resolve(((MPSProject)MapSequence.fromMap(_params).get("mpsProject")).getRepository()),((SModel)MapSequence.fromMap(_params).get("model")));
         }
       }
-      MoveModel_Action.this.updateUsages(newModel,modelReference,newModel.getReference(),_params);
+);
+      dialog.value.show();
+      final EditableSModel newModel=dialog.value.getResult();
+      if (newModel == null) {
+        return null;
+      }
+      UpdateDependentModelsRefactoringParticipant.updateUsages(newModel,modelReference,newModel.getReference());
       DeleteModelHelper.delete(((SModel)MapSequence.fromMap(_params).get("model")).getModule(),((SModel)MapSequence.fromMap(_params).get("model")),true);
+      _FunctionTypes._return_P1_E0<? extends SModel,? super SModel> result=new _FunctionTypes._return_P1_E0<EditableSModel,SModel>(){
+        public EditableSModel invoke(        SModel oldModel){
+          if (oldModel != ((SModel)MapSequence.fromMap(_params).get("model"))) {
+            throw new IllegalStateException();
+          }
+          return newModel;
+        }
+      }
+;
+      return result;
     }
   }
 );
