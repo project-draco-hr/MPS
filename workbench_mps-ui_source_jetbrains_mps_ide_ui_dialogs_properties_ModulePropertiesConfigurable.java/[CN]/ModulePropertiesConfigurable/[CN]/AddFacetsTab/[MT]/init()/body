@@ -1,30 +1,23 @@
 {
-  final HashMap<String,ModuleFacetBase> existingFacetTypes=new HashMap<String,ModuleFacetBase>();
+  final HashMap<String,SModuleFacet> existingFacetTypes=new HashMap<String,SModuleFacet>();
   for (  final SModuleFacet moduleFacet : myModule.getFacets()) {
-    if (!(moduleFacet instanceof ModuleFacetBase))     continue;
-    existingFacetTypes.put(((ModuleFacetBase)moduleFacet).getFacetType(),(ModuleFacetBase)moduleFacet);
+    existingFacetTypes.put(moduleFacet.getFacetType(),moduleFacet);
   }
-  Set<String> usedLangs=new ModelAccessHelper(myProject.getModelAccess()).runReadAction(new Computable<Set<String>>(){
+  Set<String> applicableFacetTypes=new ModelAccessHelper(myProject.getModelAccess()).runReadAction(new Computable<Set<String>>(){
     @Override public Set<String> compute(){
-      HashSet<String> rv=new HashSet<String>();
-      for (      SLanguage reference : myModule.getUsedLanguages()) {
-        rv.add(reference.getQualifiedName());
-      }
-      return rv;
+      return FacetsFacade.getInstance().getApplicableFacetTypes(myModule.getUsedLanguages());
     }
   }
 );
-  Set<String> applicableFacetTypes=FacetsFacade.getInstance().getApplicableFacetTypes(usedLangs);
   for (  String facet : FacetsFacade.getInstance().getFacetTypes()) {
-    ModuleFacetBase sModuleFacet=existingFacetTypes.get(facet);
+    SModuleFacet sModuleFacet=existingFacetTypes.get(facet);
     if (sModuleFacet == null) {
-      SModuleFacet newInstance=FacetsFacade.getInstance().getFacetFactory(facet).create();
-      sModuleFacet=(ModuleFacetBase)newInstance;
+      sModuleFacet=FacetsFacade.getInstance().getFacetFactory(facet).create();
     }
-    String facetPresentation=sModuleFacet.getFacetPresentation();
+    String facetPresentation=sModuleFacet instanceof ModuleFacetBase ? ((ModuleFacetBase)sModuleFacet).getFacetPresentation() : sModuleFacet.getFacetType();
     String fmt=PropertiesBundle.message("module.facets.checkbox.title");
     facetPresentation=applicableFacetTypes.contains(facet) ? String.format(fmt,facetPresentation) : facetPresentation;
-    FacetCheckBox checkBox=existingFacetTypes.containsKey(facet) ? new FacetCheckBox(AddFacetsTab.this,sModuleFacet,myFacetTabsPersistence.getFacetTab(facet,sModuleFacet),facetPresentation) : new FacetCheckBox(AddFacetsTab.this,facet,facetPresentation);
+    FacetCheckBox checkBox=existingFacetTypes.containsKey(facet) ? new FacetCheckBox(AddFacetsTab.this,sModuleFacet,myFacetTabsPersistence.getFacetTab(sModuleFacet),facetPresentation) : new FacetCheckBox(AddFacetsTab.this,facet,facetPresentation);
     myCheckBoxes.add(checkBox);
   }
   Collections.sort(myCheckBoxes);
