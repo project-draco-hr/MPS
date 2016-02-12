@@ -2,26 +2,21 @@
   if (!(file instanceof MPSNodeVirtualFile)) {
     return null;
   }
-  if (!(ModelAccess.instance().isInEDT())) {
+  if (!(ThreadUtils.isInEDT())) {
     return FileStatus.NOT_CHANGED;
   }
   final MPSNodeVirtualFile nodeFile=(MPSNodeVirtualFile)file;
-  final Wrappers._T<FileStatus> status=new Wrappers._T<FileStatus>(null);
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      SNode root=MPSEditorUtil.getCurrentEditedNode(myProject,nodeFile);
+  return new ModelAccessHelper(myProject.getModelAccess()).runReadAction(new Computable<FileStatus>(){
+    public FileStatus compute(){
+      SNode root=MPSEditorUtil.getCurrentEditedNode(myProject.getProject(),nodeFile);
       if (root == null) {
         root=nodeFile.getNode().getContainingRoot();
       }
-      if (root == null) {
-        return;
+      if (!(SNodeUtil.isAccessible(root,myProject.getRepository()))) {
+        return null;
       }
-      if (SNodeUtil.isAccessible(root,MPSModuleRepository.getInstance())) {
-        return;
-      }
-      status.value=myMapping.getStatus(root);
+      return myMapping.getStatus(root);
     }
   }
 );
-  return status.value;
 }
