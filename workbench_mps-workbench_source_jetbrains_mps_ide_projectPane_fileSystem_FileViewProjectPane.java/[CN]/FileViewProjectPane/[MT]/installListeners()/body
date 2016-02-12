@@ -2,22 +2,21 @@
   FileStatusManager.getInstance(myProject).addFileStatusListener(myFileStatusListener=new FileStatusChangeListener());
   VirtualFileManager.getInstance().addVirtualFileListener(myFileListener=new FileChangesListener());
   VirtualFileManager.getInstance().addVirtualFileManagerListener(myVirtualFileManagerListener=new RefreshListener());
-  myDirectoryMappingListener=new VcsListener(){
+  ChangeListManager.getInstance(myProject).addChangeListListener(myChangeListListener=new ChangeListUpdateListener());
+  myMessageBusConnection=myBus.connect(this);
+  myMessageBusConnection.subscribe(ProjectLevelVcsManager.VCS_CONFIGURATION_CHANGED,new VcsListener(){
     @Override public void directoryMappingChanged(){
       rebuildTreeLater();
     }
   }
-;
-  myProject.getComponent(ProjectLevelVcsManager.class).addVcsListener(myDirectoryMappingListener);
-  ChangeListManager.getInstance(myProject).addChangeListListener(myChangeListListener=new ChangeListUpdateListener());
-  myMessageBusConnection=myBus.connect();
+);
   myMessageBusConnection.subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER,new FileEditorManagerAdapter(){
-    @Override public void fileOpened(    FileEditorManager source,    VirtualFile file){
+    @Override public void fileOpened(    @NotNull FileEditorManager source,    @NotNull VirtualFile file){
       if (myProjectView.isAutoscrollFromSource(getId())) {
         selectNode(file,false);
       }
     }
-    @Override public void selectionChanged(    FileEditorManagerEvent event){
+    @Override public void selectionChanged(    @NotNull FileEditorManagerEvent event){
       if (myProjectView.isAutoscrollFromSource(getId())) {
         VirtualFile newFile=event.getNewFile();
         if (newFile != null) {
