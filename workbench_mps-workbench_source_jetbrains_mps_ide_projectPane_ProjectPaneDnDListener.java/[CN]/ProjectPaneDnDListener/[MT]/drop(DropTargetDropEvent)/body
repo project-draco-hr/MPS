@@ -6,13 +6,18 @@
     return;
   }
   dtde.acceptDrop(dtde.getDropAction());
-  final Project project=MPSDataKeys.PROJECT.getData(DataManager.getInstance().getDataContext());
-  JFrame frame=WindowManager.getInstance().getFrame(project);
+  final DataContext dataContext=DataManager.getInstance().getDataContext(myTree);
+  final MPSProject project=MPSDataKeys.MPS_PROJECT.getData(dataContext);
+  if (project == null) {
+    dtde.rejectDrop();
+    return;
+  }
+  Frame frame=MPSDataKeys.FRAME.getData(dataContext);
   final String targetPackage=(getTargetVirtualPackage(target) == null) ? "" : getTargetVirtualPackage(target);
   String text=getConfirmLabel(sourceNodes.size(),targetPackage);
   int result=JOptionPane.showConfirmDialog(frame,text,"Move Nodes",JOptionPane.YES_NO_OPTION);
   if (result != JOptionPane.YES_OPTION)   return;
-  ModelAccess.instance().runWriteActionInCommand(new Runnable(){
+  project.getModelAccess().executeCommand(new Runnable(){
     @Override public void run(){
       SModel targetModel=getTargetModel(target);
       if (targetModel == null)       return;
@@ -21,7 +26,7 @@
         SNodeAccessUtil.setProperty(sourceNode.o1,SNodeUtil.property_BaseConcept_virtualPackage,fullTargetPack);
         if (SNodeOperations.isInstanceOf(sourceNode.o1,SNodeUtil.concept_AbstractConceptDeclaration)) {
           SNode baseNode=sourceNode.o1;
-          List<RelationDescriptor> tabs=ProjectPluginManager.getApplicableTabs(project,baseNode);
+          List<RelationDescriptor> tabs=ProjectPluginManager.getApplicableTabs(project.getProject(),baseNode);
           for (          RelationDescriptor tab : tabs) {
             if (!tab.isApplicable(baseNode))             continue;
             for (            SNode aspect : tab.getNodes(baseNode)) {

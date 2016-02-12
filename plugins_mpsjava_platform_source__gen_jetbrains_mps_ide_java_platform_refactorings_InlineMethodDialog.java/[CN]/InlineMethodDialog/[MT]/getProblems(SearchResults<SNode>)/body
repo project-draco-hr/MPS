@@ -1,10 +1,22 @@
 {
-  InlineMethodRefactoringAnalyzer analyzer;
-  if (myModel.getMethodCall() == null) {
-    analyzer=new InlineMethodRefactoringAnalyzer(myOperationContext,null,myModel.getMethod());
-  }
+  final StringBuilder sb=new StringBuilder();
+  ProgressManager.getInstance().run(new Task.Modal(getProject(),"Search for overriding methods",true){
+    public void run(    @NotNull final ProgressIndicator pi){
+      myEditorRepo.getModelAccess().runReadAction(new Runnable(){
+        public void run(){
+          InlineMethodRefactoringAnalyzer analyzer;
+          if (myModel.getMethodCall() == null) {
+            analyzer=new InlineMethodRefactoringAnalyzer(null,myModel.getMethod());
+          }
  else {
-    analyzer=new InlineMethodRefactoringAnalyzer(myOperationContext,myModel.getMethodCall().getNode(),myModel.getMethod());
+            analyzer=new InlineMethodRefactoringAnalyzer(myModel.getMethodCall().getNode(),myModel.getMethod());
+          }
+          analyzer.appendProblems(usages,sb,new ProgressMonitorAdapter(pi));
+        }
+      }
+);
+    }
   }
-  return analyzer.findProblems(usages);
+);
+  return sb.toString();
 }
