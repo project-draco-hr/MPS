@@ -1,0 +1,47 @@
+{
+  Rectangle bounds=new Rectangle();
+  int availableWidth=parent.getMaximumSize().width;
+  int currentX=0;
+  int height=0;
+  final int reservedWidthForOverflow=myHorizontalGap + myShowOnOverflowComponent.getWidth();
+  Component[] componentsWithoutOverflow=ArrayUtil.remove(parent.getComponents(),myShowOnOverflowComponent);
+  myShowOnOverflowComponent.setVisible(false);
+  int i=0, length=componentsWithoutOverflow.length;
+  for (; i < length; i++) {
+    Component component=componentsWithoutOverflow[i];
+    if (component == myShowOnOverflowComponent)     continue;
+    int maybeGap=i == 0 ? 0 : myHorizontalGap;
+    int componentWidthWithGap=component.getPreferredSize().width + maybeGap;
+    boolean last=i == length - 1;
+    boolean fits;
+    if (last) {
+      fits=componentWidthWithGap <= availableWidth - currentX;
+    }
+ else {
+      fits=componentWidthWithGap + reservedWidthForOverflow <= availableWidth - currentX;
+    }
+    component.setVisible(fits);
+    if (fits) {
+      bounds.setLocation(currentX + maybeGap,0);
+      bounds.setSize(component.getPreferredSize());
+      component.setBounds(bounds);
+      currentX+=maybeGap + bounds.width;
+      height=Math.max(height,bounds.height);
+    }
+ else {
+      myShowOnOverflowComponent.setVisible(true);
+      bounds.setLocation(currentX + maybeGap,0);
+      bounds.setSize(myShowOnOverflowComponent.getPreferredSize());
+      myShowOnOverflowComponent.setBounds(bounds);
+      currentX+=maybeGap + bounds.width;
+      height=Math.max(height,bounds.height);
+      break;
+    }
+  }
+  parent.setSize(currentX,height);
+  myFitCount=i;
+  for (; i < length; i++) {
+    Component component=componentsWithoutOverflow[i];
+    component.setVisible(false);
+  }
+}
