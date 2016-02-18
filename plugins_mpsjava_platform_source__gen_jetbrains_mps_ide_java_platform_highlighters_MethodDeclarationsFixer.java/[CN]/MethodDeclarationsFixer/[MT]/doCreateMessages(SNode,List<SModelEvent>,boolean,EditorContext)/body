@@ -27,14 +27,14 @@
       @Override public void visitReferenceEvent(      SModelReferenceEvent event){
         SReference reference=event.getReference();
         SNode sourceNode=reference.getSourceNode();
-        if (SNodeOperations.isInstanceOf(sourceNode,MetaAdapterFactory.getInterfaceConcept(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0x11857355952L,"jetbrains.mps.baseLanguage.structure.IMethodCall")) && "baseMethodDeclaration".equals(reference.getRole())) {
+        if (SNodeOperations.isInstanceOf(sourceNode,MetaAdapterFactory.getInterfaceConcept(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0x11857355952L,"jetbrains.mps.baseLanguage.structure.IMethodCall")) && MetaAdapterFactory.getReferenceLink(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0x11857355952L,0xf8c78301adL,"baseMethodDeclaration").equals(reference.getLink())) {
           methodCallDeclarationChanged(SNodeOperations.cast(sourceNode,MetaAdapterFactory.getInterfaceConcept(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0x11857355952L,"jetbrains.mps.baseLanguage.structure.IMethodCall")),reResolvedTargets);
         }
       }
       @Override public void visitPropertyEvent(      SModelPropertyEvent event){
         SNode node=event.getNode();
         SNodeOperations.isInstanceOf(node,MetaAdapterFactory.getConcept(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0xf8cc56b1fcL,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration"));
-        if (SNodeOperations.isInstanceOf(node,MetaAdapterFactory.getConcept(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0xf8cc56b1fcL,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration")) && "name".equals(event.getPropertyName())) {
+        if (SNodeOperations.isInstanceOf(node,MetaAdapterFactory.getConcept(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0xf8cc56b1fcL,"jetbrains.mps.baseLanguage.structure.BaseMethodDeclaration")) && MetaAdapterFactory.getProperty(0xceab519525ea4f22L,0x9b92103b95ca8c0cL,0x110396eaaa4L,0x110396ec041L,"name").getName().equals(event.getPropertyName())) {
           methodDeclarationNameChanged(node,reResolvedTargets);
           methodDeclarationSignatureChanged(node,reResolvedTargets);
         }
@@ -51,28 +51,24 @@
       event.accept(visitor);
     }
   }
-  ThreadUtils.runInUIThreadNoWait(new Runnable(){
-    public void run(){
-      if (reResolvedTargets.isEmpty()) {
-        return;
-      }
-      Project p=(editorContext != null && editorContext.getOperationContext() != null ? editorContext.getOperationContext().getProject() : null);
-      if (p == null) {
-        return;
-      }
-      p.getModelAccess().executeUndoTransparentCommand(new Runnable(){
-        public void run(){
-          for (          SNode methodCall : reResolvedTargets.keySet()) {
-            SNode referent=reResolvedTargets.get(methodCall);
-            if (referent != null && SNodeUtil.isAccessible(referent,MPSModuleRepository.getInstance())) {
-              SLinkOperations.setTarget(methodCall,MetaAdapterFactory.getReferenceLink(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0x11857355952L,0xf8c78301adL,"baseMethodDeclaration"),referent);
+  if (!(reResolvedTargets.isEmpty()) && editorContext != null && editorContext.getRepository() != null) {
+    ThreadUtils.runInUIThreadNoWait(new Runnable(){
+      public void run(){
+        final SRepository repo=editorContext.getRepository();
+        repo.getModelAccess().executeUndoTransparentCommand(new Runnable(){
+          public void run(){
+            for (            SNode methodCall : reResolvedTargets.keySet()) {
+              SNode referent=reResolvedTargets.get(methodCall);
+              if (referent != null && SNodeUtil.isAccessible(referent,repo)) {
+                SLinkOperations.setTarget(methodCall,MetaAdapterFactory.getReferenceLink(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0x11857355952L,0xf8c78301adL,"baseMethodDeclaration"),referent);
+              }
             }
           }
         }
+);
       }
-);
     }
-  }
 );
+  }
   return new HashSet<EditorMessage>();
 }
