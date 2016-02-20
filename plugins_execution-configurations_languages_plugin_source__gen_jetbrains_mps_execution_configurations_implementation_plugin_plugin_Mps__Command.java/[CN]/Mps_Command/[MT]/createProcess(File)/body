@@ -1,3 +1,15 @@
 {
-  return new Java_Command().setVirtualMachineParameter_ProcessBuilderCommandPart(new ListCommandPart(ListSequence.fromListAndArray(new ArrayList(),myVirtualMachineParameters_String,new PropertyCommandPart("idea.system.path",mySystemPath_String),new PropertyCommandPart("idea.config.path",myConfigurationPath_String)))).setDebuggerSettings_String(myDebuggerSettings_String).setWorkingDirectory_File(new File(System.getProperty("user.dir"))).setJrePath_String(myJrePath_String).createProcess(new ListCommandPart(ListSequence.fromListAndArray(new ArrayList(),projectToOpen)),"jetbrains.mps.Launcher",Mps_Command.getClassPath());
+  final boolean runNotLocked=MpsInstanceLock.acquireLock();
+  if (runNotLocked) {
+    ProcessHandler process=new Java_Command().setVirtualMachineParameter_ProcessBuilderCommandPart(new ListCommandPart(ListSequence.fromListAndArray(new ArrayList(),myVirtualMachineParameters_String,new PropertyCommandPart("idea.system.path",mySystemPath_String),new PropertyCommandPart("idea.config.path",myConfigurationPath_String)))).setDebuggerSettings_String(myDebuggerSettings_String).setWorkingDirectory_File(new File(System.getProperty("user.dir"))).setJrePath_String(myJrePath_String).createProcess(new ListCommandPart(ListSequence.fromListAndArray(new ArrayList(),projectToOpen)),"jetbrains.mps.Launcher",Mps_Command.getClassPath());
+    process.addProcessListener(new ProcessAdapter(){
+      @Override public void processTerminated(      ProcessEvent p0){
+        MpsInstanceLock.releaseLock();
+      }
+    }
+);
+  }
+ else {
+    throw new ExecutionException("Only one instance of MPS is allowed to be executed at once.");
+  }
 }
