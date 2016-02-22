@@ -1,2 +1,32 @@
 {
+  FeatureUsageTracker.getInstance().triggerFeatureUsed("navigation.goto.module");
+  final MPSProject mpsProject=((MPSProject)MapSequence.fromMap(_params).get("project"));
+  final BaseModuleModel goToModuleModel=new BaseModuleModel(mpsProject){
+    @Override public SModuleReference[] find(    SearchScope scope){
+      List<SModuleReference> modules=new ArrayList<SModuleReference>();
+      for (      SModule module : scope.getModules()) {
+        if (!((module instanceof Solution || module instanceof Language || module instanceof DevKit))) {
+          continue;
+        }
+        modules.add(module.getModuleReference());
+      }
+      return modules.toArray(new SModuleReference[modules.size()]);
+    }
+  }
+;
+  ChooseByNamePopup popup=MpsPopupFactory.createPackagePopup(mpsProject.getProject(),goToModuleModel,GoToModule_Action.this);
+  popup.invoke(new ChooseByNamePopupComponent.Callback(){
+    private SModuleReference myModuleRef;
+    public void elementChosen(    Object p0){
+      myModuleRef=goToModuleModel.getModelObject(p0);
+    }
+    @Override public void onClose(){
+      SModule module=(myModuleRef == null ? null : myModuleRef.resolve(mpsProject.getRepository()));
+      if (module == null) {
+        return;
+      }
+      ProjectPane.getInstance(mpsProject).selectModule(module,true);
+    }
+  }
+,ModalityState.current(),true);
 }
