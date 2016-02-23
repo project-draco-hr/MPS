@@ -1,20 +1,18 @@
 {
-  BaseMPSChooseModel goToNodeModel=new RootChooseModel(mpsProject);
+  final RootChooseModel goToNodeModel=new RootChooseModel(mpsProject);
   goToNodeModel.setPromptText("Import model that contains root:");
   ChooseByNamePopup popup=MpsPopupFactory.createNodePopup(mpsProject.getProject(),goToNodeModel,initialText,parentAction);
-  popup.invoke(new ChooseByNamePopupComponent.Callback(){
-    @Override public void onClose(){
+  popup.invoke(new AddImportCallback(mpsProject,model){
+    private String myRootName;
+    @Override public void elementChosen(    Object element){
+      NavigationTarget object=goToNodeModel.getModelObject(element);
+      myRootName=object.getPresentation();
+      myModelToImport=object.getNodeReference().getModelReference();
     }
-    @Override public void elementChosen(    final Object element){
-      mpsProject.getModelAccess().runWriteAction(new Runnable(){
-        @Override public void run(){
-          RootNodeElement object=(RootNodeElement)element;
-          new AddModelItem(mpsProject,model,object.getModel()).navigate(true);
-          callback.importForRootAdded(object.getPresentation().getPresentableText());
-        }
-      }
-);
+    @Override public void onClose(){
+      super.onClose();
+      callback.importForRootAdded(myRootName);
     }
   }
-,ModalityState.current(),true);
+,ModalityState.current(),false);
 }
