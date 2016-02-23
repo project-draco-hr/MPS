@@ -1,0 +1,50 @@
+{
+  showPanel(new jetbrains.mps.util.Callback<SModuleReference>(){
+    @Override public void call(    final SModuleReference param){
+      final Set<SModuleReference> importCandidates=new HashSet<SModuleReference>();
+      myProject.getModelAccess().runWriteAction(new Runnable(){
+        @Override public void run(){
+          Language lang=new ModuleRepositoryFacade(myProject).getModule(param,Language.class);
+          HashSet<Language> langs=new HashSet<Language>(LanguageDependenciesManager.getAllExtendedLanguages(lang));
+          langs.remove(lang);
+          langs.remove(BootstrapLanguages.coreLanguage());
+          final Collection<SModuleReference> alreadyImported=SModelOperations.getAllImportedLanguages(model);
+          for (          Language l : langs) {
+            if (alreadyImported.contains(l.getModuleReference())) {
+              continue;
+            }
+            importCandidates.add(l.getModuleReference());
+          }
+        }
+      }
+);
+      final Set<SModuleReference> toImport=new HashSet<SModuleReference>();
+      if (!importCandidates.isEmpty()) {
+        Set<SModuleReference> modules=chooseModulesToImport(importCandidates);
+        if (modules != null) {
+          toImport.addAll(modules);
+        }
+      }
+      toImport.add(param);
+      myProject.getModelAccess().executeCommand(new Runnable(){
+        @Override public void run(){
+          boolean reload=false;
+          final boolean reloadableModule=model.getModule() instanceof ReloadableModule;
+          Set<SLanguage> existingUsedLanguages=reloadableModule ? model.getModule().getUsedLanguages() : Collections.<SLanguage>emptySet();
+          for (          SModuleReference ref : toImport) {
+            final SLanguage rtLanguage=MetaAdapterFactory.getLanguage(ref);
+            if (!existingUsedLanguages.contains(rtLanguage)) {
+              reload=true;
+            }
+            ((jetbrains.mps.smodel.SModelInternal)model).addLanguage(rtLanguage);
+          }
+          if (reloadableModule && reload) {
+            ((ReloadableModule)model.getModule()).reload();
+          }
+        }
+      }
+);
+    }
+  }
+);
+}

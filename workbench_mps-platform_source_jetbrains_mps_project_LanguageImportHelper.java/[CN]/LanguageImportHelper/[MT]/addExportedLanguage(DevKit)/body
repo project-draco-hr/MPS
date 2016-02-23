@@ -1,0 +1,48 @@
+{
+  showPanel(new jetbrains.mps.util.Callback<SModuleReference>(){
+    @Override public void call(    final SModuleReference param){
+      final Set<SModuleReference> importCandidates=new HashSet<SModuleReference>();
+      myProject.getModelAccess().runWriteAction(new Runnable(){
+        @Override public void run(){
+          Language lang=new ModuleRepositoryFacade(myProject).getModule(param,Language.class);
+          HashSet<Language> langs=new HashSet<Language>(LanguageDependenciesManager.getAllExtendedLanguages(lang));
+          langs.remove(lang);
+          langs.remove(BootstrapLanguages.coreLanguage());
+          final Collection<SModuleReference> alreadyImported=new HashSet<SModuleReference>();
+          for (          Language language : devkit.getAllExportedLanguages()) {
+            alreadyImported.add(language.getModuleReference());
+          }
+          for (          Language l : langs) {
+            if (alreadyImported.contains(l.getModuleReference())) {
+              continue;
+            }
+            importCandidates.add(l.getModuleReference());
+          }
+        }
+      }
+);
+      final Set<SModuleReference> toImport=new HashSet<SModuleReference>();
+      if (!importCandidates.isEmpty()) {
+        Set<SModuleReference> modules=chooseModulesToImport(importCandidates);
+        if (modules != null) {
+          toImport.addAll(modules);
+        }
+      }
+      toImport.add(param);
+      myProject.getModelAccess().executeCommand(new Runnable(){
+        @Override public void run(){
+          for (          SModuleReference ref : toImport) {
+            Language lang=((Language)ref.resolve(myProject.getRepository()));
+            if (lang == null) {
+              continue;
+            }
+            devkit.getModuleDescriptor().getExportedLanguages().add(ref);
+            devkit.setChanged();
+          }
+        }
+      }
+);
+    }
+  }
+);
+}
