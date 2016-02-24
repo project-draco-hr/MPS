@@ -1,29 +1,18 @@
 {
-  showPanel(new jetbrains.mps.util.Callback<SModuleReference>(){
-    @Override public void call(    final SModuleReference param){
-      final Set<SModuleReference> importCandidates=new HashSet<SModuleReference>();
-      myProject.getModelAccess().runWriteAction(new Runnable(){
-        @Override public void run(){
-          Language lang=new ModuleRepositoryFacade(myProject).getModule(param,Language.class);
-          HashSet<Language> langs=new HashSet<Language>(LanguageDependenciesManager.getAllExtendedLanguages(lang));
-          langs.remove(lang);
-          langs.remove(BootstrapLanguages.coreLanguage());
-          final Collection<SModuleReference> alreadyImported=SModelOperations.getAllImportedLanguages(model);
-          for (          Language l : langs) {
-            if (alreadyImported.contains(l.getModuleReference())) {
-              continue;
-            }
-            importCandidates.add(l.getModuleReference());
-          }
+  showPanel(new jetbrains.mps.util.Callback<SLanguage>(){
+    @Override public void call(    final SLanguage param){
+      final Set<SLanguage> importCandidates=new ModelAccessHelper(myProject.getModelAccess()).runWriteAction(new Computable<Set<SLanguage>>(){
+        @Override public Set<SLanguage> compute(){
+          Set<SLanguage> langs=getExtendedLanguages(param);
+          final Set<SLanguage> alreadyImported=SModelOperations.getAllLanguageImports(model);
+          langs.removeAll(alreadyImported);
+          return langs;
         }
       }
 );
-      final Set<SModuleReference> toImport=new HashSet<SModuleReference>();
+      final Set<SLanguage> toImport=new HashSet<SLanguage>();
       if (!importCandidates.isEmpty()) {
-        Set<SModuleReference> modules=chooseModulesToImport(importCandidates);
-        if (modules != null) {
-          toImport.addAll(modules);
-        }
+        toImport.addAll(chooseModulesToImport(importCandidates));
       }
       toImport.add(param);
       myProject.getModelAccess().executeCommand(new Runnable(){
@@ -31,8 +20,7 @@
           boolean reload=false;
           final boolean reloadableModule=model.getModule() instanceof ReloadableModule;
           Set<SLanguage> existingUsedLanguages=reloadableModule ? model.getModule().getUsedLanguages() : Collections.<SLanguage>emptySet();
-          for (          SModuleReference ref : toImport) {
-            final SLanguage rtLanguage=MetaAdapterFactory.getLanguage(ref);
+          for (          SLanguage rtLanguage : toImport) {
             if (!existingUsedLanguages.contains(rtLanguage)) {
               reload=true;
             }
