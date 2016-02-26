@@ -1,2 +1,37 @@
 {
+  FeatureUsageTracker.getInstance().triggerFeatureUsed("navigation.goto.model");
+  final MPSProject mpsProject=((MPSProject)MapSequence.fromMap(_params).get("project"));
+  final BaseModelModel goToModelModel=new BaseModelModel(mpsProject){
+    @Override public SModelReference[] find(    SearchScope scope){
+      Condition<SModel> cond=new Condition<SModel>(){
+        @Override public boolean met(        SModel model){
+          boolean rightStereotype=SModelStereotype.isUserModel(model) || SModelStereotype.isStubModel(model);
+          boolean hasModule=model.getModule() != null;
+          return rightStereotype && hasModule;
+        }
+      }
+;
+      ConditionalIterable<SModel> iter=new ConditionalIterable<SModel>(scope.getModels(),cond);
+      List<SModelReference> result=new ArrayList<SModelReference>();
+      for (      SModel md : iter) {
+        result.add(md.getReference());
+      }
+      return result.toArray(new SModelReference[result.size()]);
+    }
+  }
+;
+  ChooseByNamePopup popup=MpsPopupFactory.createPackagePopup(mpsProject.getProject(),goToModelModel,GoToModel_Action.this);
+  popup.setShowListForEmptyPattern(true);
+  popup.invoke(new ChooseByNamePopupComponent.Callback(){
+    private SModelReference myModelRef;
+    public void elementChosen(    Object p0){
+      myModelRef=goToModelModel.getModelObject(p0);
+    }
+    @Override public void onClose(){
+      if (myModelRef != null) {
+        new ProjectPaneNavigator(mpsProject).shallFocus(true).select(myModelRef);
+      }
+    }
+  }
+,ModalityState.current(),false);
 }
