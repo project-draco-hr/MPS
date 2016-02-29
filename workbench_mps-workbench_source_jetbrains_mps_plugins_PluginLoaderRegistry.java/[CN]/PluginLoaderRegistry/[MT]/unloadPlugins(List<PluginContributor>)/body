@@ -1,10 +1,10 @@
 {
-  LOG.debug(String.format("Unloading plugins from %d contributors",contributors.size()));
   if (contributors.isEmpty())   return;
   final List<PluginContributor> contributorsToUnload=new ArrayList<PluginContributor>(contributors);
-  myModelAccess.runWriteInEDT(new Runnable(){
+  Runnable unloadingTask=new Runnable(){
     @Override public void run(){
       long beginTime=System.nanoTime();
+      LOG.info(String.format("Unloading plugins from %d contributors",contributorsToUnload.size()));
       try {
         for (        final PluginLoader listener : myPluginLoaders) {
           listener.unloadPlugins(contributorsToUnload);
@@ -12,8 +12,10 @@
       }
   finally {
         LOG.info(String.format("Unloading of %d plugins took %.3f s",contributorsToUnload.size(),(System.nanoTime() - beginTime) / 1e9));
+        myLoadedContributors.removeAll(contributorsToUnload);
       }
     }
   }
-);
+;
+  ApplicationManager.getApplication().invokeLater(unloadingTask);
 }
