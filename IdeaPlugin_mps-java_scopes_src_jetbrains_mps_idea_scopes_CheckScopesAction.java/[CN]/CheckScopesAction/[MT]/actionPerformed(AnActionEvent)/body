@@ -4,22 +4,20 @@
       long mpsTime=0, ideaTime=0;
       int notEqualMembersCount=0;
       SModel descriptor=SModelFileTracker.getInstance().findModel(myModelFile);
-      for (      SNode root : descriptor.getRootNodes()) {
-        if (LanguageHierarchyCache.isAssignable(root.getConcept().getQualifiedName(),"jetbrains.mps.baseLanguage.structure.Classifier")) {
-          PsiClass clazz=getPsiClass(myProject,root);
-          if (clazz == null) {
-            LOG.warn("PsiClass is null for root node: " + root);
-            continue;
-          }
-          long time=System.currentTimeMillis();
-          Set<String> ideaMembers=new TreeSet<String>(IdeaScopesUtils.getMembersFromClass_New(clazz));
-          ideaTime+=System.currentTimeMillis() - time;
-          time=System.currentTimeMillis();
-          Set<String> mpsMembers=new TreeSet<String>(MpsScopesUtil.getMembersSignatures(root));
-          mpsTime+=System.currentTimeMillis() - time;
-          if (!checkScopesOnEquality(clazz.getQualifiedName(),ideaMembers,mpsMembers)) {
-            notEqualMembersCount++;
-          }
+      for (      SNode root : new ConditionalIterable<SNode>(descriptor.getRootNodes(),new InstanceOfCondition(SNodeUtil.concept_Classifier))) {
+        PsiClass clazz=getPsiClass(myProject,root);
+        if (clazz == null) {
+          LOG.warn("PsiClass is null for root node: " + root);
+          continue;
+        }
+        long time=System.currentTimeMillis();
+        Set<String> ideaMembers=new TreeSet<String>(IdeaScopesUtils.getMembersFromClass_New(clazz));
+        ideaTime+=System.currentTimeMillis() - time;
+        time=System.currentTimeMillis();
+        Set<String> mpsMembers=new TreeSet<String>(MpsScopesUtil.getMembersSignatures(root));
+        mpsTime+=System.currentTimeMillis() - time;
+        if (!checkScopesOnEquality(clazz.getQualifiedName(),ideaMembers,mpsMembers)) {
+          notEqualMembersCount++;
         }
       }
       System.out.printf("Not equal members in %d classifiers; idea time %.4f; mps time %.4f%n",notEqualMembersCount,ideaTime / 1000.0,mpsTime / 1000.0);

@@ -1,0 +1,32 @@
+{
+  final BaseModelModel goToModelModel=new BaseModelModel(myProject){
+    @Override public SModelReference[] find(    SearchScope scope){
+      Condition<SModel> cond=new Condition<SModel>(){
+        @Override public boolean met(        SModel modelDescriptor){
+          boolean rightStereotype=SModelStereotype.isUserModel(modelDescriptor) || SModelStereotype.isStubModel(modelDescriptor);
+          boolean hasModule=modelDescriptor.getModule() != null;
+          return rightStereotype && hasModule;
+        }
+      }
+;
+      ConditionalIterable<SModel> iter=new ConditionalIterable<SModel>(scope.getModels(),cond);
+      List<SModelReference> filteredModelRefs=new ArrayList<SModelReference>();
+      for (      SModel md : iter) {
+        filteredModelRefs.add(md.getReference());
+      }
+      return filteredModelRefs.toArray(new SModelReference[filteredModelRefs.size()]);
+    }
+  }
+;
+  goToModelModel.setPromptText("Import model:");
+  ChooseByNamePopup popup=MpsPopupFactory.createPackagePopup(myProject,goToModelModel,myInitialText);
+  if (myShortcut != null) {
+    popup.setCheckBoxShortcut(myShortcut);
+  }
+  popup.invoke(new AddImportCallback(myProject,model){
+    @Override public void elementChosen(    Object element){
+      myModelToImport=goToModelModel.getModelObject(element);
+    }
+  }
+,ModalityState.current(),false);
+}

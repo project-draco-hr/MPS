@@ -1,0 +1,43 @@
+{
+  showPanel(new jetbrains.mps.util.Callback<SLanguage>(){
+    @Override public void call(    final SLanguage param){
+      final Set<SLanguage> importCandidates=new ModelAccessHelper(myProject.getModelAccess()).runWriteAction(new Computable<Set<SLanguage>>(){
+        @Override public Set<SLanguage> compute(){
+          Set<SLanguage> langs=getExtendedLanguages(param);
+          final Collection<SLanguage> alreadyImported=new HashSet<SLanguage>();
+          for (          Language language : devkit.getAllExportedLanguages()) {
+            alreadyImported.add(MetaAdapterByDeclaration.getLanguage(language));
+          }
+          langs.removeAll(alreadyImported);
+          return langs;
+        }
+      }
+);
+      final Set<SLanguage> toImport=new HashSet<SLanguage>();
+      if (!importCandidates.isEmpty()) {
+        toImport.addAll(chooseModulesToImport(importCandidates));
+      }
+      toImport.add(param);
+      myProject.getModelAccess().executeCommand(new Runnable(){
+        @Override public void run(){
+          for (          SLanguage li : toImport) {
+            SModuleReference ref=moduleRefForLanguage(li);
+            SModule lang=ref.resolve(myProject.getRepository());
+            if (lang instanceof Language) {
+              devkit.getModuleDescriptor().getExportedLanguages().add(ref);
+              devkit.setChanged();
+            }
+          }
+        }
+        private SModuleReference moduleRefForLanguage(        SLanguage lang){
+          String name=lang.getQualifiedName();
+          SLanguageId id=MetaIdHelper.getLanguage(lang);
+          ModuleId moduleId=ModuleId.regular(id.getIdValue());
+          return new ModuleReference(name,moduleId);
+        }
+      }
+);
+    }
+  }
+);
+}

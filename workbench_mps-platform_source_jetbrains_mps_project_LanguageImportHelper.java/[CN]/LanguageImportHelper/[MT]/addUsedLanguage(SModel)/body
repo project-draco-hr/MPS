@@ -1,0 +1,38 @@
+{
+  showPanel(new jetbrains.mps.util.Callback<SLanguage>(){
+    @Override public void call(    final SLanguage param){
+      final Set<SLanguage> importCandidates=new ModelAccessHelper(myProject.getModelAccess()).runWriteAction(new Computable<Set<SLanguage>>(){
+        @Override public Set<SLanguage> compute(){
+          Set<SLanguage> langs=getExtendedLanguages(param);
+          final Set<SLanguage> alreadyImported=SModelOperations.getAllLanguageImports(model);
+          langs.removeAll(alreadyImported);
+          return langs;
+        }
+      }
+);
+      final Set<SLanguage> toImport=new HashSet<SLanguage>();
+      if (!importCandidates.isEmpty()) {
+        toImport.addAll(chooseModulesToImport(importCandidates));
+      }
+      toImport.add(param);
+      myProject.getModelAccess().executeCommand(new Runnable(){
+        @Override public void run(){
+          boolean reload=false;
+          final boolean reloadableModule=model.getModule() instanceof ReloadableModule;
+          Set<SLanguage> existingUsedLanguages=reloadableModule ? model.getModule().getUsedLanguages() : Collections.<SLanguage>emptySet();
+          for (          SLanguage rtLanguage : toImport) {
+            if (!existingUsedLanguages.contains(rtLanguage)) {
+              reload=true;
+            }
+            ((jetbrains.mps.smodel.SModelInternal)model).addLanguage(rtLanguage);
+          }
+          if (reloadableModule && reload) {
+            ((ReloadableModule)model.getModule()).reload();
+          }
+        }
+      }
+);
+    }
+  }
+);
+}

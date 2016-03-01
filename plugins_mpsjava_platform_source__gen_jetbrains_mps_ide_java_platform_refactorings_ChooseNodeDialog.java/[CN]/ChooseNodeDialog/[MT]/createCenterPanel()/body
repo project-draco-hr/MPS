@@ -1,0 +1,54 @@
+{
+  final DefaultMutableTreeNode rootNode=createRootNode();
+  myTree=new SimpleTree(new DefaultTreeModel(rootNode));
+  myTree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+  myTree.setCellRenderer(new ModelTreeCellRenderer());
+  myTree.setRootVisible(false);
+  myTree.setShowsRootHandles(true);
+  new ModelTreeBuilder(myTree){
+    @Override protected void initTreeNode(    final ModelTreeNode node){
+      if (node.getUserObject() instanceof SModel) {
+        myProject.getModelAccess().runReadInEDT(new Runnable(){
+          @Override public void run(){
+            initModelDescriptorNode(node,(SModel)node.getUserObject());
+          }
+        }
+);
+      }
+    }
+    private void initModelDescriptorNode(    ModelTreeNode node,    SModel descriptor){
+      SModel sModel=descriptor;
+      for (      SNode nextRoot : Sequence.fromIterable(ModelTreeBuilder.sortChildNodes(ListSequence.fromList(jetbrains.mps.lang.smodel.generator.smodelAdapter.SModelOperations.roots(sModel,MetaAdapterFactory.getConcept(0xceab519525ea4f22L,0x9b92103b95ca8c0cL,0x10802efe25aL,"jetbrains.mps.lang.core.structure.BaseConcept"))).where(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode it){
+          return isAcceptable(it);
+        }
+      }
+)))) {
+        ModelTreeNode modelRootTreeNode=ModelTreeBuilder.createSNodeTreeNode(nextRoot);
+        modelRootTreeNode.setLeafPosition(true);
+        ModelTreeBuilder.insertChildSNodeTreeNode(node,modelRootTreeNode,SPropertyOperations.getString(nextRoot,MetaAdapterFactory.getProperty(0xceab519525ea4f22L,0x9b92103b95ca8c0cL,0x10802efe25aL,0x115eca8579fL,"virtualPackage")));
+      }
+      notifyNodeStructureChanged(node);
+    }
+  }
+;
+  myTree.getSelectionModel().addTreeSelectionListener(new TreeSelectionListener(){
+    @Override public void valueChanged(    TreeSelectionEvent event){
+      Object selectedNode=event.getPath().getLastPathComponent();
+      if (selectedNode instanceof ModelTreeNode) {
+        ModelTreeNode treeNode=((ModelTreeNode)selectedNode);
+        if (treeNode.getUserObject() instanceof SNodeReference) {
+          mySelectedNode=((SNodePointer)treeNode.getUserObject());
+          getOKAction().setEnabled(true);
+          return;
+        }
+      }
+      getOKAction().setEnabled(false);
+      mySelectedNode=null;
+    }
+  }
+);
+  JScrollPane scrollPane=ScrollPaneFactory.createScrollPane(myTree);
+  scrollPane.setPreferredSize(new Dimension(700,500));
+  return scrollPane;
+}
