@@ -1,0 +1,26 @@
+{
+  if (getLoadingState() == ModelLoadingState.FULLY_LOADED) {
+    return;
+  }
+synchronized (myLoadLock) {
+    if (myIsLoadInProgress) {
+      return;
+    }
+    ModelLoadingState oldState=getLoadingState();
+    if (oldState == ModelLoadingState.FULLY_LOADED) {
+      return;
+    }
+    SModel mi=getSModelInternal();
+    try {
+      myIsLoadInProgress=true;
+      mi.enterUpdateMode();
+      JavaParser.tryResolveUnknowns(MapSequence.fromMap(myRootsById).values());
+      setLoadingState(ModelLoadingState.FULLY_LOADED);
+      fireModelStateChanged(oldState,ModelLoadingState.FULLY_LOADED);
+    }
+  finally {
+      mi.leaveUpdateMode();
+      myIsLoadInProgress=false;
+    }
+  }
+}

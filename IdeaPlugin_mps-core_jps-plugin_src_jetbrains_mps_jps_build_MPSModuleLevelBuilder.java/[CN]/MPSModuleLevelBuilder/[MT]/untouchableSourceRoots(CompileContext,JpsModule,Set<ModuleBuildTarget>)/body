@@ -1,0 +1,28 @@
+{
+  Set<File> result=new HashSet<File>();
+  BuildRootIndex buildRootIndex=compileContext.getProjectDescriptor().getBuildRootIndex();
+  ModuleExcludeIndex moduleIndex=compileContext.getProjectDescriptor().getModuleExcludeIndex();
+  for (  ModuleBuildTarget target : targets) {
+    for (    BuildRootDescriptor buildRoot : buildRootIndex.getTargetRoots(target,compileContext)) {
+      File buildRootDir=buildRoot.getRootFile();
+      boolean isGenerated=buildRoot.isGenerated();
+      if (!isGenerated) {
+        for (        JpsModuleSourceRoot sourceRoot : jpsModule.getSourceRoots()) {
+          if (!sourceRoot.getFile().equals(buildRootDir)) {
+            continue;
+          }
+          JavaSourceRootProperties p1=sourceRoot.getProperties(JavaSourceRootType.SOURCE);
+          JavaSourceRootProperties p2=sourceRoot.getProperties(JavaSourceRootType.TEST_SOURCE);
+          isGenerated|=p1 != null && p1.isForGeneratedSources();
+          isGenerated|=p2 != null && p2.isForGeneratedSources();
+        }
+      }
+      if (!isGenerated) {
+        if (moduleIndex.isInContent(buildRootDir) && !moduleIndex.isExcluded(buildRootDir)) {
+          result.add(buildRootDir);
+        }
+      }
+    }
+  }
+  return result;
+}

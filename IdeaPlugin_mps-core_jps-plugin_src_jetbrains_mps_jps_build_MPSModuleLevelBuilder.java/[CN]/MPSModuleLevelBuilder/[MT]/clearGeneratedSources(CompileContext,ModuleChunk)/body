@@ -1,0 +1,38 @@
+{
+  for (  JpsModule jpsModule : moduleChunk.getModules()) {
+    JpsMPSModuleExtension extension=JpsMPSExtensionService.getInstance().getExtension(jpsModule);
+    if (extension == null) {
+      continue;
+    }
+    File outputDir=new File(extension.getConfiguration().getGeneratorOutputPath());
+    if (!outputDir.exists()) {
+      continue;
+    }
+    Set<File> sourceRootsToKeep=untouchableSourceRoots(compileContext,jpsModule,moduleChunk.getTargets());
+    boolean okToDelete=true;
+    ModuleExcludeIndex moduleIndex=compileContext.getProjectDescriptor().getModuleExcludeIndex();
+    if (!moduleIndex.isExcluded(outputDir)) {
+      if (JpsPathUtil.isUnder(sourceRootsToKeep,outputDir)) {
+        okToDelete=false;
+      }
+ else {
+        final Set<File> _outRoot=Collections.singleton(outputDir);
+        for (        File srcRoot : sourceRootsToKeep) {
+          if (JpsPathUtil.isUnder(_outRoot,srcRoot)) {
+            okToDelete=false;
+            break;
+          }
+        }
+      }
+    }
+    if (!okToDelete) {
+      LOG.warn("Not cleaning generator output path " + outputDir.getPath() + " because user files may be there. Either mark it as generated or exclude from module");
+      return;
+    }
+    List<String> deleted=new ArrayList<String>();
+    BuildOperations.deleteRecursively(extension.getConfiguration().getGeneratorOutputPath(),deleted,null);
+    compileContext.processMessage(new FileDeletedEvent(deleted));
+    ProjectBuilderLogger logger=compileContext.getLoggingManager().getProjectBuilderLogger();
+    logger.logDeletedFiles(deleted);
+  }
+}
