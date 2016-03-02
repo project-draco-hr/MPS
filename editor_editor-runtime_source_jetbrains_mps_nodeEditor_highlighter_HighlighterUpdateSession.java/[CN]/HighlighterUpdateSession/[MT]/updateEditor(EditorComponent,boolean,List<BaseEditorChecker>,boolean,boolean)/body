@@ -6,7 +6,7 @@
     final LinkedHashSet<EditorMessage> messages=new LinkedHashSet<EditorMessage>();
     boolean changed=runLoPrioRead(new Computable<Boolean>(){
       @Override public Boolean compute(){
-        if (myStopThread || myCancellable.isCancelled())         return false;
+        if (myHighlighter.isStopping() || myCancellable.isCancelled())         return false;
         SNode node=editor.getEditedNode();
         if (node == null)         return false;
         if (!SNodeUtil.isAccessible(node,MPSModuleRepository.getInstance())) {
@@ -16,7 +16,7 @@
         IOperationContext operationContext=editor.getOperationContext();
         if (operationContext.isValid()) {
           try {
-            messages.addAll(checker.createMessagesProtected(node,events,wasCheckedOnce,editorContext,myCancellable,applyQuickFixes));
+            messages.addAll(checker.createMessagesProtected(node,myEvents,wasCheckedOnce,editorContext,myCancellable,applyQuickFixes));
             return checker.areMessagesChangedProtected();
           }
  catch (          IndexNotReadyException ex) {
@@ -29,7 +29,7 @@
       }
     }
 );
-    if (myStopThread)     return false;
+    if (myHighlighter.isStopping())     return false;
     if (editor instanceof InspectorEditorComponent && recreateInspectorMessages) {
       changed=true;
     }
@@ -41,21 +41,21 @@
       }
     }
   }
-  for (  final BaseEditorChecker checker : checkersToRemove) {
+  for (  final BaseEditorChecker checker : myCheckersToRemove) {
     EditorMessageOwner owner=ModelAccess.instance().runReadAction(new Computable<EditorMessageOwner>(){
       @Override public EditorMessageOwner compute(){
-        if (myStopThread)         return null;
+        if (myHighlighter.isStopping())         return null;
         SNode node=editor.getEditedNode();
         if (node == null)         return null;
         return checker;
       }
     }
 );
-    if (myStopThread)     return false;
+    if (myHighlighter.isStopping())     return false;
     highlightManager.clearForOwner(owner,false);
     anyMessageChanged=true;
   }
-  if (myStopThread)   return false;
+  if (myHighlighter.isStopping())   return false;
   if (anyMessageChanged) {
     highlightManager.repaintAndRebuildEditorMessages();
     editor.updateStatusBarMessage();

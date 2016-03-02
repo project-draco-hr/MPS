@@ -1,0 +1,40 @@
+{
+  if (myCheckers.isEmpty() && myCheckersToRemove.isEmpty()) {
+    return;
+  }
+  List<Pair<EditorComponent,Boolean>> input=new ArrayList<Pair<EditorComponent,Boolean>>();
+  HashSet<SNodePointer> visited=new HashSet<SNodePointer>();
+  for (  EditorComponent ecomp : myAllEditorComponents) {
+    SNodePointer pointer=new SNodePointer(ecomp.getNodeForTypechecking());
+    input.add(new Pair<EditorComponent,Boolean>(ecomp,!visited.contains(pointer)));
+    visited.add(pointer);
+  }
+  final boolean[] isUpdated={false};
+  for (  Pair<EditorComponent,Boolean> pair : input) {
+    final EditorComponent editorComponent=pair.o1;
+    final Boolean applyQuickFixes=pair.o2;
+    if (myHighlighter.isStopping() || myCancellable.isCancelled()) {
+      return;
+    }
+    TypeContextManager.getInstance().runTypecheckingAction(editorComponent.getTypecheckingContextOwner(),new Runnable(){
+      @Override public void run(){
+        if (updateEditorComponent(editorComponent,false,applyQuickFixes)) {
+          isUpdated[0]=true;
+        }
+      }
+    }
+);
+  }
+  if (myHighlighter.isStopping() || myCancellable.isCancelled()) {
+    return;
+  }
+  final EditorComponent inspector=myHighlighter.getInspector();
+  if (inspector != null) {
+    TypeContextManager.getInstance().runTypecheckingAction(inspector.getTypecheckingContextOwner(),new Runnable(){
+      @Override public void run(){
+        updateEditorComponent(inspector,isUpdated[0],false);
+      }
+    }
+);
+  }
+}
