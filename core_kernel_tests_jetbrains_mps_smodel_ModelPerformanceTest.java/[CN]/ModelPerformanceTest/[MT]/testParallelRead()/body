@@ -5,6 +5,7 @@
   myTestModelAccess.enableRead();
   m1f.attachTo(myTestRepo);
   final long baselineMillis=500 * 2;
+  ourStats.report("multiThreadBaselineMillis",baselineMillis);
   final int parallelThreads=4;
   final CountDownLatch stopLatch=new CountDownLatch(3);
   CyclicBarrier b=new CyclicBarrier(parallelThreads,new Runnable(){
@@ -21,6 +22,8 @@
   boolean finishOk=stopLatch.await(10,TimeUnit.SECONDS);
   if (finishOk) {
     final int expectedNodeCount=3 * initialNodeCount;
+    long averageElapsedMillis=0;
+    long minElapsedMillis=Long.MAX_VALUE, maxElapsedMillis=0;
     for (int i=0; i < parallelThreads; i++) {
       myErrors.checkThat(threads[i].getName(),threads[i].getAllThreadListenerCount(),equalTo(expectedNodeCount * parallelThreads));
       myErrors.checkThat(threads[i].getName(),threads[i].getThisThreadCount1(),equalTo(expectedNodeCount));
@@ -49,7 +52,18 @@
         }
       }
 );
+      averageElapsedMillis+=threads[i].getElapsedMillis();
+      if (threads[i].getElapsedMillis() < minElapsedMillis) {
+        minElapsedMillis=threads[i].getElapsedMillis();
+      }
+      if (threads[i].getElapsedMillis() > maxElapsedMillis) {
+        maxElapsedMillis=threads[i].getElapsedMillis();
+      }
     }
+    averageElapsedMillis/=parallelThreads;
+    ourStats.report("multiThreadAverageMillis",averageElapsedMillis);
+    ourStats.report("multiThreadMaxMillis",maxElapsedMillis);
+    ourStats.report("multiThreadMinMillis",minElapsedMillis);
     return;
   }
   for (int i=0; i < parallelThreads; i++) {
