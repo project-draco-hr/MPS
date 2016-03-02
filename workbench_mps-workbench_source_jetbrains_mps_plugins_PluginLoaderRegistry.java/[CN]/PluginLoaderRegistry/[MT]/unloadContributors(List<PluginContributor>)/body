@@ -1,0 +1,31 @@
+{
+  myModelAccess.checkWriteAccess();
+  if (contributors.isEmpty())   return;
+  final List<PluginContributor> contributorsToUnload=new ArrayList<PluginContributor>(contributors);
+  for (  PluginContributor contributor : contributors) {
+    if (!myContributorsToBeLoaded.contains(contributor)) {
+      LOG.warn("Trying to unload twice the plugin contributor " + contributor + ". Ignoring the request.");
+      contributorsToUnload.remove(contributor);
+    }
+  }
+synchronized (myPluginLoadersLock) {
+    final List<PluginLoader> pluginLoaders=new ArrayList<PluginLoader>(myPluginLoaders);
+    Runnable unloadingTask=new Runnable(){
+      @Override public void run(){
+        long beginTime=System.nanoTime();
+        LOG.info(String.format("Unloading plugins from %d contributors",contributorsToUnload.size()));
+        try {
+          for (          final PluginLoader listener : pluginLoaders) {
+            listener.unloadPlugins(contributorsToUnload);
+          }
+        }
+  finally {
+          LOG.info(String.format("Unloading of %d plugins took %.3f s",contributorsToUnload.size(),(System.nanoTime() - beginTime) / 1e9));
+        }
+      }
+    }
+;
+    ApplicationManager.getApplication().invokeLater(unloadingTask,ModalityState.any());
+    myContributorsToBeLoaded.removeAll(contributors);
+  }
+}

@@ -1,0 +1,31 @@
+{
+  myModelAccess.checkWriteAccess();
+  if (contributors.isEmpty())   return;
+  final List<PluginContributor> contributorsToLoad=new ArrayList<PluginContributor>(contributors);
+  for (  PluginContributor contributor : contributors) {
+    if (myContributorsToBeLoaded.contains(contributor)) {
+      LOG.warn("Trying to load twice the plugin contributor " + contributor + ". Ignoring the request.");
+      contributorsToLoad.remove(contributor);
+    }
+  }
+synchronized (myPluginLoadersLock) {
+    final List<PluginLoader> pluginLoaders=new ArrayList<PluginLoader>(myPluginLoaders);
+    Runnable loadingTask=new Runnable(){
+      @Override public void run(){
+        final long beginTime=System.nanoTime();
+        LOG.info(String.format("Loading plugins from %d contributors",contributorsToLoad.size()));
+        try {
+          for (          final PluginLoader listener : pluginLoaders) {
+            listener.loadPlugins(contributorsToLoad);
+          }
+        }
+  finally {
+          LOG.info(String.format("Loading of %d plugins took %.3f s",contributorsToLoad.size(),(System.nanoTime() - beginTime) / 1e9));
+        }
+      }
+    }
+;
+    ApplicationManager.getApplication().invokeLater(loadingTask,ModalityState.any());
+    myContributorsToBeLoaded.addAll(contributors);
+  }
+}
