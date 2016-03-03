@@ -1,17 +1,35 @@
 {
-{
-    final SearchScope scope=CommandUtil.createScope(myProject);
-    QueryExecutionContext context=new QueryExecutionContext(){
-      public SearchScope getDefaultSearchScope(){
-        return scope;
-      }
+  final List<SModule>[] modules=new List[1];
+  myProject.getRepository().getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      modules[0]=Sequence.fromIterable(MigrationsUtil.getMigrateableModulesFromProject(myProject)).toListSequence();
     }
-;
-    Sequence.fromIterable(CommandUtil.modules(CommandUtil.createConsoleScope(null,false,context))).visitAll(new IVisitor<SModule>(){
-      public void visit(      SModule it){
-        RunMigration.this.myScript.execute(it);
-      }
-    }
-);
   }
+);
+  ProgressManager.getInstance().run(new Task.Modal(myProject.getProject(),"Run Migration",true){
+    public void run(    @NotNull ProgressIndicator progressIndicator){
+      ProgressMonitorAdapter progressMonitor=new ProgressMonitorAdapter(progressIndicator);
+      int steps=modules[0].size();
+      progressMonitor.start(myScript.getCaption(),steps);
+      for (      final SModule module : ListSequence.fromList(modules[0])) {
+        progressMonitor.step(module.getModuleName());
+        WaitForProgressToShow.runOrInvokeAndWaitAboveProgress(new Runnable(){
+          public void run(){
+            RunMigration.this.myProject.getRepository().getModelAccess().executeCommand(new Runnable(){
+              public void run(){
+                myScript.execute(module);
+              }
+            }
+);
+          }
+        }
+);
+        progressMonitor.advance(1);
+        if (progressMonitor.isCanceled()) {
+          break;
+        }
+      }
+    }
+  }
+);
 }
