@@ -1,0 +1,50 @@
+{
+  if (!against.getConcept().isSubConceptOf(pattern.getConcept())) {
+    return false;
+  }
+  Map<SProperty,String> prop2var=myPropertyToVariableName == null ? Collections.<SProperty,String>emptyMap() : myPropertyToVariableName;
+  for (  SProperty p : pattern.getProperties()) {
+    if (prop2var.containsKey(p)) {
+      getValues().put(prop2var.get(p),against.getProperty(p));
+    }
+ else {
+      if (!pattern.getProperty(p).equals(against.getProperty(p))) {
+        return false;
+      }
+    }
+  }
+  final Map<SReferenceLink,String> ref2var=myReferenceToVariableName == null ? Collections.<SReferenceLink,String>emptyMap() : myReferenceToVariableName;
+  for (  SReference r : pattern.getReferences()) {
+    SReference r2=against.getReference(r.getLink());
+    SNodeReference actualTarget=r2 == null ? null : r2.getTargetNodeReference();
+    if (ref2var.containsKey(r.getLink())) {
+      getValues().put(ref2var.get(r.getLink()),actualTarget);
+    }
+ else {
+      final SNodeReference expectedTarget=r.getTargetNodeReference();
+      if (!expectedTarget.equals(actualTarget)) {
+        return false;
+      }
+    }
+  }
+  ArrayList<SContainmentLink> knownChildRoles=new ArrayList<SContainmentLink>();
+  for (SNode child=pattern.getFirstChild(); child != null; child=child.getNextSibling()) {
+    final SContainmentLink cl=child.getContainmentLink();
+    if (!knownChildRoles.contains(cl)) {
+      knownChildRoles.add(cl);
+    }
+  }
+  final Map<SContainmentLink,ChildMatcher> ce=myChildExtractors == null ? Collections.<SContainmentLink,ChildMatcher>emptyMap() : myChildExtractors;
+  final ChildMatcher defaultChildExtractor=new ChildMatcher(this);
+  for (  SContainmentLink l : knownChildRoles) {
+    ChildMatcher childExtractor=ce.get(l);
+    if (childExtractor == null) {
+      childExtractor=defaultChildExtractor;
+    }
+    if (!childExtractor.match(IterableUtil.asList(pattern.getChildren(l)),IterableUtil.asList(against.getChildren(l)))) {
+      return false;
+    }
+    ;
+  }
+  return true;
+}
