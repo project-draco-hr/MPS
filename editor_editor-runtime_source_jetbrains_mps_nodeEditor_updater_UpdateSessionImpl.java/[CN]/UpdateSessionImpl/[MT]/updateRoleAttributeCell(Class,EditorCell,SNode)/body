@@ -5,7 +5,13 @@
   final EditorContext editorContext=getUpdater().getEditorContext();
   editorContext.getCellFactory().pushCellContext();
   editorContext.getCellFactory().removeCellContextHints(EditorCellFactoryImpl.BASE_REFLECTIVE_EDITOR_HINT);
-  myCurrentUpdateInfo=myCurrentUpdateInfo.insertNewParent(new UpdateInfoNode(ReferencedNodeContext.createNodeAttributeContext(roleAttribute)));
+  final boolean isNodeAttribute=attributeKind == Node.class;
+  if (isNodeAttribute) {
+    myCurrentUpdateInfo=myCurrentUpdateInfo.insertNewParent(new UpdateInfoNode(ReferencedNodeContext.createNodeAttributeContext(roleAttribute)));
+  }
+ else {
+    myCurrentUpdateInfo=new UpdateInfoNode(getCurrentContext().sameContextButAnotherNode(roleAttribute),myCurrentUpdateInfo);
+  }
   try {
     return runWithExplicitEditorHints(editorContext,roleAttribute,new Computable<EditorCell>(){
       @Override public EditorCell compute(){
@@ -16,5 +22,8 @@
   }
   finally {
     editorContext.getCellFactory().popCellContext();
+    if (!isNodeAttribute) {
+      myCurrentUpdateInfo=myCurrentUpdateInfo.getParent();
+    }
   }
 }
