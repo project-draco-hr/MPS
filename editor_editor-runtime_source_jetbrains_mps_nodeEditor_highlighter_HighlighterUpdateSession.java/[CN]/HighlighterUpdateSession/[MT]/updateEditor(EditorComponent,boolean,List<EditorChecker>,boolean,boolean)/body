@@ -1,0 +1,42 @@
+{
+  if (editor == null || editor.getRootCell() == null)   return false;
+  final NodeHighlightManager highlightManager=editor.getHighlightManager();
+  boolean anyMessageChanged=false;
+  for (  final EditorChecker checker : checkersToRecheck) {
+    Pair<Collection<EditorMessage>,Boolean> checkResult=runLoPrioRead(new Computable<Pair<Collection<EditorMessage>,Boolean>>(){
+      @Override public Pair<Collection<EditorMessage>,Boolean> compute(){
+        if (myHighlighter.isPausedOrStopping())         return CHECK_ABORTED;
+        SNode node=editor.getEditedNode();
+        if (node == null)         return CHECK_ABORTED;
+        if (!SNodeUtil.isAccessible(node,MPSModuleRepository.getInstance())) {
+          return null;
+        }
+        if (!editor.getOperationContext().isValid()) {
+          return CHECK_ABORTED;
+        }
+        try {
+          return checker.update(editor,wasCheckedOnce,applyQuickFixes,new HighlighterUpdateSessionCancellable(myHighlighter,checker.toString(),editor));
+        }
+ catch (        IndexNotReadyException ex) {
+          highlightManager.clearForOwner(checker.getEditorMessageOwner(),true);
+          throw ex;
+        }
+      }
+    }
+);
+    if (myHighlighter.isStopping())     return false;
+    if (checkResult.o2 || (myHighlighter.getEditorTracker().isInspector(editor) && recreateInspectorMessages)) {
+      anyMessageChanged=true;
+      highlightManager.clearForOwner(checker.getEditorMessageOwner(),false);
+      for (      EditorMessage message : checkResult.o1) {
+        highlightManager.mark(message);
+      }
+    }
+  }
+  if (myHighlighter.isStopping())   return false;
+  if (anyMessageChanged) {
+    highlightManager.repaintAndRebuildEditorMessages();
+    editor.updateStatusBarMessage();
+  }
+  return anyMessageChanged;
+}
