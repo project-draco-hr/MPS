@@ -1,26 +1,16 @@
 {
-  final List<SModelEvent> events=new ArrayList<SModelEvent>();
-synchronized (EVENTS_LOCK) {
-    events.addAll(myLastEvents);
-    myLastEvents.clear();
-  }
-  final Set<BaseEditorChecker> checkers=new LinkedHashSet<BaseEditorChecker>();
+  processEvents();
+  final Set<EditorChecker> checkers=new LinkedHashSet<EditorChecker>();
   if (!EditorSettings.getInstance().isPowerSaveMode() || myForceUpdateInPowerSaveModeFlag) {
     checkers.addAll(myCheckers);
     myForceUpdateInPowerSaveModeFlag=false;
   }
   final List<EditorComponent> activeEditors=myEditorList.getActiveEditorsInEDT();
-  runUpdateMessagesAction(new Runnable(){
-    @Override public void run(){
-      if (EditorSettings.getInstance().isPowerSaveMode()) {
-        myCheckedOnceEditors.clear();
-        myInspectorMessagesCreated=false;
-      }
- else {
-        cleanupCheckedOnce(activeEditors);
-      }
-    }
+  if (EditorSettings.getInstance().isPowerSaveMode()) {
+    myEditorTracker.markEverythingUnchecked();
   }
-);
-  return new HighlighterUpdateSession(Highlighter.this,essentialOnly,events,checkers,activeEditors);
+ else {
+    myEditorTracker.markOnlyEditorsChecked(activeEditors);
+  }
+  return new HighlighterUpdateSession(Highlighter.this,essentialOnly,checkers,activeEditors);
 }
