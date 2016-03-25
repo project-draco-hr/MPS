@@ -1,8 +1,20 @@
 {
   if (childConcept == SNodeUtil.concept_BaseConcept.getDeclarationNode()) {
     if ((currentChild == null || currentChild.getConcept().equals(SNodeUtil.concept_BaseConcept))) {
-      ISearchScope conceptsSearchScope=SModelSearchUtil.createConceptsFromModelLanguagesScope(parentNode.getModel(),true);
-      List<SNode> allVisibleConcepts=conceptsSearchScope.getNodes();
+      final SModel model=parentNode.getModel();
+      LanguageRegistry lr=LanguageRegistry.getInstance(model.getRepository());
+      ArrayList<SNode> allVisibleConcepts=new ArrayList<SNode>(100);
+      for (      SLanguage l : new SLanguageHierarchy(lr,SModelOperations.getAllLanguageImports(model)).getExtended()) {
+        for (        SAbstractConcept c : l.getConcepts()) {
+          if (c.isAbstract()) {
+            continue;
+          }
+          SNode conceptDeclNode=c.getDeclarationNode();
+          if (conceptDeclNode != null) {
+            allVisibleConcepts.add(conceptDeclNode);
+          }
+        }
+      }
       List<SubstituteAction> resultActions=new ArrayList<SubstituteAction>(allVisibleConcepts.size());
       for (      final SNode visibleConcept : allVisibleConcepts) {
         resultActions.add(new DefaultChildNodeSubstituteAction(visibleConcept,parentNode,currentChild,childSetter){
