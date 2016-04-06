@@ -1,26 +1,31 @@
 {
-  if (wasMoved) {
-    return false;
+  myIsValid=isValid();
+  if (!(myIsValid)) {
+    throw new IllegalStateException("IntelligentNodeMover has invalid state. Nodes to move have different parents of different containment links");
   }
-  myEditorContext.getRepository().getModelAccess().executeCommand(new EditorCommand(myEditorContext){
-    protected void doExecute(){
-      myIsValid=isValid();
-      if (!(myIsValid)) {
-        return;
-      }
+  ComputeRunnable<Boolean> mover=new ModelComputeRunnable<Boolean>(new Computable<Boolean>(){
+    public Boolean compute(){
       IntelligentNodeMover.PlaceToMove placeToMove=findPlaceToMove();
-      if (placeToMove != null) {
-        Iterable<SNode> intersection=ListSequence.fromList(SNodeOperations.getNodeAncestors(placeToMove.myParent,null,false)).intersect(CollectionSequence.fromCollection(myNodesToMove));
-        if (Sequence.fromIterable(intersection).isNotEmpty()) {
-          SNode first=Sequence.fromIterable(intersection).first();
-          LOG.error("Possible creation of cyclic tree. Node [\"" + first + "\"; concept: "+ SNodeOperations.getConcept(first)+ "; id: "+ first.getNodeId()+ "] is supposed to be moved inside itself. Moving was cancelled");
-          return;
-        }
-        doMove(placeToMove);
-        wasMoved=true;
+      if (placeToMove == null) {
+        return false;
       }
-      if (wasMoved) {
-        myEditorContext.flushEvents();
+      Iterable<SNode> intersection=ListSequence.fromList(SNodeOperations.getNodeAncestors(placeToMove.myParent,null,false)).intersect(CollectionSequence.fromCollection(myNodesToMove));
+      if (Sequence.fromIterable(intersection).isNotEmpty()) {
+        SNode first=Sequence.fromIterable(intersection).first();
+        LOG.error("Possible creation of cyclic tree. Node [\"" + first + "\"; concept: "+ SNodeOperations.getConcept(first)+ "; id: "+ first.getNodeId()+ "] is supposed to be moved inside itself. Moving was cancelled");
+        return false;
+      }
+      doMove(placeToMove);
+      return true;
+    }
+  }
+);
+  myEditorContext.getRepository().getModelAccess().executeCommand(new EditorCommandAdapter(mover,myEditorContext));
+  boolean result=mover.getResult();
+  if (result) {
+    myEditorContext.flushEvents();
+    myEditorContext.getRepository().getModelAccess().runReadAction(new Runnable(){
+      public void run(){
         if (CollectionSequence.fromCollection(myNodesToMove).count() == 1) {
           myEditorContext.select(getBoundaryNode());
         }
@@ -30,7 +35,7 @@
         }
       }
     }
-  }
 );
-  return wasMoved;
+  }
+  return result;
 }
