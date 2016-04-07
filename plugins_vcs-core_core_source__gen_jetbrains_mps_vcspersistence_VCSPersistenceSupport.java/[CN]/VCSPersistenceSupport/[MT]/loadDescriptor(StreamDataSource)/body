@@ -1,13 +1,27 @@
 {
   final SModelHeader result=new SModelHeader();
-  loadDescriptor(result,source);
-  if (result.getPersistenceVersion() < 7 && source instanceof FileDataSource) {
-    Map<String,String> metadata=loadMetadata(((FileDataSource)source).getFile());
-    if (metadata != null) {
-      if (metadata.containsKey(SModelHeader.DO_NOT_GENERATE)) {
-        result.setDoNotGenerate(Boolean.parseBoolean(metadata.remove(SModelHeader.DO_NOT_GENERATE)));
+  final Wrappers._T<ModelReadException> ex=new Wrappers._T<ModelReadException>(null);
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      try {
+        loadDescriptor(result,source);
+        if (result.getPersistenceVersion() < 7 && source instanceof FileDataSource) {
+          Map<String,String> metadata=loadMetadata(((FileDataSource)source).getFile());
+          if (metadata != null) {
+            if (metadata.containsKey(SModelHeader.DO_NOT_GENERATE)) {
+              result.setDoNotGenerate(Boolean.parseBoolean(metadata.remove(SModelHeader.DO_NOT_GENERATE)));
+            }
+          }
+        }
+      }
+ catch (      ModelReadException e) {
+        ex.value=e;
       }
     }
+  }
+);
+  if (ex.value != null) {
+    throw ex.value;
   }
   return result;
 }
