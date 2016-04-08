@@ -1,10 +1,24 @@
 {
-  try {
-    SModelHeader header=loadDescriptor(new InputSource(new StringReader(content)));
-    ModelLoadingState state=(interfaceOnly ? ModelLoadingState.INTERFACE_LOADED : ModelLoadingState.FULLY_LOADED);
-    return (DefaultSModel)readModel(header,new InputSource(new StringReader(content)),state).getModel();
+  final Wrappers._T<DefaultSModel> result=new Wrappers._T<DefaultSModel>();
+  final Wrappers._T<ModelReadException> ex=new Wrappers._T<ModelReadException>(null);
+  ModelAccess.instance().runReadAction(new Runnable(){
+    public void run(){
+      try {
+        SModelHeader header=loadDescriptor(new InputSource(new StringReader(content)));
+        ModelLoadingState state=(interfaceOnly ? ModelLoadingState.INTERFACE_LOADED : ModelLoadingState.FULLY_LOADED);
+        result.value=(DefaultSModel)readModel(header,new InputSource(new StringReader(content)),state).getModel();
+      }
+ catch (      IOException e) {
+        ex.value=new ModelReadException(e.toString(),e);
+      }
+catch (      ModelReadException e) {
+        ex.value=e;
+      }
+    }
   }
- catch (  IOException ex) {
-    throw new ModelReadException(ex.toString(),ex);
+);
+  if (ex.value != null) {
+    throw ex.value;
   }
+  return result.value;
 }

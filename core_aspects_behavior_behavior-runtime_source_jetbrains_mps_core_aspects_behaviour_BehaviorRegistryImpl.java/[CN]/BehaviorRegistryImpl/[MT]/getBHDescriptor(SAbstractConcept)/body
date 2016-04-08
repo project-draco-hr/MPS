@@ -8,31 +8,28 @@
   }
   try {
     try {
-      if ((concept instanceof SAbstractConceptAdapter)) {
-        LanguageRuntime languageRuntime=myLanguageRegistry.getLanguage(concept.getLanguage());
-        BehaviorAspectDescriptor behaviorAspect=null;
-        if (languageRuntime == null) {
-          LOG.warn("No language for: " + concept + ", while looking for the behavior descriptor.");
-        }
+      if (!(concept instanceof SAbstractConceptAdapter)) {
+        throw new IllegalArgumentException();
+      }
+      LanguageRuntime languageRuntime=myLanguageRegistry.getLanguage(concept.getLanguage());
+      BehaviorAspectDescriptor behaviorAspect=null;
+      if (languageRuntime == null) {
+        LOG.warn("No language for: " + concept + ", while looking for the behavior descriptor.");
+      }
  else {
-          behaviorAspect=languageRuntime.getAspect(BehaviorAspectDescriptor.class);
-        }
-        if (behaviorAspect == null) {
+        behaviorAspect=languageRuntime.getAspect(BehaviorAspectDescriptor.class);
+      }
+      if (behaviorAspect == null) {
+        descriptor=new EmptyBHDescriptor(this,concept);
+      }
+ else       if (behaviorAspect instanceof BaseBehaviorAspectDescriptor) {
+        descriptor=((BaseBehaviorAspectDescriptor)behaviorAspect).getDescriptor(concept);
+        if (descriptor == null) {
           descriptor=new EmptyBHDescriptor(this,concept);
-        }
- else         if (behaviorAspect instanceof BaseBehaviorAspectDescriptor) {
-          SConceptId conceptId=((SAbstractConceptAdapter)concept).getId();
-          descriptor=((BaseBehaviorAspectDescriptor)behaviorAspect).getDescriptor(conceptId);
-          if (descriptor == null) {
-            descriptor=new EmptyBHDescriptor(this,concept);
-          }
-        }
- else {
-          descriptor=fallbackToInterpretedLegacy(concept);
         }
       }
  else {
-        descriptor=fallbackToInterpretedLegacy(concept);
+        throw new IllegalArgumentException();
       }
       if (descriptor instanceof BaseBHDescriptor) {
         ((BaseBHDescriptor)descriptor).init();
