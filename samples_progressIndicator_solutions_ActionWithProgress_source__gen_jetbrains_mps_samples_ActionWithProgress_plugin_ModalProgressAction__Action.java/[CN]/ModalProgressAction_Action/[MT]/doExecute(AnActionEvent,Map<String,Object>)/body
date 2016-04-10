@@ -1,7 +1,7 @@
 {
   boolean canBeCanceled=true;
   final Task.Modal modalTask=new Task.Modal(event.getData(CommonDataKeys.PROJECT),"Modal cancelable task",canBeCanceled){
-    public void run(    @NotNull final ProgressIndicator indicator){
+    @Override public void run(    @NotNull final ProgressIndicator indicator){
       final ProgressMonitorAdapter adapter=new ProgressMonitorAdapter(indicator);
       final SRepository repository=event.getData(MPSCommonDataKeys.MPS_PROJECT).getRepository();
       adapter.start("Progress in progress...",9);
@@ -34,10 +34,37 @@
       if (adapter.isCanceled()) {
         return;
       }
-      repository.getModelAccess().executeCommand(new Runnable(){
+      adapter.step("Now will try to do some work with Locks in EDT...");
+      ModalProgressAction_Action.this.doWork(event);
+      adapter.advance(stepValue);
+      if (adapter.isCanceled()) {
+        return;
+      }
+      adapter.step("Do some work in command in EDT...");
+      WaitForProgressToShow.runOrInvokeAndWaitAboveProgress(new Runnable(){
         public void run(){
-          adapter.step("Do some work in command ...");
-          ModalProgressAction_Action.this.doWork(event);
+          repository.getModelAccess().executeCommand(new Runnable(){
+            public void run(){
+              ModalProgressAction_Action.this.doWork(event);
+            }
+          }
+);
+        }
+      }
+,ModalityState.defaultModalityState());
+      adapter.advance(stepValue);
+      if (adapter.isCanceled()) {
+        return;
+      }
+      adapter.step("Do some work with Read Lock in EDT using IDEA API...");
+      WaitForProgressToShow.runOrInvokeAndWaitAboveProgress(new Runnable(){
+        public void run(){
+          repository.getModelAccess().runReadAction(new Runnable(){
+            public void run(){
+              ModalProgressAction_Action.this.doWork(event);
+            }
+          }
+);
         }
       }
 );
@@ -46,13 +73,7 @@
         return;
       }
       final CyclicBarrier barrier=new CyclicBarrier(2);
-      adapter.step("Now will try to do some work with Locks in EDT...");
-      ModalProgressAction_Action.this.doWork(event);
-      adapter.advance(stepValue);
-      if (adapter.isCanceled()) {
-        return;
-      }
-      adapter.step("Do some work with Read Lock in EDT...");
+      adapter.step("Do some work with Read Lock in EDT using jdk...");
       repository.getModelAccess().runReadInEDT(new Runnable(){
         public void run(){
           ModalProgressAction_Action.this.doWork(event);
@@ -65,21 +86,8 @@
       if (adapter.isCanceled()) {
         return;
       }
-      adapter.step("Do some work with Write Lock in EDT...");
+      adapter.step("Do some work with Write Lock in EDT using jdk...");
       repository.getModelAccess().runWriteInEDT(new Runnable(){
-        public void run(){
-          ModalProgressAction_Action.this.doWork(event);
-          ModalProgressAction_Action.this.block(barrier,event);
-        }
-      }
-);
-      ModalProgressAction_Action.this.block(barrier,event);
-      adapter.advance(stepValue);
-      if (adapter.isCanceled()) {
-        return;
-      }
-      adapter.step("Do some work in command in EDT...");
-      repository.getModelAccess().executeCommandInEDT(new Runnable(){
         public void run(){
           ModalProgressAction_Action.this.doWork(event);
           ModalProgressAction_Action.this.block(barrier,event);
