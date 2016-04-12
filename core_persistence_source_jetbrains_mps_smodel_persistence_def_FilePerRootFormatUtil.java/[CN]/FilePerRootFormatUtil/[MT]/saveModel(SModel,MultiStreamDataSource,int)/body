@@ -13,10 +13,21 @@
   if (persistenceVersion < 9) {
     modelData.getImplicitImportsSupport().calculateImplicitImports();
   }
-  Map<String,Document> result=ModelPersistence.getPersistence(persistenceVersion).getModelWriter(modelHeader).saveModelAsMultiStream(modelData);
+  ModelPersistence.checkV8(persistenceVersion,modelHeader == null ? null : modelHeader.getModelReference(),source.getLocation());
+  IModelPersistence persistence=ModelPersistence.getPersistence(persistenceVersion);
+  if (persistence == null) {
+    return false;
+  }
+  IModelWriter writer=persistence.getModelWriter(modelHeader);
+  if (writer == null) {
+    return false;
+  }
+  Map<String,Document> result=writer.saveModelAsMultiStream(modelData);
   Set<String> toRemove=new HashSet<String>();
   for (  String s : source.getAvailableStreams()) {
-    if (!result.containsKey(s))     toRemove.add(s);
+    if (!result.containsKey(s)) {
+      toRemove.add(s);
+    }
   }
   for (  Entry<String,Document> entry : result.entrySet()) {
     String fnameLower=entry.getKey().toLowerCase();
