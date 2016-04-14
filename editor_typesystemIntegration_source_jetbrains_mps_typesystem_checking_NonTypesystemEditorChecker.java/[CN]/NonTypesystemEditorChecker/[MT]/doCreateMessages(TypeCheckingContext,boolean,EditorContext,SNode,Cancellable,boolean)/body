@@ -1,0 +1,33 @@
+{
+  if (context == null || !(context instanceof IncrementalTypecheckingContext)) {
+    return CANCELLED;
+  }
+  if (cancellable.isCancelled()) {
+    return CANCELLED;
+  }
+  return ((IncrementalTypecheckingContext)context).runTypeCheckingAction(new Computable<Pair<Collection<EditorMessage>,Boolean>>(){
+    @Override public Pair<Collection<EditorMessage>,Boolean> compute(){
+      IncrementalTypechecking typesComponent=context.getBaseNodeTypesComponent();
+      boolean messagesChanged=false;
+      if (!incremental || !typesComponent.isCheckedNonTypesystem()) {
+        try {
+          messagesChanged=true;
+          context.setIsNonTypesystemComputation();
+          if (typesComponent.applyNonTypesystemRulesToRoot(context,cancellable)) {
+            typesComponent.setCheckedNonTypesystem();
+          }
+        }
+ catch (        Throwable t) {
+          LOG.error(null,t);
+          typesComponent.setCheckedNonTypesystem();
+        }
+ finally {
+          context.resetIsNonTypesystemComputation();
+        }
+      }
+      Collection<EditorMessage> messages=collectMessagesForNodesWithErrors(context,editorContext,false,applyQuickFixes);
+      return new Pair<Collection<EditorMessage>,Boolean>(messages,messagesChanged);
+    }
+  }
+);
+}
