@@ -63,6 +63,29 @@
           if (i_var != null) {
             logBuilder.addPart(participant_var,i_var,f_var);
           }
+          refactoringSession.registerChange(new Runnable(){
+            public void run(){
+              Iterable<SModule> modules=searchScope.getModules();
+              Sequence.fromIterable(modules).where(new IWhereFilter<SModule>(){
+                public boolean accept(                SModule m){
+                  return MigrationModuleUtil.isModuleMigrateable(m);
+                }
+              }
+).where(new IWhereFilter<SModule>(){
+                public boolean accept(                SModule m){
+                  return SetSequence.fromSet(MigrationModuleUtil.getModuleDependencies(m)).contains(sourceModule);
+                }
+              }
+).visitAll(new IVisitor<SModule>(){
+                public void visit(                SModule m){
+                  int fromVersion=MigrationModuleUtil.getDepVersion(m,sourceModule.getModuleReference());
+                  MigrationModuleUtil.setDepVersion(m,sourceModule.getModuleReference(),fromVersion + 1);
+                }
+              }
+);
+            }
+          }
+);
         }
       }
     }
