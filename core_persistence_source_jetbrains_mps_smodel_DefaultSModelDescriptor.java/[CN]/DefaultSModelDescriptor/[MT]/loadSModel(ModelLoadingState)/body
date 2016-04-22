@@ -2,7 +2,7 @@
   DataSource source=getSource();
   if (!source.isReadOnly() && source.getTimestamp() == -1) {
     DefaultSModel model=new DefaultSModel(getReference(),myHeader);
-    return new ModelLoadResult((SModel)model,ModelLoadingState.FULLY_LOADED);
+    return new ModelLoadResult(model,ModelLoadingState.FULLY_LOADED);
   }
   ModelLoadResult result;
   try {
@@ -12,11 +12,11 @@
     LOG.warning(String.format("Failed to load model %s: %s",getSource().getLocation(),e.toString()));
     SuspiciousModelHandler.getHandler().handleSuspiciousModel(this,false);
     InvalidDefaultSModel newModel=new InvalidDefaultSModel(getReference(),e);
-    return new ModelLoadResult((SModel)newModel,ModelLoadingState.NOT_LOADED);
+    return new ModelLoadResult(newModel,ModelLoadingState.NOT_LOADED);
   }
   jetbrains.mps.smodel.SModel model=result.getModel();
-  if (result.getState() == ModelLoadingState.FULLY_LOADED) {
-    boolean needToSave=model.updateSModelReferences() || model.updateModuleReferences();
+  if (result.getState() == ModelLoadingState.FULLY_LOADED && getRepository() != null) {
+    boolean needToSave=model.updateExternalReferences(getRepository());
     if (needToSave && !source.isReadOnly()) {
       setChanged(true);
     }

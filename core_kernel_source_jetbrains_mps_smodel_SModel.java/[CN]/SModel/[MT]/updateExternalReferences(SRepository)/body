@@ -1,0 +1,32 @@
+{
+  assertLegalChange();
+  enforceFullLoad();
+  boolean changed=false;
+  for (  org.jetbrains.mps.openapi.model.SNode node : myIdToNodeMap.values()) {
+    for (    SReference reference : node.getReferences()) {
+      SModelReference oldReference=reference.getTargetSModelReference();
+      if (oldReference == null || !(reference instanceof SReferenceBase)) {
+        continue;
+      }
+      final org.jetbrains.mps.openapi.model.SModel resolved=oldReference.resolve(repository);
+      if (resolved != null && jetbrains.mps.smodel.SModelReference.differs(resolved.getReference(),oldReference)) {
+        changed=true;
+        ((SReferenceBase)reference).setTargetSModelReference(resolved.getReference());
+      }
+    }
+  }
+  for (  ImportElement e : myImports) {
+    final org.jetbrains.mps.openapi.model.SModel resolved=e.getModelReference().resolve(repository);
+    if (resolved != null && jetbrains.mps.smodel.SModelReference.differs(resolved.getReference(),e.getModelReference())) {
+      changed=true;
+      e.myModelReference=resolved.getReference();
+    }
+  }
+  if (updateRefs(myDevKits)) {
+    changed=true;
+  }
+  if (updateRefs(myLanguagesEngagedOnGeneration)) {
+    changed=true;
+  }
+  return changed;
+}
