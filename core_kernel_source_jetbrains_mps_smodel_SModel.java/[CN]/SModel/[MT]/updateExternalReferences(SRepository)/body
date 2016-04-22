@@ -1,0 +1,35 @@
+{
+  assertLegalChange();
+  enforceFullLoad();
+  boolean changed=false;
+  for (  org.jetbrains.mps.openapi.model.SNode node : myIdToNodeMap.values()) {
+    for (    SReference reference : node.getReferences()) {
+      SModelReference oldReference=reference.getTargetSModelReference();
+      if (oldReference == null)       continue;
+      jetbrains.mps.smodel.SModelReference oldSRef=(jetbrains.mps.smodel.SModelReference)oldReference;
+      jetbrains.mps.smodel.SModelReference newRef=oldSRef.update();
+      if (jetbrains.mps.smodel.SModelReference.differs(newRef,oldSRef)) {
+        changed=true;
+        ((jetbrains.mps.smodel.SReference)reference).setTargetSModelReference(newRef);
+      }
+    }
+  }
+  for (  ImportElement e : myImports) {
+    jetbrains.mps.smodel.SModelReference oldSRef=(jetbrains.mps.smodel.SModelReference)e.myModelReference;
+    jetbrains.mps.smodel.SModelReference newRef=oldSRef.update();
+    if (jetbrains.mps.smodel.SModelReference.differs(newRef,oldSRef)) {
+      changed=true;
+      e.myModelReference=newRef;
+    }
+  }
+  if (myLegacyImplicitImports != null) {
+    changed|=myLegacyImplicitImports.updateSModelReferences();
+  }
+  if (updateRefs(myDevKits)) {
+    changed=true;
+  }
+  if (updateRefs(myLanguagesEngagedOnGeneration)) {
+    changed=true;
+  }
+  return changed;
+}
