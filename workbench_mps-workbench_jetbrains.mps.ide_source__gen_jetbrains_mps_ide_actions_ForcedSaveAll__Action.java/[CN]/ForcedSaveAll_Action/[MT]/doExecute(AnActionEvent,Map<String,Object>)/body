@@ -1,5 +1,5 @@
 {
-  Iterable<? extends SModule> modules=((MPSProject)MapSequence.fromMap(_params).get("project")).getModulesWithGenerators();
+  Iterable<SModule> modules=(Iterable<SModule>)((MPSProject)MapSequence.fromMap(_params).get("project")).getProjectModulesWithGenerators();
   List<EditableSModel> allModels=Sequence.fromIterable(modules).translate(new ITranslator2<SModule,SModel>(){
     public Iterable<SModel> translate(    SModule it){
       return it.getModels();
@@ -11,16 +11,11 @@
     }
   }
 ).toListSequence();
-  for (  Language language : Sequence.fromIterable(modules).ofType(Language.class)) {
-    for (    Generator generator : CollectionSequence.fromCollection(language.getGenerators())) {
-      generator.updateModuleReferences();
+  for (  AbstractModule module : Sequence.fromIterable(modules).ofType(AbstractModule.class)) {
+    module.updateExternalReferences();
+    if (!(module instanceof Generator)) {
+      module.save();
     }
-    language.updateSModelReferences();
-    language.save();
-  }
-  for (  Solution solution : Sequence.fromIterable(modules).ofType(Solution.class)) {
-    solution.updateSModelReferences();
-    solution.save();
   }
   for (  EditableSModel model : ListSequence.fromList(allModels)) {
     if (model.isReadOnly()) {
@@ -35,7 +30,7 @@
     }
  catch (    Exception ex) {
       if (LOG.isEnabledFor(Level.ERROR)) {
-        LOG.error("Error re-saving model " + model.getModelName(),ex);
+        LOG.error("Error re-saving model " + model.getName(),ex);
       }
     }
   }
