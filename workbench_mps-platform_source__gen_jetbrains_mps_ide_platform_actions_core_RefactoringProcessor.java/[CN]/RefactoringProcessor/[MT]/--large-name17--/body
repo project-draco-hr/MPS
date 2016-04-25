@@ -1,47 +1,4 @@
 {
-  final Map<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,T,S>> changes=askParticipantChanges(project,participants,nodes);
-  if (changes == null) {
-    return;
-  }
-  SearchResults searchResults=new SearchResults();
-  for (  IMapping<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,T,S>> participantState : MapSequence.fromMap(changes)) {
-    List<? extends List<? extends RefactoringParticipant.Change<?,?>>> partivipantChanges=participantState.value().getChanges();
-    for (    List<? extends RefactoringParticipant.Change<?,?>> nodeChanges : ListSequence.fromList(partivipantChanges)) {
-      for (      RefactoringParticipant.Change<?,?> change : ListSequence.fromList(nodeChanges)) {
-        searchResults.addAll(change.getSearchResults());
-      }
-    }
-  }
-  RefactoringAccessEx.getInstance().showRefactoringView(project.getProject(),new RefactoringViewAction(){
-    public void performAction(    RefactoringViewItem refactoringViewItem){
-      project.getRepository().getModelAccess().executeCommand(new Runnable(){
-        public void run(){
-          RefactoringSessionImpl refactoringSession=new RefactoringSessionImpl();
-          final _FunctionTypes._return_P1_E0<? extends S,? super T> getFinalObject=doRefactor.invoke(changes,refactoringSession);
-          if (getFinalObject == null) {
-            return;
-          }
-          try {
-            for (            IMapping<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,T,S>> participantChanges : MapSequence.fromMap(changes)) {
-              participantChanges.value().doRefactor(ListSequence.fromList(nodes).select(new ISelector<T,S>(){
-                public S select(                T it){
-                  return getFinalObject.invoke(it);
-                }
-              }
-).toListSequence(),project.getRepository(),refactoringSession);
-            }
-            refactoringSession.commit();
-          }
- catch (          RuntimeException exception) {
-            if (LOG.isEnabledFor(Level.ERROR)) {
-              LOG.error("Exception during refactoring: ",exception);
-            }
-          }
-        }
-      }
-);
-      refactoringViewItem.close();
-    }
-  }
-,searchResults,false,refactoringName);
+  RefactoringSessionImpl refactoringSession=new RefactoringSessionImpl();
+  performRefactoring(new RefactoringProcessor.RefactoringUIImpl(project),refactoringSession,project.getRepository(),project.getScope(),refactoringName,participants,initialStates,doRefactor);
 }
