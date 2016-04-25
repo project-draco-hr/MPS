@@ -9,18 +9,27 @@
     final Runnable tuGenerate=new Runnable(){
       @Override public void run(){
         try {
-          tu.generate();
-        }
- catch (        Exception ex) {
-          myMessages.handle(new Message(MessageKind.ERROR,String.format("TextGen threw an exception for model %s",model.getName())).setException(ex));
-        }
-        if (unitsCount.decrementAndGet() == 0) {
           try {
-            resultQueue.put(new TextGenResult(model,textUnits));
+            tu.generate();
           }
- catch (          InterruptedException ex) {
-            myMessages.handle(new Message(MessageKind.WARNING,String.format("TextGen interrupted for model %s",model.getModelName())).setException(ex));
+  finally {
+            if (tu instanceof RegularTextUnit) {
+              for (              IMessage msg : ((RegularTextUnit)tu).getMessages()) {
+                myMessages.handle(msg);
+              }
+            }
+            if (unitsCount.decrementAndGet() == 0) {
+              try {
+                resultQueue.put(new TextGenResult(model,textUnits));
+              }
+ catch (              InterruptedException ex) {
+                myMessages.handle(new Message(MessageKind.WARNING,String.format("TextGen interrupted for model %s",model.getName())).setException(ex));
+              }
+            }
           }
+        }
+ catch (        Throwable ex) {
+          myMessages.handle(new Message(MessageKind.ERROR,String.format("TextGen threw an exception for model %s",model.getName())).setException(ex));
         }
       }
     }
