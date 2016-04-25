@@ -2,12 +2,10 @@
   if (node.getModel() == null) {
     return true;
   }
-  Set<String> langNames=new HashSet<String>();
   LanguageRegistry languageRegistry=LanguageRegistry.getInstance(editorContext.getRepository());
   ArrayList<IntentionAspectDescriptor> activeIntentionAspects=new ArrayList<IntentionAspectDescriptor>();
   ArrayList<MigrationRefactoringIntentions> activeIntentionsFromMigrationScripts=new ArrayList<MigrationRefactoringIntentions>();
   for (  SLanguage l : new SLanguageHierarchy(languageRegistry,SModelOperations.getAllLanguageImports(node.getModel())).getExtended()) {
-    langNames.add(l.getQualifiedName());
     final LanguageRuntime lr=languageRegistry.getLanguage(l);
     if (lr == null) {
       continue;
@@ -21,7 +19,6 @@
       activeIntentionsFromMigrationScripts.add(new MigrationRefactoringIntentions(lr,scriptsAspect));
     }
   }
-  Map<String,Set<IntentionFactory>> concept2FactoriesMap=isAncestor ? myConcept2IntentionFactoriesAvailableInChildNodes : myConcept2IntentionFactories;
   for (  SAbstractConcept concept : new UniqueIterator<SAbstractConcept>(new DepthFirstConceptIterator(node.getConcept()))) {
     ArrayList<IntentionFactory> intentionsForConcept=new ArrayList<IntentionFactory>();
     for (    IntentionAspectDescriptor intentionAspect : activeIntentionAspects) {
@@ -43,22 +40,6 @@
       }
       if (!visitor.visit(intentionFactory)) {
         return false;
-      }
-    }
-  }
-  if (!concept2FactoriesMap.isEmpty()) {
-    for (    SAbstractConcept concept : new DepthFirstConceptIterator(node.getConcept())) {
-      final String conceptId=concept.getQualifiedName();
-      if (concept2FactoriesMap.containsKey(conceptId)) {
-        for (        IntentionFactory intentionFactory : concept2FactoriesMap.get(conceptId)) {
-          if (!langNames.contains(intentionFactory.getLanguageFqName()))           continue;
-          if (!filter.accept(intentionFactory) || !intentionFactory.isApplicable(node,editorContext)) {
-            continue;
-          }
-          if (!visitor.visit(intentionFactory)) {
-            return false;
-          }
-        }
       }
     }
   }
