@@ -1,26 +1,22 @@
 {
-  final Wrappers._T<SModel> createdModel=new Wrappers._T<SModel>(null);
-  ((MPSProject)MapSequence.fromMap(_params).get("project")).getModelAccess().executeCommand(new Runnable(){
+  event.getData(MPSCommonDataKeys.MPS_PROJECT).getModelAccess().executeCommand(new Runnable(){
     public void run(){
-      SModelName testModelName=new SModelName(NewSubTestModel_Action.this.getTestModelName(_params),SModelStereotype.TESTS);
-      createdModel.value=SModuleOperations.createModelWithAdjustments(testModelName.getValue(),((SModel)MapSequence.fromMap(_params).get("model")).getModelRoot());
-      if (createdModel.value == null) {
+      SModelName testModelName=new SModelName(NewSubTestModel_Action.this.getTestModelName(event),SModelStereotype.TESTS);
+      SModel parentModel=event.getData(MPSCommonDataKeys.CONTEXT_MODEL);
+      SModel createdModel=SModuleOperations.createModelWithAdjustments(testModelName.getValue(),parentModel.getModelRoot());
+      if (createdModel == null) {
         if (LOG.isEnabledFor(Level.WARN)) {
-          LOG.warn("Can't create submodel " + testModelName + " for model "+ ((SModel)MapSequence.fromMap(_params).get("model")).getName());
+          LOG.warn("Can't create submodel " + testModelName + " for model "+ parentModel.getName());
         }
         return;
       }
-      ((SModelInternal)createdModel.value).addModelImport(((SModel)MapSequence.fromMap(_params).get("model")).getReference(),false);
-      for (      jetbrains.mps.smodel.SModel.ImportElement importElement : ((SModelInternal)((SModel)MapSequence.fromMap(_params).get("model"))).importedModels()) {
-        ((SModelInternal)createdModel.value).addModelImport(((SModel)MapSequence.fromMap(_params).get("model")).getReference(),false);
-      }
-      for (      SLanguage importedLanguage : ((SModelInternal)((SModel)MapSequence.fromMap(_params).get("model"))).importedLanguageIds()) {
-        ((SModelInternal)createdModel.value).addLanguage(importedLanguage);
-      }
-      for (      SModuleReference devKit : ((SModelInternal)((SModel)MapSequence.fromMap(_params).get("model"))).importedDevkits()) {
-        ((SModelInternal)createdModel.value).addDevKit(devKit);
-      }
-      ProjectPane.getInstance(((Project)MapSequence.fromMap(_params).get("ideaProject"))).selectModel(createdModel.value,false);
+      ModelImports imports=new ModelImports(createdModel);
+      imports.addModelImport(parentModel.getReference());
+      imports.copyImportedModelsFrom(parentModel);
+      imports.copyUsedLanguagesFrom(parentModel);
+      imports.copyEmployedDevKitsFrom(parentModel);
+      imports.copyLanguageEngagedOnGeneration(parentModel);
+      ProjectPane.getInstance(event.getData(CommonDataKeys.PROJECT)).selectModel(createdModel,false);
     }
   }
 );
