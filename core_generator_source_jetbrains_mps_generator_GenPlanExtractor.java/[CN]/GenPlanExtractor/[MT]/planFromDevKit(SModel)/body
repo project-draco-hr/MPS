@@ -1,0 +1,30 @@
+{
+  for (  SModuleReference dkRef : ((SModelInternal)model).importedDevkits()) {
+    if (myDevkitToPlan.containsKey(dkRef)) {
+      final ModelGenerationPlan rv=myDevkitToPlan.get(dkRef);
+      if (rv == null) {
+        continue;
+      }
+      return rv;
+    }
+    final SModule dkModule=dkRef.resolve(myRepository);
+    if (!(dkModule instanceof DevKit)) {
+      continue;
+    }
+    final SModelReference dkPlan=((DevKit)dkModule).getModuleDescriptor().getAssociatedGenPlan();
+    if (dkPlan == null) {
+      continue;
+    }
+    final ModelGenerationPlan plan;
+    final SModel planModel=dkPlan.resolve(myRepository);
+    if (planModel != null) {
+      plan=new GenPlanBuilder(LanguageRegistry.getInstance(myRepository)).create(planModel.getRootNodes().iterator().next());
+    }
+ else {
+      plan=null;
+    }
+    myDevkitToPlan.put(dkRef,plan);
+    return plan;
+  }
+  return null;
+}
