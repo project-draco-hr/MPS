@@ -2,17 +2,27 @@
   final SModelInternal modelInternal=(SModelInternal)myModel;
   final AbstractModule module=((AbstractModule)myModel.getModule());
   final Collection<SLanguage> importedLanguages=modelInternal.importedLanguageIds();
-  for (  SNode subNode : ListSequence.fromList(SNodeOperations.getNodeDescendants(node,null,true,new SAbstractConcept[]{}))) {
-    SLanguage usedLanguage=subNode.getConcept().getLanguage();
-    if (!(importedLanguages.contains(usedLanguage))) {
-      modelInternal.addLanguage(usedLanguage);
+  ModelDependencyScanner scan=new ModelDependencyScanner().crossModelReferences(true).usedLanguages(true);
+  scan.walk(SNodeOperations.getNodeDescendants(node,null,true,new SAbstractConcept[]{}));
+  HashSet<SLanguage> languagesToImport=new HashSet<SLanguage>(scan.getUsedLanguages());
+  languagesToImport.removeAll(importedLanguages);
+  for (  SLanguage usedLanguage : SetSequence.fromSet(languagesToImport)) {
+    modelInternal.addLanguage(usedLanguage);
+  }
+  HashSet<SModelReference> modelsToImport=new HashSet<SModelReference>(scan.getCrossModelReferences());
+  modelsToImport.removeAll(SModelOperations.getImportedModelUIDs(myModel));
+  for (  SModelReference ref : SetSequence.fromSet(modelsToImport)) {
+    modelInternal.addModelImport(ref,false);
+    SModuleReference moduleRef;
+    if (ref.getModuleReference() != null) {
+      moduleRef=ref.getModuleReference();
     }
-    for (    SReference ref : ListSequence.fromList(SNodeOperations.getReferences(subNode))) {
-      SModel usedModel=SNodeOperations.getModel(SLinkOperations.getTargetNode(ref));
-      if (usedModel != null && !(modelInternal.importedModels().contains(usedModel))) {
-        modelInternal.addModelImport(usedModel.getReference(),false);
-        module.addDependency(SNodeOperations.getModel(SLinkOperations.getTargetNode(ref)).getModule().getModuleReference(),false);
-      }
+ else {
+      SModel usedModel=ref.resolve(myProject.getRepository());
+      moduleRef=(usedModel == null ? null : usedModel.getModule().getModuleReference());
+    }
+    if (moduleRef != null) {
+      module.addDependency(moduleRef,false);
     }
   }
 }
