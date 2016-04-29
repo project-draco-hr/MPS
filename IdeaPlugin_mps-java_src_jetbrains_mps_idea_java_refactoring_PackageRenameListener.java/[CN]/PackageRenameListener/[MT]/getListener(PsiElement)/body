@@ -1,2 +1,55 @@
 {
+  if (!(element instanceof PsiPackage)) {
+    return null;
+  }
+  final PsiPackage pkg=(PsiPackage)element;
+  final Project project=pkg.getProject();
+  DirectoryIndex dirIndex=DirectoryIndex.getInstance(project);
+  final Set<SModelReference> modelRefs=new HashSet<SModelReference>();
+  for (  PsiDirectory dir : pkg.getDirectories()) {
+    DirectoryInfo dirInfo=dirIndex.getInfoForFile(dir.getVirtualFile());
+    Module module=dirInfo.getModule();
+    if (module == null)     continue;
+    MPSFacet facet=FacetManager.getInstance(module).getFacetByType(MPSFacetType.ID);
+    if (facet == null)     continue;
+    modelRefs.add(new JavaPackageNameStub(pkg.getQualifiedName()).asModelReference(facet.getSolution().getModuleReference()));
+  }
+  if (modelRefs.isEmpty())   return null;
+  final Set<SModel> models=new HashSet<SModel>();
+  ProjectHelper.getModelAccess(project).runReadAction(new Runnable(){
+    @Override public void run(){
+      models.addAll(FindUsagesFacade.getInstance().findModelUsages(new ProjectScope(ProjectHelper.toMPSProject(project)),modelRefs,new EmptyProgressMonitor()));
+    }
+  }
+);
+  if (models.isEmpty())   return null;
+  return new RefactoringElementListener(){
+    @Override public void elementMoved(    PsiElement newElement){
+    }
+    @Override public void elementRenamed(    PsiElement newElement){
+      final String newPkgName=((PsiPackage)newElement).getQualifiedName();
+      final SRepository repository=ProjectHelper.getProjectRepository(project);
+      repository.getModelAccess().executeCommand(new Runnable(){
+        @Override public void run(){
+          for (          SModel model : models) {
+            ModelImports modelImports=new ModelImports(model);
+            Map<SModelReference,SModelReference> changes=new HashMap<SModelReference,SModelReference>();
+            for (            SModelReference mref : modelImports.getImportedModels()) {
+              if (!modelRefs.contains(mref)) {
+                continue;
+              }
+              SModule module=mref.getModuleReference().resolve(repository);
+              SModelReference newModelRef=new JavaPackageNameStub(newPkgName).asModelReference(module.getModuleReference());
+              modelImports.removeModelImport(mref);
+              modelImports.addModelImport(newModelRef);
+              changes.put(mref,newModelRef);
+            }
+            updateSReferences(model,changes);
+          }
+        }
+      }
+);
+    }
+  }
+;
 }
