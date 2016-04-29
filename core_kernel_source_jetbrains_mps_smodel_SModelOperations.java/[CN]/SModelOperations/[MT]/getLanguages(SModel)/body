@@ -1,12 +1,19 @@
 {
-  Set<Language> languages=new LinkedHashSet<Language>();
-  for (  SModuleReference lang : getAllImportedLanguages(model)) {
-    Language language=(Language)lang.resolve(MPSModuleRepository.getInstance());
-    if (language == null) {
+  ArrayList<Language> languages=new ArrayList<>();
+  SRepository repository=model.getRepository();
+  if (repository == null) {
+    repository=MPSModuleRepository.getInstance();
+  }
+  LanguageRegistry languageRegistry=LanguageRegistry.getInstance(repository);
+  for (  SLanguage lang : new SLanguageHierarchy(languageRegistry,SModelOperations.getAllLanguageImports(model)).getExtended()) {
+    final SModuleReference sourceModuleRef=lang.getSourceModuleReference();
+    if (sourceModuleRef == null) {
       continue;
     }
-    languages.add(language);
-    languages.addAll(LanguageDependenciesManager.getAllExtendedLanguages(language));
+    final SModule sourceModule=sourceModuleRef.resolve(repository);
+    if (sourceModule instanceof Language) {
+      languages.add((Language)sourceModule);
+    }
   }
-  return new ArrayList<Language>(languages);
+  return languages;
 }
