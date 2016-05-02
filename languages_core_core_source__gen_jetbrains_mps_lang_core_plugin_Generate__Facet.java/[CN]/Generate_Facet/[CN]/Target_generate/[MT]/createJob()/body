@@ -30,22 +30,28 @@ GenerationTaskRecorder<GeneratorTask> taskHandler=new GenerationTaskRecorder<Gen
 IMessageHandler mh=Generate_Facet.Target_checkParameters.vars(pa.global()).makeSession().getMessageHandler();
 progressMonitor.start("Generating",110);
 try {
+List<GeneratorTask> tasks=new ModelAccessHelper(mpsProject.getModelAccess()).runReadAction(new Computable<List<GeneratorTask>>(){
+public List<GeneratorTask> compute(){
 List<SModel> models=Sequence.fromIterable(input).translate(new ITranslator2<MResource,SModel>(){
-public Iterable<SModel> translate(MResource in){
-return in.models();
-}
+  public Iterable<SModel> translate(  MResource in){
+    return in.models();
+  }
 }
 ).toListSequence();
-DefaultTaskBuilder<GeneratorTaskBase> tb=new DefaultTaskBuilder<GeneratorTaskBase>(new GeneratorTask.Factory<GeneratorTaskBase>(){
-public GeneratorTaskBase create(SModel model){
-return new GeneratorTaskBase(model);
-}
+DefaultTaskBuilder<GeneratorTask> tb=new DefaultTaskBuilder<GeneratorTask>(new GeneratorTask.Factory<GeneratorTask>(){
+  public GeneratorTask create(  SModel model){
+    return new GeneratorTaskBase(model);
+  }
 }
 );
 tb.addAll(models);
+return tb.getResult();
+}
+}
+);
 GenerationFacade genFacade=new GenerationFacade(mpsProject.getRepository(),Generate_Facet.Target_configure.vars(pa.global()).generationOptions().create());
 genFacade.transients(Generate_Facet.Target_configure.vars(pa.global()).transientModelsProvider()).messages(mh).taskHandler(taskHandler);
-genFacade.process(progressMonitor.subTask(100),tb.getResult());
+genFacade.process(progressMonitor.subTask(100),tasks);
 for (GenerationStatus genStatus : taskHandler.getAllRecorded()) {
 if (!(genStatus.isOk())) {
 return new IResult.FAILURE(_output_fi61u2_a0d);
