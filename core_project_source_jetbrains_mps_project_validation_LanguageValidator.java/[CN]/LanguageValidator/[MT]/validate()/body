@@ -2,46 +2,76 @@
   if (!ValidationUtil.validateAbstractModule(myLanguage,myProcessor)) {
     return;
   }
+  ArrayDeque<Language> extendedLanguages=new ArrayDeque<>();
   for (  SModuleReference el : myLanguage.getExtendedLanguageRefs()) {
-    if (el.resolve(myRepository) != null) {
+    final SModule resolved=el.resolve(myRepository);
+    if (resolved instanceof Language) {
+      extendedLanguages.add((Language)resolved);
       continue;
     }
-    if (!myProcessor.process(new ValidationProblem(Severity.ERROR,"Can't find extended language: " + el.getModuleName()))) {
+    if (!myProcessor.process(new ValidationProblem(Severity.ERROR,String.format(resolved == null ? "Can't find extended language: %s" : "Module %s is not a language, can't extend it",el.getModuleName())))) {
       return;
     }
   }
-  for (  Language l : LanguageDependenciesManager.getAllExtendedLanguages(myLanguage)) {
+  HashSet<Language> visited=new HashSet<>();
+  if (LanguageAspect.BEHAVIOR.get(myLanguage) == null) {
+    if (!myProcessor.process(new ValidationProblem(Severity.ERROR,"Behavior aspect is absent"))) {
+      return;
+    }
+  }
+  visited.add(myLanguage);
+  while (!extendedLanguages.isEmpty()) {
+    Language l=extendedLanguages.removeFirst();
+    if (l == myLanguage) {
+      if (!myProcessor.process(new ValidationProblem(Severity.WARNING,"Cycle in extended language hierarchy"))) {
+        return;
+      }
+    }
+    if (!visited.add(l)) {
+      continue;
+    }
+    for (    SModuleReference el : l.getExtendedLanguageRefs()) {
+      final SModule resolved=el.resolve(myRepository);
+      if (resolved instanceof Language) {
+        extendedLanguages.add((Language)resolved);
+      }
+    }
     SModel descriptor=LanguageAspect.BEHAVIOR.get(l);
-    if (descriptor != null)     continue;
-    if (!myProcessor.process(new ValidationProblem(Severity.ERROR,myLanguage == l ? "Behavior aspect is absent" : "Cannot extend language without behavior aspect: " + l.getModuleName()))) {
+    if (descriptor != null) {
+      continue;
+    }
+    if (!myProcessor.process(new ValidationProblem(Severity.ERROR,"Cannot extend language without behavior aspect: " + l.getModuleName()))) {
       return;
     }
   }
   for (  SModuleReference mr : myLanguage.getRuntimeModulesReferences()) {
     SModule runtimeModule=mr.resolve(myRepository);
     if (runtimeModule == null) {
+      if (!myProcessor.process(new ValidationProblem(Severity.WARNING,String.format("Missing runtime module %s",mr.getModuleName())))) {
+        return;
+      }
       continue;
     }
-    if ((runtimeModule instanceof Solution)) {
+    if (runtimeModule instanceof Solution) {
       continue;
     }
-    if (!myProcessor.process(new ValidationProblem(Severity.ERROR,"Runtime module " + runtimeModule + " is not a solution"))) {
+    if (!myProcessor.process(new ValidationProblem(Severity.ERROR,String.format("Runtime module %s is not a solution",runtimeModule)))) {
       return;
     }
   }
   for (  SModelReference accessory : myLanguage.getModuleDescriptor().getAccessoryModels()) {
-    org.jetbrains.mps.openapi.model.SModel accModel=accessory.resolve(MPSModuleRepository.getInstance());
+    SModel accModel=accessory.resolve(myRepository);
     if (accModel == null) {
+      if (!myProcessor.process(new ValidationProblem(Severity.WARNING,String.format("Missing accessory model %s",accessory.getModelName())))) {
+        return;
+      }
       continue;
     }
     if (VisibilityUtil.isVisible(myLanguage,accModel)) {
       continue;
     }
-    if (!myProcessor.process(new ValidationProblem(Severity.ERROR,"Can't find accessory model: " + accessory.getModelName()))) {
+    if (!myProcessor.process(new ValidationProblem(Severity.ERROR,String.format("Accessory model %s is not visible in the module",accessory.getModelName())))) {
       return;
     }
-  }
-  if (!checkCyclicInheritance(myLanguage)) {
-    myProcessor.process(new ValidationProblem(Severity.WARNING,"Cyclic language hierarchy"));
   }
 }
