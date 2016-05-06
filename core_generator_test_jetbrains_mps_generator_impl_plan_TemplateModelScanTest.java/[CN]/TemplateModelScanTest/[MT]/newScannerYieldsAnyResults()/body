@@ -2,9 +2,7 @@
   final Project mpsProject=ourEnvironment.openProject(new File(System.getProperty("user.dir")));
   final String[] templateModels2Test={"r:00000000-0000-4000-0000-011c8959029f(jetbrains.mps.lang.editor.generator.baseLanguage.template.main@generator)","r:00000000-0000-4000-0000-011c895902e9(jetbrains.mps.lang.generator.generator.baseLanguage.template.main@generator)","r:00000000-0000-4000-0000-011c895902cd(jetbrains.mps.baseLanguage.generator.java.main@generator)","r:00000000-0000-4000-0000-011c89590303(jetbrains.mps.lang.smodel.generator.baseLanguage.template.main@generator)","r:00000000-0000-4000-0000-011c8959032f(jetbrains.mps.baseLanguage.collections.generator.baseLanguage.template.main@generator)","r:d1558b8f-fc9e-4ca7-bb90-70ac789f336e(jetbrains.mps.baseLanguage.collections.generator.baseLanguage.template.post@generator)","r:d64ba0fe-173d-44e2-ab7b-bde40d7e9b7e(jetbrains.mps.baseLanguage.collections.generator.baseLanguage.template.pre@generator)","r:00000000-0000-4000-0000-011c8959034c(jetbrains.mps.lang.quotation.generator.baseLanguage.template.main@generator)","r:00000000-0000-4000-0000-011c8959033a(jetbrains.mps.baseLanguage.closures.generator.baseLanguage.template.main@generator)","r:00000000-0000-4000-0000-011c895902b7(jetbrains.mps.lang.typesystem.generator.baseLanguage.template.main@generator)"};
   try {
-    final TemplateModelScanner[] s1=new TemplateModelScanner[templateModels2Test.length];
     final ModelScanner[] s2=new ModelScanner[templateModels2Test.length];
-    final long[] s1Dur=new long[s1.length];
     final long[] s2Dur=new long[s2.length];
     Runnable cmd=new Runnable(){
       @Override public void run(){
@@ -12,22 +10,18 @@
           final SModelReference mr=PersistenceFacade.getInstance().createModelReference(templateModels2Test[i]);
           SModel m=mr.resolve(mpsProject.getRepository());
           final long start=System.nanoTime();
-          s1[i]=new TemplateModelScanner(m);
-          s1[i].scan();
-          final long stop1=System.nanoTime();
           s2[i]=new ModelScanner();
           s2[i].scan(m);
           final long end=System.nanoTime();
-          s1Dur[i]=stop1 - start;
-          s2Dur[i]=end - stop1;
+          s2Dur[i]=end - start;
         }
       }
     }
 ;
     mpsProject.getModelAccess().runReadAction(cmd);
     for (int i=0; i < templateModels2Test.length; i++) {
-      myErrors.checkThat("Query languages for model " + templateModels2Test[i],language2name(s2[i].getQueryLanguages()),equalTo(s1[i].getQueryLanguages()));
-      myErrors.checkThat("Template languages for model " + templateModels2Test[i],language2name(s2[i].getTargetLanguages()),equalTo(s1[i].getTargetLanguages()));
+      myErrors.checkThat("Query languages for model " + templateModels2Test[i],s2[i].getQueryLanguages().isEmpty(),equalTo(false));
+      myErrors.checkThat("Template languages for model " + templateModels2Test[i],s2[i].getTargetLanguages().isEmpty(),equalTo(false));
     }
   }
   finally {

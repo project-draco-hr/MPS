@@ -2,56 +2,20 @@
   if (!(SModelStereotype.isGeneratorModel(model))) {
     return Collections.emptyList();
   }
-  final List<SearchResult<ModelCheckerIssue>> results=ListSequence.fromList(new ArrayList<SearchResult<ModelCheckerIssue>>());
+  myResults=ListSequence.fromList(new ArrayList<SearchResult<ModelCheckerIssue>>());
   if (progressMonitor.isCanceled()) {
-    return results;
+    return myResults;
   }
-  progressMonitor.start("cross-templates references",1);
-  new TemplateModelScanner(model){
-    @Override public void scan(){
-      for (      SNode root : SModelOperations.roots(model,null)) {
-        if (progressMonitor.isCanceled()) {
-          return;
-        }
-        if (AttributeOperations.getAttribute(root,new IAttributeDescriptor.NodeAttribute(MetaAdapterFactory.getConcept(0xb401a68083254110L,0x8fd384331ff25befL,0x11017244494L,"jetbrains.mps.lang.generator.structure.RootTemplateAnnotation"))) != null) {
-          scanTemplateNode(root);
-        }
-      }
+  progressMonitor.start("cross-templates references",ListSequence.fromList(SModelOperations.roots(model,null)).count());
+  for (  SNode root : ListSequence.fromList(SModelOperations.roots(model,null))) {
+    if (AttributeOperations.getAttribute(root,new IAttributeDescriptor.NodeAttribute(MetaAdapterFactory.getConcept(0xb401a68083254110L,0x8fd384331ff25befL,0x11017244494L,"jetbrains.mps.lang.generator.structure.RootTemplateAnnotation"))) != null) {
+      scanTemplateNode(root,progressMonitor);
     }
-    @Override protected void scanTemplateNode(    SNode node){
-      if (node == null) {
-        return;
-      }
-      try {
-        for (        SReference ref : ListSequence.fromList(SNodeOperations.getReferences(node))) {
-          if (progressMonitor.isCanceled()) {
-            return;
-          }
-          if ((AttributeOperations.getAttribute(node,new IAttributeDescriptor.LinkAttribute(MetaAdapterFactory.getConcept(0xb401a68083254110L,0x8fd384331ff25befL,0xfd7f44d616L,"jetbrains.mps.lang.generator.structure.ReferenceMacro"),ref.getLink())) != null)) {
-            continue;
-          }
-          SNode target=jetbrains.mps.util.SNodeOperations.getTargetNodeSilently(ref);
-          if (target == null) {
-            continue;
-          }
-          if (!(SModelStereotype.isGeneratorModel(SNodeOperations.getModel(target)))) {
-            continue;
-          }
-          SNode root=SNodeOperations.getContainingRoot(target);
-          if (AttributeOperations.getAttribute(root,new IAttributeDescriptor.NodeAttribute(MetaAdapterFactory.getConcept(0xb401a68083254110L,0x8fd384331ff25befL,0x11017244494L,"jetbrains.mps.lang.generator.structure.RootTemplateAnnotation"))) == null) {
-            continue;
-          }
-          if (root == SNodeOperations.getContainingRoot(node)) {
-            continue;
-          }
-          SpecificChecker.addIssue(results,node,"Reference across root templates in role `" + SLinkOperations.getRole(ref) + "', use mapping label or reference macro",ModelChecker.SEVERITY_WARNING,"reference across templates",null);
-        }
-      }
- catch (      Exception ex) {
-      }
-      super.scanTemplateNode(node);
+    if (progressMonitor.isCanceled()) {
+      return myResults;
     }
+    progressMonitor.advance(1);
   }
-.scan();
-  return results;
+  progressMonitor.done();
+  return myResults;
 }
