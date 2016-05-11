@@ -4,27 +4,17 @@
   }
   myLoading=true;
   try {
-    ModelLoadResult<SModel> res=UndoHelper.getInstance().runNonUndoableAction(new Computable<ModelLoadResult<SModel>>(){
-      @Override public ModelLoadResult<SModel> compute(){
+    ModelLoadResult<T> res=UndoHelper.getInstance().runNonUndoableAction(new Computable<ModelLoadResult<T>>(){
+      @Override public ModelLoadResult<T> compute(){
         if (state == ModelLoadingState.NOT_LOADED) {
-          return new ModelLoadResult<SModel>(null,ModelLoadingState.NOT_LOADED);
+          return new ModelLoadResult<T>(null,ModelLoadingState.NOT_LOADED);
         }
         if (state == ModelLoadingState.INTERFACE_LOADED) {
-          ModelLoadResult<jetbrains.mps.smodel.SModel> result=myLoader.doLoad(ModelLoadingState.INTERFACE_LOADED);
-          if (result.getModelData() != null) {
-            result.getModelData().setModelDescriptor(myModelDescriptor);
-          }
-          return result;
+          return myLoader.doLoad(ModelLoadingState.INTERFACE_LOADED);
         }
         if (state == ModelLoadingState.FULLY_LOADED) {
-          ModelLoadResult<SModel> fullModel=myLoader.doLoad(ModelLoadingState.FULLY_LOADED);
-          if (myModel == null) {
-            if (fullModel.getModelData() != null) {
-              fullModel.getModelData().setModelDescriptor(myModelDescriptor);
-            }
-            return fullModel;
-          }
-          if (fullModel.getModelData() == null) {
+          ModelLoadResult<T> fullModel=myLoader.doLoad(ModelLoadingState.FULLY_LOADED);
+          if (myModel == null || fullModel.getModelData() == null) {
             return fullModel;
           }
           myModel.enterUpdateMode();
@@ -32,7 +22,7 @@
           new PartialModelUpdateFacility(myModel,fullModel.getModelData(),myModelDescriptor).update();
           fullModel.getModelData().leaveUpdateMode();
           myModel.leaveUpdateMode();
-          return new ModelLoadResult<SModel>(myModel,fullModel.getState());
+          return new ModelLoadResult<T>(myModel,fullModel.getState());
         }
         throw new UnsupportedOperationException();
       }
