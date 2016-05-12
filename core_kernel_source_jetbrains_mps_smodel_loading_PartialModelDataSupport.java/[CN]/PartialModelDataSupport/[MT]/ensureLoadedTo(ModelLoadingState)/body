@@ -1,0 +1,36 @@
+{
+  if (myLoading) {
+    return;
+  }
+  myLoading=true;
+  try {
+    ModelLoadResult<T> res=UndoHelper.getInstance().runNonUndoableAction(new Computable<ModelLoadResult<T>>(){
+      @Override public ModelLoadResult<T> compute(){
+        if (state == ModelLoadingState.NOT_LOADED) {
+          return new ModelLoadResult<T>(null,ModelLoadingState.NOT_LOADED);
+        }
+        if (state == ModelLoadingState.INTERFACE_LOADED) {
+          return myLoader.doLoad(ModelLoadingState.INTERFACE_LOADED);
+        }
+        if (state == ModelLoadingState.FULLY_LOADED) {
+          ModelLoadResult<T> fullModel=myLoader.doLoad(ModelLoadingState.FULLY_LOADED);
+          if (myModel == null || fullModel.getModelData() == null) {
+            return fullModel;
+          }
+          myModel.enterUpdateMode();
+          fullModel.getModelData().enterUpdateMode();
+          new PartialModelUpdateFacility(myModel,fullModel.getModelData(),myModelDescriptor).update();
+          fullModel.getModelData().leaveUpdateMode();
+          myModel.leaveUpdateMode();
+          return new ModelLoadResult<T>(myModel,fullModel.getState());
+        }
+        throw new UnsupportedOperationException();
+      }
+    }
+);
+    doReplace(res.getModelData(),res.getState());
+  }
+  finally {
+    myLoading=false;
+  }
+}
