@@ -1,38 +1,28 @@
 {
-  final SNode[] newNode=new SNode[1];
-  Runnable runnable=new Runnable(){
-    @Override public void run(){
-      if (context != null) {
-        jetbrains.mps.nodeEditor.cells.EditorCell selectedCell=(jetbrains.mps.nodeEditor.cells.EditorCell)context.getSelectedCell();
+  ModelComputeRunnable<SNode> substituter=new ModelComputeRunnable<SNode>(new Computable<SNode>(){
+    @Override public SNode compute(){
+      if (editorContext != null) {
+        jetbrains.mps.nodeEditor.cells.EditorCell selectedCell=(jetbrains.mps.nodeEditor.cells.EditorCell)editorContext.getSelectedCell();
         if (selectedCell != null) {
           selectedCell.synchronizeViewWithModel();
         }
       }
-      newNode[0]=doSubstitute(context,pattern);
-      if (context != null && newNode[0] != null) {
-        jetbrains.mps.nodeEditor.EditorComponent editorComponent=((jetbrains.mps.nodeEditor.EditorComponent)context.getEditorComponent());
-        if (editorComponent != null) {
-          editorComponent.getUpdater().flushModelEvents();
-          EditorCell cell=editorComponent.findNodeCell(newNode[0]);
-          if (cell != null) {
-            EditorCell errorCell=CellFinderUtil.findFirstError(cell,true);
-            if (errorCell != null) {
-              editorComponent.changeSelectionWRTFocusPolicy(((jetbrains.mps.nodeEditor.cells.EditorCell)errorCell));
-            }
- else {
-              editorComponent.changeSelectionWRTFocusPolicy((jetbrains.mps.nodeEditor.cells.EditorCell)cell);
-            }
-          }
-        }
+      SNode nodeToSelect=doSubstitute(editorContext,pattern);
+      if (editorContext != null && nodeToSelect != null) {
+        EditorComponent editorComponent=editorContext.getEditorComponent();
+        editorComponent.getUpdater().flushModelEvents();
+        select(editorContext,nodeToSelect);
       }
+      return nodeToSelect;
     }
   }
-;
-  if (context != null) {
-    context.getRepository().getModelAccess().executeCommand(new EditorCommandAdapter(runnable,context));
+);
+  if (editorContext != null) {
+    editorContext.getRepository().getModelAccess().executeCommand(new EditorCommandAdapter(substituter,editorContext));
+    return substituter.getResult();
   }
  else {
-    runnable.run();
+    substituter.run();
+    return substituter.getResult();
   }
-  return newNode[0];
 }
