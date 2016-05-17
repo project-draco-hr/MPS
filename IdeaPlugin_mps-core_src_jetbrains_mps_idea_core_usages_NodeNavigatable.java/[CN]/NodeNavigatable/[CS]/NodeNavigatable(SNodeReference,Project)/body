@@ -3,14 +3,13 @@
   myProject=project;
   myItemPresentation=new NodePointerPresentation(node);
   myTextPresentation=myItemPresentation.getPresentableText();
-  ModelAccess.instance().runReadAction(new Runnable(){
-    @Override public void run(){
-      SNode targetNode=myNode.resolve(MPSModuleRepository.getInstance());
-      if (targetNode != null) {
-        myRootNode=new jetbrains.mps.smodel.SNodePointer(targetNode.getContainingRoot());
-        myFile=MPSNodesVirtualFileSystem.getInstance().getFileFor(((SNodePointer)myRootNode));
-      }
+  final SRepository repo=ProjectHelper.getProjectRepository(project);
+  myRootNode=new ModelAccessHelper(repo).runReadAction(new Computable<SNodeReference>(){
+    @Override public SNodeReference compute(){
+      SNode targetNode=myNode.resolve(repo);
+      return targetNode == null ? null : targetNode.getContainingRoot().getReference();
     }
   }
 );
+  myFile=myRootNode == null ? null : NodeVirtualFileSystem.getInstance().getFileFor(repo,myRootNode);
 }
