@@ -22,6 +22,32 @@
           if (smodel instanceof EditableSModel) {
             ((EditableSModel)smodel).save();
           }
+          makeIndicesUpToDate(smodel);
+        }
+        /** 
+ * Forces indices that are relevant for this model's virtual file up-to-date by issuing a fake
+ * query. The thing is idea index serves queries by first making sure that all indices are up-to-date. It's
+ * crucial that the provided GlobalSearchScope has non-null project. But MPS code like ClassifierSuccessorFinder
+ * queries indices with a scope where project is null (MPS's GlobalScope)
+ */
+        private void makeIndicesUpToDate(        SModel smodel){
+          if (DumbService.isDumb(myProject)) {
+            return;
+          }
+          if (smodel.getSource() instanceof FileSystemBasedDataSource) {
+            for (            IFile f : ((FileSystemBasedDataSource)smodel.getSource()).getAffectedFiles()) {
+              VirtualFile file=VirtualFileUtils.getVirtualFile(f);
+              GlobalSearchScope oneFileScope=GlobalSearchScope.fileScope(myProject,file);
+              FileBasedIndex.getInstance().requestReindex(file);
+              for (              FileBasedIndexExtension indexExt : FileBasedIndexExtension.EXTENSION_POINT_NAME.getExtensions()) {
+                if (!indexExt.getInputFilter().acceptInput(file)) {
+                  continue;
+                }
+                ID id=indexExt.getName();
+                FileBasedIndex.getInstance().processFilesContainingAllKeys(id,Collections.emptyList(),oneFileScope,null,Processor.FALSE);
+              }
+            }
+          }
         }
       }
 ;
