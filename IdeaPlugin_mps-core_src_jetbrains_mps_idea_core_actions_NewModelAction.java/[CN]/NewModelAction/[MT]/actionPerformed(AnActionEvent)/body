@@ -1,7 +1,8 @@
 {
+  Map<String,ModelTemplate> namesToTemplates=new HashMap<String,ModelTemplate>();
   CreateFromTemplateDialog dialog=new CreateFromTemplateDialog(myProject){
     @Override protected void doOKAction(){
-      final ModelTemplates template=ModelTemplates.valueOf(getKindCombo().getSelectedName());
+      final ModelTemplate template=namesToTemplates.get(getKindCombo().getSelectedName());
       String shortModelName=getNameField().getText().trim();
       final String modelName=myModelPrefix.isEmpty() ? shortModelName : myModelPrefix + "." + shortModelName;
       if (!isModelNameValid(modelName)) {
@@ -79,9 +80,14 @@
   }
 ;
   dialog.setTitle(MPSBundle.message("create.new.model.dialog.title"));
-  for (  ModelTemplates template : ModelTemplates.values()) {
-    dialog.getKindCombo().addItem(template.getPresentation(),template.getIcon(),template.name());
-    dialog.setTemplateKindComponentsVisible(true);
+  dialog.getKindCombo().addItem(EMPTY_MODEL.getPresentation(),EMPTY_MODEL.getIcon(),EMPTY_MODEL.getName());
+  namesToTemplates.put(EMPTY_MODEL.getName(),EMPTY_MODEL);
+  for (  ModelTemplateProvider provider : ModelTemplateProvider.EP_NAME.getExtensions()) {
+    for (    ModelTemplate template : provider.getTemplates()) {
+      dialog.getKindCombo().addItem(template.getPresentation(),template.getIcon(),template.getName());
+      dialog.setTemplateKindComponentsVisible(true);
+      namesToTemplates.put(template.getName(),template);
+    }
   }
   dialog.show();
 }
