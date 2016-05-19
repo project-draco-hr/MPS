@@ -2,13 +2,21 @@
   if (myDisposed) {
     return;
   }
-  for (  MPSNodeVirtualFile deletedFile : myDeleterFiles) {
+  ArrayList<MPSNodeVirtualFile> deletedFiles;
+  ArrayList<Pair<MPSNodeVirtualFile,String>> renamedFiles;
+synchronized (this) {
+    deletedFiles=new ArrayList<>(myDeletedFiles);
+    renamedFiles=new ArrayList<>(myRenamedFiles);
+    myDeletedFiles.clear();
+    myRenamedFiles.clear();
+  }
+  for (  MPSNodeVirtualFile deletedFile : deletedFiles) {
     fireBeforeFileDeletion(this,deletedFile);
     deletedFile.invalidate();
     fireFileDeleted(this,deletedFile,deletedFile.getName(),null);
   }
-  for (  Pair<MPSNodeVirtualFile,String> renamedFile : myRenamedFiles) {
+  for (  Pair<MPSNodeVirtualFile,String> renamedFile : renamedFiles) {
     MPSNodeVirtualFile vf=renamedFile.o1;
-    vf.updateFields();
+    firePropertyChanged(this,vf,VirtualFile.PROP_NAME,renamedFile.o2,vf.getName());
   }
 }

@@ -1,23 +1,27 @@
 {
-  updateModificationStamp(md.getRootNodes());
+  final RepositoryVirtualFiles rvf=findRepoFiles(md);
+  if (rvf == null) {
+    return;
+  }
+  final Collection<MPSNodeVirtualFile> filesInModel=rvf.getKnownVirtualFilesIn(md.getReference());
+  updateModificationStamp(filesInModel);
   Collection<MPSNodeVirtualFile> deletedFiles=new ArrayList<MPSNodeVirtualFile>();
   Collection<Pair<MPSNodeVirtualFile,String>> renamedFiles=new ArrayList<Pair<MPSNodeVirtualFile,String>>();
-  for (  MPSNodeVirtualFile vf : myGlobalRepoFiles.getKnownVirtualFilesIn(md.getReference())) {
-    SNode node=vf.getSNodePointer().resolve(myRepository);
-    if (node == null) {
+  for (  MPSNodeVirtualFile vf : filesInModel) {
+    if (vf.getNode() == null) {
       deletedFiles.add(vf);
-      forgetVirtualFile(vf.getSNodePointer());
     }
  else {
       String oldName=vf.getName();
-      String newName=node.getPresentation();
+      vf.updateFields();
+      String newName=vf.getName();
       if (!oldName.equals(newName)) {
-        renamedFiles.add(new Pair<MPSNodeVirtualFile,String>(vf,newName));
+        renamedFiles.add(new Pair<MPSNodeVirtualFile,String>(vf,oldName));
       }
     }
   }
-  VFSNotifier vfsNotifier=new VFSNotifier(deletedFiles,renamedFiles);
-  if (vfsNotifier.hasPendingNotifications()) {
-    myRepository.getModelAccess().runWriteInEDT(vfsNotifier);
-  }
+  VFSNotifier vfsNotifier=new VFSNotifier(rvf);
+  vfsNotifier.deleted(deletedFiles);
+  vfsNotifier.renamed(renamedFiles);
+  vfsNotifier.execute();
 }
