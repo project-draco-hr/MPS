@@ -1,0 +1,28 @@
+{
+  myChangeCollector.stop();
+  final List<AbstractModelChangeEvent> events=myChangeCollector.purge();
+  final RepositoryVirtualFiles rvf=findRepoFiles(repository);
+  if (rvf == null || events.isEmpty()) {
+    return;
+  }
+  Collection<MPSNodeVirtualFile> deletedFiles=new ArrayList<MPSNodeVirtualFile>();
+  Collection<MPSNodeVirtualFile> changedFiles=new ArrayList<MPSNodeVirtualFile>();
+  for (  AbstractModelChangeEvent evt : events) {
+    if (evt instanceof SPropertyChangeEvent) {
+      MPSNodeVirtualFile vf=rvf.getVirtualFile(((SPropertyChangeEvent)evt).getNode().getReference());
+      if (vf != null) {
+        changedFiles.add(vf);
+      }
+    }
+ else     if (evt instanceof SNodeRemoveEvent) {
+      MPSNodeVirtualFile vf=rvf.getVirtualFile(((SNodeRemoveEvent)evt).getChild().getReference());
+      if (vf != null) {
+        deletedFiles.add(vf);
+      }
+    }
+  }
+  VFSNotifier vfsNotifier=new VFSNotifier(rvf);
+  vfsNotifier.deleted(deletedFiles);
+  vfsNotifier.changed(changedFiles);
+  vfsNotifier.execute();
+}
