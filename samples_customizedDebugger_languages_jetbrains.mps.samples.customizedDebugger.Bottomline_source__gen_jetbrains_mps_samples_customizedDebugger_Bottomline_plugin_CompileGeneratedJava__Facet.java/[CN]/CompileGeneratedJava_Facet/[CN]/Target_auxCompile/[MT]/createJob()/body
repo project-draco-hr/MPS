@@ -1,0 +1,74 @@
+{
+  return new IJob.Stub(){
+    @Override public IResult execute(    final Iterable<IResource> rawInput,    final IJobMonitor monitor,    final IPropertiesAccessor pa,    @NotNull final ProgressMonitor progressMonitor){
+      Iterable<IResource> _output_widgfz_a0b=null;
+      final Iterable<TResource> input=(Iterable<TResource>)(Iterable)rawInput;
+switch (0) {
+case 0:
+        if (Boolean.TRUE.equals(CompileGeneratedJava_Facet.Target_compile.vars(pa.global()).skipCompilation())) {
+          _output_widgfz_a0b=Sequence.fromIterable(_output_widgfz_a0b).concat(Sequence.fromIterable(input));
+          return new IResult.SUCCESS(_output_widgfz_a0b);
+        }
+      if (vars(pa.global()).skipAuxCompile() != null && vars(pa.global()).skipAuxCompile()) {
+        return new IResult.SUCCESS(_output_widgfz_a0b);
+      }
+    if (Sequence.fromIterable(input).any(new IWhereFilter<TResource>(){
+      public boolean accept(      TResource it){
+        return it.module() == null;
+      }
+    }
+)) {
+      return new IResult.FAILURE(_output_widgfz_a0b);
+    }
+  Iterable<TResource> toCompile=Sequence.fromIterable(input).where(new IWhereFilter<TResource>(){
+    public boolean accept(    TResource it){
+      return SModuleOperations.isCompileInIdea(it.module());
+    }
+  }
+);
+if (Sequence.fromIterable(toCompile).isEmpty()) {
+  return new IResult.SUCCESS(_output_widgfz_a0b);
+}
+if (RuntimeFlags.isTestMode()) {
+return new IResult.FAILURE(_output_widgfz_a0b);
+}
+IdeaJavaCompiler compiler=vars(pa.global()).project().getComponent(IdeaJavaCompiler.class);
+if (compiler == null || !(compiler.isValid())) {
+monitor.reportFeedback(new IFeedback.ERROR(String.valueOf("IntelliJ IDEA is required for compilation")));
+return new IResult.FAILURE(_output_widgfz_a0b);
+}
+monitor.currentProgress().beginWork("Compiling in IntelliJ IDEA",1,monitor.currentProgress().workLeft());
+monitor.currentProgress().advanceWork("Compiling in IntelliJ IDEA",1);
+MPSCompilationResult cr=compiler.compileModules(Sequence.fromIterable(toCompile).select(new ISelector<TResource,SModule>(){
+public SModule select(TResource it){
+return it.module();
+}
+}
+).toGenericArray(SModule.class));
+if (cr != null) {
+for (IMessage msg : cr.getMessages()) {
+monitor.reportFeedback(new IFeedback.MESSAGE(msg));
+}
+}
+if (cr == null || !(cr.isOk())) {
+if (cr != null) {
+if (cr.getErrors() > 0) {
+monitor.reportFeedback(new IFeedback.ERROR(String.valueOf(cr)));
+}
+ else if (cr.getWarnings() > 0) {
+monitor.reportFeedback(new IFeedback.WARNING(String.valueOf(cr)));
+}
+ else {
+monitor.reportFeedback(new IFeedback.INFORMATION(String.valueOf(cr)));
+}
+}
+return new IResult.FAILURE(_output_widgfz_a0b);
+}
+monitor.currentProgress().finishWork("Compiling in IntelliJ IDEA");
+default :
+return new IResult.SUCCESS(_output_widgfz_a0b);
+}
+}
+}
+;
+}

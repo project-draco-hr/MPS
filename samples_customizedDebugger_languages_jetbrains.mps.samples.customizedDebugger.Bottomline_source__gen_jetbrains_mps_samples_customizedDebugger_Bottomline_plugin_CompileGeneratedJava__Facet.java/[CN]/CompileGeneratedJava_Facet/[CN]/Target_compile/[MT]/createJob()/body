@@ -1,0 +1,68 @@
+{
+  return new IJob.Stub(){
+    @Override public IResult execute(    final Iterable<IResource> rawInput,    final IJobMonitor monitor,    final IPropertiesAccessor pa,    @NotNull final ProgressMonitor progressMonitor){
+      Iterable<IResource> _output_widgfz_a0a=null;
+      final Iterable<TResource> input=(Iterable<TResource>)(Iterable)rawInput;
+switch (0) {
+case 0:
+        if (Boolean.TRUE.equals(vars(pa.global()).skipCompilation())) {
+          _output_widgfz_a0a=Sequence.fromIterable(_output_widgfz_a0a).concat(Sequence.fromIterable(input));
+          return new IResult.SUCCESS(_output_widgfz_a0a);
+        }
+      vars(pa.global()).compiledAnything(false);
+    final Set<SModule> toCompile=SetSequence.fromSetWithValues(new HashSet<SModule>(),Sequence.fromIterable(input).select(new ISelector<TResource,SModule>(){
+      public SModule select(      TResource it){
+        return it.module();
+      }
+    }
+).where(new IWhereFilter<SModule>(){
+      public boolean accept(      SModule it){
+        return SModuleOperations.isCompileInMps(it);
+      }
+    }
+).distinct());
+  if (SetSequence.fromSet(toCompile).isEmpty()) {
+    return new IResult.SUCCESS(_output_widgfz_a0a);
+  }
+final Wrappers._T<MPSCompilationResult> cr=new Wrappers._T<MPSCompilationResult>();
+ModelAccess.instance().runReadAction(new Runnable(){
+public void run(){
+  cr.value=new ModuleMaker().make(toCompile,progressMonitor,vars(pa.global()).options());
+}
+}
+);
+if (cr.value != null) {
+vars(pa.global()).compiledAnything(vars(pa.global()).compiledAnything() || cr.value.isCompiledAnything());
+for (IMessage msg : cr.value.getMessages()) {
+monitor.reportFeedback(new IFeedback.MESSAGE(msg));
+}
+}
+if (cr.value == null || !(cr.value.isOk())) {
+if (cr.value != null) {
+if (cr.value.getErrors() > 0) {
+monitor.reportFeedback(new IFeedback.ERROR(String.valueOf(cr.value)));
+}
+ else if (cr.value.getWarnings() > 0) {
+monitor.reportFeedback(new IFeedback.WARNING(String.valueOf(cr.value)));
+}
+ else {
+monitor.reportFeedback(new IFeedback.INFORMATION(String.valueOf(cr.value)));
+}
+}
+return new IResult.FAILURE(_output_widgfz_a0a);
+}
+for (TResource tres : Sequence.fromIterable(input)) {
+if (tres.module() == null) {
+return new IResult.FAILURE(_output_widgfz_a0a);
+}
+if (cr.value.getChangedModules().contains(tres.module())) {
+_output_widgfz_a0a=Sequence.fromIterable(_output_widgfz_a0a).concat(Sequence.fromIterable(Sequence.<IResource>singleton(tres)));
+}
+}
+default :
+return new IResult.SUCCESS(_output_widgfz_a0a);
+}
+}
+}
+;
+}
