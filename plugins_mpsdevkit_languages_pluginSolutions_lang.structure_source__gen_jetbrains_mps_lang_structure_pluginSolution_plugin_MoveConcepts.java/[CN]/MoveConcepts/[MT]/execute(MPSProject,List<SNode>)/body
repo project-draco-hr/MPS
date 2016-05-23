@@ -1,0 +1,64 @@
+{
+  final List<SNode> conceptsToMove=Sequence.fromIterable(SNodeOperations.ofConcept(nodesToMove,MetaAdapterFactory.getConcept(0xc72da2b97cce4447L,0x8389f407dc1158b7L,0x1103553c5ffL,"jetbrains.mps.lang.structure.structure.AbstractConceptDeclaration"))).toListSequence();
+  final SModel sourceModel=SNodeOperations.getModel(ListSequence.fromList(nodesToMove).first());
+  final Language sourceLanguage=Language.getLanguageFor(sourceModel);
+  final Wrappers._boolean hasGenerator=new Wrappers._boolean(false);
+  project.getRepository().getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      hasGenerator.value=ListSequence.fromList(conceptsToMove).any(new IWhereFilter<SNode>(){
+        public boolean accept(        SNode node){
+          return ListSequence.fromList(AbstractConceptDeclaration__BehaviorDescriptor.findGeneratorFragments_id5zMz2aJEI4B.invoke(node)).isNotEmpty();
+        }
+      }
+);
+    }
+  }
+);
+  if (hasGenerator.value) {
+    Messages.showWarningDialog(project.getProject(),"Generator fragments will not be moved.","Move concepts");
+  }
+  final Wrappers._T<List<SModelReference>> structureModels=new Wrappers._T<List<SModelReference>>();
+  project.getRepository().getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      Iterable<SModule> modules=project.getRepository().getModules();
+      structureModels.value=Sequence.fromIterable(modules).ofType(Language.class).select(new ISelector<Language,SModelReference>(){
+        public SModelReference select(        Language it){
+          return it.getStructureModelDescriptor().getReference();
+        }
+      }
+).toListSequence();
+    }
+  }
+);
+  final SModelReference targetModelRef=SModelReferenceDialog.getSelectedModel(project,structureModels.value);
+  if (targetModelRef == null) {
+    return;
+  }
+  final Wrappers._T<SModel> targetModel=new Wrappers._T<SModel>();
+  final Wrappers._T<Language> targetLanguage=new Wrappers._T<Language>();
+  final Wrappers._T<Map<LanguageAspect,List<SNode>>> aspectsMap=new Wrappers._T<Map<LanguageAspect,List<SNode>>>();
+  project.getRepository().getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      targetModel.value=targetModelRef.resolve(project.getRepository());
+      targetLanguage.value=(Language)targetModel.value.getModule();
+      aspectsMap.value=MoveConceptUtil.getAspectNodes(sourceLanguage,conceptsToMove);
+    }
+  }
+);
+  this.doMove(project,MapSequence.fromMap(new ArrayList<ToMoveItem>()),new _FunctionTypes._void_P1_E0<RefactoringSession>(){
+    public void invoke(    RefactoringSession refactoringSession){
+      sourceLanguage.addDependency(targetLanguage.value.getModuleReference(),false);
+      targetLanguage.value.addDependency(sourceLanguage.getModuleReference(),false);
+      MoveConceptUtil.setExtendsDependencies(conceptsToMove,sourceModel,sourceLanguage,targetLanguage.value);
+      refactoringSession.registerChange(new Runnable(){
+        public void run(){
+          for (          IMapping<LanguageAspect,List<SNode>> aspectItem : MapSequence.fromMap(aspectsMap.value)) {
+            SModelOperations.validateLanguagesAndImports(aspectItem.key().get(targetLanguage.value),true,true);
+          }
+        }
+      }
+);
+    }
+  }
+);
+}

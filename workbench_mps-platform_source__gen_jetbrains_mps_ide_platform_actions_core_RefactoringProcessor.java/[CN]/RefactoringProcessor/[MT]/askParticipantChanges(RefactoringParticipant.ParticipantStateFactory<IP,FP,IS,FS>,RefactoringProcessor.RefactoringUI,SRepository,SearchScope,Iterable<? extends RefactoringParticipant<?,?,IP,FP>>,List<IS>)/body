@@ -1,14 +1,14 @@
 {
-  final Map<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,IP,FP,IS,FS>> changes=MapSequence.fromMap(new HashMap<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,IP,FP,IS,FS>>());
+  final List<RefactoringParticipant.ParticipantState<?,?,IP,FP,IS,FS>> participantStates=ListSequence.fromList(new ArrayList<RefactoringParticipant.ParticipantState<?,?,IP,FP,IS,FS>>());
   final Wrappers._T<List<RefactoringParticipant.Option>> options=new Wrappers._T<List<RefactoringParticipant.Option>>();
   refactoringUI.prepare(new Runnable(){
     public void run(){
       for (      RefactoringParticipant<?,?,IP,FP> participant : Sequence.fromIterable(participants)) {
-        MapSequence.fromMap(changes).put(participant,RefactoringParticipant.ParticipantState.create(factory,participant,nodes));
+        ListSequence.fromList(participantStates).addElement(RefactoringParticipant.ParticipantState.create(factory,participant,nodes));
       }
-      options.value=MapSequence.fromMap(changes).translate(new ITranslator2<IMapping<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,IP,FP,IS,FS>>,RefactoringParticipant.Option>(){
-        public Iterable<RefactoringParticipant.Option> translate(        IMapping<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,IP,FP,IS,FS>> it){
-          return it.value().getAvaliableOptions(repository);
+      options.value=ListSequence.fromList(participantStates).translate(new ITranslator2<RefactoringParticipant.ParticipantState<?,?,IP,FP,IS,FS>,RefactoringParticipant.Option>(){
+        public Iterable<RefactoringParticipant.Option> translate(        RefactoringParticipant.ParticipantState<?,?,IP,FP,IS,FS> it){
+          return it.getAvaliableOptions(repository);
         }
       }
 ).distinct().sort(new ISelector<RefactoringParticipant.Option,String>(){
@@ -27,11 +27,11 @@
   final Wrappers._boolean cancelled=new Wrappers._boolean(false);
   refactoringUI.runSearch(new _FunctionTypes._void_P1_E0<ProgressMonitor>(){
     public void invoke(    ProgressMonitor progressMonitor){
-      int steps=MapSequence.fromMap(changes).count();
+      int steps=ListSequence.fromList(participantStates).count();
       progressMonitor.start("Searching for usages",steps);
-      for (      IMapping<RefactoringParticipant,RefactoringParticipant.ParticipantState<?,?,IP,FP,IS,FS>> participantStates : MapSequence.fromMap(changes)) {
+      for (      RefactoringParticipant.ParticipantState<?,?,IP,FP,IS,FS> participantStates : ListSequence.fromList(participantStates)) {
         try {
-          participantStates.value().findChanges(repository,selectedOptions,searchScope,progressMonitor.subTask(1,SubProgressKind.AS_COMMENT));
+          participantStates.findChanges(repository,selectedOptions,searchScope,progressMonitor.subTask(1,SubProgressKind.AS_COMMENT));
         }
  catch (        RuntimeException e) {
           if (LOG.isEnabledFor(Level.ERROR)) {
@@ -52,5 +52,5 @@
   if (cancelled.value) {
     return null;
   }
-  return changes;
+  return participantStates;
 }

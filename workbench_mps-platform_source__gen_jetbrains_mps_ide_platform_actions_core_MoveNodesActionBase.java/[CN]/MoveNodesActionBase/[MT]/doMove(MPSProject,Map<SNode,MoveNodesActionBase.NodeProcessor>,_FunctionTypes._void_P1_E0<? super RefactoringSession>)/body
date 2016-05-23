@@ -1,0 +1,60 @@
+{
+  project.getRepository().getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      for (      IMapping<SNode,MoveNodesActionBase.NodeProcessor> moving : MapSequence.fromMap(moveMap)) {
+        if (!(moving.value().isValid(moving.key()))) {
+          throw new IllegalArgumentException();
+        }
+      }
+    }
+  }
+);
+  final Wrappers._T<List<SNode>> allNodes=new Wrappers._T<List<SNode>>();
+  project.getRepository().getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      allNodes.value=MapSequence.fromMap(moveMap).translate(new ITranslator2<IMapping<SNode,MoveNodesActionBase.NodeProcessor>,SNode>(){
+        public Iterable<SNode> translate(        IMapping<SNode,MoveNodesActionBase.NodeProcessor> mapping){
+          return mapping.value().getNodesToSearch(mapping.key());
+        }
+      }
+).toListSequence();
+    }
+  }
+);
+  Iterable<? extends RefactoringParticipant<?,?,SNode,SNode>> participants=new ExtensionPoint<MoveNodeRefactoringParticipant<?,?>>("jetbrains.mps.ide.platform.MoveNodeParticipantEP").getObjects();
+  RefactoringProcessor.performRefactoring(project,getName(),participants,allNodes.value,new _FunctionTypes._return_P2_E0<_FunctionTypes._return_P1_E0<? extends SNode,? super SNode>,Iterable<RefactoringParticipant.ParticipantState<?,?,SNode,SNode,SNode,SNode>>,RefactoringSession>(){
+    public _FunctionTypes._return_P1_E0<? extends SNode,? super SNode> invoke(    Iterable<RefactoringParticipant.ParticipantState<?,?,SNode,SNode,SNode,SNode>> participantStates,    RefactoringSession refactoringSession){
+      if (initRefactoringSession != null) {
+        initRefactoringSession.invoke(refactoringSession);
+      }
+      final Map<MoveNodesActionBase.NodeProcessor,List<SNode>> processorToRoots=MapSequence.fromMap(new HashMap<MoveNodesActionBase.NodeProcessor,List<SNode>>());
+      MapSequence.fromMap(moveMap).visitAll(new IVisitor<IMapping<SNode,MoveNodesActionBase.NodeProcessor>>(){
+        public void visit(        IMapping<SNode,MoveNodesActionBase.NodeProcessor> mapping){
+          MoveNodesActionBase.NodeProcessor processor=mapping.value();
+          if (!(MapSequence.fromMap(processorToRoots).containsKey(processor))) {
+            MapSequence.fromMap(processorToRoots).put(processor,ListSequence.fromList(new ArrayList<SNode>()));
+          }
+          ListSequence.fromList(MapSequence.fromMap(processorToRoots).get(processor)).addElement(mapping.key());
+        }
+      }
+);
+      final Map<SNode,Integer> allNodesIndices=MapSequence.fromMap(new HashMap<SNode,Integer>());
+      for (int i=0; i < ListSequence.fromList(allNodes.value).count(); i++) {
+        MapSequence.fromMap(allNodesIndices).put(ListSequence.fromList(allNodes.value).getElement(i),i);
+      }
+      _FunctionTypes._return_P2_E0<? extends Iterable<RefactoringParticipant.Change<?,?>>,? super SNode,? super RefactoringParticipant.ParticipantState<?,?,SNode,SNode,SNode,SNode>> nodeChangesCorrespondence=new _FunctionTypes._return_P2_E0<ISequence<RefactoringParticipant.Change<?,?>>,SNode,RefactoringParticipant.ParticipantState<?,?,SNode,SNode,SNode,SNode>>(){
+        public ISequence<RefactoringParticipant.Change<?,?>> invoke(        SNode node,        RefactoringParticipant.ParticipantState<?,?,SNode,SNode,SNode,SNode> participantState){
+          return ListSequence.fromList((ListSequence.fromList(participantState.getChanges()).getElement(MapSequence.fromMap(allNodesIndices).get(node)))).select(new ISelector<RefactoringParticipant.Change<?,?>,RefactoringParticipant.Change<?,?>>(){
+            public RefactoringParticipant.Change<?,?> select(            RefactoringParticipant.Change<?,?> it){
+              return it;
+            }
+          }
+);
+        }
+      }
+;
+      return doRefactor(processorToRoots,nodeChangesCorrespondence,participantStates,refactoringSession);
+    }
+  }
+);
+}
