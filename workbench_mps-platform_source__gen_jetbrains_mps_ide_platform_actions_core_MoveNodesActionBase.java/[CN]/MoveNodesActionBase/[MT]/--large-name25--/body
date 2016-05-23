@@ -1,14 +1,15 @@
 {
   for (  IMapping<MoveNodesActionBase.NodeProcessor,List<SNode>> mapping : MapSequence.fromMap(processorToRoots)) {
     List<SNode> moveRoots=mapping.value();
-    final MoveNodesActionBase.NodeProcessor processor=mapping.key();
+    MoveNodesActionBase.NodeProcessor processor=mapping.key();
     Iterable<SNode> moveRootsToRemove=ListSequence.fromList(moveRoots).where(new IWhereFilter<SNode>(){
       public boolean accept(      SNode moveRoot){
-        return ListSequence.fromList(processor.getNodesToSearch(moveRoot)).all(new IWhereFilter<SNode>(){
-          public boolean accept(          final SNode descendant){
+        return ListSequence.fromList(MapSequence.fromMap(moveRootsToDescendants).get(moveRoot.getReference())).all(new IWhereFilter<SNodeReference>(){
+          public boolean accept(          final SNodeReference descendant){
             return Sequence.fromIterable(participantStates).all(new IWhereFilter<RefactoringParticipant.ParticipantState<?,?,SNode,SNode,SNode,SNode>>(){
               public boolean accept(              RefactoringParticipant.ParticipantState<?,?,SNode,SNode,SNode,SNode> participantState){
-                return Sequence.fromIterable(nodeChangesCorrespondence.invoke(descendant,participantState)).all(new IWhereFilter<RefactoringParticipant.Change<?,?>>(){
+                List<? extends RefactoringParticipant.Change<?,?>> changes=nodeChangesCorrespondence.getCorrespondent(participantState.getChanges(),descendant);
+                return ListSequence.fromList(changes).all(new IWhereFilter<RefactoringParticipant.Change<?,?>>(){
                   public boolean accept(                  RefactoringParticipant.Change<?,?> change){
                     return !(change.needsToPreserveOldNode());
                   }
