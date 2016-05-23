@@ -1,9 +1,9 @@
 {
-  final CurrentLinePainter newPainter=ModelAccess.instance().runReadAction(new Computable<CurrentLinePainter>(){
+  final CurrentLinePainter newPainter=new ModelAccessHelper(ProjectHelper.getModelAccess(myProject)).runReadAction(new Computable<CurrentLinePainter>(){
     @Override public CurrentLinePainter compute(){
       SNode node=getNode(debugSession);
       if (node != null) {
-        return new CurrentLinePainter(node);
+        return new CurrentLinePainter(SNodeOperations.getPointer(node));
       }
       return null;
     }
@@ -16,9 +16,9 @@ synchronized (mySessionToContextPainterMap) {
       MapSequence.fromMap(mySessionToContextPainterMap).put(debugSession,newPainter);
       return new Runnable(){
         @Override public void run(){
-          final jetbrains.mps.project.Project mpsProject=ProjectHelper.toMPSProject(myProject);
+          final jetbrains.mps.project.Project mpsProject=ProjectHelper.fromIdeaProject(myProject);
           mpsProject.getModelAccess().checkWriteAccess();
-          SNode node=newPainter.getSNode();
+          SNode node=(newPainter.getSNode() == null ? null : newPainter.getSNode().resolve(mpsProject.getRepository()));
           if (node != null) {
             if (visible && focus) {
               jetbrains.mps.openapi.editor.EditorComponent currentEditorComponent=NavigationSupport.getInstance().openNode(mpsProject,node,true,false).getCurrentEditorComponent();
