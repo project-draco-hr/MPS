@@ -1,0 +1,45 @@
+{
+  final Map<SModule,Boolean> modules=new HashMap<SModule,Boolean>();
+  orderEnumerator.forEach(new Processor<OrderEntry>(){
+    public boolean process(    OrderEntry oe){
+      if (!(oe instanceof LibraryOrderEntry)) {
+        return true;
+      }
+      LibraryOrderEntry loe=(LibraryOrderEntry)oe;
+      Library library=loe.getLibrary();
+      if (loe.isModuleLevel() || library == null) {
+        return true;
+      }
+      if (ModuleLibraryType.isModuleLibrary(library)) {
+        Set<SModuleReference> moduleReferences=ModuleLibrariesUtil.getModules(library);
+        for (        SModuleReference moduleReference : moduleReferences) {
+          SModule m=moduleReference.resolve(getRepository());
+          if (m == null) {
+            continue;
+          }
+          if (modules.containsKey(moduleReference)) {
+            if (loe.isExported()) {
+              modules.put(m,true);
+            }
+          }
+ else {
+            modules.put(m,loe.isExported());
+          }
+        }
+      }
+ else       if (includeStubs) {
+        SModule s=getRepository().getModule(ModuleId.foreign(library.getName()));
+        if (s != null) {
+          modules.put(s,loe.isExported());
+        }
+      }
+      return true;
+    }
+  }
+);
+  List<SDependency> result=new ArrayList<SDependency>();
+  for (  Entry<SModule,Boolean> entry : modules.entrySet()) {
+    result.add(new SDependencyImpl(entry.getKey(),SDependencyScope.DEFAULT,entry.getValue()));
+  }
+  return result;
+}
