@@ -1,7 +1,8 @@
 {
   final Language language=((Language)((SModule)MapSequence.fromMap(_params).get("module")));
   final List<SModelReference> models=ListSequence.fromList(new ArrayList<SModelReference>());
-  ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
+  final SRepository repository=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository();
+  ModelAccess modelAccess=repository.getModelAccess();
   modelAccess.runReadAction(new Runnable(){
     public void run(){
       Iterable<SModel> descriptors=new FilteredGlobalScope().getModels();
@@ -21,7 +22,7 @@
   final Wrappers._boolean visibleFromModule=new Wrappers._boolean(true);
   modelAccess.runReadAction(new Runnable(){
     public void run(){
-      SModel md=result.resolve(((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository());
+      SModel md=result.resolve(repository);
       visibleFromModule.value=VisibilityUtil.isVisible(language,md);
     }
   }
@@ -36,13 +37,13 @@
   }
   modelAccess.executeCommand(new Runnable(){
     public void run(){
-      MPSModuleRepository.getInstance().saveAll();
+      repository.saveAll();
       LanguageDescriptor descriptor;
       descriptor=language.getModuleDescriptor();
       descriptor.getAccessoryModels().add(result);
-      language.setLanguageDescriptor(descriptor);
+      language.setModuleDescriptor(descriptor);
       if (importModuleDependency) {
-        SModel md=result.resolve(((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository());
+        SModel md=result.resolve(repository);
         language.addDependency(md.getModule().getModuleReference(),false);
       }
       language.save();
