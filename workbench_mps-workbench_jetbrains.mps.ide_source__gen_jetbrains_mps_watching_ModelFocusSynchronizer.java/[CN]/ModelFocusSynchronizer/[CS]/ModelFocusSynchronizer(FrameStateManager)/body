@@ -3,10 +3,15 @@
     @Override public void onFrameDeactivated(){
     }
     @Override public void onFrameActivated(){
-      ModelAccess.instance().runReadInEDT(new Runnable(){
-        public void run(){
-          Set<SModel> models=SetSequence.fromSet(new HashSet<SModel>());
-          for (          Project project : ProjectManager.getInstance().getOpenProjects()) {
+      final Set<IFile> files=SetSequence.fromSet(new HashSet<IFile>());
+      for (      Project project : ProjectManager.getInstance().getOpenProjects()) {
+        MPSProject mpsProject=ProjectHelper.fromIdeaProject(project);
+        if (mpsProject == null) {
+          continue;
+        }
+        mpsProject.getModelAccess().runReadInEDT(new Runnable(){
+          public void run(){
+            Set<SModel> models=SetSequence.fromSet(new HashSet<SModel>());
             for (            VirtualFile vf : FileEditorManager.getInstance(project).getSelectedFiles()) {
               if (vf instanceof MPSNodeVirtualFile) {
                 MPSNodeVirtualFile nvf=((MPSNodeVirtualFile)vf);
@@ -22,18 +27,24 @@
                 }
               }
             }
+            for (            SModel model : SetSequence.fromSet(models)) {
+              SetSequence.fromSet(files).addSequence(CollectionSequence.fromCollection(new FileSystemModelHelper(model).getFiles()));
+            }
           }
+        }
+);
+      }
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        public void run(){
           RefreshSession session=RefreshQueue.getInstance().createSession(true,true,null);
-          for (          SModel model : SetSequence.fromSet(models)) {
-            for (            IFile file : CollectionSequence.fromCollection(new FileSystemModelHelper(model).getFiles())) {
-              IFile fileToRefresh=file;
-              while (!(fileToRefresh.exists())) {
-                fileToRefresh=fileToRefresh.getParent();
-              }
-              VirtualFile virtualFile=VirtualFileUtils.getVirtualFile(fileToRefresh);
-              if (virtualFile != null) {
-                session.addFile(virtualFile);
-              }
+          for (          IFile file : SetSequence.fromSet(files)) {
+            IFile fileToRefresh=file;
+            while (!(fileToRefresh.exists())) {
+              fileToRefresh=fileToRefresh.getParent();
+            }
+            VirtualFile virtualFile=VirtualFileUtils.getVirtualFile(fileToRefresh);
+            if (virtualFile != null) {
+              session.addFile(virtualFile);
             }
           }
           session.launch();
