@@ -1,4 +1,5 @@
 {
+  SRepository repository=ProjectHelper.getProjectRepository(myProject);
   Map<String,ModelTemplate> namesToTemplates=new HashMap<String,ModelTemplate>();
   CreateFromTemplateDialog dialog=new CreateFromTemplateDialog(myProject){
     @Override protected void doOKAction(){
@@ -8,7 +9,7 @@
       if (!isModelNameValid(modelName)) {
         return;
       }
-      final SModel newModel=new ModelAccessHelper(ProjectHelper.getModelAccess(myProject)).executeCommand(new Computable<SModel>(){
+      final SModel newModel=new ModelAccessHelper(repository.getModelAccess()).executeCommand(new Computable<SModel>(){
         @Override public SModel compute(){
           final String path=((PsiDirectory)anActionEvent.getData(LangDataKeys.PSI_ELEMENT)).getVirtualFile().getPath();
           EditableSModel model=null;
@@ -52,7 +53,7 @@
       if (getOKAction().isEnabled()) {
         close(OK_EXIT_CODE);
       }
-      ProjectHelper.getModelAccess(myProject).runWriteAction(new Runnable(){
+      repository.getModelAccess().runWriteAction(new Runnable(){
         @Override public void run(){
           ((EditableSModel)newModel).save();
         }
@@ -64,7 +65,7 @@
         showError(MPSBundle.message("create.new.model.dialog.error.empty.name"));
         return false;
       }
-      if (SModelRepository.getInstance().getModelDescriptor(modelName) != null) {
+      if (new ModuleRepositoryFacade(repository).getModelByName(modelName) != null) {
         showError(MPSBundle.message("create.new.model.dialog.error.model.exists",modelName));
         return false;
       }

@@ -1,0 +1,35 @@
+{
+  final List<SModuleReference> availableSolutions=new ArrayList<SModuleReference>();
+  final List<SModuleReference> availableLanguages=new ArrayList<SModuleReference>();
+  repository.getModelAccess().runReadAction(new Runnable(){
+    @Override public void run(){
+      for (      SModule module : new ModuleRepositoryFacade(repository).getAllModules(SModule.class)) {
+        if (module instanceof SolutionIdea || ((AbstractModule)module).getDescriptorFile() == null) {
+          continue;
+        }
+        if (excluded.contains(VirtualFileUtils.getVirtualFile(((AbstractModule)module).getDescriptorFile()))) {
+          continue;
+        }
+        if (module instanceof Solution) {
+          availableSolutions.add(module.getModuleReference());
+        }
+ else {
+          availableLanguages.add(module.getModuleReference());
+        }
+      }
+    }
+  }
+);
+  Comparator<SModuleReference> moduleComparator=new Comparator<SModuleReference>(){
+    @Override public int compare(    SModuleReference o1,    SModuleReference o2){
+      return o1.getModuleName().compareTo(o2.getModuleName());
+    }
+  }
+;
+  Collections.sort(availableSolutions,moduleComparator);
+  Collections.sort(availableLanguages,moduleComparator);
+  List<SModuleReference> result=new ArrayList<SModuleReference>();
+  result.addAll(availableSolutions);
+  result.addAll(availableLanguages);
+  return result;
+}

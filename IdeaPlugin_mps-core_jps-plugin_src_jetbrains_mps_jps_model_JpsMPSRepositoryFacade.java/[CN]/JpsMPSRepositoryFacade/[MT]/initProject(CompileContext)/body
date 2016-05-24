@@ -1,7 +1,6 @@
 {
   long start=System.nanoTime();
   JpsProject jpsProject=context.getProjectDescriptor().getProject();
-  myProject=new JpsMPSProject(jpsProject);
   Set<JpsLibrary> processedSdks=new HashSet<JpsLibrary>();
   JpsLibrary jdk=null;
   for (  JpsModule mod : jpsProject.getModules()) {
@@ -16,7 +15,7 @@
     descriptor.setNamespace(mod.getName());
     MPSCompilerUtil.debug(context,"UUID " + descriptor.getId());
     JpsSolutionIdea module=new JpsSolutionIdea(mod,descriptor,context);
-    JpsSolutionIdea solutionIdea=MPSModuleRepository.getInstance().registerModule(module,myProject);
+    JpsSolutionIdea solutionIdea=((SRepositoryExt)myRepository).registerModule(module,myProject);
     if (module == solutionIdea) {
       solutionIdea.updateModelsSet();
     }
@@ -25,7 +24,7 @@
     for (    JpsLibrary sdk : getModuleSdks(mod,context)) {
       MPSCompilerUtil.debug(context,"SDK name" + sdk.getName() + " type: "+ sdk.getType());
       JpsLibSolution sdkSolution=createLibSolution(sdk,jdk,context);
-      JpsLibSolution regSolution=MPSModuleRepository.getInstance().registerModule(sdkSolution,myProject);
+      JpsLibSolution regSolution=((SRepositoryExt)myRepository).registerModule(sdkSolution,myProject);
       MPSCompilerUtil.debug(context,"SDK " + regSolution.getModuleReference().toString());
       if (sdkSolution == regSolution) {
         MPSCompilerUtil.debug(context,"SDK updating model set for " + sdk.getName());
@@ -42,14 +41,14 @@
   }
   for (  JpsLibrary jpsLib : jpsProject.getLibraryCollection().getLibraries()) {
     JpsLibSolution libSolution=createLibSolution(jpsLib,jdk,context);
-    JpsLibSolution regSolution=MPSModuleRepository.getInstance().registerModule(libSolution,myProject);
+    JpsLibSolution regSolution=((SRepositoryExt)myRepository).registerModule(libSolution,myProject);
     MPSCompilerUtil.debug(context,"LIB " + regSolution.getModuleReference().toString());
     if (libSolution == regSolution) {
       MPSCompilerUtil.debug(context,"LIB updating model set for " + jpsLib.getName());
       libSolution.updateModelsSet();
     }
     if (MPSCompilerUtil.isExtraTracingMode()) {
-      for (      SModel desc : SModelRepository.getInstance().getModelDescriptors(regSolution)) {
+      for (      SModel desc : regSolution.getModels()) {
         MPSCompilerUtil.debug(context,"LIB model " + desc.getModelName());
       }
     }
@@ -57,9 +56,9 @@
   if (MPSCompilerUtil.isTracingMode()) {
     context.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"Project modules loaded in " + (System.nanoTime() - start) / 1000000 + " ms"));
     if (MPSCompilerUtil.isExtraTracingMode()) {
-      for (      SModule m : MPSModuleRepository.getInstance().getModules(myProject)) {
+      for (      SModule m : new ModuleRepositoryFacade(myRepository).getModules(myProject,null)) {
         context.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"Debug output: module " + m.getModuleReference().toString()));
-        for (        SModel d : SModelRepository.getInstance().getModelDescriptors(m)) {
+        for (        SModel d : m.getModels()) {
           context.processMessage(new CompilerMessage(MPSMakeConstants.BUILDER_ID,Kind.INFO,"Debug output: model " + SNodeOperations.getModelLongName(d) + " / "+ d.getReference().toString()));
         }
       }
