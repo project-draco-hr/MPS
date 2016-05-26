@@ -1,5 +1,5 @@
 {
-  if (!(isApplicable(initialState,repository)) || !(ListSequence.fromList(selectedOptions).contains(OPTION))) {
+  if (!(isApplicable(ListSequence.fromListAndArray(new ArrayList<SNodeReference>(),initialState),repository)) || !(ListSequence.fromList(selectedOptions).contains(OPTION))) {
     return ListSequence.fromList(new ArrayList<RefactoringParticipant.Change<SNodeReference,SNodeReference>>());
   }
   final SNode sourceNode=initialState.resolve(repository);
@@ -42,7 +42,7 @@
         }
       }
 ).toListSequence();
-      MoveNodeRefactoringLogParticipant.LogBuilder logBuilder=MoveNodeRefactoringLogParticipant.LogBuilder.getBuilder(refactoringSession,sourceModule);
+      MoveNodeRefactoringLogParticipant.LogBuilder logBuilder=MoveNodeRefactoringLogParticipant.LogBuilder.getBuilder(refactoringSession,searchScope,sourceModule);
       logBuilder.addOptions(selectedOptions);
 {
         Iterator<RefactoringParticipant.PersistentRefactoringParticipant<?,?,SNode,SNode>> participant_it=ListSequence.fromList(participantStates).select(new ISelector<MoveNodeRefactoringLogParticipant.SerializingParticipantState<?,?>,RefactoringParticipant.PersistentRefactoringParticipant<?,?,SNode,SNode>>(){
@@ -63,29 +63,6 @@
           if (i_var != null) {
             logBuilder.addPart(participant_var,i_var,f_var);
           }
-          refactoringSession.registerChange(new Runnable(){
-            public void run(){
-              Iterable<SModule> modules=searchScope.getModules();
-              Sequence.fromIterable(modules).where(new IWhereFilter<SModule>(){
-                public boolean accept(                SModule m){
-                  return MigrationModuleUtil.isModuleMigrateable(m);
-                }
-              }
-).where(new IWhereFilter<SModule>(){
-                public boolean accept(                SModule m){
-                  return SetSequence.fromSet(MigrationModuleUtil.getModuleDependencies(m)).contains(sourceModule);
-                }
-              }
-).visitAll(new IVisitor<SModule>(){
-                public void visit(                SModule m){
-                  int fromVersion=MigrationModuleUtil.getDepVersion(m,sourceModule.getModuleReference());
-                  MigrationModuleUtil.setDepVersion(m,sourceModule.getModuleReference(),fromVersion + 1);
-                }
-              }
-);
-            }
-          }
-);
         }
       }
     }

@@ -17,12 +17,35 @@
       }
 ).distinct()) {
         if (!(SModelOperations.getImportedModelUIDs(migrationModel).contains(reference))) {
-          sm.addModelImport(reference,true);
+          sm.addModelImport(reference);
         }
       }
       sm.addLanguage(MetaAdapterFactory.getLanguage(MetaIdFactory.langId(0x9882f4ad195546feL,0x826994189e5dbbf2L),"jetbrains.mps.lang.migration.util"));
       jetbrains.mps.lang.smodel.generator.smodelAdapter.SModelOperations.addRootNode(migrationModel,myRefactoringStep);
       module.setModuleVersion(moduleVersion + 1);
+      Iterable<SModule> modules=searchScope.getModules();
+      List<SModule> modulesToIncrementDependencyVersion=Sequence.fromIterable(modules).where(new IWhereFilter<SModule>(){
+        public boolean accept(        SModule m){
+          return MigrationModuleUtil.isModuleMigrateable(m);
+        }
+      }
+).where(new IWhereFilter<SModule>(){
+        public boolean accept(        SModule m){
+          return SetSequence.fromSet(MigrationModuleUtil.getModuleDependencies(m)).contains(module) && MigrationModuleUtil.hasDepVersion(m,module.getModuleReference());
+        }
+      }
+).toListSequence();
+      for (      SModule m : ListSequence.fromList(modulesToIncrementDependencyVersion)) {
+        int depVersion=MigrationModuleUtil.getDepVersion(m,module.getModuleReference());
+        if (moduleVersion != depVersion) {
+          if (LOG.isEnabledFor(Level.ERROR)) {
+            LOG.error("Module " + m + " depends on module "+ module+ " with version "+ depVersion+ ", but current version is "+ moduleVersion);
+          }
+        }
+ else {
+          MigrationModuleUtil.setDepVersion(m,module.getModuleReference(),moduleVersion + 1);
+        }
+      }
     }
   }
 );
