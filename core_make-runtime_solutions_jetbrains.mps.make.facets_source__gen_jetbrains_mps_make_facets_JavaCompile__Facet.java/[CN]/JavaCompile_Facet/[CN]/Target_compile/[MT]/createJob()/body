@@ -24,30 +24,31 @@ case 0:
   if (SetSequence.fromSet(toCompile).isEmpty()) {
     return new IResult.SUCCESS(_output_wf1ya0_a0a);
   }
+final IMessageHandler msgHandler=new IMessageHandler(){
+  private final IMessageHandler myErrorsLoggingHandler=new ErrorsLoggingHandler(LogManager.getLogger(new IFacet.Name("jetbrains.mps.make.facets.JavaCompile").getClass().toString()));
+  public void handle(  @NotNull IMessage msg){
+    myErrorsLoggingHandler.handle(msg);
+    monitor.reportFeedback(new IFeedback.MESSAGE(msg));
+  }
+}
+;
 final Wrappers._T<MPSCompilationResult> cr=new Wrappers._T<MPSCompilationResult>();
 ModelAccess.instance().runReadAction(new Runnable(){
 public void run(){
-  cr.value=new ModuleMaker().make(toCompile,progressMonitor,vars(pa.global()).options());
+cr.value=new ModuleMaker(msgHandler,MessageKind.INFORMATION).make(toCompile,progressMonitor,vars(pa.global()).options());
 }
 }
 );
-if (cr.value != null) {
 vars(pa.global()).compiledAnything(vars(pa.global()).compiledAnything() || cr.value.isCompiledAnything());
-for (IMessage msg : cr.value.getMessages()) {
-monitor.reportFeedback(new IFeedback.MESSAGE(msg));
-}
-}
-if (cr.value == null || !(cr.value.isOk())) {
-if (cr.value != null) {
-if (cr.value.getErrors() > 0) {
+if (!(cr.value.isOk())) {
+if (cr.value.getErrorsCount() > 0) {
 monitor.reportFeedback(new IFeedback.ERROR(String.valueOf(cr.value)));
 }
- else if (cr.value.getWarnings() > 0) {
+ else if (cr.value.getWarningsCount() > 0) {
 monitor.reportFeedback(new IFeedback.WARNING(String.valueOf(cr.value)));
 }
  else {
 monitor.reportFeedback(new IFeedback.INFORMATION(String.valueOf(cr.value)));
-}
 }
 return new IResult.FAILURE(_output_wf1ya0_a0a);
 }

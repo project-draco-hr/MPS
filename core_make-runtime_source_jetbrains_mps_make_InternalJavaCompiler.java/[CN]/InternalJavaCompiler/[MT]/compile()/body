@@ -1,0 +1,30 @@
+{
+  if (!myModulesContainer.hasNoExcludedModule()) {
+    return MPSCompilationResult.ZERO_COMPILATION_RESULT;
+  }
+  myTracer.push(PREPARING_TO_COMPILE_MSG);
+  ModuleAnalyzerResult analysisResult=new ModuleAnalyzer(myModulesContainer,mySender).analyze();
+  JavaCompiler compiler=new JavaCompiler();
+  for (  SModule module : myModulesContainer.getModules()) {
+    if (!myModulesContainer.areClassesUpToDate(module)) {
+      if (ModulesContainer.isCompileInMps(module)) {
+        for (        JavaFile javaFile : myModulesContainer.getSources(module).getFilesToCompile()) {
+          compiler.addSource(javaFile.getClassName(),javaFile.getContents());
+          myModulesContainer.putClassForModule(javaFile.getClassName(),module);
+        }
+      }
+    }
+  }
+  myTracer.pop();
+  if (!analysisResult.hasJavaToCompile && !analysisResult.hasResourcesToUpdate) {
+    return MPSCompilationResult.nothingToDoCompilationResult();
+  }
+  if (analysisResult.hasJavaToCompile) {
+    MPSCompilationResult result=compileJava(compiler);
+    reportModulesWithRemovalsAreNotChanged(analysisResult.modulesWithRemovals,result.getChangedModules());
+    return result;
+  }
+  copyResources();
+  invalidateCompiledClasses();
+  return MPSCompilationResult.noJavaCompiledCompilationResult();
+}
