@@ -1,0 +1,27 @@
+{
+  jetbrains.mps.project.Project mpsProject=ProjectHelper.fromIdeaProject(project);
+  if (mpsProject == null) {
+    return NavigationItem.EMPTY_NAVIGATION_ITEM_ARRAY;
+  }
+  SearchScope scope=includeNonProjectItems ? new ProperModelsGlobalSearchScope() : new ProperModelsProjectSearchScope(project);
+  Condition<NavigationItem> rightName=new Condition<NavigationItem>(){
+    @Override public boolean met(    NavigationItem item){
+      return name.equals(item.getName());
+    }
+  }
+;
+  List<NavigationItem> items=new ModelAccessHelper(mpsProject.getModelAccess()).runReadAction(new Computable<List<NavigationItem>>(){
+    @Override public List<NavigationItem> compute(){
+      Collection<NavigationTarget> targets=GotoNavigationUtil.getNavigationTargets(TargetKind.ROOT,scope,new EmptyProgressMonitor());
+      NavigationItem[] items=new NavigationItem[targets.size()];
+      int i=0;
+      for (      NavigationTarget target : targets) {
+        items[i++]=new RootNodeElement(mpsProject,target);
+      }
+      return Arrays.asList(items);
+    }
+  }
+);
+  Iterable<NavigationItem> itemsFilteredByName=name == null ? items : new ConditionalIterable<>(items,rightName);
+  return IterableUtil.asList(itemsFilteredByName).toArray(NavigationItem.EMPTY_NAVIGATION_ITEM_ARRAY);
+}
