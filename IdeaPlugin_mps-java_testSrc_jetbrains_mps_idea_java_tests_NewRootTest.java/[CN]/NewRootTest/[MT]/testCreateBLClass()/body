@@ -1,0 +1,63 @@
+{
+  Project project=myProjectBuilder.getFixture().getProject();
+  Ref<AbstractProjectViewPSIPane> pane=new Ref<>();
+  ApplicationManager.getApplication().runReadAction(new Runnable(){
+    @Override public void run(){
+      pane.set(myStructure.createPane());
+    }
+  }
+);
+  MPSPsiModel psiModel=new ModelAccessHelper(ProjectHelper.getModelAccess(project)).runReadAction(new Computable<MPSPsiModel>(){
+    @Override public MPSPsiModel compute(){
+      SModule solution=FacetManager.getInstance(myModule).getFacetByType(MPSFacetType.ID).getSolution();
+      SModel smodel=solution.getModels().iterator().next();
+      MPSPsiModel psiModel=MPSPsiProvider.getInstance(project).getPsi(smodel);
+      pane.get().select(psiModel,psiModel.getSourceVirtualFile(),true);
+      return psiModel;
+    }
+  }
+);
+  PlatformTestUtil.assertTreeEqual(pane.get().getTree(),"-Project\n" + " -PsiDirectory: unitTest\n" + "  jetbrains.mps.otherPsiTest\n"+ " +External Libraries\n");
+class DataCtx extends TestDataContext {
+    DataCtx(){
+      super(pane.get(),project);
+    }
+    @Nullable @Override public Object getData(    @NonNls String dataId){
+      if (NewRootAction.HEADLESS_INTERACTION.getName().equals(dataId)) {
+        return new NewRootAction.Interaction(){
+          @Override public Pair<String,SAbstractConcept> choose(          Map<String,SAbstractConcept> concepts){
+            assertTrue(concepts.containsKey(ConceptNames.ClassConcept));
+            return Pair.create("ANewClass",concepts.get(ConceptNames.ClassConcept));
+          }
+        }
+;
+      }
+ else {
+        return super.getData(dataId);
+      }
+    }
+  }
+  NewRootAction newRootAction=new NewRootAction();
+  AnActionEvent e=new TestActionEvent(new DataCtx());
+  newRootAction.update(e);
+  assertTrue(e.getPresentation().isEnabled());
+  assertTrue(e.getPresentation().isVisible());
+  newRootAction.beforeActionPerformedUpdate(e);
+  ApplicationManager.getApplication().invokeAndWait(new Runnable(){
+    @Override public void run(){
+      newRootAction.actionPerformed(e);
+    }
+  }
+,ModalityState.NON_MODAL);
+  pane.get().expand(new Object[]{psiModel},true);
+  PlatformTestUtil.assertTreeEqual(pane.get().getTree(),"-Project\n" + " -PsiDirectory: unitTest\n" + "  -jetbrains.mps.otherPsiTest\n"+ "   ANewClass\n"+ " +External Libraries\n");
+  ProjectHelper.getModelAccess(project).runReadAction(new Runnable(){
+    @Override public void run(){
+      SModel smodel=FacetManager.getInstance(myModule).getFacetByType(MPSFacetType.ID).getSolution().getModels().iterator().next();
+      List<SNode> nodes=IterableUtil.asList(smodel.getRootNodes());
+      assertTrue(nodes.size() == 1);
+      assertTrue(nodes.get(0).getName().equals("ANewClass"));
+    }
+  }
+);
+}
