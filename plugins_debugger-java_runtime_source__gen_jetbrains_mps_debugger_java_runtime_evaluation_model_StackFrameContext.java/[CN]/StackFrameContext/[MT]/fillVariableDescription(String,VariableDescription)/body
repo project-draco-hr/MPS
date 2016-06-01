@@ -1,11 +1,21 @@
 {
   JavaStackFrame javaStackFrame=myUiState.getStackFrame();
-  if (javaStackFrame != null) {
-    JavaLocation javaLocation=javaStackFrame.getLocation();
+  JavaLocation javaLocation;
+  if (javaStackFrame != null && (javaLocation=javaStackFrame.getLocation()) != null) {
     try {
-      SNode node=TraceInfoUtil.getVar(getStaticContextTypeName(),javaLocation.getFileName(),javaLocation.getLineNumber(),varName);
-      if ((node != null)) {
-        description.setHighLevelNode(node);
+      AbstractDebugSession<?> debugSession=javaStackFrame.getThread().getDebugSession();
+      TraceInfoProvider traceProvider=debugSession.getTraceProvider();
+      for (Iterator<DebugInfo> it=traceProvider.debugInfo(JavaUiState.modelNameFromLocation(javaLocation)).iterator(); it.hasNext(); ) {
+        DebugInfo di=it.next();
+        List<SNodeReference> varNodes=di.getVariableNodesForPosition(javaLocation.getFileName(),javaLocation.getLineNumber(),varName);
+        if (varNodes.isEmpty()) {
+          continue;
+        }
+        SNode node=varNodes.get(0).resolve(debugSession.getProject().getRepository());
+        if (node != null) {
+          description.setHighLevelNode(node);
+          break;
+        }
       }
     }
  catch (    InvalidStackFrameException e) {
