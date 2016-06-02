@@ -1,7 +1,18 @@
 {
-  SNode node=TraceInfoUtil.getNode(location.getUnitName(),location.getFileName(),location.getLineNumber());
-  if (node == null) {
-    return null;
+  final SRepository repo=session.getProject().getRepository();
+  return new ModelAccessHelper(repo).runReadAction(new Computable<SNodeReference>(){
+    public SNodeReference compute(){
+      for (Iterator<DebugInfo> it=session.getTraceProvider().debugInfo(NameUtil.namespaceFromLongName(location.getUnitName())).iterator(); it.hasNext(); ) {
+        DebugInfo next=it.next();
+        List<SNodeReference> nodes=next.getTracedNodesForPosition(location.getFileName(),location.getLineNumber());
+        for (        SNodeReference nodeRef : nodes) {
+          if (nodeRef.resolve(repo) != null) {
+            return nodeRef;
+          }
+        }
+      }
+      return null;
+    }
   }
-  return new SNodePointer(node);
+);
 }
