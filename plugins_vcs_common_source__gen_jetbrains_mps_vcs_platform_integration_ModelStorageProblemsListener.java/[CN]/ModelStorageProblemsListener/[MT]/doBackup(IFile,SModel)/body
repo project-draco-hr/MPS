@@ -1,7 +1,14 @@
 {
   try {
     File tmp=FileUtil.createTmpDir();
-    MergeDriverBackupUtil.writeContentsToFile(ModelPersistence.modelToString(((SModelBase)inMemory).getSModelInternal()).getBytes(FileUtil.DEFAULT_CHARSET),modelFile.getName(),tmp,ModelStorageProblemsListener.DiskMemoryConflictVersion.MEMORY.getSuffix());
+    final Wrappers._T<String> modelData=new Wrappers._T<String>();
+    inMemory.getRepository().getModelAccess().runReadAction(new Runnable(){
+      public void run(){
+        modelData.value=ModelPersistence.modelToString(((SModelBase)inMemory).getSModelInternal());
+      }
+    }
+);
+    MergeDriverBackupUtil.writeContentsToFile(modelData.value.getBytes(FileUtil.DEFAULT_CHARSET),modelFile.getName(),tmp,ModelStorageProblemsListener.DiskMemoryConflictVersion.MEMORY.getSuffix());
     if (modelFile.exists()) {
       com.intellij.openapi.util.io.FileUtil.copy(new File(modelFile.getPath()),new File(tmp.getAbsolutePath(),modelFile.getName() + "." + ModelStorageProblemsListener.DiskMemoryConflictVersion.FILE_SYSTEM.getSuffix()));
     }

@@ -2,8 +2,21 @@
   JavaStackFrame frame=myUiState.getStackFrame();
   if (frame != null) {
     JavaLocation location=frame.getLocation();
-    if (location != null) {
-      return TraceInfoUtil.getUnitNode(location.getUnitName(),location.getFileName(),location.getLineNumber());
+    if (location == null) {
+      return null;
+    }
+    AbstractDebugSession<?> debugSession=frame.getThread().getDebugSession();
+    TraceInfoProvider traceProvider=debugSession.getTraceProvider();
+    for (Iterator<DebugInfo> it=traceProvider.debugInfo(JavaUiState.modelNameFromLocation(location)).iterator(); it.hasNext(); ) {
+      DebugInfo di=it.next();
+      List<SNodeReference> unitNodes=di.getUnitNodesForPosition(location.getFileName(),location.getLineNumber());
+      if (unitNodes.isEmpty()) {
+        continue;
+      }
+      SNode node=unitNodes.get(0).resolve(debugSession.getProject().getRepository());
+      if (node != null) {
+        return node;
+      }
     }
   }
   return null;
