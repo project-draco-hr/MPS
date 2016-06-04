@@ -1,5 +1,21 @@
 {
   final MPSProject mpsProject=project.getComponent(MPSProject.class);
   final SNode target=nodes.get(0);
-  getRefactoringExecutable().execute(mpsProject,target,new MoveStaticMemberRefactoring());
+  MoveStaticMemberExecutable refactoringExecutable=getRefactoringExecutable();
+  SNode whereToMove=refactoringExecutable.askDestination(mpsProject,target);
+  if (whereToMove == null) {
+    return;
+  }
+  mpsProject.getModelAccess().runReadInEDT(new Runnable(){
+    @Override public void run(){
+      if (!SNodeUtil.isAccessible(target,mpsProject.getRepository())) {
+        return;
+      }
+      if (!SNodeUtil.isAccessible(whereToMove,mpsProject.getRepository())) {
+        return;
+      }
+      RefactoringAccessEx.getInstance().getRefactoringFacade().execute(RefactoringContext.createRefactoringContext(new MoveStaticMemberRefactoring(),Arrays.asList("destination"),Arrays.asList(whereToMove),target,mpsProject));
+    }
+  }
+);
 }
