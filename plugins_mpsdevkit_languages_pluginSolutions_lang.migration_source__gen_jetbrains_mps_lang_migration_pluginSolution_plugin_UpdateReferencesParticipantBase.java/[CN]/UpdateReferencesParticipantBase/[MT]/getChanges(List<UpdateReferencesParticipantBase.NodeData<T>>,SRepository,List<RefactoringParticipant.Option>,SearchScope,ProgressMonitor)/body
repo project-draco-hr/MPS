@@ -1,0 +1,91 @@
+{
+  if (!(ListSequence.fromList(selectedOptions).contains(OPTION))) {
+    return ListSequence.fromList(initialStates).select(new ISelector<UpdateReferencesParticipantBase.NodeData<T>,List<RefactoringParticipant.Change<UpdateReferencesParticipantBase.NodeData<T>,UpdateReferencesParticipantBase.NodeData<T>>>>(){
+      public List<RefactoringParticipant.Change<UpdateReferencesParticipantBase.NodeData<T>,UpdateReferencesParticipantBase.NodeData<T>>> select(      UpdateReferencesParticipantBase.NodeData<T> it){
+        return (List<RefactoringParticipant.Change<UpdateReferencesParticipantBase.NodeData<T>,UpdateReferencesParticipantBase.NodeData<T>>>)Collections.<RefactoringParticipant.Change<UpdateReferencesParticipantBase.NodeData<T>,UpdateReferencesParticipantBase.NodeData<T>>>emptyList();
+      }
+    }
+).toListSequence();
+  }
+  Collection<SReference> usages;
+  List<SNode> movedNodes=ListSequence.fromList(initialStates).select(new ISelector<UpdateReferencesParticipantBase.NodeData<T>,SNode>(){
+    public SNode select(    UpdateReferencesParticipantBase.NodeData<T> it){
+      return it.baseData().reference().resolve(repository);
+    }
+  }
+).toListSequence();
+{
+    final SearchScope scope=CommandUtil.createScope(searchScope);
+    QueryExecutionContext context=new QueryExecutionContext(){
+      public SearchScope getDefaultSearchScope(){
+        return scope;
+      }
+    }
+;
+    if (movedNodes != null) {
+      progressMonitor.start("References in current project",1);
+      usages=(Set<SReference>)FindUsagesFacade.getInstance().findUsages(searchScope,SetSequence.fromSetWithValues(new HashSet<SNode>(),movedNodes),progressMonitor.subTask(1));
+    }
+ else {
+      progressMonitor.start("References in current project",Sequence.fromIterable(CommandUtil.references(CommandUtil.createConsoleScope(null,false,context))).count());
+      usages=CollectionSequence.fromCollection(new ArrayList<SReference>());
+      for (      SReference ref : Sequence.fromIterable(CommandUtil.references(CommandUtil.createConsoleScope(null,false,context)))) {
+        if (ListSequence.fromList(initialStates).select(new ISelector<UpdateReferencesParticipantBase.NodeData<T>,SNodeReference>(){
+          public SNodeReference select(          UpdateReferencesParticipantBase.NodeData<T> it){
+            return it.baseData().reference();
+          }
+        }
+).contains(ref.getTargetNodeReference())) {
+          CollectionSequence.fromCollection(usages).addElement(ref);
+        }
+        progressMonitor.advance(1);
+        if (progressMonitor.isCanceled()) {
+          return null;
+        }
+      }
+    }
+  }
+  final Map<SNodeReference,List<RefactoringParticipant.Change<UpdateReferencesParticipantBase.NodeData<T>,UpdateReferencesParticipantBase.NodeData<T>>>> result=MapSequence.fromMap(new HashMap<SNodeReference,List<RefactoringParticipant.Change<UpdateReferencesParticipantBase.NodeData<T>,UpdateReferencesParticipantBase.NodeData<T>>>>());
+  for (  SReference ref : CollectionSequence.fromCollection(usages)) {
+    final SNodeReference containingNode=ref.getSourceNode().getReference();
+    final SNode movingNode=ref.getTargetNode();
+    final SReferenceLink role=ref.getLink();
+    final String resolveInfo=SLinkOperations.getResolveInfo(ref);
+    final SearchResults searchResults=new SearchResults(SetSequence.fromSetAndArray(new HashSet<SNode>(),ref.getTargetNode()),ListSequence.fromListAndArray(new ArrayList<SearchResult<SNode>>(),new SearchResult<SNode>(ref.getSourceNode(),"reference")));
+    RefactoringParticipant.Change<UpdateReferencesParticipantBase.NodeData<T>,UpdateReferencesParticipantBase.NodeData<T>> change=new RefactoringParticipant.Change<UpdateReferencesParticipantBase.NodeData<T>,UpdateReferencesParticipantBase.NodeData<T>>(){
+      public MoveNodeRefactoringParticipant<UpdateReferencesParticipantBase.NodeData<T>,UpdateReferencesParticipantBase.NodeData<T>> getParticipant(){
+        return UpdateReferencesParticipantBase.this;
+      }
+      public SearchResults getSearchResults(){
+        return searchResults;
+      }
+      public boolean needsToPreserveOldNode(){
+        return false;
+      }
+      public void confirm(      final UpdateReferencesParticipantBase.NodeData<T> finalState,      final SRepository repository,      final RefactoringSession refactoringSession){
+        refactoringSession.registerChange(new Runnable(){
+          public void run(){
+            if (shouldUpdateReference(repository,containingNode.resolve(repository),role,movingNode,refactoringSession)) {
+              doUpdateReference(repository,containingNode.resolve(repository),role,finalState,resolveInfo);
+              if (ListSequence.fromList(selectedOptions).contains(UpdateModelImports.OPTION)) {
+                doUpdateModelImport(repository,containingNode.resolve(repository),role,finalState);
+              }
+            }
+          }
+        }
+);
+      }
+    }
+;
+    if (MapSequence.fromMap(result).get(ref.getTargetNodeReference()) == null) {
+      MapSequence.fromMap(result).put(ref.getTargetNodeReference(),ListSequence.fromList(new ArrayList<RefactoringParticipant.Change<UpdateReferencesParticipantBase.NodeData<T>,UpdateReferencesParticipantBase.NodeData<T>>>()));
+    }
+    ListSequence.fromList(MapSequence.fromMap(result).get(ref.getTargetNodeReference())).addElement(change);
+  }
+  return ListSequence.fromList(initialStates).select(new ISelector<UpdateReferencesParticipantBase.NodeData<T>,List<RefactoringParticipant.Change<UpdateReferencesParticipantBase.NodeData<T>,UpdateReferencesParticipantBase.NodeData<T>>>>(){
+    public List<RefactoringParticipant.Change<UpdateReferencesParticipantBase.NodeData<T>,UpdateReferencesParticipantBase.NodeData<T>>> select(    UpdateReferencesParticipantBase.NodeData<T> initialState){
+      return MapSequence.fromMap(result).get(initialState.baseData().reference());
+    }
+  }
+).toListSequence();
+}
