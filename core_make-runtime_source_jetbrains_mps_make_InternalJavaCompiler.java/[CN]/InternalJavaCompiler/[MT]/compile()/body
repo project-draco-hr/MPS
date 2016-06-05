@@ -4,7 +4,7 @@
   }
   myTracer.push(PREPARING_TO_COMPILE_MSG);
   ModuleAnalyzerResult analysisResult=new ModuleAnalyzer(myModulesContainer,mySender).analyze();
-  JavaCompiler compiler=new JavaCompiler();
+  EclipseJavaCompiler compiler=new EclipseJavaCompiler();
   for (  SModule module : myModulesContainer.getModules()) {
     if (!myModulesContainer.areClassesUpToDate(module)) {
       if (ModulesContainer.isCompileInMps(module)) {
@@ -19,12 +19,16 @@
   if (!analysisResult.hasJavaToCompile && !analysisResult.hasResourcesToUpdate) {
     return MPSCompilationResult.nothingToDoCompilationResult();
   }
-  if (analysisResult.hasJavaToCompile) {
-    MPSCompilationResult result=compileJava(compiler);
+  MPSCompilationResult result;
+  if (!analysisResult.hasJavaToCompile) {
+    result=MPSCompilationResult.noJavaCompiledCompilationResult();
+  }
+ else {
+    result=compileJava(compiler);
     reportModulesWithRemovalsAreNotChanged(analysisResult.modulesWithRemovals,result.getChangedModules());
+    invalidateCompiledClasses();
     return result;
   }
   copyResources();
-  invalidateCompiledClasses();
-  return MPSCompilationResult.noJavaCompiledCompilationResult();
+  return result;
 }
