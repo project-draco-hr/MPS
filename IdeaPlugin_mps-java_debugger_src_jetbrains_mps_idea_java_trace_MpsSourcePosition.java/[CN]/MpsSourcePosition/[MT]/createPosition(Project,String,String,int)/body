@@ -1,18 +1,20 @@
 {
-  return ModelAccess.instance().runReadAction(new Computable<MpsSourcePosition>(){
-    @Override public MpsSourcePosition compute(){
-      GeneratedSourcePosition sourcePosition=new GeneratedSourcePosition(typeName,fileName,lineNumber);
-      SNode node=sourcePosition.getNode();
+  final GeneratedSourcePosition sourcePosition=GeneratedSourcePosition.fromLocation(project,typeName,fileName,lineNumber);
+  if (sourcePosition.getNode() == null) {
+    return null;
+  }
+  final SRepository repo=ProjectHelper.getProjectRepository(project);
+  final boolean isSolutionIdea=new ModelAccessHelper(repo).runReadAction(new Computable<Boolean>(){
+    @Override public Boolean compute(){
+      SNode node=sourcePosition.getNode().resolve(repo);
       if (node == null) {
-        return null;
+        return false;
       }
       SModel modelDescriptor=node.getModel();
       SModule module=modelDescriptor.getModule();
-      if (!(module instanceof SolutionIdea)) {
-        return null;
-      }
-      return new MpsSourcePosition(sourcePosition,project);
+      return module instanceof SolutionIdea;
     }
   }
 );
+  return isSolutionIdea ? new MpsSourcePosition(sourcePosition,project) : null;
 }

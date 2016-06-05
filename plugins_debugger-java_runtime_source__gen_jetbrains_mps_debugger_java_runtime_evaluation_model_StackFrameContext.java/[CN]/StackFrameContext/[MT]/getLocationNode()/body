@@ -1,9 +1,18 @@
 {
   JavaStackFrame javaStackFrame=myUiState.getStackFrame();
-  if (javaStackFrame != null) {
-    JavaLocation location=javaStackFrame.getLocation();
-    if (location != null) {
-      return TraceInfoUtil.getJavaNode(location.getUnitName(),location.getFileName(),location.getLineNumber());
+  JavaLocation location;
+  if (javaStackFrame != null && (location=javaStackFrame.getLocation()) != null) {
+    AbstractDebugSession<?> debugSession=javaStackFrame.getThread().getDebugSession();
+    TraceInfoProvider traceProvider=debugSession.getTraceProvider();
+    for (Iterator<DebugInfo> it=traceProvider.debugInfo(JavaUiState.modelNameFromLocation(location)).iterator(); it.hasNext(); ) {
+      SNodeReference n=new BaseLanguageNodeLookup(it.next()).getNodeAt(location.getFileName(),location.getLineNumber());
+      if (n == null) {
+        continue;
+      }
+      SNode resolved=n.resolve(debugSession.getProject().getRepository());
+      if (resolved != null) {
+        return resolved;
+      }
     }
   }
   return null;
