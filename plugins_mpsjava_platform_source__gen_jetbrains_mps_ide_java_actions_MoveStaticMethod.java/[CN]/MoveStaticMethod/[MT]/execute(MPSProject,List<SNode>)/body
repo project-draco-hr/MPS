@@ -7,14 +7,33 @@
   }
   project.getRepository().getModelAccess().executeCommand(new Runnable(){
     public void run(){
-      if (!(SNodeUtil.isAccessible(target,project.getRepository()))) {
-        return;
+      doMove(project,MapSequence.<MoveNodesActionBase.NodeProcessor,List<SNode>>fromMapAndKeysArray(new HashMap<MoveNodesActionBase.NodeProcessor,List<SNode>>(),new MoveNodesActionBase.NodeCreatingProcessor(new MoveStaticField.NodeLocationClassifierMember(SNodeOperations.cast(whereToMove,MetaAdapterFactory.getConcept(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0x101d9d3ca30L,"jetbrains.mps.baseLanguage.structure.Classifier"))),project){
+        @Override public List<SNode> getNodesToSearch(        SNode nodeToMove){
+          return ListSequence.fromListAndArray(new ArrayList<SNode>(),nodeToMove);
+        }
+        @Override public void process(        List<SNode> nodesToMove,        List<SNode> whichOfThemToRemove,        RefactoringSession refactoringSession){
+          MoveNodesActionBase.CopyMapObject copyMap=MoveNodesActionBase.CopyMapObject.getCopyMap(refactoringSession);
+          copyMap.copy(nodesToMove);
+          Map<SNode,SNode> oldMembersToClasses=MapSequence.fromMap(new HashMap<SNode,SNode>());
+          for (          SNode oldNode : ListSequence.fromList(nodesToMove)) {
+            MapSequence.fromMap(oldMembersToClasses).put(oldNode,SNodeOperations.getNodeAncestor(oldNode,MetaAdapterFactory.getConcept(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0xf8c108ca66L,"jetbrains.mps.baseLanguage.structure.ClassConcept"),false,false));
+          }
+          for (          SNode oldNode : ListSequence.fromList(whichOfThemToRemove)) {
+            SNodeOperations.detachNode(oldNode);
+          }
+          for (          SNode oldNode : ListSequence.fromList(nodesToMove)) {
+            SNode newNode=MapSequence.fromMap(copyMap.getCopyMap()).get(oldNode);
+            if (!(SNodeOperations.isInstanceOf(newNode,MetaAdapterFactory.getConcept(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0xfbbebabf0aL,"jetbrains.mps.baseLanguage.structure.StaticMethodDeclaration")))) {
+              throw new IllegalStateException();
+            }
+            SNode originalClass=MapSequence.fromMap(oldMembersToClasses).get(oldNode);
+            MoveStaticMethodRefactoring.replaceFields(newNode,originalClass);
+            MoveStaticMethodRefactoring.replaceMethods(newNode,originalClass);
+            myNodeLocation.insertNode(myProject.getRepository(),newNode);
+          }
+        }
       }
-      if (!(SNodeUtil.isAccessible(whereToMove,project.getRepository()))) {
-        return;
-      }
-      MoveStaticMethodRefactoring refactoring=new MoveStaticMethodRefactoring(project.getRepository(),project.getScope(),target,whereToMove);
-      refactoring.doRefactoring();
+).withValues(ListSequence.fromListAndArray(new ArrayList<SNode>(),target)),null);
     }
   }
 );
