@@ -6,10 +6,10 @@
   MPSTreeNode rootTreeNode=new TextTreeNode("Local Variables");
   rootTreeNode.setTree(this);
   Map<WatchablesCategory,List<IWatchable>> orphanesByCategory=MapSequence.fromMap(new HashMap<WatchablesCategory,List<IWatchable>>());
-  Map<WatchablesCategory,Map<SNode,List<IWatchable>>> nodeToVarsMapByCategory=MapSequence.fromMap(new HashMap<WatchablesCategory,Map<SNode,List<IWatchable>>>());
+  Map<WatchablesCategory,Map<SNodeReference,List<IWatchable>>> nodeToVarsMapByCategory=MapSequence.fromMap(new HashMap<WatchablesCategory,Map<SNodeReference,List<IWatchable>>>());
   for (  IWatchable watchable : watchables) {
     WatchablesCategory category=watchable.getCategory();
-    SNode node=watchable.getNode();
+    SNodeReference node=(watchable instanceof Watchable2 ? ((Watchable2)watchable).getSourceNode() : ((watchable.getNode() == null ? null : watchable.getNode().getReference())));
     if (node == null) {
       List<IWatchable> orphanes=MapSequence.fromMap(orphanesByCategory).get(category);
       if (orphanes == null) {
@@ -19,9 +19,9 @@
       orphanes.add(watchable);
     }
  else {
-      Map<SNode,List<IWatchable>> nodeToVarsMap=MapSequence.fromMap(nodeToVarsMapByCategory).get(category);
+      Map<SNodeReference,List<IWatchable>> nodeToVarsMap=MapSequence.fromMap(nodeToVarsMapByCategory).get(category);
       if (nodeToVarsMap == null) {
-        nodeToVarsMap=MapSequence.fromMap(new LinkedHashMap<SNode,List<IWatchable>>(16,(float)0.75,false));
+        nodeToVarsMap=MapSequence.fromMap(new LinkedHashMap<SNodeReference,List<IWatchable>>(16,(float)0.75,false));
         MapSequence.fromMap(nodeToVarsMapByCategory).put(category,nodeToVarsMap);
       }
       List<IWatchable> watchableList=MapSequence.fromMap(nodeToVarsMap).get(node);
@@ -35,15 +35,15 @@
   SortedSet<WatchablesCategory> keys=SortedSetSequence.fromSetWithValues(new TreeSet<WatchablesCategory>(),SetSequence.fromSet(MapSequence.fromMap(orphanesByCategory).keySet()).union(SetSequence.fromSet(MapSequence.fromMap(nodeToVarsMapByCategory).keySet())));
   for (  WatchablesCategory category : keys) {
     List<IWatchable> orphanes=MapSequence.fromMap(orphanesByCategory).get(category);
-    Map<SNode,List<IWatchable>> nodeToVarsMap=MapSequence.fromMap(nodeToVarsMapByCategory).get(category);
+    Map<SNodeReference,List<IWatchable>> nodeToVarsMap=MapSequence.fromMap(nodeToVarsMapByCategory).get(category);
     if (orphanes == null) {
       orphanes=ListSequence.fromList(new ArrayList<IWatchable>());
     }
     if (nodeToVarsMap == null) {
-      nodeToVarsMap=MapSequence.fromMap(new HashMap<SNode,List<IWatchable>>());
+      nodeToVarsMap=MapSequence.fromMap(new HashMap<SNodeReference,List<IWatchable>>());
     }
-    List<SNode> nodes=ListSequence.fromList(new ArrayList<SNode>());
-    nodes.addAll(MapSequence.fromMap(nodeToVarsMap).keySet());
+    List<SNodeReference> nodes=ListSequence.fromList(new ArrayList<SNodeReference>());
+    ListSequence.fromList(nodes).addSequence(SetSequence.fromSet(MapSequence.fromMap(nodeToVarsMap).keySet()));
     Collections.sort(nodes,new ToStringComparator());
     Collections.sort(orphanes,new Comparator<IWatchable>(){
       @Override public int compare(      IWatchable o1,      IWatchable o2){
@@ -51,7 +51,7 @@
       }
     }
 );
-    for (    SNode snode : MapSequence.fromMap(nodeToVarsMap).keySet()) {
+    for (    SNodeReference snode : MapSequence.fromMap(nodeToVarsMap).keySet()) {
       List<IWatchable> watchablesWithNodes=MapSequence.fromMap(nodeToVarsMap).get(snode);
       if (ListSequence.fromList(watchablesWithNodes).count() == 1) {
         rootTreeNode.add(new WatchableNode(ListSequence.fromList(watchablesWithNodes).first(),myUiState));
