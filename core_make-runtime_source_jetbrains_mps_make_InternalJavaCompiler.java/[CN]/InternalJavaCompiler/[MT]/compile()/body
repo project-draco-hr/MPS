@@ -3,19 +3,18 @@
     return MPSCompilationResult.ZERO_COMPILATION_RESULT;
   }
   myTracer.push(PREPARING_TO_COMPILE_MSG);
-  ModuleAnalyzerResult analysisResult=new ModuleAnalyzer(myModulesContainer,mySender).analyze();
+  ModuleAnalyzerResult analysisResult=new ModuleAnalyzer(myModulesContainer).analyze();
   EclipseJavaCompiler compiler=new EclipseJavaCompiler();
   for (  SModule module : myModulesContainer.getModules()) {
     if (!myModulesContainer.areClassesUpToDate(module)) {
-      if (ModulesContainer.isCompileInMps(module)) {
-        for (        JavaFile javaFile : myModulesContainer.getSources(module).getFilesToCompile()) {
-          compiler.addSource(javaFile.getClassName(),javaFile.getContents());
-          myModulesContainer.putClassForModule(javaFile.getClassName(),module);
-        }
+      for (      JavaFile javaFile : myModulesContainer.getSources(module).getFilesToCompile()) {
+        compiler.addSource(javaFile.getClassName(),javaFile.getContents());
+        myModulesContainer.putClassForModule(javaFile.getClassName(),module);
       }
     }
   }
   myTracer.pop();
+  invalidateCompiledClasses(analysisResult.modulesWithRemovals);
   if (!analysisResult.hasJavaToCompile && !analysisResult.hasResourcesToUpdate) {
     return MPSCompilationResult.nothingToDoCompilationResult();
   }
@@ -26,7 +25,7 @@
  else {
     result=compileJava(compiler);
     reportModulesWithRemovalsAreNotChanged(analysisResult.modulesWithRemovals,result.getChangedModules());
-    invalidateCompiledClasses();
+    invalidateCompiledClasses(result.getChangedModules());
     return result;
   }
   copyResources();
