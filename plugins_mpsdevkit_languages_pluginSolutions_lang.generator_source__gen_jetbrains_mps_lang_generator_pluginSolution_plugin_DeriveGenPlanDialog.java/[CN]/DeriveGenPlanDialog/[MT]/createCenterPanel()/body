@@ -1,0 +1,51 @@
+{
+  myStepModuleKind=new DeriveGenPlanDialog.ExclusiveAlternativesPanel("Specify transformation with");
+  myStepModuleKind.addOption("Language",1);
+  myStepModuleKind.addOption("Generator",2);
+  myStepGranularityKind=new DeriveGenPlanDialog.ExclusiveAlternativesPanel("Step granularity");
+  myStepGranularityKind.addOption("All transformation in a single step",3);
+  myStepGranularityKind.addOption("Single language/generator per step",4);
+  JPanel p=new JPanel(new GridLayout(1,2));
+  p.add(myStepModuleKind.getComponent());
+  p.add(myStepGranularityKind.getComponent());
+  final BaseModelModel chooseModel=new BaseModelModel(myProject){
+    public SModelReference[] find(    SearchScope scope){
+      ArrayList<SModelReference> rv=new ArrayList<SModelReference>();
+      for (      SModel m : scope.getModels()) {
+        if (SModelStereotype.isStubModel(m)) {
+          continue;
+        }
+        if (SModelStereotype.isDescriptorModel(m)) {
+          continue;
+        }
+        rv.add(m.getReference());
+      }
+      return rv.toArray(new SModelReference[rv.size()]);
+    }
+  }
+;
+  myChoosePanel=new ChooseByNamePanel(myProject.getProject(),chooseModel,"",false,null){
+{
+      myProvider=new CompositeItemProvider(new MPSPackageItemProvider(null),myProvider);
+    }
+    @Override protected void showTextFieldPanel(){
+    }
+    @Override protected void doClose(    boolean ok){
+      if (ok) {
+        myActionListener.elementChosen(getChosenElement());
+      }
+    }
+  }
+;
+  myChoosePanel.invoke(new ChooseByNamePopupComponent.Callback(){
+    public void elementChosen(    Object o){
+      setSampleModel(chooseModel.getModelObject(o));
+    }
+  }
+,ModalityState.current(),false);
+  Disposer.register(getDisposable(),myChoosePanel);
+  JPanel rv=new JPanel(new BorderLayout());
+  rv.add(myChoosePanel.getPanel(),BorderLayout.NORTH);
+  rv.add(p,BorderLayout.CENTER);
+  return rv;
+}
