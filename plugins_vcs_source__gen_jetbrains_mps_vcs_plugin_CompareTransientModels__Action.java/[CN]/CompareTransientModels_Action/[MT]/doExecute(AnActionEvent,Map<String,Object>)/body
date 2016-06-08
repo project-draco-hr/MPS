@@ -1,10 +1,17 @@
 {
-  final SModel[] model=SortUtil.sortModels(((List<SModel>)MapSequence.fromMap(_params).get("models"))).toArray(new SModel[((List<SModel>)MapSequence.fromMap(_params).get("models")).size()]);
-  final String[] titles=new String[]{model[0].getModelName(),model[1].getModelName()};
-  ApplicationManager.getApplication().invokeLater(new Runnable(){
-    public void run(){
-      new ModelDifferenceDialog(((Project)MapSequence.fromMap(_params).get("project")),model[0],model[1],titles[0],titles[1],null).show();
+  List<SModel> sortedModels=SortUtil.sortModels(((List<SModel>)MapSequence.fromMap(_params).get("models")));
+  List<DiffContent> contents=ListSequence.fromList(sortedModels).select(new ISelector<SModel,DiffContent>(){
+    public DiffContent select(    SModel model){
+      return (DiffContent)new ModelDiffContent(model);
     }
   }
-);
+).toListSequence();
+  List<String> titles=ListSequence.fromList(sortedModels).select(new ISelector<SModel,String>(){
+    public String select(    SModel model){
+      return model.getName() + "";
+    }
+  }
+).toListSequence();
+  DiffRequest request=new SimpleDiffRequest("",contents,titles);
+  DiffManager.getInstance().showDiff(((Project)MapSequence.fromMap(_params).get("project")),request);
 }
