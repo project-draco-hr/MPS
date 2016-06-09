@@ -1,0 +1,27 @@
+{
+  Project project=myProjectBuilder.getFixture().getProject();
+  Ref<PsiDirectory> dirElement=new Ref<>();
+  ApplicationManager.getApplication().runReadAction(new Runnable(){
+    @Override public void run(){
+      dirElement.set(PsiManager.getInstance(project).findDirectory(packageDir));
+    }
+  }
+);
+  MakeDirAModel action=new MakeDirAModel();
+  MapDataContext dataContext=new MapDataContext();
+  dataContext.put(PlatformDataKeys.PROJECT,project);
+  dataContext.put(LangDataKeys.MODULE,myModule);
+  dataContext.put(PlatformDataKeys.PSI_ELEMENT,dirElement.get());
+  dataContext.put(PlatformDataKeys.VIRTUAL_FILE_ARRAY,new VirtualFile[]{dirElement.get().getVirtualFile()});
+  dataContext.put(MakeDirAModel.LANGUAGE_IMPORT_INTERACTION,interaction);
+  AnActionEvent e=new TestActionEvent(dataContext,action);
+  action.update(e);
+  assertTrue(e.getPresentation().isEnabled());
+  action.beforeActionPerformedUpdate(e);
+  ApplicationManager.getApplication().invokeAndWait(new Runnable(){
+    @Override public void run(){
+      action.actionPerformed(e);
+    }
+  }
+,ModalityState.NON_MODAL);
+}
