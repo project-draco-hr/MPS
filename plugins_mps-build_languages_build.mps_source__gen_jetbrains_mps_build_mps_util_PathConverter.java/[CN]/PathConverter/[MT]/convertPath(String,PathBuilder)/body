@@ -1,0 +1,31 @@
+{
+  path=normalizePath(path,false);
+  String withSlash=normalizePath(path,true);
+  List<SNode> result=new ArrayList<SNode>();
+  final boolean startsWithMacroPrefix=path.startsWith("$");
+  for (  Tuples._2<String,SNode> m : Sequence.fromIterable(macros)) {
+    String mdir=(startsWithMacroPrefix ? "${" + SPropertyOperations.getString(m._1(),MetaAdapterFactory.getProperty(0xceab519525ea4f22L,0x9b92103b95ca8c0cL,0x110396eaaa4L,0x110396ec041L,"name")) + "}/" : m._0());
+    String currPath=(path.length() < mdir.length() ? withSlash : path);
+    if (currPath.startsWith(mdir)) {
+      currPath=currPath.substring(mdir.length());
+      ListSequence.fromList(result).addElement(pathBuilder.buildRelative(m._1(),currPath));
+    }
+  }
+  if (workingDirectory != null && withSlash.startsWith(workingDirectory)) {
+    ListSequence.fromList(result).addElement(pathBuilder.buildRelative(withSlash.substring(workingDirectory.length())));
+  }
+  if (startsWithMacroPrefix) {
+    for (    SNode m : Sequence.fromIterable(macrosWithoutPath)) {
+      String mdir="${" + SPropertyOperations.getString(m,MetaAdapterFactory.getProperty(0xceab519525ea4f22L,0x9b92103b95ca8c0cL,0x110396eaaa4L,0x110396ec041L,"name")) + "}/";
+      String currPath=(path.length() < mdir.length() ? withSlash : path);
+      if (currPath.startsWith(mdir)) {
+        currPath=currPath.substring(mdir.length());
+        ListSequence.fromList(result).addElement(pathBuilder.buildRelative(m,currPath));
+      }
+    }
+  }
+  if (ListSequence.fromList(result).isEmpty()) {
+    throw new PathConverter.PathConvertException("source path (" + path + ") should be under working directory ("+ workingDirectory+ "), or any macros default directory");
+  }
+  return result;
+}

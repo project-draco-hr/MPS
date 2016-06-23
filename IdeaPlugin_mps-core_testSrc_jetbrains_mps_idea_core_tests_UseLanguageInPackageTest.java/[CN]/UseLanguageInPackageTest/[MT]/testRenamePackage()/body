@@ -1,0 +1,27 @@
+{
+  doTest(chooseOnlyBaseLanguageInteraction);
+  Project project=myProjectBuilder.getFixture().getProject();
+  ApplicationManager.getApplication().invokeAndWait(new Runnable(){
+    @Override public void run(){
+      CommandProcessor.getInstance().executeCommand(project,new Runnable(){
+        @Override public void run(){
+          PsiPackage psiPackage=JavaPsiFacade.getInstance(project).findPackage("com.jetbrains.pkg");
+          assertNotNull(psiPackage);
+          new RenameProcessor(project,psiPackage,"com.jetbrains.pkgRenamed",false,false).run();
+        }
+      }
+,null,null);
+    }
+  }
+,ModalityState.NON_MODAL);
+  ProjectHelper.getModelAccess(project).runReadAction(new Runnable(){
+    @Override public void run(){
+      SModule module=FacetManager.getInstance(myModule).getFacetByType(MPSFacetType.ID).getSolution();
+      List<SModel> smodels=IterableUtil.asList(module.getModels());
+      assertEquals("Exactly one model must be in the idea solution after package rename",1,smodels.size());
+      SModel smodel=smodels.get(0);
+      assertEquals("com.jetbrains.pkgRenamed",smodel.getName().getLongName());
+    }
+  }
+);
+}
