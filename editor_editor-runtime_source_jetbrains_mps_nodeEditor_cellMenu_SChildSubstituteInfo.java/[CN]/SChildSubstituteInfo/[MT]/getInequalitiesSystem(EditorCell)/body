@@ -1,0 +1,23 @@
+{
+  if (myParentNode == null || myLink == null) {
+    return null;
+  }
+  HashMap<SNode,SNode> mapping=new HashMap<SNode,SNode>();
+  final SNode copy=CopyUtil.copy(Collections.singletonList(getSourceNode().getContainingRoot()),mapping).get(0);
+  getModelForTypechecking().addRootNode(copy);
+  final SAbstractConcept concept=myLink.getTargetConcept();
+  boolean holeIsAType=concept.isSubConceptOf(SNodeUtil.concept_IType);
+  SNode parent=mapping.get(myParentNode);
+  SNode hole=SModelUtil_new.instantiateConceptDeclaration(SNodeUtil.concept_BaseConcept,null,null,true);
+  if (myCurrentChild != null) {
+    SNode child=mapping.get(myCurrentChild);
+    parent.insertChildBefore(myLink,hole,child);
+    parent.removeChild(child);
+  }
+ else {
+    parent.addChild(myLink,hole);
+  }
+  InequalitySystem inequationsForHole=TypeChecker.getInstance().getInequalitiesForHole(hole,holeIsAType);
+  inequationsForHole.replaceRefs(mapping);
+  return inequationsForHole;
+}
