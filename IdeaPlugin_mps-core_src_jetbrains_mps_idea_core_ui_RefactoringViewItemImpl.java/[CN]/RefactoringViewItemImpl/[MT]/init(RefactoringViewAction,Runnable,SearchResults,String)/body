@@ -1,0 +1,35 @@
+{
+  List<UsageTarget> usageTargets=new LinkedList<UsageTarget>();
+  UsageViewManager viewManager=UsageViewManager.getInstance(myProject);
+  myCallback=callback;
+  myDisposeAction=disposeAction;
+  for (  Object searchedNode : searchResults.getAliveNodes()) {
+    if (searchedNode instanceof SNode) {
+      usageTargets.add(new NodeUsageTarget(new jetbrains.mps.smodel.SNodePointer((SNode)searchedNode),myProject));
+    }
+  }
+  List<Usage> usages=new ArrayList<Usage>();
+  Set<SNode> nodes=new HashSet<SNode>();
+  for (  SearchResult searchResult : (List<SearchResult>)searchResults.getSearchResults()) {
+    if (searchResult instanceof PsiSearchResult) {
+      PsiReference psiRef=((PsiSearchResult)searchResult).getReference();
+      usages.add(new UsageInfo2UsageAdapter(new UsageInfo(psiRef)));
+    }
+ else     if (searchResult.getObject() != null) {
+      Object usage=searchResult.getObject();
+      if (usage instanceof SNode && !(nodes.contains((SNode)usage))) {
+        nodes.add((SNode)usage);
+        usages.add(new NodeUsage(new jetbrains.mps.smodel.SNodePointer((SNode)usage),myProject,searchResult.getCategory()));
+      }
+    }
+  }
+  final UsageViewPresentation presentation=createPresentation();
+  usageView=viewManager.showUsages(usageTargets.toArray(new UsageTarget[usageTargets.size()]),usages.toArray(new Usage[usages.size()]),presentation);
+  String canNotMakeString=RefactoringBundle.message("usageView.need.reRun");
+  usageView.addPerformOperationAction(new Runnable(){
+    @Override public void run(){
+      myCallback.performAction(RefactoringViewItemImpl.this);
+    }
+  }
+,name,canNotMakeString,RefactoringBundle.message("usageView.doAction"));
+}

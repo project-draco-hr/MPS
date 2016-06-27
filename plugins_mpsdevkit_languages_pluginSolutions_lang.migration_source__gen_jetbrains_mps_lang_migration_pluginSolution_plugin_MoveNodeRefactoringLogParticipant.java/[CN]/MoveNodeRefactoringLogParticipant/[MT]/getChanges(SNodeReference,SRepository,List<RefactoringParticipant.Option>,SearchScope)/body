@@ -1,7 +1,4 @@
 {
-  if (!(isApplicable(initialState,repository)) || !(ListSequence.fromList(selectedOptions).contains(OPTION))) {
-    return ListSequence.fromList(new ArrayList<RefactoringParticipant.Change<SNodeReference,SNodeReference>>());
-  }
   final SNode sourceNode=initialState.resolve(repository);
   final SModule sourceModule=SNodeOperations.getModel(sourceNode).getModule();
   final List<MoveNodeRefactoringLogParticipant.SerializingParticipantState<?,?>> participantStates=Sequence.fromIterable(new ExtensionPoint<MoveNodeRefactoringParticipant<?,?>>("jetbrains.mps.ide.platform.MoveNodeParticipantEP").getObjects()).select(new ISelector<MoveNodeRefactoringParticipant<?,?>,MoveNodeRefactoringLogParticipant.SerializingParticipantState<?,?>>(){
@@ -26,12 +23,9 @@
 ).toListSequence();
   final SearchResults results=new SearchResults();
   results.add(new SearchResult<SModule>(sourceModule,"refactoring log"));
-  RefactoringParticipant.Change<SNodeReference,SNodeReference> change=new RefactoringParticipant.Change<SNodeReference,SNodeReference>(){
+  RefactoringParticipant.Change<SNodeReference,SNodeReference> change=new MoveNodeRefactoringParticipant.ChangeBase<SNodeReference,SNodeReference>(){
     public SearchResults getSearchResults(){
       return results;
-    }
-    public boolean needsToPreserveOldNode(){
-      return false;
     }
     public void confirm(    SNodeReference finalState,    SRepository repository,    RefactoringSession refactoringSession){
       final SNode targetNode=finalState.resolve(repository);
@@ -42,7 +36,7 @@
         }
       }
 ).toListSequence();
-      MoveNodeRefactoringLogParticipant.LogBuilder logBuilder=MoveNodeRefactoringLogParticipant.LogBuilder.getBuilder(refactoringSession,sourceModule);
+      MoveNodeRefactoringLogParticipant.LogBuilder logBuilder=MoveNodeRefactoringLogParticipant.LogBuilder.getBuilder(refactoringSession,searchScope,sourceModule);
       logBuilder.addOptions(selectedOptions);
 {
         Iterator<RefactoringParticipant.PersistentRefactoringParticipant<?,?,SNode,SNode>> participant_it=ListSequence.fromList(participantStates).select(new ISelector<MoveNodeRefactoringLogParticipant.SerializingParticipantState<?,?>,RefactoringParticipant.PersistentRefactoringParticipant<?,?,SNode,SNode>>(){
@@ -63,29 +57,6 @@
           if (i_var != null) {
             logBuilder.addPart(participant_var,i_var,f_var);
           }
-          refactoringSession.registerChange(new Runnable(){
-            public void run(){
-              Iterable<SModule> modules=searchScope.getModules();
-              Sequence.fromIterable(modules).where(new IWhereFilter<SModule>(){
-                public boolean accept(                SModule m){
-                  return MigrationModuleUtil.isModuleMigrateable(m);
-                }
-              }
-).where(new IWhereFilter<SModule>(){
-                public boolean accept(                SModule m){
-                  return SetSequence.fromSet(MigrationModuleUtil.getModuleDependencies(m)).contains(sourceModule);
-                }
-              }
-).visitAll(new IVisitor<SModule>(){
-                public void visit(                SModule m){
-                  int fromVersion=MigrationModuleUtil.getDepVersion(m,sourceModule.getModuleReference());
-                  MigrationModuleUtil.setDepVersion(m,sourceModule.getModuleReference(),fromVersion + 1);
-                }
-              }
-);
-            }
-          }
-);
         }
       }
     }
