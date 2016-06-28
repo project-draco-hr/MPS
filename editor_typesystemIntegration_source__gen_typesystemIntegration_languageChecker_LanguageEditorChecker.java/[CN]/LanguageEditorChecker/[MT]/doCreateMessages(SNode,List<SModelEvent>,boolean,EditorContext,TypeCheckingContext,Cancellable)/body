@@ -15,45 +15,9 @@
   if (node.getModel() == null || SNodeOperations.getModel(editedNode) == null) {
     return result;
   }
-  LanguageErrorsComponent errorsComponent;
-synchronized (myMapsLock) {
-    final Wrappers._T<EditorComponent> mainEditorComponent=new Wrappers._T<EditorComponent>(null);
-    if (inspector) {
-      List<SNode> editedNodeAncestors=SNodeOperations.getNodeAncestors(editedNode,null,true);
-      for (      EditorComponent candidate : MapSequence.fromMap(myEditorComponentToErrorMap).keySet()) {
-        if (ListSequence.fromList(editedNodeAncestors).contains(candidate.getEditedNode())) {
-          mainEditorComponent.value=candidate;
-          break;
-        }
-      }
-      if (mainEditorComponent.value == null) {
-        return result;
-      }
-    }
- else {
-      mainEditorComponent.value=editorComponent;
-    }
-    errorsComponent=MapSequence.fromMap(myEditorComponentToErrorMap).get(mainEditorComponent.value);
-    if (errorsComponent == null) {
-      errorsComponent=new LanguageErrorsComponent(model);
-      MapSequence.fromMap(myEditorComponentToErrorMap).put(mainEditorComponent.value,errorsComponent);
-      Set<EditorComponent> mappedEditorComponent=MapSequence.fromMap(myModelToEditorComponentsMap).get(model);
-      if (mappedEditorComponent == null) {
-        mappedEditorComponent=SetSequence.fromSet(new HashSet<EditorComponent>());
-        MapSequence.fromMap(myModelToEditorComponentsMap).put(model,mappedEditorComponent);
-        addModelListener(model);
-      }
-      SetSequence.fromSet(mappedEditorComponent).addElement(mainEditorComponent.value);
-      ApplicationManager.getApplication().invokeLater(new Runnable(){
-        public void run(){
-          mainEditorComponent.value.addDisposeListener(myDisposeListener);
-          if (mainEditorComponent.value.isDisposed()) {
-            myDisposeListener.editorWillBeDisposed(mainEditorComponent.value);
-          }
-        }
-      }
-);
-    }
+  LanguageErrorsComponent errorsComponent=getErrorsComponent(editorComponent);
+  if (errorsComponent == null) {
+    return result;
   }
   if (!(wasCheckedOnce)) {
     errorsComponent.clear();

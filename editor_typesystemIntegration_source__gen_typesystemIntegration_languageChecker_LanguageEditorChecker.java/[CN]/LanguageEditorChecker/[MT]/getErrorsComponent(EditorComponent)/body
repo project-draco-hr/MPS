@@ -1,0 +1,44 @@
+{
+synchronized (myMapsLock) {
+    LanguageErrorsComponent errorsComponent;
+    final Wrappers._T<EditorComponent> mainEditorComponent=new Wrappers._T<EditorComponent>(null);
+    if (editorComponent instanceof InspectorEditorComponent) {
+      List<SNode> editedNodeAncestors=SNodeOperations.getNodeAncestors(((SNode)editorComponent.getEditedNode()),null,true);
+      for (      EditorComponent candidate : MapSequence.fromMap(myEditorComponentToErrorMap).keySet()) {
+        if (ListSequence.fromList(editedNodeAncestors).contains(candidate.getEditedNode())) {
+          mainEditorComponent.value=candidate;
+          break;
+        }
+      }
+      if (mainEditorComponent.value == null) {
+        return null;
+      }
+    }
+ else {
+      mainEditorComponent.value=editorComponent;
+    }
+    SModel model=editorComponent.getEditorContext().getModel();
+    errorsComponent=MapSequence.fromMap(myEditorComponentToErrorMap).get(mainEditorComponent.value);
+    if (errorsComponent == null) {
+      errorsComponent=new LanguageErrorsComponent(model);
+      MapSequence.fromMap(myEditorComponentToErrorMap).put(mainEditorComponent.value,errorsComponent);
+      Set<EditorComponent> mappedEditorComponent=MapSequence.fromMap(myModelToEditorComponentsMap).get(model);
+      if (mappedEditorComponent == null) {
+        mappedEditorComponent=SetSequence.fromSet(new HashSet<EditorComponent>());
+        MapSequence.fromMap(myModelToEditorComponentsMap).put(model,mappedEditorComponent);
+        addModelListener(model);
+      }
+      SetSequence.fromSet(mappedEditorComponent).addElement(mainEditorComponent.value);
+      ApplicationManager.getApplication().invokeLater(new Runnable(){
+        public void run(){
+          mainEditorComponent.value.addDisposeListener(myDisposeListener);
+          if (mainEditorComponent.value.isDisposed()) {
+            myDisposeListener.editorWillBeDisposed(mainEditorComponent.value);
+          }
+        }
+      }
+);
+    }
+    return errorsComponent;
+  }
+}
