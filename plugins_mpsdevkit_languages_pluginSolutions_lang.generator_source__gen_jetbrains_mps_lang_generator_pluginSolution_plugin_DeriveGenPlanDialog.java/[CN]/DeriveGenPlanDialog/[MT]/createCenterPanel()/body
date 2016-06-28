@@ -8,22 +8,20 @@
   JPanel p=new JPanel(new GridLayout(1,2));
   p.add(myStepModuleKind.getComponent());
   p.add(myStepGranularityKind.getComponent());
-  final BaseModelModel chooseModel=new BaseModelModel(myProject){
-    public SModelReference[] find(    SearchScope scope){
-      ArrayList<SModelReference> rv=new ArrayList<SModelReference>();
-      for (      SModel m : scope.getModels()) {
-        if (SModelStereotype.isStubModel(m)) {
-          continue;
-        }
-        if (SModelStereotype.isDescriptorModel(m)) {
-          continue;
-        }
-        rv.add(m.getReference());
-      }
-      return rv.toArray(new SModelReference[rv.size()]);
+  Condition<SModel> isStub=new Condition<SModel>(){
+    public boolean met(    SModel m){
+      return SModelStereotype.isStubModel(m);
     }
   }
 ;
+  Condition<SModel> isDescriptor=new Condition<SModel>(){
+    public boolean met(    SModel m){
+      return SModelStereotype.isDescriptorModel(m);
+    }
+  }
+;
+  Condition<SModel> filter=new AndCondition<SModel>(NotCondition.negate(isStub),NotCondition.negate(isDescriptor));
+  final BaseModelModel chooseModel=new BaseModelModel(myProject,new ConditionalScope(myProject.getScope(),null,filter),new ConditionalScope(new FilteredGlobalScope(),null,filter));
   myChoosePanel=MpsPopupFactory.createPanelForPackage(myProject.getProject(),chooseModel,false);
   myChoosePanel.invoke(new ChooseByNamePopupComponent.Callback(){
     public void elementChosen(    Object o){
