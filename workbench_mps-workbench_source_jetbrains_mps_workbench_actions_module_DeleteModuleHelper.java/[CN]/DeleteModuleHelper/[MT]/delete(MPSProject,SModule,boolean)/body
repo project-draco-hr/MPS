@@ -2,7 +2,7 @@
   if (!project.isProjectModule(module instanceof Generator ? ((Generator)module).getSourceLanguage() : module) && !deleteFiles) {
     throw new IllegalArgumentException("Non-project modules can only be deleted with files deletion enabled");
   }
-  MPSModuleRepository.getInstance().saveAll();
+  project.getRepository().saveAll();
   if (deleteFiles) {
     for (    SModel model : module.getModels()) {
       DeleteModelHelper.delete(module,model,true);
@@ -10,32 +10,44 @@
     if (module.getFacet(JavaModuleFacet.class) != null) {
       IFile classesGen=module.getFacet(JavaModuleFacet.class).getClassesGen();
       if (classesGen != null) {
-        deleteFile(classesGen.getPath());
+        deleteFile(classesGen.toPath().toString());
       }
     }
     if (module.getFacet(TestsFacet.class) != null) {
-      deleteFile(module.getFacet(TestsFacet.class).getTestsOutputPath().getPath());
+      final IFile testsOutputPath=module.getFacet(TestsFacet.class).getTestsOutputPath();
+      if (testsOutputPath != null) {
+        deleteFile(testsOutputPath.toPath().toString());
+      }
     }
     if (module instanceof AbstractModule) {
       AbstractModule curModule=(AbstractModule)module;
-      String outputPath=curModule.getOutputPath().getPath();
+      String outputPath=curModule.getOutputPath().toPath().toString();
       deleteFile(outputPath);
       deleteFile(FileGenerationUtil.getCachesPath(outputPath));
-      if (curModule.getDescriptorFile() != null)       curModule.getDescriptorFile().delete();
+      if (curModule.getDescriptorFile() != null) {
+        curModule.getDescriptorFile().delete();
+      }
       if (curModule.getModuleSourceDir() != null && curModule.getModuleSourceDir().getChildren().isEmpty()) {
-        deleteFile(curModule.getModuleSourceDir().getPath());
+        deleteFile(curModule.getModuleSourceDir().toPath().toString());
       }
       if (curModule.getDescriptorFile() != null) {
         IFile moduleFolder=curModule.getDescriptorFile().getParent();
-        if (deleteDirIfEmpty(moduleFolder))         moduleFolder.delete();
+        if (moduleFolder != null && deleteDirIfEmpty(moduleFolder)) {
+          moduleFolder.delete();
+        }
       }
     }
   }
   if (project.isProjectModule(module)) {
+    final SRepository repository=project.getRepository();
+    if (repository instanceof SRepositoryExt) {
+      ((SRepositoryExt)repository).unregisterModule(module,project);
+    }
     project.removeModule(module);
-    ((StandaloneMPSProject)project).update();
-    MPSModuleRepository.getInstance().unregisterModule(module,project);
     project.save();
+    ((StandaloneMPSProject)project).update();
   }
-  if (deleteFiles)   ModuleRepositoryFacade.getInstance().removeModuleForced(module);
+  if (deleteFiles) {
+    new ModuleRepositoryFacade(project.getRepository()).removeModuleForced(module);
+  }
 }
