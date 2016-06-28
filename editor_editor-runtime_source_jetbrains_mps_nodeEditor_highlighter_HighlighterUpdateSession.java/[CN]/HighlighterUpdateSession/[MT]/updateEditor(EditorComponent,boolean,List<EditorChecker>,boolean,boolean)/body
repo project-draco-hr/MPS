@@ -3,16 +3,17 @@
   final NodeHighlightManager highlightManager=editor.getHighlightManager();
   boolean anyMessageChanged=false;
   for (  final EditorChecker checker : checkersToRecheck) {
-    Pair<Collection<EditorMessage>,Boolean> checkResult=runLoPrioRead(new Computable<Pair<Collection<EditorMessage>,Boolean>>(){
-      @Override public Pair<Collection<EditorMessage>,Boolean> compute(){
-        if (myHighlighter.isPausedOrStopping())         return CHECK_ABORTED;
+    UpdateResult checkResult=runLoPrioRead(new Computable<UpdateResult>(){
+      @Override public UpdateResult compute(){
+        if (myHighlighter.isPausedOrStopping())         return UpdateResult.CANCELLED;
         SNode node=editor.getEditedNode();
         if (node == null) {
-          return CHECK_ABORTED;
+          return UpdateResult.CANCELLED;
         }
         if (!SNodeUtil.isAccessible(node,editor.getEditorContext().getRepository())) {
           return null;
         }
+        boolean recreateMessages=myHighlighter.getEditorTracker().isInspector(editor) && recreateInspectorMessages;
         try {
           return checker.update(editor,wasCheckedOnce,applyQuickFixes,new HighlighterUpdateSessionCancellable(myHighlighter,checker.toString(),editor));
         }
@@ -24,11 +25,14 @@
     }
 );
     if (myHighlighter.isStopping())     return false;
-    if (checkResult.o2 || (myHighlighter.getEditorTracker().isInspector(editor) && recreateInspectorMessages)) {
-      anyMessageChanged=true;
-      highlightManager.clearForOwner(checker.getEditorMessageOwner(),false);
-      for (      EditorMessage message : checkResult.o1) {
-        highlightManager.mark(message);
+    if (checkResult instanceof Completed) {
+      Completed completed=(Completed)checkResult;
+      if (completed.myMessagesChanged || myHighlighter.getEditorTracker().isInspector(editor) && recreateInspectorMessages) {
+        anyMessageChanged=true;
+        highlightManager.clearForOwner(checker.getEditorMessageOwner(),false);
+        for (        EditorMessage message : completed.myMessages) {
+          highlightManager.mark(message);
+        }
       }
     }
   }
