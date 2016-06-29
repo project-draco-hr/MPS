@@ -1,20 +1,21 @@
 {
-  Set<EditorMessage> messages=SetSequence.fromSet(new LinkedHashSet<EditorMessage>());
+  SNode rootNode=editorComponent.getEditedNode();
   if (SNodeOperations.getModel(rootNode) == null || SNodeOperations.getModel(rootNode).getModule() == null) {
-    return messages;
+    return UpdateResult.CANCELLED;
   }
+  Set<EditorMessage> messages=SetSequence.fromSet(new LinkedHashSet<EditorMessage>());
   Set<SReference> badReferences=collectBadReferences(rootNode);
   for (  SReference ref : SetSequence.fromSet(badReferences)) {
     EditorMessage message=HighlightUtil.createHighlighterMessage(ref.getSourceNode(),"Unresolved reference",this);
     SetSequence.fromSet(messages).addElement(message);
   }
-  Set<EditorCell> editorErrorCells=((EditorComponent)editorContext.getEditorComponent()).getCellTracker().getErrorCells();
+  Set<EditorCell> editorErrorCells=editorComponent.getCellTracker().getErrorCells();
   boolean hasWork=SetSequence.fromSet(badReferences).isNotEmpty() || !(editorErrorCells.isEmpty());
-  if (hasWork && isAutofix(SNodeOperations.getModel(rootNode),editorContext.getRepository())) {
-    runAutofix(badReferences,editorContext);
+  if (hasWork && isAutofix(SNodeOperations.getModel(rootNode),editorComponent.getEditorContext().getRepository())) {
+    runAutofix(badReferences,editorComponent.getEditorContext());
   }
  else {
     myForceAutofix=false;
   }
-  return messages;
+  return new UpdateResult.Completed(true,messages);
 }
