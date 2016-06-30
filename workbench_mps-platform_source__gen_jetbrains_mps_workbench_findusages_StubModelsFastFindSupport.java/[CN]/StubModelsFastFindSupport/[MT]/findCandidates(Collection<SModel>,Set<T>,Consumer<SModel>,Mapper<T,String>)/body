@@ -10,7 +10,6 @@
   }
   final ManyToManyMap<SModel,VirtualFile> scopeFiles=new ManyToManyMap<SModel,VirtualFile>();
   Set<FolderSetDataSource> sources=new THashSet<FolderSetDataSource>();
-  final Set<VirtualFile> dirs=new THashSet<VirtualFile>();
   for (  final SModel sm : models) {
     if (!(sm instanceof JavaClassStubModelDescriptor)) {
       continue;
@@ -21,6 +20,7 @@
       continue;
     }
     Collection<IFile> files=source.getAffectedFiles();
+    ArrayList<VirtualFile> vFiles=new ArrayList();
     for (    IFile path : files) {
       final VirtualFile vf=VirtualFileUtils.getVirtualFile(path);
       if (vf == null) {
@@ -29,16 +29,18 @@
         }
         continue;
       }
-      VfsUtilCore.visitChildrenRecursively(vf,new VirtualFileVisitor<Object>(){
-        @Override public boolean visitFile(        @NotNull VirtualFile file){
-          if (file.isDirectory()) {
-            return dirs.add(file);
-          }
-          scopeFiles.addLink(sm,file);
-          return true;
-        }
+      if (vf.isDirectory()) {
+        vFiles.addAll(Arrays.asList(vf.getChildren()));
       }
-);
+ else {
+        vFiles.add(vf);
+      }
+    }
+    for (    VirtualFile vf : vFiles) {
+      if (vf.isDirectory()) {
+        continue;
+      }
+      scopeFiles.addLink(sm,vf);
     }
   }
   for (  T elem : elems) {
