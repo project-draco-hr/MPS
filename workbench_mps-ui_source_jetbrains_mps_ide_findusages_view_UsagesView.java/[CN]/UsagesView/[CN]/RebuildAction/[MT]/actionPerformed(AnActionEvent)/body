@@ -1,15 +1,21 @@
 {
-  List<SModel> models=new ArrayList<SModel>();
-  for (  SModel modelDescriptor : myView.getIncludedModels()) {
-    if (GenerationFacade.canGenerate(modelDescriptor)) {
-      models.add(modelDescriptor);
+  final Project mpsProject=myView.myProject;
+  Iterable<IResource> makeRes=new ModelAccessHelper(mpsProject.getModelAccess()).runReadAction(new Computable<Iterable<IResource>>(){
+    @Override public Iterable<IResource> compute(){
+      List<SModel> models=new ArrayList<SModel>();
+      for (      SModel modelDescriptor : myView.getIncludedModels()) {
+        if (GenerationFacade.canGenerate(modelDescriptor)) {
+          models.add(modelDescriptor);
+        }
+      }
+      return new ModelsToResources(models).resources(false);
     }
   }
-  final Project mpsProject=myView.myProject;
+);
   if (myMakeSession.compareAndSet(null,new MakeSession(mpsProject,new DefaultMakeMessageHandler(mpsProject),false))) {
     try {
       if (IMakeService.INSTANCE.get().openNewSession(myMakeSession.get())) {
-        IMakeService.INSTANCE.get().make(myMakeSession.get(),new ModelsToResources(models).resources(false));
+        IMakeService.INSTANCE.get().make(myMakeSession.get(),makeRes);
       }
     }
   finally {
