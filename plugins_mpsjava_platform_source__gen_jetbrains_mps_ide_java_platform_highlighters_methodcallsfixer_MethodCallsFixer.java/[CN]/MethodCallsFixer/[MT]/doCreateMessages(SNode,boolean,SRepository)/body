@@ -1,0 +1,40 @@
+{
+  if (DISABLED) {
+    return;
+  }
+  SModel model=SNodeOperations.getModel(rootNode);
+  if (!(model instanceof EditableSModel) || model.getModule() instanceof TransientSModule || jetbrains.mps.util.SNodeOperations.isModelDisposed(model)) {
+    return;
+  }
+  if (!(incremental)) {
+    myCurrentSession=null;
+  }
+  if (myCurrentSession == null) {
+    myCurrentSession=new MethodCallsUpdateSession(myRepository);
+    incremental=false;
+  }
+  if (!(incremental)) {
+    for (    SNode methodCall : SNodeOperations.getNodeDescendants(rootNode,MetaAdapterFactory.getInterfaceConcept(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0x11857355952L,"jetbrains.mps.baseLanguage.structure.IMethodCall"),false,new SAbstractConcept[]{})) {
+      myCurrentSession.checkMethodCall(methodCall);
+    }
+  }
+  final Map<SNode,SNode> methodCallsToUpdate=myCurrentSession.collectMethodCallsToUpdate();
+  if (!(methodCallsToUpdate.isEmpty()) && repository != null) {
+    ThreadUtils.runInUIThreadNoWait(new Runnable(){
+      public void run(){
+        repository.getModelAccess().executeUndoTransparentCommand(new Runnable(){
+          public void run(){
+            for (            SNode methodCall : methodCallsToUpdate.keySet()) {
+              SNode referent=methodCallsToUpdate.get(methodCall);
+              if (referent != null && SNodeUtil.isAccessible(referent,repository)) {
+                SLinkOperations.setTarget(methodCall,MetaAdapterFactory.getReferenceLink(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0x11857355952L,0xf8c78301adL,"baseMethodDeclaration"),referent);
+              }
+            }
+          }
+        }
+);
+      }
+    }
+);
+  }
+}
