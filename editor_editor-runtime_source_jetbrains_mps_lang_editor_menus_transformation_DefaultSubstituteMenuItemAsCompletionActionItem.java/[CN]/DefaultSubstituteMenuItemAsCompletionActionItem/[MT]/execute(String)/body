@@ -1,0 +1,34 @@
+{
+  SNode newChild=getSubstituteItem().createNode(pattern);
+  if (newChild != null) {
+    SContainmentLink containmentLink=myContext.getLink();
+    SNode parentNode=myContext.getParentNode();
+    SNode currentChild=myContext.getCurrentChild();
+    if (!newChild.getConcept().isSubConceptOf(containmentLink.getTargetConcept())) {
+      LOG.error("couldn't set instance of " + newChild.getConcept().getName() + " as child '"+ containmentLink.getName()+ "' to parent"+ parentNode.getPresentation()+ " Parent id: "+ parentNode.getNodeId());
+    }
+    if (currentChild == null) {
+      parentNode.addChild(containmentLink,newChild);
+    }
+ else {
+      SNodeUtil.replaceWithAnother(currentChild,newChild);
+      currentChild.delete();
+    }
+  }
+  boolean wasSelected=getSubstituteItem().select(newChild,pattern);
+  if (!wasSelected) {
+    EditorContext editorContext=myContext.getEditorContext();
+    editorContext.flushEvents();
+    EditorComponent editorComponent=((EditorComponent)editorContext.getEditorComponent());
+    EditorCell cell=editorComponent.findNodeCell(newChild);
+    if (cell != null) {
+      EditorCell errorCell=CellFinderUtil.findFirstError(cell,true);
+      if (errorCell != null) {
+        editorComponent.changeSelectionWRTFocusPolicy(errorCell);
+      }
+ else {
+        editorComponent.changeSelectionWRTFocusPolicy(cell);
+      }
+    }
+  }
+}
