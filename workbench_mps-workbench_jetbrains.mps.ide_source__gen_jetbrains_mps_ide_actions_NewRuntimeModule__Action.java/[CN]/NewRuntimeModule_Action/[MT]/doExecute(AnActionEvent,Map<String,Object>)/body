@@ -1,18 +1,21 @@
 {
-  final ModelAccess modelAccess=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository().getModelAccess();
+  final SRepository repo=((MPSProject)MapSequence.fromMap(_params).get("project")).getRepository();
   final Language language=(Language)((SModule)MapSequence.fromMap(_params).get("contextModule"));
   final MPSTree mpsTree=((MPSTreeNode)((TreeNode)MapSequence.fromMap(_params).get("treeNode"))).getTree();
-  final BaseModuleModel baseSolutionModel=new BaseModuleModel(((MPSProject)MapSequence.fromMap(_params).get("project")),"runtime module");
-  ChooseByNamePopup popup=MpsPopupFactory.createPackagePopup(((Project)MapSequence.fromMap(_params).get("ideaProject")),baseSolutionModel,NewRuntimeModule_Action.this);
+  ModuleInstanceCondition solutionOnly=new ModuleInstanceCondition(Solution.class);
+  ModuleScopeIterable localScope=new ModuleScopeIterable(new ConditionalScope(((MPSProject)MapSequence.fromMap(_params).get("project")).getScope(),solutionOnly,null),repo);
+  ModuleScopeIterable globalScope=new ModuleScopeIterable(new ConditionalScope(new FilteredGlobalScope(),solutionOnly,null),repo);
+  ChooseByNameData<SModuleReference> gotoData=new ChooseByNameData<SModuleReference>(new ModulesPresentation(repo));
+  gotoData.derivePrompts("runtime module").setScope(localScope,globalScope);
+  ChooseByNamePopup popup=MpsPopupFactory.createPackagePopup(((Project)MapSequence.fromMap(_params).get("ideaProject")),gotoData,NewRuntimeModule_Action.this);
   popup.invoke(new ChooseByNamePopupComponent.Callback(){
-    @Override public void elementChosen(    Object p0){
-      SModuleReference module=baseSolutionModel.getModelObject(p0);
-      if (module == null) {
+    @Override public void elementChosen(    final Object p0){
+      if (!(p0 instanceof SModuleReference)) {
         return;
       }
-      language.getModuleDescriptor().getRuntimeModules().add((ModuleReference)module);
-      modelAccess.runWriteInEDT(new Runnable(){
+      repo.getModelAccess().runWriteInEDT(new Runnable(){
         public void run(){
+          language.getModuleDescriptor().getRuntimeModules().add((SModuleReference)p0);
           language.save();
           mpsTree.rebuildLater();
         }
