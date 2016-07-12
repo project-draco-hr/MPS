@@ -1,0 +1,27 @@
+{
+synchronized (myPluginsLock) {
+    try {
+      int size=contributors.size();
+      monitor.start("Unloading " + size + " MPS plugins",1);
+      showProgress();
+      LOG.debug("Unloading MPS plugins from " + size + " contributors ["+ toString()+ "]");
+      final List<T> plugins=new ArrayList<T>();
+      for (      PluginContributor contributor : contributors) {
+        if (!myContributorToPlugin.containsKey(contributor)) {
+          LOG.error("",new IllegalStateException("Contributor " + contributor + " was not registered"));
+          continue;
+        }
+        T plugin=myContributorToPlugin.remove(contributor);
+        if (plugin != null) {
+          plugins.add(plugin);
+        }
+      }
+      mySortedPlugins.removeAll(plugins);
+      beforePluginsDisposed(plugins);
+      disposePlugins(plugins,monitor);
+    }
+  finally {
+      monitor.done();
+    }
+  }
+}
