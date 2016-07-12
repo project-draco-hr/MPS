@@ -7,15 +7,21 @@
     }
   }
 ;
-  final BaseModelModel goToModelModel=new BaseModelModel(myProject,new ConditionalScope(myProject.getScope(),null,cond),new ConditionalScope(new FilteredGlobalScope(),null,cond));
-  goToModelModel.setPromptText("Import model:");
-  ChooseByNamePopup popup=MpsPopupFactory.createPackagePopup(myProject,goToModelModel,myInitialText);
+  ConditionalScope localScope=new ConditionalScope(myProject.getScope(),null,cond);
+  ConditionalScope globalScope=new ConditionalScope(new FilteredGlobalScope(),null,cond);
+  SRepository repo=myProject.getRepository();
+  ChooseByNameData<SModelReference> gotoData=new ChooseByNameData<>(new ModelsPresentation(repo));
+  gotoData.derivePrompts("model").setPrompts("Import model:",gotoData.getNotFoundMessage(),gotoData.getNotInMessage());
+  gotoData.setScope(new ModelScopeIterable(localScope,repo),new ModelScopeIterable(globalScope,repo));
+  ChooseByNamePopup popup=MpsPopupFactory.createPackagePopup(myProject,gotoData,myInitialText);
   if (myShortcut != null) {
     popup.setCheckBoxShortcut(myShortcut);
   }
   popup.invoke(new AddImportCallback(myProject,model){
     @Override public void elementChosen(    Object element){
-      doImport(goToModelModel.getModelObject(element));
+      if (element instanceof SModelReference) {
+        doImport((SModelReference)element);
+      }
     }
   }
 ,ModalityState.current(),false);
