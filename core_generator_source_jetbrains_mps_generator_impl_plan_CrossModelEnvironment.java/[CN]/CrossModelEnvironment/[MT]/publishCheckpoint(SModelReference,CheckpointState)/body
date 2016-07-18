@@ -5,15 +5,22 @@
     myTransientCheckpoints.put(originalModel,new ModelCheckpoints(cpState));
   }
  else {
-    Collection<CheckpointState> discarded=checkpoints.updateAndDiscardOutdated(cpState);
+    CheckpointState replaced=checkpoints.updateAndDiscardOutdated(cpState);
+    if (replaced == null) {
+      return;
+    }
     HashSet<SModelReference> forgottenCheckpoints=new HashSet<SModelReference>();
-    for (    CheckpointState next : discarded) {
+    ArrayDeque<CheckpointState> discarded=new ArrayDeque<>();
+    discarded.add(replaced);
+    do {
+      CheckpointState next=discarded.removeFirst();
       SModelReference cpReference=next.getCheckpointModel().getReference();
       forgottenCheckpoints.add(cpReference);
       myModule.forgetModel(cpReference,true);
+      for (      ModelCheckpoints mcp : myTransientCheckpoints.values()) {
+        mcp.discardOutdated(forgottenCheckpoints,discarded);
+      }
     }
-    for (    ModelCheckpoints mcp : myTransientCheckpoints.values()) {
-      mcp.discardOutdated(forgottenCheckpoints,discarded);
-    }
+ while (!discarded.isEmpty());
   }
 }
