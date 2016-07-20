@@ -1,6 +1,6 @@
 {
   ThreadUtils.assertEDT();
-  SwingUtilities.invokeLater(new Runnable(){
+  ApplicationManager.getApplication().invokeLater(new Runnable(){
     @Override public void run(){
       ProgressManager.getInstance().run(new Task.Modal(getProject(),"Searching",true){
         @Override public void run(        @NotNull final ProgressIndicator indicator){
@@ -8,10 +8,16 @@
           final MigrationScriptFinder finder=new MigrationScriptFinder(scripts);
           final IResultProvider provider=FindUtils.makeProvider(finder);
           final SearchQuery query=new SearchQuery(scope);
-          final SearchResults results=FindUtils.getSearchResults(new ProgressMonitorAdapter(indicator),query,provider);
-          SwingUtilities.invokeLater(new Runnable(){
+          final Wrappers._T<SearchResults> results=new Wrappers._T<SearchResults>();
+          ProjectHelper.fromIdeaProject(getProject()).getRepository().getModelAccess().runReadAction(new Runnable(){
+            public void run(){
+              results.value=FindUtils.getSearchResults(new ProgressMonitorAdapter(indicator),query,provider);
+            }
+          }
+);
+          ApplicationManager.getApplication().invokeLater(new Runnable(){
             @Override public void run(){
-              if (results.getSearchResults().isEmpty()) {
+              if (results.value.getSearchResults().isEmpty()) {
                 JOptionPane.showMessageDialog(getContentManager().getComponent(),"No applicable nodes found","Migration Scripts",JOptionPane.INFORMATION_MESSAGE);
               }
  else {

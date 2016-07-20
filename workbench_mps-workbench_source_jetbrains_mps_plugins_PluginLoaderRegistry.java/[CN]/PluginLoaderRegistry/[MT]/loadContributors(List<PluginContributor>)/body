@@ -1,31 +1,39 @@
 {
   myModelAccess.checkWriteAccess();
-  if (contributors.isEmpty())   return;
-  final List<PluginContributor> contributorsToLoad=new ArrayList<PluginContributor>(contributors);
-  for (  PluginContributor contributor : contributors) {
-    if (myContributorsToBeLoaded.contains(contributor)) {
-      LOG.warn("Trying to load twice the plugin contributor " + contributor + ". Ignoring the request.");
-      contributorsToLoad.remove(contributor);
-    }
+  if (contributors.isEmpty()) {
+    return;
   }
-synchronized (myPluginLoadersLock) {
-    final List<PluginLoader> pluginLoaders=new ArrayList<PluginLoader>(myPluginLoaders);
-    Runnable loadingTask=new Runnable(){
-      @Override public void run(){
-        final long beginTime=System.nanoTime();
-        LOG.info(String.format("Loading plugins from %d contributors",contributorsToLoad.size()));
-        try {
-          for (          final PluginLoader listener : pluginLoaders) {
-            listener.loadPlugins(contributorsToLoad);
-          }
-        }
-  finally {
-          LOG.info(String.format("Loading of %d plugins took %.3f s",contributorsToLoad.size(),(System.nanoTime() - beginTime) / 1e9));
-        }
+  LOG.debug(String.format("Scheduling loading of %d contributors",contributors.size()));
+  if (!contributors.isEmpty()) {
+    final List<PluginContributor> contributorsToLoad=new ArrayList<PluginContributor>(contributors);
+    for (    PluginContributor contributor : contributors) {
+      if (myContributorsToBeLoaded.contains(contributor)) {
+        LOG.warn("Trying to load twice the plugin contributor " + contributor + ". Ignoring the request.");
+        contributorsToLoad.remove(contributor);
       }
     }
+synchronized (myPluginLoadersLock) {
+      final List<PluginLoader> pluginLoaders=new ArrayList<PluginLoader>(myPluginLoaders);
+      Task loadingTask=new Task.Modal(null,"Loading MPS plugin contributors",false){
+        @Override public void run(        @NotNull ProgressIndicator indicator){
+          final long beginTime=System.nanoTime();
+          ProgressMonitorAdapter monitor=new ProgressMonitorAdapter(indicator);
+          try {
+            monitor.start("Loading contributors",pluginLoaders.size());
+            for (            final PluginLoader loader : pluginLoaders) {
+              LOG.info(String.format("Loading plugins to loader %s from %d contributors",loader,contributorsToLoad.size()));
+              loader.loadPlugins(contributorsToLoad,monitor.subTask(1));
+            }
+          }
+  finally {
+            monitor.done();
+            LOG.info(String.format("Loading of %d plugins took %.3f s",contributorsToLoad.size(),(System.nanoTime() - beginTime) / 1e9));
+          }
+        }
+      }
 ;
-    ApplicationManager.getApplication().invokeLater(loadingTask,ModalityState.any());
-    myContributorsToBeLoaded.addAll(contributors);
+      runOrPostpone(loadingTask);
+      myContributorsToBeLoaded.addAll(contributors);
+    }
   }
 }
