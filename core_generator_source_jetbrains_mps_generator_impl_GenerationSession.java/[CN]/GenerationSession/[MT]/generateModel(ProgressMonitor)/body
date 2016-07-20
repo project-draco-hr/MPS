@@ -95,8 +95,10 @@
         }
  else         if (planStep instanceof Checkpoint) {
           Checkpoint checkpointStep=(Checkpoint)planStep;
-          SModel checkpointModel=mySessionContext.getCrossModelEnvironment().createBlankCheckpointModel(myOriginalInputModel.getReference(),checkpointStep);
+          CheckpointIdentity checkpointIdentity=new CheckpointIdentity(myGenerationPlan,checkpointStep);
+          SModel checkpointModel=mySessionContext.getCrossModelEnvironment().createBlankCheckpointModel(myOriginalInputModel.getReference(),checkpointIdentity);
           CheckpointStateBuilder cpBuilder=new CheckpointStateBuilder(currInputModel,checkpointModel,transitionTrace);
+          CheckpointState cpState=cpBuilder.create(checkpointIdentity);
           if (myStepArguments != null) {
             GeneratorMappings stepLabels=myStepArguments.mappingLabels;
             stepLabels.export(cpBuilder);
@@ -104,7 +106,7 @@
             SNode debugMappings=new DebugMappingsBuilder(mySessionContext.getRepository(),Collections.singletonMap(currInputModel,checkpointModel)).build(checkpointModel,stepLabels);
             checkpointModel.addRootNode(debugMappings);
           }
-          mySessionContext.getCrossModelEnvironment().publishCheckpoint(myOriginalInputModel.getReference(),cpBuilder.create(new PlanIdentity(myGenerationPlan),checkpointStep));
+          mySessionContext.getCrossModelEnvironment().publishCheckpoint(myOriginalInputModel.getReference(),cpState);
           transitionTrace=new TransitionTrace(checkpointStep);
           transitionTrace.reset(currInputModel);
           myStepArguments=null;
