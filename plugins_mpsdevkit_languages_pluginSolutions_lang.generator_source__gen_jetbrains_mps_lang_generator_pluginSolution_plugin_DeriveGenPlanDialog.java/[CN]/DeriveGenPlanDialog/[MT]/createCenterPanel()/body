@@ -21,11 +21,17 @@
   }
 ;
   Condition<SModel> filter=new AndCondition<SModel>(NotCondition.negate(isStub),NotCondition.negate(isDescriptor));
-  final BaseModelModel chooseModel=new BaseModelModel(myProject,new ConditionalScope(myProject.getScope(),null,filter),new ConditionalScope(new FilteredGlobalScope(),null,filter));
-  myChoosePanel=MpsPopupFactory.createPanelForPackage(myProject.getProject(),chooseModel,false);
+  ConditionalScope localScope=new ConditionalScope(myProject.getScope(),null,filter);
+  ConditionalScope globalScope=new ConditionalScope(new FilteredGlobalScope(),null,filter);
+  SRepository repo=myProject.getRepository();
+  ChooseByNameData<SModelReference> gotoData=new ChooseByNameData<SModelReference>(new ModelsPresentation(repo));
+  gotoData.derivePrompts("model").setScope(new ModelScopeIterable(localScope,repo),new ModelScopeIterable(globalScope,repo));
+  myChoosePanel=MpsPopupFactory.createPanelForPackage(myProject.getProject(),gotoData,false);
   myChoosePanel.invoke(new ChooseByNamePopupComponent.Callback(){
     public void elementChosen(    Object o){
-      setSampleModel(chooseModel.getModelObject(o));
+      if (o instanceof SModelReference) {
+        setSampleModel(((SModelReference)o));
+      }
     }
   }
 ,ModalityState.current(),false);
