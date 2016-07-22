@@ -1,32 +1,26 @@
 {
   myModule.addModelToKeep(cpState.getCheckpointModel().getReference(),true);
-  List<CheckpointState> checkpoints=myCheckpoints.get(originalModel);
+  ModelCheckpoints checkpoints=myTransientCheckpoints.get(originalModel);
   if (checkpoints == null) {
-    myCheckpoints.put(originalModel,checkpoints=new ArrayList<CheckpointState>(3));
+    myTransientCheckpoints.put(originalModel,new ModelCheckpoints(cpState));
   }
  else {
+    CheckpointState replaced=checkpoints.updateAndDiscardOutdated(cpState);
+    if (replaced == null) {
+      return;
+    }
     HashSet<SModelReference> forgottenCheckpoints=new HashSet<SModelReference>();
-    for (Iterator<CheckpointState> it=checkpoints.iterator(); it.hasNext(); ) {
-      CheckpointState next=it.next();
-      if (next.getCheckpoint().equals(cpState.getCheckpoint())) {
-        SModelReference cpReference=next.getCheckpointModel().getReference();
-        forgottenCheckpoints.add(cpReference);
-        myModule.forgetModel(cpReference,true);
-        it.remove();
-        break;
+    ArrayDeque<CheckpointState> discarded=new ArrayDeque<>();
+    discarded.add(replaced);
+    do {
+      CheckpointState next=discarded.removeFirst();
+      SModelReference cpReference=next.getCheckpointModel().getReference();
+      forgottenCheckpoints.add(cpReference);
+      myModule.forgetModel(cpReference,true);
+      for (      ModelCheckpoints mcp : myTransientCheckpoints.values()) {
+        mcp.discardOutdated(forgottenCheckpoints,discarded);
       }
     }
-    for (    List<CheckpointState> cpStates : myCheckpoints.values()) {
-      for (Iterator<CheckpointState> it=cpStates.iterator(); it.hasNext(); ) {
-        CheckpointState next=it.next();
-        for (        SModelReference importElement : SModelOperations.getImportedModelUIDs(next.getCheckpointModel())) {
-          if (forgottenCheckpoints.contains(importElement)) {
-            it.remove();
-            break;
-          }
-        }
-      }
-    }
+ while (!discarded.isEmpty());
   }
-  checkpoints.add(cpState);
 }
