@@ -15,17 +15,22 @@
         final OptimizeImportsHelper helper=new OptimizeImportsHelper(repo);
         for (        final SModule module : ((List<SModule>)MapSequence.fromMap(_params).get("modules"))) {
           monitor.step("Optimizing imports of the " + module);
-          repo.getModelAccess().runWriteAction(new Runnable(){
+          ApplicationManager.getApplication().invokeAndWait(new Runnable(){
             public void run(){
-              if (module instanceof Solution) {
-                report.value+=helper.optimizeSolutionImports(((Solution)module));
+              repo.getModelAccess().executeCommand(new Runnable(){
+                public void run(){
+                  if (module instanceof Solution) {
+                    report.value+=helper.optimizeSolutionImports(((Solution)module));
+                  }
+ else                   if (module instanceof Language) {
+                    report.value+=helper.optimizeLanguageImports(((Language)module));
+                  }
+                }
               }
- else               if (module instanceof Language) {
-                report.value+=helper.optimizeLanguageImports(((Language)module));
-              }
+);
             }
           }
-);
+,ModalityState.any());
           monitor.advance(1);
           if (monitor.isCanceled()) {
             return;
