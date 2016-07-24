@@ -1,0 +1,20 @@
+{
+  tracer.start(COMPILING_JAVA_MSG,10);
+  try {
+    IClassPathItem classPath=computeDependenciesClassPath(myModulesContainer.getModules(),tracer.subTracer(1));
+    final CompilationErrorsHandler errorsHandler=new CompilationErrorsHandler(myModulesContainer,tracer.getSender(),classPath);
+    CompilationHandler compilationHandler=new CompilationHandler(classPath,tracer.subTracer(3),errorsHandler);
+    final CollectingResultsListener listener=new CollectingResultsListener(errorsHandler);
+    compiler.addCompilationResultListener(listener);
+    doCompileJava(compiler,classPath,myCompilerOptions,tracer.subTracer(6));
+    compiler.removeCompilationResultListener(listener);
+    Collection<SModule> changedModules=compilationHandler.process(listener.getResults());
+    if (changedModules.isEmpty()) {
+      tracer.error(NO_CHANGES_AFTER_COMPILATION_ERROR);
+    }
+    return new MPSCompilationResult(errorsHandler.getErrorsCount(),0,false,changedModules);
+  }
+  finally {
+    tracer.done();
+  }
+}
