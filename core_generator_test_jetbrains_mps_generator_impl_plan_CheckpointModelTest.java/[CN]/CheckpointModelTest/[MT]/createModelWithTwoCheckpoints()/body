@@ -12,18 +12,19 @@
     }
   }
 );
+  final PlanIdentity planIdentity=new PlanIdentity(plan);
   GenerationOptions opt=GenerationOptions.getDefaults().customPlan(m,plan).create();
   final TransientModelsProvider tmProvider=mpsProject.getComponent(TransientModelsProvider.class);
   GenerationFacade genFacade=new GenerationFacade(mpsProject.getRepository(),opt).transients(tmProvider);
   GenerationStatus genStatus=genFacade.process(new EmptyProgressMonitor(),m);
   myErrors.checkThat("Generation succeeds",genStatus.isOk(),CoreMatchers.equalTo(true));
-  CrossModelEnvironment cme=new CrossModelEnvironment(tmProvider);
-  boolean crossModelCheckpointsPresent=cme.hasState(mr);
-  myErrors.checkThat("CrossModelEnvironment.hasState",crossModelCheckpointsPresent,CoreMatchers.equalTo(true));
+  CrossModelEnvironment cme=new CrossModelEnvironment(tmProvider,new ModelStreamProviderImpl());
+  ModelCheckpoints modelCheckpoints=cme.getState(m,planIdentity);
+  boolean crossModelCheckpointsPresent=modelCheckpoints != null;
+  myErrors.checkThat("CrossModelEnvironment: state present",crossModelCheckpointsPresent,CoreMatchers.equalTo(true));
   if (!crossModelCheckpointsPresent) {
     return;
   }
-  ModelCheckpoints modelCheckpoints=cme.getState(mr);
   final CheckpointState cp1State=modelCheckpoints.find(cp1);
   final CheckpointState cp2State=modelCheckpoints.find(cp2);
   myErrors.checkThat("state for the first checkpoint present",cp1State,CoreMatchers.notNullValue());

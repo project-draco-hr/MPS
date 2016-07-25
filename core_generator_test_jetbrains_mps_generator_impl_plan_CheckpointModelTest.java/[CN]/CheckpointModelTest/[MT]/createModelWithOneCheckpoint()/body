@@ -10,15 +10,15 @@
     }
   }
 );
+  final PlanIdentity planIdentity=new PlanIdentity(plan);
   GenerationOptions opt=GenerationOptions.getDefaults().customPlan(m,plan).create();
   final TransientModelsProvider tmProvider=mpsProject.getComponent(TransientModelsProvider.class);
   GenerationFacade genFacade=new GenerationFacade(mpsProject.getRepository(),opt).transients(tmProvider);
   GenerationStatus genStatus=genFacade.process(new EmptyProgressMonitor(),m);
   myErrors.checkThat("Generation succeeds",genStatus.isOk(),CoreMatchers.equalTo(true));
-  CrossModelEnvironment cme=new CrossModelEnvironment(tmProvider);
-  myErrors.checkThat("CrossModelEnvironment.hasState",cme.hasState(mr),CoreMatchers.equalTo(true));
+  CrossModelEnvironment cme=new CrossModelEnvironment(tmProvider,new ModelStreamProviderImpl());
   SModule checkpointModule=tmProvider.getCheckpointsModule();
-  final SModelName cpModelName=CrossModelEnvironment.createCheckpointModelName(m.getReference(),cp1);
+  final SModelName cpModelName=CrossModelEnvironment.createCheckpointModelName(m.getReference(),new CheckpointIdentity(planIdentity,cp1));
   SModel cpModel=null;
   for (  SModel trm : checkpointModule.getModels()) {
     if (cpModelName.equals(trm.getName())) {
@@ -27,7 +27,8 @@
     }
   }
   myErrors.checkThat("Checkpoint model",cpModel,CoreMatchers.notNullValue());
-  ModelCheckpoints modelCheckpoints=cme.getState(mr);
+  ModelCheckpoints modelCheckpoints=cme.getState(m,planIdentity);
+  myErrors.checkThat("CrossModelEnvironment: state present",modelCheckpoints,CoreMatchers.notNullValue());
   CheckpointState cpState=modelCheckpoints.find(cp1);
   myErrors.checkThat("CheckpointState present",cpState,CoreMatchers.notNullValue());
   if (cpState != null) {
