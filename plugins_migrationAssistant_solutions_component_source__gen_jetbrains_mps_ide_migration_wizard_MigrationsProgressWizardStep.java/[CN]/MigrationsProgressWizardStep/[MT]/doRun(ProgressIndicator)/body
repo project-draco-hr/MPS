@@ -80,25 +80,34 @@
   }
 );
   setFraction(progress,ProgressEstimation.saving(1.0));
-  addElementToMigrationList("Checking models... Please wait.");
   mpsProject.getRepository().getModelAccess().runReadAction(new Runnable(){
     public void run(){
       Iterable<SModule> modules=MigrationsUtil.getMigrateableModulesFromProject(mpsProject);
       final Wrappers._int moduleNum=new Wrappers._int(0);
-      if (MigrationCheckUtil.haveProblems(modules,new _FunctionTypes._void_P1_E0<Double>(){
+      addElementToMigrationList("Checking models... Please wait.");
+      boolean haveBadCode=MigrationCheckUtil.haveProblems(modules,new _FunctionTypes._void_P1_E0<Double>(){
         public void invoke(        Double fraction){
           moduleNum.value++;
           setFraction(progress,ProgressEstimation.postCheck(fraction));
         }
       }
-)) {
-        myErrorContainer.setErrorDescriptor(new MigrationsProgressWizardStep.PostCheckError());
+);
+      addElementToMigrationList("Finding not migrated code... Please wait.");
+      boolean haveNotMigrated=MigrationCheckUtil.haveNotMigrated(modules,getMPSProject().getComponent(MigrationComponent.class),new _FunctionTypes._void_P1_E0<Double>(){
+        public void invoke(        Double fraction){
+          moduleNum.value++;
+          setFraction(progress,ProgressEstimation.nonMigratedCheck(fraction));
+        }
+      }
+);
+      if (haveBadCode || haveNotMigrated) {
+        myErrorContainer.setErrorDescriptor(new MigrationsProgressWizardStep.PostCheckError(haveBadCode,haveNotMigrated));
       }
     }
   }
 );
   if (myErrorContainer.getErrorDescriptor() != null) {
-    addElementToMigrationList("Errors are detected in project after executing migrations. Press 'Next' to continue.");
+    addElementToMigrationList("Problems are detected in project after executing migrations. Press 'Next' to continue.");
     return;
   }
   addElementToMigrationList("Done!");
