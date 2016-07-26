@@ -12,21 +12,27 @@
     LOG.error("",new IllegalArgumentException("Broken contract : some of the passed module references have not been loaded"));
   }
   myLoadedModules.removeAll(modulesToUnload);
-  for (  MPSClassesListener listener : myClassesHandlers) {
-    try {
-      listener.onUnloaded(modulesToUnload,monitor);
+  try {
+    monitor.start("Broadcasting Events",myClassesHandlers.size() + myDeployListeners.size());
+    for (    MPSClassesListener listener : myClassesHandlers) {
+      try {
+        listener.onUnloaded(modulesToUnload,monitor.subTask(1));
+      }
+ catch (      Exception e) {
+        LOG.error("Caught exception from the listener " + listener + ". Will continue.",e);
+      }
     }
- catch (    Exception e) {
-      LOG.error("Caught exception from the listener " + listener + ". Will continue.",e);
+    for (    DeployListener listener : myDeployListeners) {
+      try {
+        listener.onUnloaded(modulesToUnload,monitor.subTask(1));
+      }
+ catch (      Exception e) {
+        LOG.error("Caught exception from the listener " + listener + ". Will continue.",e);
+      }
     }
   }
-  for (  DeployListener listener : myDeployListeners) {
-    try {
-      listener.onUnloaded(modulesToUnload,monitor);
-    }
- catch (    Exception e) {
-      LOG.error("Caught exception from the listener " + listener + ". Will continue.",e);
-    }
+  finally {
+    monitor.done();
   }
   final Set<ReloadableModule> resultingUnload=new LinkedHashSet<ReloadableModule>();
   for (  ReloadableModule module : modulesToUnload)   resultingUnload.add(module);
