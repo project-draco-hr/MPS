@@ -1,0 +1,40 @@
+{
+  tracer.start(BUILDING_DIRTY_CLOSURE,3);
+  Set<SModule> candidates=modulesContainer.getModules();
+  tracer.push(CHECKING_DIRTY_MODULES_MSG,Priority.DEBUG,false);
+  List<SModule> dirtyModules=new ArrayList<SModule>(candidates.size());
+  for (  SModule m : candidates) {
+    if (modulesContainer.isDirty(m)) {
+      dirtyModules.add(m);
+    }
+  }
+  tracer.pop(1);
+  Map<SModule,Set<SModule>> backDependencies=new HashMap<>();
+  tracer.push(BUILDING_BACK_DEPS_MSG,Priority.DEBUG,true);
+  for (  SModule m : candidates) {
+    for (    SModule dep : new GlobalModuleDependenciesManager(m).getModules(Deptype.COMPILE)) {
+      Set<SModule> incoming=backDependencies.get(dep);
+      if (incoming == null) {
+        incoming=new HashSet<>();
+        backDependencies.put(dep,incoming);
+      }
+      incoming.add(m);
+    }
+  }
+  Set<SModule> toCompile=new LinkedHashSet<>();
+  LinkedList<SModule> queue=new LinkedList<SModule>(dirtyModules);
+  while (!queue.isEmpty()) {
+    SModule m=queue.removeFirst();
+    if (candidates.contains(m)) {
+      toCompile.add(m);
+    }
+    Set<SModule> backDeps=backDependencies.remove(m);
+    if (backDeps != null) {
+      queue.addAll(backDeps);
+    }
+  }
+  tracer.pop(1);
+  Set<SModule> result=new TreeSet<>(MODULE_BY_NAME_COMPARATOR);
+  result.addAll(toCompile);
+  return result;
+}

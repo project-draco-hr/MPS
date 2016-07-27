@@ -1,0 +1,31 @@
+{
+  if (toLoad.isEmpty())   return;
+  myModelAccess.checkWriteAccess();
+  final Set<ReloadableModuleBase> modulesToLoad=new LinkedHashSet<>(toLoad.size());
+  for (  ReloadableModule module : toLoad) {
+    modulesToLoad.add((ReloadableModuleBase)module);
+  }
+  myLoadedModules.addAll(modulesToLoad);
+  try {
+    monitor.start("Broadcasting Events",myClassesHandlers.size() + myDeployListeners.size());
+    for (    MPSClassesListener listener : myClassesHandlers) {
+      try {
+        listener.onLoaded(toLoad,monitor.subTask(1));
+      }
+ catch (      Exception e) {
+        LOG.error("Caught exception from the listener " + listener + ". Will continue.",e);
+      }
+    }
+    for (    DeployListener listener : myDeployListeners) {
+      try {
+        listener.onLoaded(toLoad,monitor.subTask(1));
+      }
+ catch (      Exception e) {
+        LOG.error("Caught exception from the listener " + listener + ". Will continue.",e);
+      }
+    }
+  }
+  finally {
+    monitor.done();
+  }
+}
