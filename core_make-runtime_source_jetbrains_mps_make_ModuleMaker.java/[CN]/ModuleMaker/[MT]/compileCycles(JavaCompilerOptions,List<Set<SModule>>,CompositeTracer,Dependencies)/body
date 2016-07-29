@@ -1,16 +1,21 @@
 {
   List<MPSCompilationResult> cycleCompilationResults=new ArrayList<>();
+  tracer.start("",cyclesToCompile.size());
   try {
     int cycleNumber=0;
     for (    Set<SModule> modulesInCycle : cyclesToCompile) {
       if (tracer.isMonitorCanceled()) {
         break;
       }
-      tracer.push(String.format(CYCLE_FORMAT_MSG,++cycleNumber,modulesInCycle));
+      ++cycleNumber;
+      CompositeTracer cycleTracer=tracer.subTracer(1);
+      tracer.info(String.format(CYCLE_FORMAT_MSG,cycleNumber,modulesInCycle));
+      cycleTracer.start(getCycleString(cycleNumber,modulesInCycle),1,Priority.DEBUG);
       ModulesContainer modulesContainer=new ModulesContainer(modulesInCycle,dependencies);
-      MPSCompilationResult cycleCompilationResult=compile(modulesContainer,compilerOptions);
+      InternalJavaCompiler internalJavaCompiler=new InternalJavaCompiler(modulesContainer,compilerOptions);
+      MPSCompilationResult cycleCompilationResult=internalJavaCompiler.compile(cycleTracer.subTracer(1,SubProgressKind.AS_COMMENT));
       cycleCompilationResults.add(cycleCompilationResult);
-      tracer.pop(modulesInCycle.size());
+      cycleTracer.done(0);
     }
   }
   finally {

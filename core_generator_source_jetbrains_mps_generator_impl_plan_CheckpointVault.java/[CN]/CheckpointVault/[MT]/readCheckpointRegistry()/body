@@ -1,0 +1,23 @@
+{
+  try {
+    myKnownCheckpoints.clear();
+    try (InputStream is=myStreams.getOutputLocation().openInputStream("checkpoints")){
+      Document cpDoc=JDOMUtil.loadDocument(is);
+      for (      Element planElement : cpDoc.getRootElement().getChildren("plan")) {
+        PlanIdentity pi=new PlanIdentity(planElement.getAttributeValue("id"));
+        LinkedHashMap<CheckpointIdentity,String> cpFiles=new LinkedHashMap<>();
+        for (        Element cpElement : planElement.getChildren("checkpoint")) {
+          CheckpointIdentity cpId=new CheckpointIdentity(pi,cpElement.getAttributeValue("id"));
+          cpFiles.put(cpId,cpElement.getAttributeValue("file"));
+        }
+        myKnownCheckpoints.add(new Entry(pi,cpFiles));
+      }
+    }
+   }
+ catch (  FileNotFoundException ex) {
+    Logger.getLogger(GenerationPlan.class).debug("No checkpoint registry file found");
+  }
+catch (  IOException|JDOMException ex) {
+    Logger.getLogger(GenerationPlan.class).warn("Failed to read checkpoint registry",ex);
+  }
+}

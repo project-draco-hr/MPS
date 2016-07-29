@@ -1,0 +1,54 @@
+{
+  if (!(myModule instanceof Language)) {
+    return;
+  }
+  myLanguage=((Language)myModule);
+{
+    final SearchScope scope=CommandUtil.createScope(myModule);
+    QueryExecutionContext context=new QueryExecutionContext(){
+      public SearchScope getDefaultSearchScope(){
+        return scope;
+      }
+    }
+;
+    Collection<SNode> allSubstituteActions=CommandUtil.instances(CommandUtil.createConsoleScope(null,false,context),MetaAdapterFactory.getConcept(0xaee9cad2acd44608L,0xaef20004f6a1cdbdL,0x102ebc25367L,"jetbrains.mps.lang.actions.structure.NodeSubstituteActions"));
+    for (    SNode actions : CollectionSequence.fromCollection(allSubstituteActions)) {
+      for (      SNode builder : ListSequence.fromList(SLinkOperations.getChildren(actions,MetaAdapterFactory.getContainmentLink(0xaee9cad2acd44608L,0xaef20004f6a1cdbdL,0x102ebc25367L,0x102ebd353e0L,"actionsBuilder")))) {
+        addBuilderToMap(actions,builder);
+        addBuilderToMenuMap(actions,builder);
+      }
+    }
+    Set<SNode> actionsKeySet=myActionsToConceptToBuilder.keySet();
+    for (    SNode actions : SetSequence.fromSet(actionsKeySet)) {
+      Map<SNode,List<SNode>> conceptToBuilder=myActionsToConceptToBuilder.get(actions);
+      for (      SNode key : SetSequence.fromSet(conceptToBuilder.keySet())) {
+        migrateSubstituteActions(actions,key,conceptToBuilder.get(key));
+      }
+    }
+    for (    SNode mainMenu : CollectionSequence.fromCollection(myMainMenus.values())) {
+      if (!(SNodeOperations.isInstanceOf(mainMenu,MetaAdapterFactory.getConcept(0x18bc659203a64e29L,0xa83a7ff23bde13baL,0x2de9c932f4e5ab84L,"jetbrains.mps.lang.editor.structure.SubstituteMenu_Default")))) {
+        continue;
+      }
+      SNode mainGroup=getOrCreateMainGroup(mainMenu);
+      SNode condition=null;
+      for (      SNode variable : ListSequence.fromList(SLinkOperations.getChildren(mainGroup,MetaAdapterFactory.getContainmentLink(0x18bc659203a64e29L,0xa83a7ff23bde13baL,0x5c03050cab4546bL,0x780e672842433a1L,"variables")))) {
+        if (condition == null) {
+          condition=createVariableReference(variable);
+        }
+ else {
+          SNode or=SConceptOperations.createNewNode(MetaAdapterFactory.getConcept(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0xfb8255689fL,"jetbrains.mps.baseLanguage.structure.OrExpression"));
+          SLinkOperations.setTarget(or,MetaAdapterFactory.getContainmentLink(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0xfbdeb6fecfL,0xfbdeb7a11cL,"leftExpression"),condition);
+          SLinkOperations.setTarget(or,MetaAdapterFactory.getContainmentLink(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0xfbdeb6fecfL,0xfbdeb7a11bL,"rightExpression"),createVariableReference(variable));
+        }
+      }
+      SNode trueGroup=getOrCreateTrueGroup(mainMenu);
+      fillCondition(trueGroup,condition);
+      SNode falseGroup=getOrCreateFalseGroup(mainMenu);
+      SNode copy=SNodeOperations.copyNode(condition);
+      SNode not=SConceptOperations.createNewNode(MetaAdapterFactory.getConcept(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0xfbcf6bd10dL,"jetbrains.mps.baseLanguage.structure.NotExpression"));
+      SLinkOperations.setTarget(not,MetaAdapterFactory.getContainmentLink(0xf3061a5392264cc5L,0xa443f952ceaf5816L,0xfbcf6bd10dL,0xfbcf6c30a4L,"expression"),copy);
+      fillCondition(falseGroup,not);
+      ListSequence.fromList(SLinkOperations.getChildren(falseGroup,MetaAdapterFactory.getContainmentLink(0x18bc659203a64e29L,0xa83a7ff23bde13baL,0x5c03050cab4546bL,0x5c03050cab46dafL,"parts"))).addElement(_quotation_createNode_ehvekh_a0a11a4a2a31());
+    }
+  }
+}

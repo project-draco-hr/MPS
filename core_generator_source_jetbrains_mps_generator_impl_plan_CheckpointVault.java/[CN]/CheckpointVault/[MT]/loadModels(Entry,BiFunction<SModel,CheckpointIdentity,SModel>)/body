@@ -1,0 +1,16 @@
+{
+  final ModelFactory modelFactory=PersistenceFacade.getInstance().getDefaultModelFactory();
+  try {
+    ArrayList<CheckpointState> states=new ArrayList<>();
+    for (    Pair<CheckpointIdentity,String> p : entry.myFiles) {
+      final SingleStreamSource source=new SingleStreamSource(myStreams.getOutputLocation(),p.o2);
+      SModel cpModel=modelFactory.load(source,Collections.emptyMap());
+      MappingsMemento memento=new MappingLabelExtractor().restore(MappingLabelExtractor.findDebugNode(cpModel));
+      states.add(new CheckpointState(memento,publisher.apply(cpModel,p.o1),p.o1));
+    }
+    entry.myCheckpoints=new ModelCheckpoints(entry.myPlan,states);
+  }
+ catch (  IOException ex) {
+    Logger.getLogger(CheckpointVault.class).error("Failed to load checkpoint model for " + entry.myPlan,ex);
+  }
+}

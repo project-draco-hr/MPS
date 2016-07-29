@@ -39,18 +39,26 @@
       }
       ApplicationManager.getApplication().invokeLater(new Runnable(){
         public void run(){
-          RefreshSession session=RefreshQueue.getInstance().createSession(true,true,null);
-          for (          IFile file : SetSequence.fromSet(files)) {
-            IFile fileToRefresh=file;
-            while (!(fileToRefresh.exists())) {
-              fileToRefresh=fileToRefresh.getParent();
+          if (!(SetSequence.fromSet(files).isEmpty())) {
+            RefreshSession session=RefreshQueue.getInstance().createSession(true,true,null);
+            for (            IFile file : SetSequence.fromSet(files)) {
+              IFile fileToRefresh=file;
+              while (!(fileToRefresh.exists())) {
+                fileToRefresh=fileToRefresh.getParent();
+              }
+              if (!(fileToRefresh instanceof IdeaFile)) {
+                if (LOG.isEnabledFor(Level.WARN)) {
+                  LOG.warn("File " + fileToRefresh + " must be a project file and managed by IDEA FS");
+                }
+                continue;
+              }
+              VirtualFile virtualFile=((IdeaFile)fileToRefresh).getVirtualFile();
+              if (virtualFile != null) {
+                session.addFile(virtualFile);
+              }
             }
-            VirtualFile virtualFile=VirtualFileUtils.getVirtualFile(fileToRefresh);
-            if (virtualFile != null) {
-              session.addFile(virtualFile);
-            }
+            session.launch();
           }
-          session.launch();
         }
       }
 );
