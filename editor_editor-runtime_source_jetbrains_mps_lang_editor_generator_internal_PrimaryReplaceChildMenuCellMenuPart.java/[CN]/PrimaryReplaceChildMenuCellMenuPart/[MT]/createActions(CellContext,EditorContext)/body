@@ -3,16 +3,23 @@
   SNode linkDeclaration=(SNode)cellContext.get(AggregationCellContext.LINK_DECLARATION);
   final String role=CellUtil.getLinkDeclarationRole(linkDeclaration);
   SNode currentChild=(SNode)cellContext.getOpt(AggregationCellContext.CURRENT_CHILD_NODE);
-  return ModelActions.createChildNodeSubstituteActions(parentNode,currentChild,CellUtil.getLinkDeclarationTarget(linkDeclaration),new AbstractChildNodeSetter(){
-    @Override public SNode doExecute(    SNode parentNode,    SNode oldChild,    SNode newChild,    @Nullable EditorContext editorContext){
-      if (oldChild == null) {
-        parentNode.addChild(role,newChild);
-      }
+  if (OldNewSubstituteUtil.areOldActionsApplicable(SModelUtil.getLinkDeclarationTarget(linkDeclaration))) {
+    return ModelActions.createChildNodeSubstituteActions(parentNode,currentChild,CellUtil.getLinkDeclarationTarget(linkDeclaration),new AbstractChildNodeSetter(){
+      @Override public SNode doExecute(      SNode parentNode,      SNode oldChild,      SNode newChild,      @Nullable EditorContext editorContext){
+        if (oldChild == null) {
+          parentNode.addChild(role,newChild);
+        }
  else {
-        SNodeUtil.replaceWithAnother(oldChild,newChild);
+          SNodeUtil.replaceWithAnother(oldChild,newChild);
+        }
+        return newChild;
       }
-      return newChild;
     }
-  }
 ,editorContext.getOperationContext());
+  }
+ else {
+    SContainmentLink containmentLink=MetaAdapterByDeclaration.getContainmentLink(linkDeclaration);
+    List<TransformationMenuItem> transformationItems=new SubstituteItemsCollector(parentNode,currentChild,containmentLink,editorContext,null).collect();
+    return new SubstituteActionsCollector(parentNode,transformationItems).collect();
+  }
 }

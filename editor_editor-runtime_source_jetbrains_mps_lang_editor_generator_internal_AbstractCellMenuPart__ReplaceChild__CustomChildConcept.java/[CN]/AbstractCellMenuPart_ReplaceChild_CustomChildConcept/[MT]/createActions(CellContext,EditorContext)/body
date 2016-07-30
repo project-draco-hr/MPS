@@ -9,5 +9,17 @@
   if (childNodeConcept == null) {
     return Collections.emptyList();
   }
-  return ModelActions.createChildNodeSubstituteActions(parentNode,currentChild,childNodeConcept,setter,context);
+  if (OldNewSubstituteUtil.areOldActionsApplicable(childNodeConcept)) {
+    return ModelActions.createChildNodeSubstituteActions(parentNode,currentChild,childNodeConcept,setter,context);
+  }
+ else {
+    SAbstractConcept concept=MetaAdapterByDeclaration.getConcept(childNodeConcept);
+    if (concept == null) {
+      return new ArrayList<>();
+    }
+    SContainmentLink containmentLink=MetaAdapterByDeclaration.getContainmentLink(linkDeclaration);
+    MenuLookup<SubstituteMenu> lookup=new DefaultSubstituteMenuLookup(LanguageRegistry.getInstance(editorContext.getRepository()),concept);
+    List<TransformationMenuItem> transformationItems=new SubstituteItemsCollector(parentNode,currentChild,containmentLink,editorContext,lookup).collect();
+    return new SubstituteActionsCollector(parentNode,transformationItems).collect();
+  }
 }
