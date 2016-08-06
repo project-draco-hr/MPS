@@ -1,2 +1,49 @@
 {
+  if (!(myReloadSessionBroker.hasUnemployed())) {
+    return;
+  }
+  myQueue.queue(new Update(myUpdateId){
+    public void run(){
+      for (      Project project : myProjectManager.getOpenProjects()) {
+        if (project.getComponent(ProjectLevelVcsManager.class).isBackgroundVcsOperationRunning()) {
+          queueReloadSession();
+          return;
+        }
+      }
+      final ReloadSession rs=myReloadSessionBroker.getUnemployed();
+      if (rs == null) {
+        queueReloadSession();
+        return;
+      }
+      if (rs.isEmpty()) {
+        return;
+      }
+      ApplicationManager.getApplication().invokeAndWait(new Runnable(){
+        public void run(){
+          ModelAccess.instance().runWriteAction(new Runnable(){
+            public void run(){
+              MPSModuleRepository.getInstance().saveAll();
+            }
+          }
+);
+        }
+      }
+,ModalityState.NON_MODAL);
+      ProgressManager.getInstance().run(new Task.Backgroundable(null,"Reloading Files",false){
+        @Override public void run(        @NotNull final ProgressIndicator progressIndicator){
+          ProgressMonitor monitor=new ProgressMonitorAdapter(progressIndicator);
+          monitor.start("Reloading Files",1);
+          try {
+            monitor.step("Reloading File System");
+            rs.doReload(monitor.subTask(1));
+          }
+  finally {
+            monitor.done();
+          }
+        }
+      }
+);
+    }
+  }
+);
 }

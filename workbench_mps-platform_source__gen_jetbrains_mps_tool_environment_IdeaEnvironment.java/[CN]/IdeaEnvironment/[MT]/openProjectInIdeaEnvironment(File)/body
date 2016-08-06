@@ -4,26 +4,28 @@
   }
   final ProjectManagerEx projectManager=ProjectManagerEx.getInstanceEx();
   final String filePath=projectFile.getAbsolutePath();
-  final com.intellij.openapi.project.Project[] project=new com.intellij.openapi.project.Project[1];
-  final Exception[] exc=new Exception[]{null};
+  final IdeaEnvironment.PostStartupActivitiesWaiter waiter=new IdeaEnvironment.PostStartupActivitiesWaiter();
+  final Reference<com.intellij.openapi.project.Project> project=new Reference<com.intellij.openapi.project.Project>();
+  final Reference<Exception> exc=new Reference<Exception>();
   ApplicationManager.getApplication().invokeAndWait(new Runnable(){
     public void run(){
       try {
         if (LOG.isInfoEnabled()) {
           LOG.info("Load and open the project with path '" + filePath + "'");
         }
-        project[0]=projectManager.loadAndOpenProject(filePath);
+        project.set(projectManager.loadAndOpenProject(filePath));
+        waiter.init(project.get());
         VirtualFileManager.getInstance().syncRefresh();
       }
  catch (      Exception e) {
-        exc[0]=e;
+        exc.set(e);
       }
     }
   }
 ,ModalityState.NON_MODAL);
-  if (exc[0] != null) {
-    throw new RuntimeException("ProjectManager could not load project from " + projectFile.getAbsolutePath(),exc[0]);
+  if (!(exc.isNull())) {
+    throw new RuntimeException("ProjectManager could not load project from " + projectFile.getAbsolutePath(),exc.get());
   }
-  waitForPostStartupActivities(project);
-  return project[0].getComponent(MPSProject.class);
+  waiter.wait0();
+  return project.get().getComponent(MPSProject.class);
 }
