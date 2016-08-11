@@ -1,12 +1,33 @@
 {
-  myContentPane=new JPanel(new GridLayout(4,1));
-  myContentPane.setPreferredSize(new Dimension(400,100));
+  myContentPane=new JPanel(new VerticalLayout(5));
   myContentPane.add(new JLabel("Name"));
-  myContentPane.add(myNameField=new JTextField());
-  myNameField.setName("Name");
-  myContentPane.add(new JLabel("Folder"));
-  myContentPane.add(myPathField=new PathField());
-  myPathField.setName("Path");
-  myPathField.setPath(myProject.getProjectFile().getAbsolutePath() + File.separator + "devkits"+ File.separator);
-  myNameField.setText("NewDevkit");
+  myContentPane.add(myDevkitName=new JTextField("NewDevkit"));
+  myDevkitName.getDocument().addDocumentListener(new DocumentAdapter(){
+    protected void textChanged(    DocumentEvent p0){
+      if (!(myDevkitLocationChangedByUser)) {
+        setDevkitLocation(generateDevkitPath());
+      }
+      check();
+    }
+  }
+);
+  myDevkitLocation=new JTextField(generateDevkitPath());
+  myDevkitLocation.getDocument().addDocumentListener(new DocumentAdapter(){
+    protected void textChanged(    DocumentEvent p0){
+      if (myDevkitLocationDocListenerEnabled) {
+        myDevkitLocationChangedByUser=true;
+        check();
+      }
+    }
+  }
+);
+  final FileChooserDescriptor descriptor=FileChooserDescriptorFactory.createSingleFolderDescriptor();
+  InsertPathAction.addTo(myDevkitLocation,descriptor);
+  BrowseFilesListener listener=new BrowseFilesListener(myDevkitLocation,"Choose Devkit Location Folder","",descriptor);
+  FieldPanel fieldPanel=new FieldPanel(myDevkitLocation,"Devkit location:",null,listener,EmptyRunnable.getInstance());
+  FileChooserFactory.getInstance().installFileCompletion(fieldPanel.getTextField(),descriptor,false,myProject.getProject());
+  myContentPane.add(fieldPanel);
+  check();
+  myDevkitName.setName("Name");
+  myDevkitLocation.setName("Path");
 }
