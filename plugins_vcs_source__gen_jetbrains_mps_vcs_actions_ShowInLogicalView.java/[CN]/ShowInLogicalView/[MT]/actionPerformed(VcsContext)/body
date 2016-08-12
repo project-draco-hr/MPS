@@ -1,2 +1,34 @@
 {
+  final Project project=e.getProject();
+  final VirtualFile selectedFile=getSelectedFile(e);
+  final jetbrains.mps.project.Project mpsProject=ProjectHelper.fromIdeaProject(project);
+  if (selectedFile == null || mpsProject == null) {
+    return;
+  }
+  ProjectPaneNavigator ppn=new ProjectPaneNavigator(mpsProject);
+  if (MPSFileTypesManager.isModelFile(selectedFile)) {
+    SModelReference model=new ModelAccessHelper(mpsProject.getModelAccess()).runReadAction(new Computable<SModelReference>(){
+      @Override public SModelReference compute(){
+        SModel m=SModelFileTracker.getInstance(mpsProject.getRepository()).findModel(VirtualFileUtils.toIFile(selectedFile));
+        return (m == null ? null : m.getReference());
+      }
+    }
+);
+    if (model != null) {
+      ppn.select(model);
+    }
+  }
+ else   if (MPSFileTypesManager.isModuleFile(selectedFile)) {
+    SModuleReference module=new ModelAccessHelper(mpsProject.getModelAccess()).runReadAction(new Computable<SModuleReference>(){
+      @Override public SModuleReference compute(){
+        SModule m=ModuleFileTracker.getInstance(mpsProject.getRepository()).getModuleByFile(VirtualFileUtils.toIFile(selectedFile));
+        return (m == null ? null : m.getModuleReference());
+      }
+    }
+);
+    if (module != null) {
+      ppn.shallFocus(true);
+      ppn.select(module);
+    }
+  }
 }
