@@ -1,2 +1,54 @@
 {
+  if (descriptorFile.exists()) {
+    throw new IllegalArgumentException("Descriptor file " + descriptorFile + " already exists");
+  }
+  LanguageDescriptor descriptor=createNewLanguageDescriptor(namespace,descriptorFile);
+  if (importLangDevDevkit) {
+    SModuleReference devkitRef=PersistenceFacade.getInstance().createModuleReference("2677cb18-f558-4e33-bc38-a5139cee06dc(jetbrains.mps.devkit.language-design)");
+    descriptor.getUsedDevkits().add(devkitRef);
+  }
+  LanguageDescriptorPersistence.saveLanguageDescriptor(descriptorFile,descriptor,MacrosFactory.forModuleFile(descriptorFile));
+  Language language=(Language)ModuleRepositoryFacade.createModule(new ModulesMiner().loadModuleHandle(descriptorFile),moduleOwner);
+  descriptor=language.getModuleDescriptor();
+  if (createMainAspectModels) {
+    try {
+      createMainLanguageAspects(language);
+    }
+ catch (    IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+  String templateModelsDir=descriptorFile.getParent().getPath() + File.separator + "generator"+ File.separator+ "template";
+  try {
+    VfsUtil.createDirectories(templateModelsDir);
+  }
+ catch (  IOException ioException) {
+  }
+  final GeneratorDescriptor generatorDescriptor=new GeneratorDescriptor();
+  generatorDescriptor.setGeneratorUID(Generator.generateGeneratorUID(language));
+  generatorDescriptor.setNamespace(null);
+  DefaultModelRoot templateModelsRoot=new DefaultModelRoot();
+  templateModelsRoot.setContentRoot(descriptorFile.getParent().getPath());
+  templateModelsRoot.addFile(DefaultModelRoot.SOURCE_ROOTS,templateModelsDir);
+  generatorDescriptor.getModelRootDescriptors().add(templateModelsRoot.toDescriptor());
+  generatorDescriptor.getUsedDevkits().add(PersistenceFacade.getInstance().createModuleReference("fbc25dd2-5da4-483a-8b19-70928e1b62d7(jetbrains.mps.devkit.general-purpose)"));
+  descriptor.getGenerators().add(generatorDescriptor);
+  language.setLanguageDescriptor(descriptor);
+  language.save();
+  final Generator newGenerator=(Generator)MPSModuleRepository.getInstance().getModule(generatorDescriptor.getId());
+  boolean alreadyOwnsTemplateModel=false;
+  for (  SModel modelDescriptor : newGenerator.getModels()) {
+    if (SModelStereotype.isGeneratorModel(modelDescriptor)) {
+      alreadyOwnsTemplateModel=true;
+      break;
+    }
+  }
+  if (!(alreadyOwnsTemplateModel)) {
+    EditableSModel templateModel=SModuleOperations.createModelWithAdjustments(language.getModuleName() + ".generator.template" + "."+ "main@"+ SModelStereotype.GENERATOR,newGenerator.getModelRoots().iterator().next());
+    SNode mappingConfiguration=SModelOperations.createNewNode(templateModel,null,MetaAdapterFactory.getConcept(0xb401a68083254110L,0x8fd384331ff25befL,0xff0bea0475L,"jetbrains.mps.lang.generator.structure.MappingConfiguration"));
+    SPropertyOperations.set(mappingConfiguration,MetaAdapterFactory.getProperty(0xceab519525ea4f22L,0x9b92103b95ca8c0cL,0x110396eaaa4L,0x110396ec041L,"name"),"main");
+    SModelOperations.addRootNode(templateModel,mappingConfiguration);
+    templateModel.save();
+  }
+  return language;
 }
