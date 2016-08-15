@@ -1,8 +1,32 @@
 {
-  show(project,null,Sequence.fromIterable(problems).select(new ISelector<Problem,SearchResult<ModelCheckerIssue>>(){
+  Iterable<SearchResult<ModelCheckerIssue>> items=Sequence.fromIterable(problems).select(new ISelector<Problem,SearchResult<ModelCheckerIssue>>(){
     public SearchResult<ModelCheckerIssue> select(    Problem p){
       return new SearchResult<ModelCheckerIssue>(issueByProblem(p),p.getReason(),p.getCategory());
     }
   }
-));
+).where(new IWhereFilter<SearchResult<ModelCheckerIssue>>(){
+    public boolean accept(    SearchResult<ModelCheckerIssue> it){
+      return it != null;
+    }
+  }
+);
+  if (Sequence.fromIterable(items).isEmpty()) {
+    return;
+  }
+  ModelCheckerViewer v=new ModelCheckerViewer(project){
+    @Override protected void close(){
+      ModelCheckerTool.getInstance(project).closeTab(this);
+      super.close();
+    }
+  }
+;
+  final SearchResults<ModelCheckerIssue> result=new SearchResults<ModelCheckerIssue>();
+  Sequence.fromIterable(items).visitAll(new IVisitor<SearchResult<ModelCheckerIssue>>(){
+    public void visit(    SearchResult<ModelCheckerIssue> it){
+      result.add(it);
+    }
+  }
+);
+  v.setSearchResults(result);
+  ModelCheckerTool.getInstance(project).showTabWithResults(v,"Migration issues",IdeIcons.MODULE_GROUP_CLOSED);
 }
