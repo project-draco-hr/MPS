@@ -1,18 +1,21 @@
 {
+  HttpRequest boxedRequest=new HttpRequest(request,decoder);
   for (  IHttpRequestHandler handler : Sequence.fromIterable(new ExtensionPoint<IHttpRequestHandler>("jetbrains.mps.ide.httpsupport.HttpRequestHandlerEP").getObjects())) {
-    HttpResponse response;
-    try {
-      response=handler.tryHandle(request);
-    }
- catch (    Exception e) {
-      if (LOG.isEnabledFor(Level.ERROR)) {
-        LOG.error("Request handler throws exception.",e);
+    if (isSupportsByHandler(handler,boxedRequest)) {
+      HttpResponse response;
+      try {
+        response=handler.tryHandle(boxedRequest);
       }
-      continue;
-    }
-    if (response != null) {
-      Responses.send(response,context.channel(),request);
-      return true;
+ catch (      Exception e) {
+        if (LOG.isEnabledFor(Level.ERROR)) {
+          LOG.error("Request handler throws exception.",e);
+        }
+        continue;
+      }
+      if (response != null) {
+        Responses.send(response,context.channel(),request);
+        return true;
+      }
     }
   }
   return false;
