@@ -1,2 +1,31 @@
 {
+  myIdeaProject=ourProject.getProject();
+  CurrentDifferenceRegistry.getInstance(myIdeaProject).getCommandQueue().setHadExceptions(false);
+  myWaitHelper=new ChangesManagerTestWaitHelper(myIdeaProject);
+  myWaitHelper.waitForChangesManager();
+  myGitVcs=AllVcses.getInstance(myIdeaProject).getByName("Git");
+  Assume.assumeNotNull(myGitVcs);
+  Assume.assumeNotNull(getTestModel());
+  myDiff=CurrentDifferenceRegistry.getInstance(myIdeaProject).getCurrentDifference((getTestModel()));
+  myChangeListManager=ChangeListManagerImpl.getInstanceImpl(myIdeaProject);
+  setAutoaddPolicy(VcsShowConfirmationOption.Value.DO_NOTHING_SILENTLY);
+  if (!(ChangesTestBase.ourEnabled)) {
+    myChangeListManager.ensureUpToDate(false);
+    try {
+      SwingUtilities.invokeAndWait(new Runnable(){
+        public void run(){
+          FileStatusManager.getInstance(myIdeaProject).fileStatusesChanged();
+        }
+      }
+);
+    }
+ catch (    InterruptedException e) {
+      throw new AssertionError(e);
+    }
+catch (    InvocationTargetException e) {
+      throw new AssertionError(e);
+    }
+    checkAndEnable();
+    ChangesTestBase.ourEnabled=true;
+  }
 }
