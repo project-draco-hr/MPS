@@ -1,0 +1,34 @@
+{
+  super.handle(request);
+  final Project project=HandlerUtil.getProjectByName(this.project);
+  if (project != null) {
+    final int line=HandlerUtil.parseNumber(this.line);
+    int sourceGen=this.file.lastIndexOf(HandlerUtil.SOURCE_GEN);
+    int fileNamePosition=(sourceGen == -1 ? 0 : sourceGen + HandlerUtil.SOURCE_GEN.length());
+    int lastSeparator=this.file.lastIndexOf("/");
+    final String namespace=this.file.substring(fileNamePosition,lastSeparator).replace('/','.');
+    final String simpleFileName=this.file.substring(lastSeparator + 1);
+    project.getModelAccess().runWriteInEDT(new Runnable(){
+      public void run(){
+        Iterator<DebugInfo> it=new DefaultTraceInfoProvider(project.getRepository()).debugInfo(namespace).iterator();
+        while (it.hasNext()) {
+          final SNodeReference nodeReference=new BaseLanguageNodeLookup(it.next()).getNodeAt(simpleFileName,line);
+          if (nodeReference != null) {
+            HandlerUtil.openNode(project,nodeReference);
+            FileOpener.this.request.sendReponse("image/gif",HandlerUtil.SUCCESS_STREAM);
+            HandlerUtil.requestFocus(project);
+            return;
+          }
+        }
+        FileOpener.this.request.sendReponse("image/gif",HandlerUtil.FAILURE_STREAM);
+      }
+    }
+);
+  }
+ else {
+    if (LOG.isEnabledFor(Level.ERROR)) {
+      LOG.error("No project is available.");
+    }
+    this.request.sendReponse("image/gif",HandlerUtil.FAILURE_STREAM);
+  }
+}
