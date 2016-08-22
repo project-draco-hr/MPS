@@ -1,5 +1,16 @@
 {
-  InitialStep initialStep=new InitialStep(project);
+  List<ProjectMigration> pMig=ProjectMigrationsRegistry.getInstance().getMigrations();
+  InitialStep initialStep=new InitialStep(project,ListSequence.fromList(pMig).ofType(ProjectMigrationWithOptions.class).where(new IWhereFilter<ProjectMigrationWithOptions>(){
+    public boolean accept(    ProjectMigrationWithOptions it){
+      return it.shouldBeExecuted(ProjectHelper.fromIdeaProject(project));
+    }
+  }
+).translate(new ITranslator2<ProjectMigrationWithOptions,ProjectMigrationWithOptions.Option>(){
+    public Iterable<ProjectMigrationWithOptions.Option> translate(    ProjectMigrationWithOptions it){
+      return it.getOptions();
+    }
+  }
+).toListSequence());
   MigrationsProgressWizardStep migrationsProgressWizardStep=new MigrationsProgressWizardStep(project,initialStep,manager,errorContainer);
   MigrationErrorWizardStep migrationErrorWizardStep=new MigrationErrorWizardStep(project,errorContainer);
   return ListSequence.fromListAndArray(new ArrayList<MigrationWizardStep>(),initialStep,migrationsProgressWizardStep,migrationErrorWizardStep);
