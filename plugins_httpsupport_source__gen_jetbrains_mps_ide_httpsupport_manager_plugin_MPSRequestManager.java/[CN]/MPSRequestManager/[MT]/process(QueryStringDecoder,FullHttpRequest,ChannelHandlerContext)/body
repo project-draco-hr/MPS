@@ -1,15 +1,26 @@
 {
-  HttpRequest boxedRequest=new HttpRequest(request,decoder,context.channel());
+  HttpRequest boxedRequest;
+  try {
+    boxedRequest=new HttpRequest(request,decoder,context.channel());
+  }
+ catch (  URISyntaxException exception) {
+    return false;
+  }
   for (  IHttpRequestHandler handler : Sequence.fromIterable(new ExtensionPoint<IHttpRequestHandler>("jetbrains.mps.ide.httpsupport.HttpRequestHandlerEP").getObjects())) {
     if (handler.canHandle(boxedRequest)) {
+      if (!(handler.isTrustful())) {
+        if (!(isTrustedHost(boxedRequest.getReferrerHost(),handler))) {
+          return false;
+        }
+      }
       try {
         handler.handle(boxedRequest);
       }
  catch (      Exception e) {
-        String errorText="Request handler '" + handler.applicationID() + "' throws exception: "+ e.getMessage();
-        boxedRequest.sendResponse(errorText,"text/plain");
+        String errorHeader="Request handler '" + handler.getName() + "' throws exception";
+        boxedRequest.sendResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR,"text/plain",Unpooled.copiedBuffer(errorHeader + "\n\n" + ExceptionUtil.getThrowableText(e),CharsetUtil.UTF_8));
         if (LOG.isEnabledFor(Level.ERROR)) {
-          LOG.error(errorText,e);
+          LOG.error(errorHeader,e);
         }
       }
  finally {
