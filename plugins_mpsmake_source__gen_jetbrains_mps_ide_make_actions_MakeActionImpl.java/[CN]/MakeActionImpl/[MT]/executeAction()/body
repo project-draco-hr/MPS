@@ -4,27 +4,26 @@
     throw new IllegalStateException("should be called outside of command");
   }
   new SaveRepositoryCommand(project.getRepository()).execute();
-  final List<IResource> inputRes=new ModelAccessHelper(project.getModelAccess()).runReadAction(new Computable<List<IResource>>(){
-    public List<IResource> compute(){
-      List<IResource> rv=Sequence.fromIterable(myParams.collectInput()).toListSequence();
-      List<SModel> models=ListSequence.fromList(rv).translate(new ITranslator2<IResource,SModel>(){
-        public Iterable<SModel> translate(        IResource it){
-          return ((MResource)it).models();
-        }
-      }
-).toListSequence();
-      if (new GenerationCheckHelper().checkModelsBeforeGenerationIfNeeded(project,models)) {
-        return rv;
-      }
-      return null;
-    }
-  }
-);
-  if (inputRes == null) {
-    return;
-  }
   MakeSession session=new MakeSession(project,new DefaultMakeMessageHandler(project),myParams.isCleanMake());
   if (IMakeService.INSTANCE.get().openNewSession(session)) {
-    IMakeService.INSTANCE.get().make(session,inputRes);
+    final List<IResource> inputRes=new ModelAccessHelper(project.getModelAccess()).runWriteAction(new Computable<List<IResource>>(){
+      public List<IResource> compute(){
+        List<IResource> rv=Sequence.fromIterable(myParams.collectInput()).toListSequence();
+        List<SModel> models=ListSequence.fromList(rv).translate(new ITranslator2<IResource,SModel>(){
+          public Iterable<SModel> translate(          IResource it){
+            return ((MResource)it).models();
+          }
+        }
+).toListSequence();
+        if (new GenerationCheckHelper().checkModelsBeforeGenerationIfNeeded(project,models)) {
+          return rv;
+        }
+        return null;
+      }
+    }
+);
+    if (inputRes != null) {
+      IMakeService.INSTANCE.get().make(session,inputRes);
+    }
   }
 }
