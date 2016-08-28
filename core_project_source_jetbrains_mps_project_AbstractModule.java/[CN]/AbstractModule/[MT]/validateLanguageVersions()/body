@@ -6,8 +6,8 @@
   }
   Map<SLanguage,Integer> oldLanguageVersions=md.getLanguageVersions();
   Map<SLanguage,Integer> newLanguageVersions=new HashMap<SLanguage,Integer>();
-  LinkedHashSet<SLanguage> usedLanguages=new LinkedHashSet<SLanguage>();
-  LinkedHashSet<SModuleReference> devkits=new LinkedHashSet<SModuleReference>();
+  Set<SLanguage> usedLanguages=new LinkedHashSet<SLanguage>();
+  Set<SModuleReference> devkits=new LinkedHashSet<SModuleReference>();
   collectLanguagesAndDevkits(usedLanguages,devkits);
   final Set<SLanguage> allUsedLanguages=new SLanguageHierarchy(usedLanguages).getExtended();
   if (!md.hasLanguageVersions()) {
@@ -23,17 +23,8 @@
         newLanguageVersions.put(lang,oldLanguageVersions.get(lang));
       }
  else {
-        int currentVersion=lang.getLanguageVersion();
-        for (        SModel m : getModels()) {
-          SModelInternal modelInternal=(SModelInternal)m;
-          if (!modelInternal.importedLanguageIds().contains(lang))           continue;
-          int modelVer=modelInternal.getLanguageImportVersion(lang);
-          if (modelVer == -1)           continue;
-          if (modelInternal.importedLanguageIds().contains(lang) && modelVer != currentVersion) {
-            LOG.error("Could not update used language versions. Language " + lang + " has current version "+ currentVersion+ " while model "+ m.getModelName()+ " uses this language with version "+ modelVer);
-          }
-        }
-        newLanguageVersions.put(lang,currentVersion);
+        checkModelVersionsAreValid(lang);
+        newLanguageVersions.put(lang,lang.getLanguageVersion());
         if (md.hasDependencyVersions()) {
           setChanged();
         }
@@ -43,7 +34,7 @@
       md.getUsedDevkits().addAll(devkits);
       setChanged();
     }
-    if (oldLanguageVersions.size() != newLanguageVersions.size()) {
+    if (!oldLanguageVersions.equals(newLanguageVersions)) {
       if (md.hasDependencyVersions()) {
         setChanged();
       }
