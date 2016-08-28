@@ -9,19 +9,13 @@
     public void run(){
       ApplicationManager.getApplication().invokeLater(new Runnable(){
         public void run(){
-          myMpsProject.getRepository().getModelAccess().runWriteAction(new Runnable(){
-            public void run(){
-              updateUsedLanguagesVersions(allModules);
-            }
-          }
-);
           if (!(myMigrationManager.isMigrationRequired())) {
             return;
           }
-          boolean migrate=MigrationDialogUtil.showMigrationConfirmation(myMpsProject,allModules,myMigrationManager);
+          boolean doMigration=MigrationDialogUtil.showMigrationConfirmation(myMpsProject,allModules,myMigrationManager);
           restoreTipsState();
-          myState.migrationRequired=migrate;
-          if (!(migrate)) {
+          myState.migrationRequired=doMigration;
+          if (!(doMigration)) {
             return;
           }
           syncRefresh();
@@ -31,9 +25,10 @@
           }
           VirtualFileManager.getInstance().asyncRefresh(new Runnable(){
             public void run(){
-              ApplicationManager.getApplication().invokeLater(new Runnable(){
+              final Application application=ApplicationManager.getApplication();
+              application.invokeLater(new Runnable(){
                 public void run(){
-                  ReloadManager.getInstance().flush();
+                  application.getComponent(ReloadManager.class).flush();
                   ProjectManagerEx.getInstance().reloadProject(ideaProject);
                 }
               }
