@@ -1,6 +1,48 @@
 {
   List<ProjectMigration> pMig=ProjectMigrationsRegistry.getInstance().getMigrations();
-  InitialStep initialStep=new InitialStep(project,ListSequence.fromList(pMig).ofType(ProjectMigrationWithOptions.class).where(new IWhereFilter<ProjectMigrationWithOptions>(){
+  final MPSProject mpsPoject=ProjectHelper.fromIdeaProject(project);
+  final List<String> modulesToMigrate=ListSequence.fromList(new ArrayList<String>());
+  mpsPoject.getRepository().getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      ListSequence.fromList(modulesToMigrate).addSequence(Sequence.fromIterable(MigrationModuleUtil.getMigrateableModulesFromProject(mpsPoject)).where(new IWhereFilter<SModule>(){
+        public boolean accept(        SModule module){
+          return Sequence.fromIterable(MigrationsUtil.getAllSteps(module)).isNotEmpty();
+        }
+      }
+).select(new ISelector<SModule,String>(){
+        public String select(        SModule module){
+          return NameUtil.compactNamespace(module.getModuleName());
+        }
+      }
+));
+    }
+  }
+);
+  final StringBuilder sb=new StringBuilder("<html><body><font face=\"Verdana\" ");
+  sb.append((SystemInfo.isMac ? "" : "size=\"-1\"")).append('>');
+  for (  String m : modulesToMigrate) {
+    sb.append(m).append("<br />");
+  }
+  sb.append("</font></body></html>");
+  List<ProjectMigrationWithOptions.Option> options=ListSequence.fromList(new ArrayList<ProjectMigrationWithOptions.Option>());
+  ListSequence.fromList(options).addElement(new ProjectMigrationWithOptions.Option<Void>("viewModulesToMigrate"){
+    @Override public JComponent createComponent(){
+      JTextPane list=new JTextPane();
+      Messages.installHyperlinkSupport(list);
+      list.setText(sb.toString());
+      JPanel panel=new JPanel(new BorderLayout());
+      JBScrollPane scrollPane=new JBScrollPane(list);
+      panel.add(scrollPane,BorderLayout.CENTER);
+      panel.add(new JBLabel("Modules to be migrated:"),BorderLayout.NORTH);
+      panel.setPreferredSize(new Dimension((int)panel.getPreferredSize().getWidth(),100));
+      return panel;
+    }
+    @Override public Void getValue(    JComponent component){
+      return null;
+    }
+  }
+);
+  ListSequence.fromList(options).addSequence(ListSequence.fromList(pMig).ofType(ProjectMigrationWithOptions.class).where(new IWhereFilter<ProjectMigrationWithOptions>(){
     public boolean accept(    ProjectMigrationWithOptions it){
       return it.shouldBeExecuted(ProjectHelper.fromIdeaProject(project));
     }
@@ -10,7 +52,8 @@
       return it.getOptions();
     }
   }
-).toListSequence());
+));
+  InitialStep initialStep=new InitialStep(project,options);
   MigrationsProgressWizardStep migrationsProgressWizardStep=new MigrationsProgressWizardStep(project,initialStep,manager,errorContainer,true);
   MigrationErrorWizardStep migrationErrorWizardStep=new MigrationErrorWizardStep(project,errorContainer);
   MigrationsProgressWizardStep fallBackProgressStep=new MigrationsProgressWizardStep(project,initialStep,manager,errorContainer,false);
