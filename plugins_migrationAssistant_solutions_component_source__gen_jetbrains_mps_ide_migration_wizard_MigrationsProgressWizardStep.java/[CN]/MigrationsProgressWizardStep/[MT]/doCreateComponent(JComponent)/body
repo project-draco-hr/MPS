@@ -5,6 +5,22 @@
   listPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(0,0,2,0),BorderFactory.createEtchedBorder()));
   listPanel.add(new JBScrollPane(myList),BorderLayout.CENTER);
   myProgress=new InlineProgressIndicator(true,myTask){
+    @Override protected void queueProgressUpdate(){
+      if (ThreadUtils.isInEDT()) {
+        updateAndRepaint();
+      }
+ else {
+        ApplicationManager.getApplication().invokeLater(new Runnable(){
+          public void run(){
+            updateAndRepaint();
+          }
+        }
+,myModalityState);
+      }
+    }
+    @Override protected void queueRunningUpdate(    @NotNull Runnable update){
+      throw new UnsupportedOperationException();
+    }
     @Override protected boolean isFinished(){
       return myIsComplete;
     }
