@@ -23,14 +23,49 @@
   }
   addElementToMigrationList("Checking migrations consistency...");
   List<ScriptApplied.ScriptAppliedReference> missingMigrations=myManager.getMissingMigrations();
-  setFraction(progress,ProgressEstimation.migrationsCheck(1.0));
+  setFraction(progress,ProgressEstimation.migrationsCheck(0.9));
   if (ListSequence.fromList(missingMigrations).isNotEmpty()) {
     myErrorContainer.setErrorDescriptor(new MigrationsProgressWizardStep.MigrationsMissingError(missingMigrations));
     addElementToMigrationList("Some migrations are missing. Press 'Next' to continue.");
     return;
   }
-  addElementToMigrationList("Checking models...");
   final jetbrains.mps.project.Project mpsProject=getMPSProject();
+  mpsProject.getRepository().getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      final List<SModule> projectModules=Sequence.fromIterable(MigrationsUtil.getMigrateableModulesFromProject(mpsProject)).toListSequence();
+      Set<SModule> depModules=SetSequence.fromSetWithValues(new HashSet<SModule>(),new GlobalModuleDependenciesManager(projectModules).getModules(GlobalModuleDependenciesManager.Deptype.VISIBLE));
+      SetSequence.fromSet(depModules).removeSequence(Sequence.fromIterable(((Iterable<SModule>)mpsProject.getModulesWithGenerators())));
+      List<ScriptApplied.ScriptAppliedReference> depMigrationsToRun=myManager.getModuleMigrationsToApply(depModules);
+      Iterable<SModule> notMigratedModules=ListSequence.fromList(depMigrationsToRun).select(new ISelector<ScriptApplied.ScriptAppliedReference,SModule>(){
+        public SModule select(        ScriptApplied.ScriptAppliedReference it){
+          return it.getModule();
+        }
+      }
+).distinct();
+      final Map<SModule,SModule> errsToShow=MapSequence.fromMap(new HashMap<SModule,SModule>());
+      Sequence.fromIterable(notMigratedModules).visitAll(new IVisitor<SModule>(){
+        public void visit(        final SModule notMigrated){
+          MapSequence.fromMap(errsToShow).put(notMigrated,ListSequence.fromList(projectModules).findFirst(new IWhereFilter<SModule>(){
+            public boolean accept(            SModule depCandidate){
+              return new GlobalModuleDependenciesManager(depCandidate).getModules(GlobalModuleDependenciesManager.Deptype.VISIBLE).contains(notMigrated);
+            }
+          }
+));
+        }
+      }
+);
+      if (ListSequence.fromList(depMigrationsToRun).isNotEmpty()) {
+        myErrorContainer.setErrorDescriptor(new MigrationsProgressWizardStep.NotMigratedLibsError(errsToShow));
+      }
+    }
+  }
+);
+  if (myErrorContainer.getErrorDescriptor() != null) {
+    addElementToMigrationList("Some dependent modules are not migrated. Press 'Next' to continue.");
+    return;
+  }
+  setFraction(progress,ProgressEstimation.migrationsCheck(1.0));
+  addElementToMigrationList("Checking models...");
   mpsProject.getRepository().getModelAccess().runReadAction(new Runnable(){
     public void run(){
       Iterable<SModule> modules=MigrationsUtil.getMigrateableModulesFromProject(mpsProject);
