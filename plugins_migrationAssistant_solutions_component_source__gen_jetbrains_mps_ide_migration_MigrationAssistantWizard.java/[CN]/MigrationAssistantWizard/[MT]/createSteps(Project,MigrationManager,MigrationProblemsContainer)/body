@@ -1,7 +1,9 @@
 {
   List<ProjectMigration> pMig=ProjectMigrationsRegistry.getInstance().getMigrations();
   final MPSProject mpsPoject=ProjectHelper.fromIdeaProject(project);
+  List<ProjectMigrationWithOptions.Option> options=ListSequence.fromList(new ArrayList<ProjectMigrationWithOptions.Option>());
   final List<String> modulesToMigrate=ListSequence.fromList(new ArrayList<String>());
+  final List<String> languageMigrations=ListSequence.fromList(new ArrayList<String>());
   mpsPoject.getRepository().getModelAccess().runReadAction(new Runnable(){
     public void run(){
       ListSequence.fromList(modulesToMigrate).addSequence(Sequence.fromIterable(MigrationModuleUtil.getMigrateableModulesFromProject(mpsPoject)).where(new IWhereFilter<SModule>(){
@@ -15,30 +17,25 @@
         }
       }
 ));
-    }
-  }
-);
-  List<ProjectMigrationWithOptions.Option> options=ListSequence.fromList(new ArrayList<ProjectMigrationWithOptions.Option>());
-  ListSequence.fromList(options).addElement(new ProjectMigrationWithOptions.Option<Void>("viewModulesToMigrate"){
-    @Override public JComponent createComponent(){
-      JTextPane list=new JTextPane();
-      StringBuilder sb=new StringBuilder();
-      for (      String m : modulesToMigrate) {
-        sb.append(m).append("<br />");
+      ListSequence.fromList(languageMigrations).addSequence(ListSequence.fromList(manager.getModuleMigrationsToApply(MigrationModuleUtil.getMigrateableModulesFromProject(mpsPoject))).select(new ISelector<ScriptApplied.ScriptAppliedReference,String>(){
+        public String select(        ScriptApplied.ScriptAppliedReference it){
+          return it.getKindDescription(it.resolve(manager.getMigrationComponent(),false));
+        }
       }
-      UIUtil.setTextPaneHtmlText(list,sb.toString());
-      JPanel panel=new JPanel(new BorderLayout());
-      JBScrollPane scrollPane=new JBScrollPane(list);
-      panel.add(scrollPane,BorderLayout.CENTER);
-      panel.add(new JBLabel("Modules to be migrated:"),BorderLayout.NORTH);
-      panel.setPreferredSize(new Dimension((int)panel.getPreferredSize().getWidth(),100));
-      return panel;
-    }
-    @Override public Void getValue(    JComponent component){
-      return null;
+).distinct());
     }
   }
 );
+  StringBuilder modulesSB=new StringBuilder();
+  for (  String m : modulesToMigrate) {
+    modulesSB.append(m).append("<br />");
+  }
+  StringBuilder scriptsSB=new StringBuilder();
+  for (  String lm : languageMigrations) {
+    scriptsSB.append(lm).append("<br />");
+  }
+  ListSequence.fromList(options).addElement(new MigrationAssistantWizard.InfoOption("viewModulesToMigrate","Modules to be migrated:",modulesSB.toString()));
+  ListSequence.fromList(options).addElement(new MigrationAssistantWizard.InfoOption("viewScriptToRun","Language migrations to be executed:",scriptsSB.toString()));
   ListSequence.fromList(options).addSequence(ListSequence.fromList(pMig).ofType(ProjectMigrationWithOptions.class).where(new IWhereFilter<ProjectMigrationWithOptions>(){
     public boolean accept(    ProjectMigrationWithOptions it){
       return it.shouldBeExecuted(ProjectHelper.fromIdeaProject(project));
