@@ -1,16 +1,17 @@
 {
   SNode node=getNode();
-  if (node == null) {
-    return super.getTestRunParameters();
-  }
-  if (((boolean)(Boolean)BHReflection.invoke(node,SMethodTrimmedId.create("isMpsStartRequired",null,"2RMg39tmiFh")))) {
+  if (node != null && ((boolean)(Boolean)BHReflection.invoke(node,SMethodTrimmedId.create("isMpsStartRequired",null,"2RMg39tmiFh")))) {
     Set<String> userMacroNames=PathMacros.getInstance().getUserMacroNames();
-    return MultiTuple.<String,List<String>,List<String>>from("jetbrains.mps.baseLanguage.unitTest.execution.server.CachingTestExecutor",ListSequence.fromList(new JvmArgs().getDefaultJvmArgs()).union(SetSequence.fromSet(userMacroNames).select(new ISelector<String,String>(){
+    List<String> jvmArgsWithMacros=ListSequence.fromList(JvmArgs.getDefaultJvmArgs()).union(SetSequence.fromSet(userMacroNames).select(new ISelector<String,String>(){
       public String select(      String key){
         return String.format("-Dpath.macro.%s=\"%s\"",key,jetbrains.mps.project.PathMacros.getInstance().getValue(key));
       }
     }
-)).toListSequence(),ListSequence.fromList(getIdeaClasspath()).union(ListSequence.fromList(super.getTestRunParameters()._2())).toListSequence());
+)).toListSequence();
+    List<String> classPath=getIdeaClasspath();
+    return new TestParameters("jetbrains.mps.baseLanguage.unitTest.execution.server.CachingTestExecutor",jvmArgsWithMacros,ListSequence.fromList(classPath).union(ListSequence.fromList(super.getTestRunParameters().getClassPath())).toListSequence());
   }
-  return super.getTestRunParameters();
+ else {
+    return super.getTestRunParameters();
+  }
 }
