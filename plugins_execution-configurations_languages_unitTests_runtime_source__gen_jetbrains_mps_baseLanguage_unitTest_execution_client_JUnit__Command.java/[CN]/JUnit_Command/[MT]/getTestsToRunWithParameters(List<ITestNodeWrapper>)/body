@@ -1,51 +1,37 @@
 {
-  final Wrappers._T<List<ITestNodeWrapper>> _tests=new Wrappers._T<List<ITestNodeWrapper>>(tests);
-  final Wrappers._T<TestParameters> runParams=new Wrappers._T<TestParameters>();
-  final Wrappers._T<List<ITestNodeWrapper>> testsToRun=new Wrappers._T<List<ITestNodeWrapper>>();
-  final Wrappers._T<String> skipped=new Wrappers._T<String>();
-  _tests.value=ListSequence.fromList(_tests.value).where(new IWhereFilter<ITestNodeWrapper>(){
+  tests=ListSequence.fromList(tests).where(new IWhereFilter<ITestNodeWrapper>(){
     public boolean accept(    ITestNodeWrapper it){
       return it != null;
     }
   }
 ).toListSequence();
-  if (ListSequence.fromList(_tests.value).isEmpty()) {
-    final Wrappers._T<TestParameters> defaultRunParameters=new Wrappers._T<TestParameters>();
-    ModelAccess.instance().runReadAction(new Runnable(){
-      public void run(){
-        defaultRunParameters.value=TestParameters.DEFAULT;
-      }
-    }
-);
-    return new TestsWithParameters(ListSequence.fromList(new ArrayList<ITestNodeWrapper>()),defaultRunParameters.value);
+  if (ListSequence.fromList(tests).isEmpty()) {
+    TestParameters defaultRunParameters;
+    defaultRunParameters=TestParameters.DEFAULT;
+    return new TestsWithParameters(ListSequence.fromList(new ArrayList<ITestNodeWrapper>()),defaultRunParameters);
   }
-  ModelAccess.instance().runReadAction(new Runnable(){
-    public void run(){
-      runParams.value=ListSequence.fromList(_tests.value).first().getTestRunParameters();
-      testsToRun.value=ListSequence.fromList(_tests.value).where(new IWhereFilter<ITestNodeWrapper>(){
-        public boolean accept(        ITestNodeWrapper it){
-          return eq_ifael_a0a0a0a0a0a0b0a0a0a0g0r(it.getTestRunParameters(),runParams.value);
-        }
-      }
-).toListSequence();
-      skipped.value=IterableUtils.join(ListSequence.fromList(_tests.value).where(new IWhereFilter<ITestNodeWrapper>(){
-        public boolean accept(        ITestNodeWrapper it){
-          return neq_ifael_a0a0a0a0a0a0a2a0a0a0a6a71(it.getTestRunParameters(),runParams.value);
-        }
-      }
-).select(new ISelector<ITestNodeWrapper,String>(){
-        public String select(        ITestNodeWrapper it){
-          return it.getName();
-        }
-      }
+  TestParameters runParams=JUnit_Command.getMaxParams(tests);
+  List<ITestNodeWrapper> testsToRun=ListSequence.fromList(new ArrayList<ITestNodeWrapper>());
+  List<ITestNodeWrapper> testsToSkip=ListSequence.fromList(new ArrayList<ITestNodeWrapper>());
+  for (  ITestNodeWrapper test : ListSequence.fromList(tests)) {
+    TestParameters testRunParameters=test.getTestRunParameters();
+    if (runParams.comprises(testRunParameters)) {
+      ListSequence.fromList(testsToRun).addElement(test);
+    }
+ else {
+      ListSequence.fromList(testsToSkip).addElement(test);
+    }
+  }
+  String skipped=IterableUtils.join(ListSequence.fromList(testsToSkip).select(new ISelector<ITestNodeWrapper,String>(){
+    public String select(    ITestNodeWrapper it){
+      return it.getName();
+    }
+  }
 )," ");
-    }
-  }
-);
-  if (isNotEmptyString(skipped.value)) {
+  if ((skipped != null && skipped.length() > 0)) {
     if (LOG.isEnabledFor(Level.WARN)) {
-      LOG.warn("All tests could not be executed together. Skipped " + skipped.value);
+      LOG.warn("All tests could not be executed together. Skipped: " + skipped);
     }
   }
-  return new TestsWithParameters(ListSequence.fromList(new ArrayList<ITestNodeWrapper>()),runParams.value);
+  return new TestsWithParameters(testsToRun,runParams);
 }

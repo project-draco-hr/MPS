@@ -1,17 +1,22 @@
 {
-  SNode node=getNode();
-  if (node != null && ((boolean)(Boolean)BHReflection.invoke(node,SMethodTrimmedId.create("isMpsStartRequired",null,"2RMg39tmiFh")))) {
-    Set<String> userMacroNames=PathMacros.getInstance().getUserMacroNames();
-    List<String> jvmArgsWithMacros=ListSequence.fromList(JvmArgs.getDefaultJvmArgs()).union(SetSequence.fromSet(userMacroNames).select(new ISelector<String,String>(){
-      public String select(      String key){
-        return String.format("-Dpath.macro.%s=\"%s\"",key,jetbrains.mps.project.PathMacros.getInstance().getValue(key));
+  final SNode node=getNode();
+  return new ModelAccessHelper(getRepo()).runReadAction(new Computable<TestParameters>(){
+    public TestParameters compute(){
+      if (node != null && ((boolean)(Boolean)BHReflection.invoke(node,SMethodTrimmedId.create("isMpsStartRequired",null,"2RMg39tmiFh")))) {
+        Set<String> userMacroNames=PathMacros.getInstance().getUserMacroNames();
+        List<String> jvmArgsWithMacros=ListSequence.fromList(JvmArgs.getDefaultJvmArgs()).union(SetSequence.fromSet(userMacroNames).select(new ISelector<String,String>(){
+          public String select(          String key){
+            return String.format("-Dpath.macro.%s=\"%s\"",key,jetbrains.mps.project.PathMacros.getInstance().getValue(key));
+          }
+        }
+)).toListSequence();
+        List<String> classPath=getIdeaClasspath();
+        return new TestParameters(CachingTestExecutor.class,ListSequence.fromList(classPath).union(ListSequence.fromList(LanguageTestWrapper.super.getTestRunParameters().getClassPath())).toListSequence(),jvmArgsWithMacros);
+      }
+ else {
+        return LanguageTestWrapper.super.getTestRunParameters();
       }
     }
-)).toListSequence();
-    List<String> classPath=getIdeaClasspath();
-    return new TestParameters("jetbrains.mps.baseLanguage.unitTest.execution.server.CachingTestExecutor",jvmArgsWithMacros,ListSequence.fromList(classPath).union(ListSequence.fromList(super.getTestRunParameters().getClassPath())).toListSequence());
   }
- else {
-    return super.getTestRunParameters();
-  }
+);
 }
