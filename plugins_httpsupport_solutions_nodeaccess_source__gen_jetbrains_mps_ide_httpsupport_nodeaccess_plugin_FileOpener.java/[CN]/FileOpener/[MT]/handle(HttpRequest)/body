@@ -1,24 +1,23 @@
 {
   super.handle(request);
-  final Project project=HandlerUtil.getProjectByName(this.project);
-  if (project != null) {
-    final com.intellij.openapi.project.Project ideaProject=((project instanceof MPSProject) ? ((MPSProject)project).getProject() : null);
+  if (this.project != null) {
+    final com.intellij.openapi.project.Project ideaProject=((this.project instanceof MPSProject) ? ((MPSProject)this.project).getProject() : null);
     int sourceGen=this.file.lastIndexOf(HandlerUtil.SOURCE_GEN);
     int unitNamePosition=(sourceGen == -1 ? 0 : sourceGen + HandlerUtil.SOURCE_GEN.length());
     int unitNameEndPostion=this.file.length() - ".java".length();
     final String unitName=this.file.substring(unitNamePosition,unitNameEndPostion).replace('/','.');
     final String namespace=unitName.substring(0,unitName.lastIndexOf("."));
     final String fileName=this.file.substring(this.file.lastIndexOf("/") + 1);
-    project.getModelAccess().runWriteInEDT(new Runnable(){
+    this.project.getModelAccess().runWriteInEDT(new Runnable(){
       public void run(){
-        Iterator<DebugInfo> it=new DefaultTraceInfoProvider(project.getRepository()).debugInfo(namespace).iterator();
+        Iterator<DebugInfo> it=new DefaultTraceInfoProvider(FileOpener.this.project.getRepository()).debugInfo(namespace).iterator();
         while (it.hasNext()) {
-          if (isNotEmptyString(FileOpener.this.line)) {
-            final SNodeReference nodeReference=new BaseLanguageNodeLookup(it.next()).getNodeAt(fileName,HandlerUtil.parseNumber(FileOpener.this.line));
+          if (FileOpener.this.line != null) {
+            final SNodeReference nodeReference=new BaseLanguageNodeLookup(it.next()).getNodeAt(fileName,FileOpener.this.line);
             if (nodeReference != null) {
-              HandlerUtil.openNode(project,nodeReference);
+              HandlerUtil.openNode(FileOpener.this.project,nodeReference);
               FileOpener.this.request.sendResponse(HttpResponseStatus.OK,"image/gif",Unpooled.copiedBuffer(HandlerUtil.SUCCESS_STREAM));
-              HandlerUtil.requestFocus(project);
+              HandlerUtil.requestFocus(FileOpener.this.project);
               return;
             }
           }
@@ -31,18 +30,18 @@
             }
 ).first().getNodeRef();
             if (nodeReference != null) {
-              HandlerUtil.openNode(project,nodeReference);
+              HandlerUtil.openNode(FileOpener.this.project,nodeReference);
               FileOpener.this.request.sendResponse(HttpResponseStatus.OK,"image/gif",Unpooled.copiedBuffer(HandlerUtil.SUCCESS_STREAM));
-              HandlerUtil.requestFocus(project);
+              HandlerUtil.requestFocus(FileOpener.this.project);
               return;
             }
           }
         }
         final VirtualFile virtualFile=FileOpenUtil.findFile(ideaProject,unitName,fileName);
         if (virtualFile != null) {
-          FileOpenUtil.openFile(ideaProject,virtualFile,(isEmptyString(FileOpener.this.line) ? 1 : HandlerUtil.parseNumber(FileOpener.this.line)));
+          FileOpenUtil.openFile(ideaProject,virtualFile,(FileOpener.this.line == null ? 1 : FileOpener.this.line));
           FileOpener.this.request.sendResponse(HttpResponseStatus.OK,"image/gif",Unpooled.copiedBuffer(HandlerUtil.SUCCESS_STREAM));
-          HandlerUtil.requestFocus(project);
+          HandlerUtil.requestFocus(FileOpener.this.project);
           return;
         }
         FileOpener.this.request.sendResponse(HttpResponseStatus.OK,"image/gif",Unpooled.copiedBuffer(HandlerUtil.FAILURE_STREAM));
