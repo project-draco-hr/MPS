@@ -4,11 +4,18 @@
   if (sourceModule == null) {
     return Collections.emptyList();
   }
-  for (  Language language : SetSequence.fromSet(sourceModule.getAllExtendedLanguages())) {
+  HashSet<Language> processed=new HashSet<>();
+  ArrayDeque<Language> queue=new ArrayDeque<>(sourceModule.getAllExtendedLanguages());
+  while (!queue.isEmpty()) {
+    Language language=queue.removeFirst();
+    if (!processed.add(language)) {
+      continue;
+    }
     runtimes.addAll(language.getRuntimeModulesReferences());
     for (    SDependency dep : language.getDeclaredDependencies()) {
       if (dep.getScope() == SDependencyScope.GENERATES_INTO && dep.getTarget() instanceof Language) {
-        runtimes.addAll(((Language)dep.getTarget()).getRuntimeModulesReferences());
+        Language target=(Language)dep.getTarget();
+        queue.addAll(target.getAllExtendedLanguages());
       }
     }
   }
