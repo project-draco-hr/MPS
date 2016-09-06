@@ -7,23 +7,24 @@
   MakeSession session=new MakeSession(project,new DefaultMakeMessageHandler(project),myParams.isCleanMake());
   if (IMakeService.INSTANCE.get().openNewSession(session)) {
     List<IResource> inputRes=null;
+    final ArrayList<SModel> models=new ArrayList<SModel>();
     try {
-      inputRes=new ModelAccessHelper(project.getModelAccess()).runWriteAction(new Computable<List<IResource>>(){
+      inputRes=new ModelAccessHelper(project.getModelAccess()).runReadAction(new Computable<List<IResource>>(){
         public List<IResource> compute(){
           List<IResource> rv=Sequence.fromIterable(myParams.collectInput()).toListSequence();
-          List<SModel> models=ListSequence.fromList(rv).translate(new ITranslator2<IResource,SModel>(){
+          models.addAll(ListSequence.fromList(rv).translate(new ITranslator2<IResource,SModel>(){
             public Iterable<SModel> translate(            IResource it){
               return ((MResource)it).models();
             }
           }
-).toListSequence();
-          if (new GenerationCheckHelper().checkModelsBeforeGenerationIfNeeded(project,models)) {
-            return rv;
-          }
-          return null;
+).toListSequence());
+          return rv;
         }
       }
 );
+      if (!(new GenerationCheckHelper().checkModelsBeforeGenerationIfNeeded(project,models))) {
+        inputRes=null;
+      }
     }
  catch (    RuntimeException e) {
       IMakeService.INSTANCE.get().closeSession(session);
