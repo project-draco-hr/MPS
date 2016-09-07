@@ -1,0 +1,24 @@
+{
+  List<ITestNodeWrapper> result=ListSequence.fromList(new ArrayList<ITestNodeWrapper>());
+  Iterable<SModel> models=myModule.getModels();
+  myMonitor.start("Fetching tests from module " + myModule.getModuleName(),IterableUtil.asCollection(models).size());
+  try {
+    for (    SModel model : Sequence.fromIterable(models)) {
+      if (SModelStereotype.isUserModel(model)) {
+        if (myMonitor.isCanceled()) {
+          return ListSequence.fromList(new ArrayList<ITestNodeWrapper>());
+        }
+        List<ITestNodeWrapper> modelTests=new ModelTestCollector(model,myMonitor.subTask(1),myBreakOnFirstFound).collect();
+        ListSequence.fromList(result).addSequence(ListSequence.fromList(modelTests));
+        if (myBreakOnFirstFound && ListSequence.fromList(modelTests).isNotEmpty()) {
+          return result;
+        }
+      }
+      myMonitor.advance(1);
+    }
+  }
+  finally {
+    myMonitor.done();
+  }
+  return result;
+}

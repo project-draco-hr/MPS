@@ -1,0 +1,22 @@
+{
+  List<ITestNodeWrapper> result=ListSequence.fromList(new ArrayList<ITestNodeWrapper>());
+  List<SModule> projectModules=myProject.getProjectModules();
+  myMonitor.start("Fetching tests from modules",2 * projectModules.size());
+  try {
+    for (    SModule module : ListSequence.fromList(projectModules)) {
+      if (myMonitor.isCanceled()) {
+        return ListSequence.fromList(new ArrayList<ITestNodeWrapper>());
+      }
+      List<ITestNodeWrapper> moduleTests=new ModuleTestCollector(module,myMonitor.subTask(1,SubProgressKind.REPLACING),myBreakOnFirstFound).collect();
+      ListSequence.fromList(result).addSequence(ListSequence.fromList(moduleTests));
+      myMonitor.advance(1);
+      if (myBreakOnFirstFound && ListSequence.fromList(moduleTests).isNotEmpty()) {
+        return result;
+      }
+    }
+  }
+  finally {
+    myMonitor.done();
+  }
+  return result;
+}
