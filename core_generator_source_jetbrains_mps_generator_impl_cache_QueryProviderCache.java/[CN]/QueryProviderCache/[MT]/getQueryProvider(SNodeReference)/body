@@ -1,18 +1,28 @@
 {
   final SModelReference mr=templateNode.getModelReference();
-  if (myReflectionQueries.contains(mr)) {
-    return new ReflectiveQueryProvider();
+  ReflectiveQueryProvider rqp=myReflectionQueries.get(mr);
+  if (rqp != null) {
+    return rqp;
   }
-  if (myDirectQueries.containsKey(mr)) {
-    return myDirectQueries.get(mr);
+  GeneratorQueryProvider gqp=myDirectQueries.get(mr);
+  if (gqp != null) {
+    return gqp;
   }
   try {
     Class<?> qg=QueryMethodGenerated.getQueriesGeneratedClassFor(mr,true);
     if (GeneratorQueryProvider.class.isAssignableFrom(qg)) {
       @SuppressWarnings("unchecked") Class<GeneratorQueryProvider> providerClass=(Class<GeneratorQueryProvider>)qg;
-      GeneratorQueryProvider p=providerClass.newInstance();
-      myDirectQueries.put(mr,p);
-      return p;
+      gqp=providerClass.newInstance();
+      if (((QueryProviderBase)gqp).needsReflectiveFallback()) {
+        ((QueryProviderBase)gqp).useReflectiveFallback(new ReflectiveQueryProvider(qg));
+      }
+      myDirectQueries.put(mr,gqp);
+      return gqp;
+    }
+ else {
+      rqp=new ReflectiveQueryProvider(qg);
+      myReflectionQueries.put(mr,rqp);
+      return rqp;
     }
   }
  catch (  ClassNotFoundException e) {
@@ -26,6 +36,7 @@ catch (  IllegalAccessException e) {
     myLog.handleException(e);
     myLog.error(templateNode,e.toString());
   }
-  myReflectionQueries.add(mr);
-  return new ReflectiveQueryProvider();
+  return new QueryProviderBase(1){
+  }
+;
 }

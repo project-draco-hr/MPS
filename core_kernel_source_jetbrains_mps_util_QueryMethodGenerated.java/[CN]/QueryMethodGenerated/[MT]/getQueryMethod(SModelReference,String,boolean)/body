@@ -1,26 +1,12 @@
 {
-  Map<String,Method> methods=myMethods.get(sourceModel);
+  QueryMethods methods=myMethods.get(sourceModel);
   if (methods == null) {
     Class queriesClass=getQueriesGeneratedClassFor(sourceModel,suppressErrorLogging);
-    methods=myMethods.get(sourceModel);
-    if (methods == null) {
-      methods=new HashMap<String,Method>();
-      Method[] declaredMethods=queriesClass.getDeclaredMethods();
-      for (      Method declaredMethod : declaredMethods) {
-        String name=declaredMethod.getName();
-        declaredMethod.setAccessible(true);
-        methods.put(name,declaredMethod);
-      }
-      myMethods.putIfAbsent(sourceModel,methods);
+    methods=new QueryMethods(queriesClass);
+    QueryMethods already=myMethods.putIfAbsent(sourceModel,methods);
+    if (already != null) {
+      methods=already;
     }
   }
-  Method method=methods.get(methodName);
-  if (method == null) {
-    String className=JavaNameUtil.packageNameForModelUID(sourceModel) + ".QueriesGenerated";
-    if (!suppressErrorLogging) {
-      LOG.error("couldn't find method '" + methodName + "' in '"+ className+ "' : TRY TO GENERATE model '"+ sourceModel+ "'");
-    }
-    throw new NoSuchMethodException("couldn't find method '" + methodName + "' in '"+ className+ "'");
-  }
-  return method;
+  return methods.getMethodPrim(methodName);
 }
