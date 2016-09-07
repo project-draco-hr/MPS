@@ -1,2 +1,50 @@
 {
+  if (myProject.isDisposed()) {
+    return;
+  }
+  if (isRegistered()) {
+    return;
+  }
+  ThreadUtils.assertEDT();
+  setIsRegistered(true);
+  myWindowManager=ToolWindowManager.getInstance(myProject);
+  if (myNumber != -1) {
+    String actionId=ActivateToolWindowAction.getActionIdForToolWindow(myId);
+    Keymap keymap=KeymapManager.getInstance().getKeymap(KeymapManager.DEFAULT_IDEA_KEYMAP);
+    if (keymap == null) {
+      LOG.error("Default IDEA Keymap cannot be found");
+      return;
+    }
+ else {
+      KeyboardShortcut defShortcut=new KeyboardShortcut(KeyStroke.getKeyStroke("alt " + myNumber),null);
+      keymap.addShortcut(actionId,defShortcut);
+    }
+    keymap=KeymapManager.getInstance().getKeymap(KeymapManager.MAC_OS_X_KEYMAP);
+    if (keymap == null) {
+      LOG.error("Keymap for MAC OS cannot be found");
+      return;
+    }
+    KeyboardShortcut oldShortcut=new KeyboardShortcut(KeyStroke.getKeyStroke("alt " + myNumber),null);
+    keymap.removeShortcut(actionId,oldShortcut);
+    KeyboardShortcut macShortcut=new KeyboardShortcut(KeyStroke.getKeyStroke("meta " + myNumber),null);
+    keymap.addShortcut(actionId,macShortcut);
+  }
+  ToolWindow toolWindow=myWindowManager.getToolWindow(myId);
+  if (toolWindow == null) {
+    toolWindow=myWindowManager.registerToolWindow(myId,myCanCloseContent,myAnchor,getProject(),true,mySideTool);
+  }
+  toolWindow.setIcon(myIcon);
+  toolWindow.setToHideOnEmptyContent(true);
+  toolWindow.installWatcher(toolWindow.getContentManager());
+  setAvailable(isInitiallyAvailable());
+  doRegister();
+  if (myComponent == null) {
+    myComponent=getComponent();
+  }
+  if (myComponent != null) {
+    addContent(myComponent,"",null,false);
+  }
+  toolWindow.setToHideOnEmptyContent(true);
+  toolWindow.installWatcher(toolWindow.getContentManager());
+  setAvailable(isInitiallyAvailable());
 }
