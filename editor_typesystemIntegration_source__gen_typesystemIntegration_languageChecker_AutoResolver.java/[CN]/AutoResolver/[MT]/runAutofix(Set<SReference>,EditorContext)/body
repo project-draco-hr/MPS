@@ -8,9 +8,13 @@
     @Override public void run(){
       myProject.getModelAccess().executeUndoTransparentCommand(new Runnable(){
         @Override public void run(){
+          EditorComponentState state=editorContext.getEditorComponentState();
           boolean doRecheckEditor=false;
           for (          SReference brokenRef : SetSequence.fromSet(badReferences)) {
             boolean resolvedByScope=ResolverComponent.getInstance().resolveScopesOnly(brokenRef,editorContext.getRepository());
+            if (resolvedByScope) {
+              doRecheckEditor=true;
+            }
             SNode sourceNode=brokenRef.getSourceNode();
             if (sourceNode == null) {
               continue;
@@ -44,8 +48,11 @@
               doRecheckEditor=true;
             }
           }
-          if (doRecheckEditor && wasForceAutofix) {
-            myForceAutofix=true;
+          if (doRecheckEditor) {
+            editorContext.restoreEditorComponentState(state);
+            if (wasForceAutofix) {
+              myForceAutofix=true;
+            }
           }
         }
       }
