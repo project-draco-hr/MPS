@@ -1,42 +1,22 @@
 {
   final SModelReference mr=templateNode.getModelReference();
-  ReflectiveQueryProvider rqp=myReflectionQueries.get(mr);
-  if (rqp != null) {
-    return rqp;
+  GeneratorQueryProvider queryProvider=myQueries.get(mr);
+  if (queryProvider != null) {
+    return queryProvider;
   }
-  GeneratorQueryProvider gqp=myDirectQueries.get(mr);
-  if (gqp != null) {
-    return gqp;
+  TemplateModel templateModel=myTemplateModels.get(mr);
+  if (templateModel == null) {
+    myLog.error(templateNode,"Attempt to generate with generator not included into the plan");
+    queryProvider=instantiateProvider(templateNode,myLog);
   }
-  try {
-    Class<?> qg=QueryMethodGenerated.getQueriesGeneratedClassFor(mr,true);
-    if (GeneratorQueryProvider.class.isAssignableFrom(qg)) {
-      @SuppressWarnings("unchecked") Class<GeneratorQueryProvider> providerClass=(Class<GeneratorQueryProvider>)qg;
-      gqp=providerClass.newInstance();
-      if (((QueryProviderBase)gqp).needsReflectiveFallback()) {
-        ((QueryProviderBase)gqp).useReflectiveFallback(new ReflectiveQueryProvider(qg));
-      }
-      myDirectQueries.put(mr,gqp);
-      return gqp;
-    }
  else {
-      rqp=new ReflectiveQueryProvider(qg);
-      myReflectionQueries.put(mr,rqp);
-      return rqp;
+    queryProvider=templateModel.getQueryProvider();
+  }
+  if (queryProvider == null) {
+    queryProvider=new QueryProviderBase(1){
     }
-  }
- catch (  ClassNotFoundException e) {
-    myLog.error(templateNode,e.getMessage());
-  }
-catch (  InstantiationException e) {
-    myLog.handleException(e);
-    myLog.error(templateNode,e.toString());
-  }
-catch (  IllegalAccessException e) {
-    myLog.handleException(e);
-    myLog.error(templateNode,e.toString());
-  }
-  return new QueryProviderBase(1){
-  }
 ;
+  }
+  myQueries.put(mr,queryProvider);
+  return queryProvider;
 }
