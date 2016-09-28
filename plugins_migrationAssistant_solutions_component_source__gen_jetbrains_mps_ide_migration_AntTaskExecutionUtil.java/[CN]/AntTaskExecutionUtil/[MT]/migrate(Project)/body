@@ -1,54 +1,54 @@
 {
-  MigrationManager m=ProjectHelper.toIdeaProject(project).getComponent(MigrationManager.class);
+  final MigrationManager m=ProjectHelper.toIdeaProject(project).getComponent(MigrationManager.class);
   if (!(m.isMigrationRequired())) {
     return false;
   }
-  while (true) {
-    MigrationManager.MigrationStep step=m.nextProjectStep(MapSequence.fromMap(new HashMap<ProjectMigrationWithOptions.Option,Object>()),true);
-    if (step == null) {
-      break;
-    }
-    if (!(step.execute())) {
-      throw new Exception("Problem on executing cleanup migrations");
-    }
-  }
-  List<ScriptApplied.ScriptAppliedReference> missingMigrations=m.getMissingMigrations();
-  if (ListSequence.fromList(missingMigrations).isNotEmpty()) {
-    throw new Exception("Some migrations are missing");
-  }
   final Wrappers._boolean ok=new Wrappers._boolean(true);
-  project.getRepository().getModelAccess().runReadAction(new Runnable(){
+  project.getRepository().getModelAccess().executeCommand(new Runnable(){
     public void run(){
+      while (true) {
+        MigrationManager.MigrationStep step=m.nextProjectStep(MapSequence.fromMap(new HashMap<ProjectMigrationWithOptions.Option,Object>()),true);
+        if (step == null) {
+          break;
+        }
+        if (!(step.execute())) {
+          throw new RuntimeException("Problem on executing cleanup migrations");
+        }
+      }
+      List<ScriptApplied.ScriptAppliedReference> missingMigrations=m.getMissingMigrations();
+      if (ListSequence.fromList(missingMigrations).isNotEmpty()) {
+        throw new RuntimeException("Some migrations are missing");
+      }
       Iterable<SModule> modules=MigrationsUtil.getMigrateableModulesFromProject(project);
       ok.value=!(MigrationCheckUtil.haveProblems(modules,true,new _FunctionTypes._void_P1_E0<Double>(){
         public void invoke(        Double fraction){
         }
       }
 ));
+      if (!(ok.value)) {
+        throw new RuntimeException("Pre-check failed");
+      }
+      while (true) {
+        MigrationManager.MigrationStep step=m.nextProjectStep(MapSequence.fromMap(new HashMap<ProjectMigrationWithOptions.Option,Object>()),false);
+        if (step == null) {
+          break;
+        }
+        if (!(step.execute())) {
+          throw new RuntimeException("Problem on executing project migrations");
+        }
+      }
+      while (true) {
+        MigrationManager.MigrationStep step=m.nextModuleStep();
+        if (step == null) {
+          break;
+        }
+        if (!(step.execute())) {
+          throw new RuntimeException("Problem on executing language migrations");
+        }
+      }
     }
   }
 );
-  if (!(ok.value)) {
-    throw new Exception("Pre-check failed");
-  }
-  while (true) {
-    MigrationManager.MigrationStep step=m.nextProjectStep(MapSequence.fromMap(new HashMap<ProjectMigrationWithOptions.Option,Object>()),false);
-    if (step == null) {
-      break;
-    }
-    if (!(step.execute())) {
-      throw new Exception("Problem on executing project migrations");
-    }
-  }
-  while (true) {
-    MigrationManager.MigrationStep step=m.nextModuleStep();
-    if (step == null) {
-      break;
-    }
-    if (!(step.execute())) {
-      throw new Exception("Problem on executing language migrations");
-    }
-  }
   project.getRepository().getModelAccess().runWriteInEDT(new Runnable(){
     public void run(){
       project.getRepository().saveAll();
@@ -67,7 +67,7 @@
   }
 );
   if (!(ok.value)) {
-    throw new Exception("Post-check failed");
+    throw new RuntimeException("Post-check failed");
   }
   return true;
 }
