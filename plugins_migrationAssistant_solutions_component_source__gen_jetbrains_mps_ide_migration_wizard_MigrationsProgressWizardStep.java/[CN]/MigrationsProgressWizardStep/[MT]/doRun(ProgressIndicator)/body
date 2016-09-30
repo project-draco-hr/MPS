@@ -12,7 +12,7 @@
       break;
     }
     ListSequence.fromList(cleanupMigrations).addElement(step);
-    if (!(executeSingleStep(step))) {
+    if (!(executeSingleStep(step,false))) {
       break;
     }
     if (!(cleanNotification)) {
@@ -96,7 +96,7 @@
   }
   int projectStepsCount=myManager.projectStepsCount(false);
   stepNum=0;
-  while (executeSingleStep(myManager.nextProjectStep(options,false))) {
+  while (executeSingleStep(myManager.nextProjectStep(options,false),false)) {
     stepNum++;
     setFraction(progress,ProgressEstimation.projectMigrations(1.0 * stepNum / projectStepsCount));
   }
@@ -106,22 +106,28 @@
   }
   int languageStepsCount=myManager.moduleStepsCount();
   stepNum=0;
-  while (executeSingleStep(myManager.nextModuleStep())) {
+  MigrationManager.MigrationStep lastStep=null;
+  while (true) {
+    String mergeId=(lastStep == null ? null : lastStep.getMergeId());
+    MigrationManager.MigrationStep nextStep=myManager.nextModuleStep(mergeId);
+    boolean merge=(mergeId != null && nextStep != null && mergeId.equals(nextStep.getMergeId()));
+    lastStep=nextStep;
+    boolean res=executeSingleStep(nextStep,merge);
+    if (!(res)) {
+      break;
+    }
     stepNum++;
     setFraction(progress,ProgressEstimation.languageMigrations(1.0 * stepNum / languageStepsCount));
+  }
+  if (myCurrentChange != null) {
+    saveAll(mpsProject);
+    myCurrentChange.finish();
+    myCurrentChange=null;
   }
   if (myErrorContainer.getErrorDescriptor() != null) {
     addElementToMigrationList("Exception while running migration. Press 'Next' to continue.");
     return;
   }
-  addElementToMigrationList("Saving changed models...");
-  mpsProject.getModelAccess().runWriteInEDT(new Runnable(){
-    public void run(){
-      mpsProject.getRepository().saveAll();
-    }
-  }
-);
-  setFraction(progress,ProgressEstimation.saving(1.0));
   final Wrappers._boolean haveBadCode=new Wrappers._boolean(false);
   addElementToMigrationList("Checking models...");
   mpsProject.getRepository().getModelAccess().runReadAction(new Runnable(){
