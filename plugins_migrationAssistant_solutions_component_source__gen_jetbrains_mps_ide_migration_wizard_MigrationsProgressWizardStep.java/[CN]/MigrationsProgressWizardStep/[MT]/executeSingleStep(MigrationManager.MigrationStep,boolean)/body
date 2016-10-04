@@ -1,0 +1,46 @@
+{
+  if (result == null) {
+    return false;
+  }
+  final boolean startNewChange=!(mergeWithPrev) && myCurrentChange != null;
+  if (startNewChange) {
+    addElementToMigrationList("Saving changed models...");
+    ApplicationManager.getApplication().invokeAndWait(new Runnable(){
+      public void run(){
+        final jetbrains.mps.project.Project mpsProject=getMPSProject();
+        mpsProject.getRepository().getModelAccess().runWriteAction(new Runnable(){
+          public void run(){
+            mpsProject.getRepository().saveAll();
+          }
+        }
+);
+      }
+    }
+,myModalityState);
+  }
+  final String step=((MigrationManager.MigrationStep)result).getDescription();
+  addElementToMigrationList(step);
+  final Wrappers._boolean noException=new Wrappers._boolean();
+  ApplicationManager.getApplication().invokeAndWait(new Runnable(){
+    public void run(){
+      if (startNewChange) {
+        myCurrentChange.finish();
+        myCurrentChange=null;
+      }
+      if (myCurrentChange == null) {
+        myCurrentChange=LocalHistory.getInstance().startAction("Applying migration " + result.getCommonDescription());
+      }
+      getMPSProject().getRepository().getModelAccess().executeCommand(new Runnable(){
+        public void run(){
+          noException.value=((MigrationManager.MigrationStep)result).execute();
+        }
+      }
+);
+    }
+  }
+,myModalityState);
+  if (!(noException.value)) {
+    myErrorContainer.setErrorDescriptor(new MigrationsProgressWizardStep.MigrationExceptionError());
+  }
+  return noException.value;
+}

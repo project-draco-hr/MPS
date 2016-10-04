@@ -1,0 +1,61 @@
+{
+  final Wrappers._T<MigrationManager.MigrationStep> result=new Wrappers._T<MigrationManager.MigrationStep>(null);
+  myMpsMproject.getRepository().getModelAccess().runReadAction(new Runnable(){
+    public void run(){
+      Iterable<ScriptApplied> toApply=Sequence.fromIterable(MigrationsUtil.getMigrateableModulesFromProject(ProjectHelper.toMPSProject(myProject))).translate(new ITranslator2<SModule,ScriptApplied.ScriptAppliedReference>(){
+        public Iterable<ScriptApplied.ScriptAppliedReference> translate(        SModule module){
+          return MigrationsUtil.getAllSteps(module);
+        }
+      }
+).select(new ISelector<ScriptApplied.ScriptAppliedReference,ScriptApplied>(){
+        public ScriptApplied select(        ScriptApplied.ScriptAppliedReference it){
+          return it.resolve(myMigrationComponent,false);
+        }
+      }
+).where(new IWhereFilter<ScriptApplied>(){
+        public boolean accept(        ScriptApplied it){
+          return it != null && Sequence.fromIterable(it.getDependencies()).where(new IWhereFilter<ScriptApplied.ScriptAppliedReference>(){
+            public boolean accept(            ScriptApplied.ScriptAppliedReference it){
+              return !(it.isAlreadyDone());
+            }
+          }
+).isEmpty();
+        }
+      }
+);
+      Iterable<ScriptApplied> preferred=(preferredId == null ? toApply : Sequence.fromIterable(toApply).where(new IWhereFilter<ScriptApplied>(){
+        public boolean accept(        ScriptApplied it){
+          return preferredId == null || preferredId.equals(it.getId());
+        }
+      }
+));
+      if (Sequence.fromIterable(preferred).isEmpty()) {
+        preferred=toApply;
+      }
+      if (Sequence.fromIterable(preferred).isEmpty()) {
+        return;
+      }
+      ScriptApplied applied=Sequence.fromIterable(preferred).first();
+      result.value=new MigrationManager.MigrationStep(){
+        public String getDescription(){
+          return applied.getDescription() + ": " + applied.getModule().getModuleName();
+        }
+        @Override public String getCommonDescription(){
+          return applied.getDescription();
+        }
+        @Override public String getMergeId(){
+          return applied.getId();
+        }
+        public boolean execute(){
+          return applied.execute(myMigrationComponent);
+        }
+        public void forceExecutionNextTime(){
+          throw new UnsupportedOperationException("not supported for module migrations");
+        }
+      }
+;
+    }
+  }
+);
+  return result.value;
+}

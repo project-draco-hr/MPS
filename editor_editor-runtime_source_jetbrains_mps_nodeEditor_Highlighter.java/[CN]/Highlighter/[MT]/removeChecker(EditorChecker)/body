@@ -1,2 +1,30 @@
 {
+  if (RuntimeFlags.isTestMode()) {
+    return;
+  }
+  ThreadUtils.assertEDT();
+  EditorCheckerWrapper wrapper=findWrapperFor(checker);
+  if (wrapper == null) {
+    return;
+  }
+  myCheckers.remove(wrapper);
+  EditorMessageOwner messageOwner=wrapper.getEditorMessageOwner();
+  wrapper.stop();
+  final List<EditorComponent> editors=myEditorList.getAllEditors();
+  if (editors.isEmpty()) {
+    return;
+  }
+  addPendingAction(new Runnable(){
+    @Override public void run(){
+      long time=System.currentTimeMillis();
+      for (      EditorComponent component : editors) {
+        component.getHighlightManager().clearForOwner(messageOwner,true);
+      }
+      if (LOG.isDebugEnabled()) {
+        long elapsed=System.currentTimeMillis() - time;
+        LOG.debug(String.format("Removing %s messages from %d editors took %d ms",messageOwner,editors.size(),elapsed));
+      }
+    }
+  }
+);
 }
