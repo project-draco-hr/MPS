@@ -1,17 +1,24 @@
 {
-  T aspectDescriptor=aspectClass.cast(myAspectDescriptors.get(aspectClass));
-  if (aspectDescriptor == null) {
-    aspectDescriptor=createAspect(aspectClass);
+  try {
+    T aspectDescriptor=aspectClass.cast(myAspectDescriptors.get(aspectClass));
     if (aspectDescriptor == null) {
-      return null;
+      aspectDescriptor=createAspect(aspectClass);
+      if (aspectDescriptor == null) {
+        return null;
+      }
+      if (aspectDescriptor instanceof LanguageRuntimeAware) {
+        ((LanguageRuntimeAware)aspectDescriptor).setLanguageRuntime(this);
+      }
+      T alreadyThere=aspectClass.cast(myAspectDescriptors.putIfAbsent(aspectClass,aspectDescriptor));
+      if (alreadyThere != null) {
+        return alreadyThere;
+      }
     }
-    if (aspectDescriptor instanceof LanguageRuntimeAware) {
-      ((LanguageRuntimeAware)aspectDescriptor).setLanguageRuntime(this);
-    }
-    T alreadyThere=aspectClass.cast(myAspectDescriptors.putIfAbsent(aspectClass,aspectDescriptor));
-    if (alreadyThere != null) {
-      return alreadyThere;
-    }
+    return aspectDescriptor;
   }
-  return aspectDescriptor;
+ catch (  Throwable th) {
+    String msg=String.format("Failed to instantiate aspect %s in language %s",aspectClass,getNamespace());
+    Logger.getLogger(LanguageRuntime.class).error(msg,th);
+    return null;
+  }
 }
