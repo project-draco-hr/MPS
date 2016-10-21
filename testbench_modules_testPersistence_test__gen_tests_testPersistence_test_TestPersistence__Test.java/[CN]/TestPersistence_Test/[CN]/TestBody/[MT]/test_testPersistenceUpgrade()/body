@@ -1,0 +1,17 @@
+{
+  TestPersistenceHelper helper=new TestPersistenceHelper();
+  SModel model=helper.getTestModel();
+  for (int fromVersion=TestPersistenceHelper.START_PERSISTENCE_TEST_VERSION; fromVersion < ModelPersistence.LAST_VERSION; fromVersion++) {
+    PersistenceUtil.InMemoryStreamDataSource notUpgradedData=new PersistenceUtil.InMemoryStreamDataSource();
+    helper.saveModelInPersistence(((SModelBase)model),notUpgradedData,fromVersion);
+    String notUpgradedContent=notUpgradedData.getContent(FileUtil.DEFAULT_CHARSET_NAME);
+    SModelBase notUpgradedModel=((SModelBase)PersistenceUtil.loadModel(notUpgradedContent,helper.getDefaultExt()));
+    PersistenceUtil.InMemoryStreamDataSource upgradedData=new PersistenceUtil.InMemoryStreamDataSource();
+    helper.saveModelInPersistence(notUpgradedModel,upgradedData,ModelPersistence.LAST_VERSION);
+    String upgradedContent=upgradedData.getContent(FileUtil.DEFAULT_CHARSET_NAME);
+    SModelBase upgradedModel=((SModelBase)PersistenceUtil.loadModel(upgradedContent,helper.getDefaultExt()));
+    ModelAssert.assertDeepModelEquals(notUpgradedModel.getSModel(),upgradedModel.getSModel());
+    notUpgradedModel.getSModel().dispose();
+    upgradedModel.getSModel().dispose();
+  }
+}
