@@ -5,7 +5,17 @@
   for (int i=TestPersistenceHelper.START_PERSISTENCE_TEST_VERSION; i <= ModelPersistence.LAST_VERSION; ++i) {
     PersistenceUtil.InMemoryStreamDataSource dataSource=new PersistenceUtil.InMemoryStreamDataSource();
     helper.saveModelInPersistence(md,dataSource,i);
-    final ModelLoadResult result=ModelPersistence.readModel(SModelHeader.create(i),dataSource,ModelLoadingState.FULLY_LOADED);
+    InputStream contentStream=dataSource.getContentAsStream();
+    byte[] content=null;
+    try {
+      int contentSize=contentStream.available();
+      content=new byte[contentSize];
+      contentStream.read(content);
+    }
+ catch (    IOException e) {
+      Assert.fail(e.getMessage());
+    }
+    final ModelLoadResult result=ModelPersistence.readModel(SModelHeader.create(i),new ByteArrayInputSource(content),ModelLoadingState.FULLY_LOADED);
     Assert.assertTrue(result.getState() == ModelLoadingState.FULLY_LOADED);
     ModelAccess.instance().runReadAction(new Runnable(){
       public void run(){
